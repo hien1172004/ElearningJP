@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: e-learning Japan
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  datasource:
+    hikari:
+      initialization-fail-timeout: 60000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      maximum-pool-size: 10
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  config:
+    import: optional:file:.env[.properties]
+
+
+
+server:
+  port: ${PORT:8080}
+

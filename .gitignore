@@ -1,0 +1,35 @@
+# ==========================================
+# Root Monorepo Git Ignore
+# ==========================================
+
+# ------------------------------------------
+# Backend (BE - Spring Boot)
+# ------------------------------------------
+BE/**/target/
+BE/**/*.log
+BE/**/.env
+BE/**/.idea/
+BE/**/mvnw.cmd
+BE/**/.mvn/
+
+# ------------------------------------------
+# Frontend (FE - React / Next.js / Vue / Vite)
+# ------------------------------------------
+FE/**/node_modules/
+FE/**/.next/
+FE/**/dist/
+FE/**/build/
+FE/**/.env.local
+FE/**/.env.development.local
+FE/**/.env.test.local
+FE/**/.env.production.local
+FE/**/.cache/
+
+# ------------------------------------------
+# Operating System & IDE Files
+# ------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+*.tmp
