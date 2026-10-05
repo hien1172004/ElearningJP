@@ -1,32 +1,72 @@
-# React + TypeScript + Vite
+# ElearningJP - Frontend Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Dự án Frontend cho Hệ thống học tiếng Nhật trực tuyến (ElearningJP), được xây dựng bằng **React 19**, **TypeScript**, **Vite** và **Tailwind CSS**.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 📁 Cấu trúc thư mục (`src/`)
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```text
+src/
+├── assets/          # Chứa tài nguyên tĩnh: hình ảnh, logo, icons, audio mẫu,...
+├── components/      # Các UI component tái sử dụng trong toàn bộ ứng dụng
+│   ├── common/      # Component cơ bản: Button, Input, Modal, Badge, Dropdown,...
+│   └── feedback/    # Component trạng thái: LoadingSpinner, EmptyState, Alert,...
+├── layouts/         # Các khung bố cục trang dùng chung
+│   ├── AuthLayout   # Bố cục cho trang Đăng nhập / Đăng ký
+│   ├── MainLayout   # Bố cục chính cho Học viên (Header, Navigation, Footer)
+│   └── AdminLayout  # Bố cục cho Quản trị viên
+├── pages/           # Chứa các trang (màn hình) của ứng dụng
+│   ├── auth/        # Login, Register, ForgotPassword
+│   ├── home/        # Trang chủ giới thiệu
+│   ├── dashboard/   # Trang tổng quan tiến độ học tập
+│   ├── courses/     # Danh sách khóa học & bài học
+│   ├── srs/         # Ôn tập Flashcard ngắt quãng
+│   └── exam/        # Luyện thi thử JLPT
+├── routes/          # Cấu hình định tuyến (React Router) & ProtectedRoute
+├── services/        # Tầng kết nối & gọi API Backend Spring Boot
+│   ├── api/         # Cấu hình Axios instance (Base URL, JWT Interceptors)
+│   ├── auth.service # API Đăng nhập, Đăng ký, Refresh token
+│   └── user.service # API Thông tin tài khoản
+├── stores/          # Quản lý State toàn cục bằng Zustand (useAuthStore)
+├── types/           # Định nghĩa kiểu dữ liệu TypeScript (User, ApiResponse,...)
+└── utils/           # Các hàm tiện ích dùng chung (storage, format ngày/số,...)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+---
+
+## 🔄 Luồng làm việc chuẩn khi thêm tính năng mới
+
+Khi xây dựng một tính năng mới (ví dụ: *Xem danh sách khóa học*), luồng code khuyến nghị:
+1. **Định nghĩa kiểu dữ liệu** (`src/types/course.types.ts`).
+2. **Viết hàm gọi API** (`src/services/course.service.ts`).
+3. **Quản lý state** nếu cần lưu toàn cục (`src/stores/useCourseStore.ts`).
+4. **Tạo giao diện trang & component** (`src/pages/courses/`, `src/components/`).
+5. **Khai báo đường dẫn** trong `src/routes/index.tsx`.
+
+---
+
+## 🛠️ Thư viện chính sử dụng
+
+- **Giao diện**: [Tailwind CSS v4](https://tailwindcss.com), [Lucide React Icons](https://lucide.dev)
+- **Routing**: [React Router](https://reactrouter.com)
+- **HTTP Client**: [Axios](https://axios-http.com)
+- **Data Caching**: [@tanstack/react-query](https://tanstack.com/query)
+- **State Management**: [Zustand](https://zustand-demo.pmnd.rs)
+- **Form & Validation**: [React Hook Form](https://react-hook-form.com) & [Zod](https://zod.dev)
+- **Thông báo**: [Sonner](https://sonner.emilkowal.ski)
+
+---
+
+## 🚀 Hướng dẫn chạy dự án
+
+```bash
+# 1. Cài đặt thư viện (nếu mới clone về)
+npm install
+
+# 2. Khởi chạy môi trường phát triển (Dev server)
+npm run dev
+
+# 3. Kiểm tra kiểu & đóng gói sản phẩm (Build production)
+npm run build
+```
