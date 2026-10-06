@@ -6,6 +6,7 @@ import com.jp.elearningjp.shared.enums.ReviewStatus;
 import com.jp.elearningjp.shared.enums.Visibility;
 import com.jp.elearningjp.shared.enums.VocabularySource;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,7 +14,11 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
 
@@ -32,6 +37,12 @@ public class Vocabulary extends SoftDeletableEntity {
 
     @Column(name = "hiragana", nullable = false, length = 100)
     private String hiragana;
+
+    @Column(name = "romaji", length = 150)
+    private String romaji;
+
+    @Column(name = "han_viet", length = 200)
+    private String hanViet;
 
     @Builder.Default
     @Column(name = "sense_no", nullable = false)
@@ -93,5 +104,23 @@ public class Vocabulary extends SoftDeletableEntity {
     @Column(name = "data_source", length = 100)
     private String dataSource;
 
+    @Builder.Default
+    @OneToMany(mappedBy = "vocabulary", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position ASC")
+    private List<VocabularyCharacter> vocabularyCharacters = new ArrayList<>();
 
+    @Builder.Default
+    @OneToMany(mappedBy = "vocabulary", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("senseNo ASC")
+    private List<VocabularySense> senses = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "vocabulary", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    private List<VocabularyExample> examples = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "vocabulary", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("priority ASC")
+    private List<VocabularyReading> readings = new ArrayList<>();
 }
