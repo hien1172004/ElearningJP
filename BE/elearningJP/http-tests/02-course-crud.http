@@ -1,0 +1,154 @@
+### Variables (chạy 01-auth.http trước)
+@baseUrl = http://localhost:8080/api/v1
+@teacherToken = {{teacherLogin.response.body.data.accessToken}}
+@studentToken = {{studentLogin.response.body.data.accessToken}}
+
+### ============================================================
+### 2.1) TEACHER tạo course (lưu id để dùng cho các test sau)
+### ============================================================
+# @name createCourseN5
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "JLPT N5 Cơ Bản",
+  "slug": "jlpt-n5-co-ban",
+  "jlptLevel": "N5",
+  "description": "Khóa học NJLPT N5 dành cho người mới bắt đầu",
+  "thumbnailUrl": "https://example.com/n5.jpg"
+}
+
+###
+@courseId = {{createCourseN5.response.body.data.id}}
+
+### ============================================================
+### 2.2) TEACHER tạo course thứ 2 (cho test list/filter)
+### ============================================================
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "JLPT N4 Trung Cấp",
+  "slug": "jlpt-n4-trung-cap",
+  "jlptLevel": "N4",
+  "description": "Khóa học N4"
+}
+
+### ============================================================
+### 2.3) (EXPECTED 409) Tạo course với slug đã tồn tại
+### ============================================================
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Trùng slug",
+  "slug": "jlpt-n5-co-ban",
+  "jlptLevel": "N5"
+}
+
+### ============================================================
+### 2.4) (EXPECTED 401) USER tạo course - không đủ quyền
+### ============================================================
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "title": "Học sinh tạo course",
+  "slug": "student-course",
+  "jlptLevel": "N5"
+}
+
+### ============================================================
+### 2.5) GET course detail (public, course chưa publish)
+### ============================================================
+GET {{baseUrl}}/courses/{{courseId}}
+
+### ============================================================
+### 2.6) GET course theo slug (public)
+### ============================================================
+GET {{baseUrl}}/courses/slug/jlpt-n5-co-ban
+
+### ============================================================
+### 2.7) GET list course đã publish (public) - ban đầu sẽ rỗng
+### ============================================================
+GET {{baseUrl}}/courses
+
+### ============================================================
+### 2.8) GET course theo level N5 (public)
+### ============================================================
+GET {{baseUrl}}/courses/level/N5
+
+### ============================================================
+### 2.9) TEACHER update course
+### ============================================================
+PUT {{baseUrl}}/courses/{{courseId}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "description": "Đã cập nhật mô tả mới"
+}
+
+### ============================================================
+### 2.10) TEACHER publish course
+### ============================================================
+POST {{baseUrl}}/courses/{{courseId}}/publish
+Authorization: Bearer {{teacherToken}}
+
+### ============================================================
+### 2.11) GET list course đã publish - giờ phải có
+### ============================================================
+GET {{baseUrl}}/courses
+
+### ============================================================
+### 2.11a) GET list với pagination cơ bản (page 0, size 10)
+### ============================================================
+GET {{baseUrl}}/courses?page=0&size=10
+
+### ============================================================
+### 2.11b) GET list với sort theo createdAt giảm dần
+### ============================================================
+GET {{baseUrl}}/courses?page=0&size=10&sort=createdAt,desc
+
+### ============================================================
+### 2.11c) GET list - sort theo title tăng dần
+### ============================================================
+GET {{baseUrl}}/courses?page=0&size=20&sort=title,asc
+
+### ============================================================
+### 2.11d) GET list - multi-sort (jlptLevel ASC, createdAt DESC)
+### ============================================================
+GET {{baseUrl}}/courses?page=0&size=10&sort=jlptLevel,asc&sort=createdAt,desc
+
+### ============================================================
+### 2.11e) GET trang 2 (page=1 theo 0-indexed, không phải 1-indexed)
+### Lưu ý: Nếu chỉ có 1 record, trang này sẽ rỗng.
+### ============================================================
+GET {{baseUrl}}/courses?page=1&size=5
+
+### ============================================================
+### 2.12) TEACHER xem tất cả course của mình (admin endpoint)
+### ============================================================
+GET {{baseUrl}}/courses/admin/all
+Authorization: Bearer {{teacherToken}}
+
+### ============================================================
+### 2.13) (EXPECTED 403) TEACHER update course của TEACHER khác
+### ============================================================
+# Cần tạo thêm 1 teacher khác trước, skip trong file này
+
+### ============================================================
+### 2.14) TEACHER archive course
+### ============================================================
+POST {{baseUrl}}/courses/{{courseId}}/archive
+Authorization: Bearer {{teacherToken}}
+
+### ============================================================
+### 2.15) TEACHER unpublish course
+### ============================================================
+POST {{baseUrl}}/courses/{{courseId}}/unpublish
+Authorization: Bearer {{teacherToken}}

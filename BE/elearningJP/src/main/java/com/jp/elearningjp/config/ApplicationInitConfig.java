@@ -37,24 +37,38 @@ public class ApplicationInitConfig {
         log.info("Initializing application.....");
         return args -> {
             if (userRepository.findUserByEmail(ADMIN_USER_EMAIL).isEmpty()) {
-
                 log.info("Saving roles...");
-                Role teacher = roleRepository.save(Role.builder()
-                        .name(PredefinedRole.TEACHER_ROLE)
-                        .description("teacher role")
-                        .build());
-                log.info("Saved role: {}", teacher.getName());
-                roleRepository.save(Role.builder()
-                        .name(PredefinedRole.USER_ROLE)
-                        .description("user role")
-                        .build());
-                Role adminRole = roleRepository.save(Role.builder()
-                        .name(PredefinedRole.ADMIN_ROLE)
-                        .description("Admin role")
-                        .build());
+
+                Role teacherRole = roleRepository.findByName(PredefinedRole.TEACHER_ROLE)
+                        .orElseGet(() -> {
+                            Role saved = roleRepository.save(Role.builder()
+                                    .name(PredefinedRole.TEACHER_ROLE)
+                                    .description("teacher role")
+                                    .build());
+                            log.info("Saved role: {}", saved.getName());
+                            return saved;
+                        });
+
+                Role userRole = roleRepository.findByName(PredefinedRole.USER_ROLE)
+                        .orElseGet(() -> roleRepository.save(Role.builder()
+                                .name(PredefinedRole.USER_ROLE)
+                                .description("user role")
+                                .build()));
+
+                Role adminRole = roleRepository.findByName(PredefinedRole.ADMIN_ROLE)
+                        .orElseGet(() -> {
+                            Role saved = roleRepository.save(Role.builder()
+                                    .name(PredefinedRole.ADMIN_ROLE)
+                                    .description("Admin role")
+                                    .build());
+                            log.info("Saved role: {}", saved.getName());
+                            return saved;
+                        });
 
                 var roles = new HashSet<Role>();
                 roles.add(adminRole);
+                roles.add(userRole);
+                roles.add(teacherRole);
 
                 User user = User.builder()
                         .fullName("System Admin")
@@ -64,7 +78,6 @@ public class ApplicationInitConfig {
                         .build();
 
                 userRepository.save(user);
-
 
                 log.warn("admin user has been created with default password: admin, please change it");
             }

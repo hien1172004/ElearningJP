@@ -1,0 +1,66 @@
+### 0.0) Biến môi trường dùng chung
+@baseUrl = http://localhost:8080/api/v1
+@contentType = application/json
+
+### ============================================================
+### 1.1) Đăng ký TEACHER (dùng để tạo course)
+### ============================================================
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "teacher.jp@gmail.com",
+  "password": "Teacher@123",
+  "confirmPassword": "Teacher@123",
+  "fullName": "Yamada Tanaka Sensei"
+}
+
+### ============================================================
+### 1.2) Đăng ký USER thường (để enroll + làm lesson)
+### ============================================================
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "email": "student.jp@gmail.com",
+  "password": "Student@123",
+  "confirmPassword": "Student@123",
+  "fullName": "Nguyen Van A"
+}
+
+### ============================================================
+### 1.3) Đăng nhập TEACHER
+### ============================================================
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "teacher.jp@gmail.com",
+  "password": "Teacher@123"
+}
+
+### ============================================================
+### 1.4) Đăng nhập USER
+### ============================================================
+# @name studentLogin
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "student.jp@gmail.com",
+  "password": "Student@123"
+}
+
+###
+@studentToken = {{studentLogin.response.body.data.accessToken}}
+
+### ============================================================
+### 1.5) Verify token
+### ============================================================
+POST {{baseUrl}}/auth/introspect
+Content-Type: {{contentType}}
+Authorization: Bearer {{studentToken}}
+
+{
+  "token": "{{studentToken}}"
+}

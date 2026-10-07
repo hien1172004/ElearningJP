@@ -197,6 +197,7 @@ public class AuthService {
                 .expirationTime(Date.from(now.plus(validDuration, ChronoUnit.SECONDS)))
                 .jwtID(UUID.randomUUID().toString())
                 .claim("scope", buildScope(user))
+                .claim("userId", user.getId())
                 .build();
 
         SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), claims);

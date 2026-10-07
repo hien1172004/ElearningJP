@@ -1,0 +1,140 @@
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@studentToken = {{studentLogin.response.body.data.accessToken}}
+@courseId = {{createCourseN5.response.body.data.id}}
+
+### ============================================================
+### PRE-REQUISITE: Phải chạy 04-enrollment-flow đến bước 4.7
+### (student đã enroll ACTIVE) trước khi chạy file này
+### ============================================================
+
+@lesson1Id = {{createLesson1.response.body.data.id}}
+@lesson2Id = {{createLesson2.response.body.data.id}}
+
+### ============================================================
+### 5.1) Start lesson THEORY
+### ============================================================
+# @name startL1
+POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/start
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.2) Complete lesson THEORY (không score)
+### ============================================================
+POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/complete
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "score": null
+}
+
+### ============================================================
+### 5.3) (EXPECTED 400) Complete lại lesson đã complete
+### ============================================================
+POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/complete
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "score": null
+}
+
+### ============================================================
+### 5.4) Start lesson VOCABULARY
+### ============================================================
+POST {{baseUrl}}/progress/lessons/{{lesson2Id}}/start
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.5) Complete lesson VOCABULARY
+### ============================================================
+POST {{baseUrl}}/progress/lessons/{{lesson2Id}}/complete
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "score": null
+}
+
+### ============================================================
+### 5.6) Complete MINI_TEST lần 1 với score 70
+### ============================================================
+# Tạo lesson MINI_TEST từ test 3.3
+@lesson3Id = {{createLesson3.response.body.data.id}}
+POST {{baseUrl}}/progress/lessons/{{lesson3Id}}/start
+Authorization: Bearer {{studentToken}}
+
+### ... (cần có lesson3 thực tế - xem 03-lesson-crud)
+
+###
+### Note: 2 lesson đã complete (lesson1 + lesson2) → progress 100% nếu course chỉ có 2 lesson
+### → Enrollment tự động COMPLETED
+
+### ============================================================
+### 5.7) GET progress 1 lesson
+### ============================================================
+GET {{baseUrl}}/progress/lessons/{{lesson1Id}}
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.8) GET toàn bộ progress trong course (kèm stats)
+### ============================================================
+GET {{baseUrl}}/progress/courses/{{courseId}}
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.9) Kiểm tra enrollment đã COMPLETED
+### ============================================================
+GET {{baseUrl}}/enrollments/me/active
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.10) (EXPECTED 400) Complete MINI_TEST không có score
+### ============================================================
+POST {{baseUrl}}/progress/lessons/{{lesson3Id}}/complete
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "score": null
+}
+
+### ============================================================
+### 5.11) Complete MINI_TEST với score 85
+### ============================================================
+POST {{baseUrl}}/progress/lessons/{{lesson3Id}}/complete
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "score": 85
+}
+
+### ============================================================
+### 5.12) (EXPECTED 400) Complete lại với score thấp hơn (bestScore 85)
+### → bestScore vẫn phải là 85
+### ============================================================
+# Lưu ý: hiện tại code reject re-complete; bestScore giữ nguyên qua lần đầu
+
+### ============================================================
+### 5.13) (EXPECTED 400) Complete THEORY với score (sai rule)
+### ============================================================
+POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/complete
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "score": 50
+}
+
+### ============================================================
+### 5.14) (EXPECTED 403) Complete lesson khi chưa enroll
+### ============================================================
+# Drop trước rồi mới complete
+POST {{baseUrl}}/enrollments/by-course/{{courseId}}/drop
+Authorization: Bearer {{studentToken}}
+
+### Sau đó:
+POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/start
+Authorization: Bearer {{studentToken}}

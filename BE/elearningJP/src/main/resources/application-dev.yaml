@@ -9,6 +9,11 @@ spring:
       minimum-idle: 5
   cache:
     type: redis
+    redis:
+      time-to-live: 600000          # default 10 phút (milliseconds)
+      cache-null-values: false       # không cache giá trị null
+      use-key-prefix: true           # caches jeden namespaced theo tên cache
+      key-prefix: "elearningjp:"     # prefix chung
 
   data:
     redis:

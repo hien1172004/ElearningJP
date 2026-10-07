@@ -28,23 +28,48 @@ public enum ErrorCode {
     INVALID_RESET_TOKEN(1014, "Reset token is invalid", HttpStatus.BAD_REQUEST),
     SAME_OLD_PASSWORD(1015, "New password must be different from old password", HttpStatus.BAD_REQUEST),
 
-    // Curriculum & Quiz (2000 - 2999)
-    COURSE_NOT_FOUND(2001, "Không tìm thấy khóa học", HttpStatus.NOT_FOUND),
-    COURSE_NOT_ENROLLED(2002, "Bạn chưa đăng ký khóa học này. Vui lòng đăng ký để học bài và làm bài kiểm tra!", HttpStatus.FORBIDDEN),
-    ALREADY_ENROLLED(2003, "Bạn đã đăng ký khóa học này rồi", HttpStatus.BAD_REQUEST),
-    LESSON_NOT_FOUND(2004, "Không tìm thấy bài học", HttpStatus.NOT_FOUND),
-    QUIZ_NOT_FOUND(2005, "Bài học này chưa có câu hỏi kiểm tra", HttpStatus.NOT_FOUND),
-    QUESTION_NOT_FOUND(2006, "Không tìm thấy câu hỏi", HttpStatus.NOT_FOUND),
-    SLUG_EXISTED(2007, "Đường dẫn khóa học (slug) đã tồn tại", HttpStatus.BAD_REQUEST),
+// CURRICULUM MODULE — Course (1100-1199)
+    COURSE_NOT_FOUND(1100, "Course not found", HttpStatus.NOT_FOUND),
+    COURSE_NOT_PUBLISHED(1101, "Course is not published", HttpStatus.BAD_REQUEST),
+    COURSE_ARCHIVED(1102, "Course is archived", HttpStatus.BAD_REQUEST),
+    COURSE_SLUG_ALREADY_EXISTS(1103, "Course slug already exists", HttpStatus.CONFLICT),
+    COURSE_DELETED(1104, "Course has been deleted", HttpStatus.GONE),
+
+    // CURRICULUM MODULE — Lesson (1200-1299)
+    LESSON_NOT_FOUND(1200, "Lesson not found", HttpStatus.NOT_FOUND),
+    LESSON_TYPE_INVALID(1201, "Invalid lesson type", HttpStatus.BAD_REQUEST),
+    LESSON_ORDER_CONFLICT(1202, "Order index already used in this course", HttpStatus.CONFLICT),
+
+    // CURRICULUM MODULE — Enrollment (1300-1399)
+    ENROLLMENT_NOT_FOUND(1300, "Enrollment not found", HttpStatus.NOT_FOUND),
+    ALREADY_ENROLLED(1301, "User already enrolled in this course", HttpStatus.CONFLICT),
+    NOT_ENROLLED(1302, "User is not enrolled in this course", HttpStatus.FORBIDDEN),
+    ENROLLMENT_DROPPED(1303, "Enrollment has been dropped", HttpStatus.BAD_REQUEST),
+
+    // CURRICULUM MODULE — Progress (1400-1499)
+    PROGRESS_NOT_FOUND(1400, "Lesson progress not found", HttpStatus.NOT_FOUND),
+    PROGRESS_ALREADY_COMPLETED(1401, "Lesson already completed", HttpStatus.BAD_REQUEST),
+    CANNOT_COMPLETE_LESSON(1402, "Cannot mark this lesson as complete", HttpStatus.BAD_REQUEST),
+    INVALID_BEST_SCORE(1403, "Best score is invalid for non MINI_TEST course", HttpStatus.BAD_REQUEST),
+
+    // CURRICULUM MODULE — Authorization (1500-1599)
+    FORBIDDEN_COURSE_ACCESS(1500, "You don't have permission to access this course", HttpStatus.FORBIDDEN),
+    FORBIDDEN_LESSON_ACCESS(1501, "You don't have permission to access this lesson", HttpStatus.FORBIDDEN),
+    FORBIDDEN_PROGRESS_ACCESS(1502, "You don't have permission to update this progress", HttpStatus.FORBIDDEN),
+
+    // CURRICULUM MODULE — Quiz (2000-2999)
+    COURSE_NOT_ENROLLED(2002, "You are not enrolled in this course. Please enroll to access lessons and quizzes!", HttpStatus.FORBIDDEN),
+    QUIZ_NOT_FOUND(2005, "This lesson has no quiz", HttpStatus.NOT_FOUND),
+    QUESTION_NOT_FOUND(2006, "Question not found", HttpStatus.NOT_FOUND),
 
     // SRS Module (3000 - 3999)
-    SRS_ITEM_NOT_FOUND(3001, "Không tìm thấy thẻ ôn tập", HttpStatus.NOT_FOUND),
-    SRS_ITEM_ALREADY_EXISTS(3002, "Mục này đã tồn tại trong danh sách ôn tập SRS của bạn", HttpStatus.BAD_REQUEST),
-    SRS_ITEM_ACCESS_DENIED(3003, "Bạn không có quyền truy cập thẻ ôn tập này", HttpStatus.FORBIDDEN),
-    VOCAB_NOT_FOUND(3004, "Không tìm thấy từ vựng tương ứng", HttpStatus.NOT_FOUND),
-    CHARACTER_NOT_FOUND(3005, "Không tìm thấy chữ Hán tương ứng", HttpStatus.NOT_FOUND),
-    GRAMMAR_NOT_FOUND(3006, "Không tìm thấy điểm ngữ pháp tương ứng", HttpStatus.NOT_FOUND),
-    INVALID_SRS_REQUEST(3007, "Yêu cầu thêm vào SRS không hợp lệ (cần chọn từ vựng, chữ Hán hoặc ngữ pháp)", HttpStatus.BAD_REQUEST)
+    SRS_ITEM_NOT_FOUND(3001, "Srs item not found", HttpStatus.NOT_FOUND),
+    SRS_ITEM_ALREADY_EXISTS(3002, "Item already exists in your SRS review list", HttpStatus.BAD_REQUEST),
+    SRS_ITEM_ACCESS_DENIED(3003, "You don't have permission to access this Srs item", HttpStatus.FORBIDDEN),
+    VOCAB_NOT_FOUND(3004, "Corresponding vocab not found", HttpStatus.NOT_FOUND),
+    CHARACTER_NOT_FOUND(3005, "Corresponding kanji not found", HttpStatus.NOT_FOUND),
+    GRAMMAR_NOT_FOUND(3006, "Corresponding grammar point not found", HttpStatus.NOT_FOUND),
+    INVALID_SRS_REQUEST(3007, "Invalid SRS add request (need to select vocab, kanji or grammar)", HttpStatus.BAD_REQUEST)
     ;
 
 

@@ -8,6 +8,7 @@ import com.jp.elearningjp.service.curriculum.LessonService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,13 +41,14 @@ public class LessonController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.Course.BASE + ApiPaths.Course.LESSONS)
     public ApiResponse<LessonDetailResponse> createLesson(
-            @PathVariable Long id,
+            @Parameter(description = "ID của khóa học chứa bài học", example = "1", required = true)
+            @PathVariable("courseId") Long courseId,
             @Valid @RequestBody LessonCreateRequest request
     ) {
         return ApiResponse.<LessonDetailResponse>builder()
                 .success(true)
                 .message("Thêm bài học vào khóa học thành công")
-                .data(lessonService.createLesson(id, request))
+                .data(lessonService.createLesson(courseId, request))
                 .build();
     }
 

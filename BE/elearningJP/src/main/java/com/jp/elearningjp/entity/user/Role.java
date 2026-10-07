@@ -9,7 +9,7 @@ import lombok.experimental.FieldDefaults;
 
 import java.util.Set;
 
-@Entity(name = "Role")
+@Entity(name = "roles")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
 @RequiredArgsConstructor

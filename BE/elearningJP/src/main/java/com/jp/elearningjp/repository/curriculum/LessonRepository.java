@@ -18,6 +18,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     long countByCourseIdAndDeletedFalse(Long courseId);
 
+    long countByCourse_IdAndDeletedFalse(Long courseId);
+
     @Query("SELECT COALESCE(MAX(l.orderIndex), 0) FROM Lesson l WHERE l.course.id = :courseId AND l.deleted = false")
     Integer findMaxOrderIndexByCourseId(@Param("courseId") Long courseId);
 }

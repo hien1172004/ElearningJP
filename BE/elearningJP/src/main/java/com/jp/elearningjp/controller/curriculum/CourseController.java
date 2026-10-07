@@ -51,17 +51,6 @@ public class CourseController {
                 .build();
     }
 
-    @Operation(summary = "Đăng ký tham gia khóa học", description = "Học viên bấm tham gia khóa học để mở khóa toàn bộ bài giảng và bài kiểm tra")
-    @SecurityRequirement(name = "bearerAuth")
-    @PostMapping(ApiPaths.Course.ENROLL)
-    public ApiResponse<Void> enrollCourse(@PathVariable Long id) {
-        courseService.enrollCourse(id);
-        return ApiResponse.<Void>builder()
-                .success(true)
-                .message("Đăng ký khóa học thành công! Bạn có thể bắt đầu học ngay.")
-                .build();
-    }
-
     @Operation(summary = "Xem % tiến độ học tập của khóa học", description = "Xem số bài đã hoàn thành và % tiến độ của học viên trong khóa")
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping(ApiPaths.Course.PROGRESS)

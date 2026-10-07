@@ -1,0 +1,82 @@
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@teacherToken = {{teacherLogin.response.body.data.accessToken}}
+@studentToken = {{studentLogin.response.body.data.accessToken}}
+@courseId = {{createCourseN5.response.body.data.id}}
+
+### ============================================================
+### 4.1) Student enroll vào course
+### ============================================================
+# @name enroll
+POST {{baseUrl}}/courses/{{courseId}}/enroll
+Authorization: Bearer {{studentToken}}
+
+###
+@enrollmentId = {{enroll.response.body.data.id}}
+
+### ============================================================
+### 4.2) (EXPECTED 409) Enroll lần 2 (đã ACTIVE)
+### ============================================================
+POST {{baseUrl}}/courses/{{courseId}}/enroll
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.3) GET my enrollments
+### ============================================================
+GET {{baseUrl}}/enrollments/me
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.4) GET my active enrollments
+### ============================================================
+GET {{baseUrl}}/enrollments/me/active
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.5) GET enrollment detail
+### ============================================================
+GET {{baseUrl}}/enrollments/{{enrollmentId}}
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.6) (EXPECTED 403) Xem enrollment của người khác
+### ============================================================
+GET {{baseUrl}}/enrollments/{{enrollmentId}}
+Authorization: Bearer {{teacherToken}}
+
+### ============================================================
+### 4.7) GET course detail - giờ student đã enroll → contentMarkdown có
+### ============================================================
+GET {{baseUrl}}/courses/{{courseId}}
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.8) GET lesson detail - student đã enroll → OK
+### ============================================================
+@lesson1Id = {{createLesson1.response.body.data.id}}
+GET {{baseUrl}}/courses/{{courseId}}/lessons/{{lesson1Id}}
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.9) Drop enrollment theo enrollmentId
+### ============================================================
+POST {{baseUrl}}/enrollments/{{enrollmentId}}/drop
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.10) (EXPECTED 400) Drop lần 2
+### ============================================================
+POST {{baseUrl}}/enrollments/{{enrollmentId}}/drop
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.11) Re-enroll
+### ============================================================
+POST {{baseUrl}}/courses/{{courseId}}/enroll
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 4.12) Drop theo courseId (tiện cho FE)
+### ============================================================
+POST {{baseUrl}}/enrollments/by-course/{{courseId}}/drop
+Authorization: Bearer {{studentToken}}
