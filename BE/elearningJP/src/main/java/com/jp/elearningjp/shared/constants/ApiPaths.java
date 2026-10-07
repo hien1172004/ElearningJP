@@ -1,6 +1,5 @@
 package com.jp.elearningjp.shared.constants;
 
-
 public final class ApiPaths {
 
     public static final String API_V1 = "/api/v1";
@@ -20,9 +19,37 @@ public final class ApiPaths {
         public static final String BASE = "/users";
         public static final String ME = "/me";
         public static final String CHANGE_PASSWORD = "/change-password";
-        public static final String CHANGE_AVATAR = "/change-avatar" ;
+        public static final String CHANGE_AVATAR = "/change-avatar";
         public static final String LOCK = "/lock";
         public static final String UNLOCK = "/unlock";
         public static final String STAFF = "/staff";
+    }
+
+    public static final class Course {
+        public static final String BASE = "/courses";
+        public static final String BY_ID = "/{id}";
+        public static final String ENROLL = "/{id}/enroll";
+        public static final String PROGRESS = "/{id}/progress";
+        public static final String PUBLISH = "/{id}/publish";
+        public static final String LESSONS = "/{id}/lessons";
+    }
+
+    public static final class Lesson {
+        public static final String BASE = "/lessons";
+        public static final String BY_ID = "/{id}";
+        public static final String COMPLETE = "/{id}/complete";
+        public static final String QUIZ = "/{id}/quiz";
+        public static final String QUIZ_SUBMIT = "/{id}/quiz/submit";
+        public static final String QUIZ_QUESTIONS = "/{id}/quiz/questions";
+    }
+
+    public static final class Srs {
+        public static final String BASE = "/srs";
+        public static final String DUE = "/due";
+        public static final String ITEMS = "/items";
+        public static final String BATCH = "/batch";
+        public static final String LESSON_ADD_ALL = "/lessons/{lessonId}/add-all";
+        public static final String REVIEW = "/items/{id}/review";
+        public static final String STATS = "/stats";
     }
 }

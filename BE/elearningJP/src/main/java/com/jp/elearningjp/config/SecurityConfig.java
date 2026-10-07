@@ -39,7 +39,10 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             // Auth
-            "/api/v1/auth/reset-password/validate"
+            "/api/v1/auth/reset-password/validate",
+            // Public courses browsing
+            "/api/v1/courses",
+            "/api/v1/courses/{id:[0-9]+}"
     };
 
     private final CustomJwtDecoder customJwtDecoder;
