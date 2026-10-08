@@ -125,3 +125,17 @@ CREATE INDEX IF NOT EXISTS idx_vocab_word_trgm
 
 CREATE INDEX IF NOT EXISTS idx_vocab_meaning_vi_trgm 
     ON vocabulary USING gin (meaning_vi gin_trgm_ops);
+
+-- -----------------------------------------------------------------------------
+-- 7. CHUẨN HÓA BẢNG character_strokes VÀ writing_characters (CHO KANJIVG & SEED)
+-- -----------------------------------------------------------------------------
+ALTER TABLE character_strokes
+    ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS svg_path_data TEXT,
+    ADD COLUMN IF NOT EXISTS sample_points_json JSONB DEFAULT '[]'::jsonb;
+
+ALTER TABLE character_strokes ALTER COLUMN svg_path DROP NOT NULL;
+
+ALTER TABLE writing_characters 
+    ALTER COLUMN radicals TYPE TEXT[] USING string_to_array(radicals, ',');
