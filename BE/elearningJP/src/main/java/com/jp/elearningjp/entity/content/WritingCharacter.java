@@ -67,8 +67,9 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Column(name = "jlpt_level", length = 2)
     private JlptLevel jlptLevel;
 
-    @Column(name = "radicals", length = 50)
-    private String radicals;
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "radicals", columnDefinition = "text[]")
+    private List<String> radicals;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)

@@ -31,5 +31,13 @@ FE/**/.cache/
 .DS_Store
 Thumbs.db
 .vscode/
+.idea/
+*.iml
 *.swp
 *.tmp
+
+# Media & Tools
+BE/**/src/main/resources/static/audio/
+BE/**/tools/
+AGENTS.md
+**/AGENTS.md

@@ -1,18 +1,10 @@
 package com.jp.elearningjp.entity.content;
 
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
 
-/**
- * Liên kết giữa từ vựng và từng chữ Hán cấu thành (phục vụ phân tích chữ Hán kiểu Mazii).
- */
 @Entity
 @Table(name = "vocabulary_characters")
 @DynamicInsert
@@ -38,4 +30,10 @@ public class VocabularyCharacter extends SoftDeletableEntity {
     @Builder.Default
     @Column(name = "is_ateji", nullable = false)
     private boolean ateji = false;
+
+    @Column(name = "reading_type", length = 20)
+    private String readingType;
+
+    @Column(name = "reading", length = 50)
+    private String reading;
 }

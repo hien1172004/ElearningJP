@@ -74,3 +74,11 @@ springdoc:
     try-it-out-enabled: true
     persistAuthorization: true
     filter: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  health:
+    mail:
+      enabled: false
