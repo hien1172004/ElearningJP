@@ -20,4 +20,6 @@ public class QuizOptionRequest {
 
     @Builder.Default
     boolean correct = false;
+
+    String matchKey; // Khóa định danh ô ghép (nếu là dạng MATCHING)
 }

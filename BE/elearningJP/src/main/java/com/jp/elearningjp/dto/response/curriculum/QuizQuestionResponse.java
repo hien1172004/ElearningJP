@@ -15,5 +15,7 @@ public class QuizQuestionResponse {
     Long id;
     String questionText;
     Integer orderIndex;
-    List<QuizOptionResponse> options; // Danh sách 4 lựa chọn không có đáp án đúng
+    com.jp.elearningjp.shared.enums.QuizQuestionType questionType;
+    com.fasterxml.jackson.databind.JsonNode matchingData; // Dữ liệu ô trống / câu nối (nếu là dạng MATCHING, đã ẩn đáp án đúng)
+    List<QuizOptionResponse> options; // Danh sách các lựa chọn (cho MULTIPLE_CHOICE hoặc MATCHING)
 }

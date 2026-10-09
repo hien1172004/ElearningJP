@@ -24,12 +24,17 @@ public class QuizQuestionCreateRequest {
     @Builder.Default
     Integer orderIndex = 1;
 
+    @Builder.Default
+    com.jp.elearningjp.shared.enums.QuizQuestionType questionType = com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE;
+
+    String correctTextAnswer; // Đáp án đúng nếu dạng FILL_IN_THE_BLANK
+
+    com.fasterxml.jackson.databind.JsonNode matchingData; // Cấu trúc ô trống / cột nối nếu dạng MATCHING
+
     Long vocabId;
 
     Long characterId;
 
-    @NotEmpty(message = "Phải có ít nhất 2 phương án lựa chọn")
-    @Size(min = 2, max = 4, message = "Số lượng lựa chọn từ 2 đến 4 phương án")
     @Valid
-    List<QuizOptionRequest> options;
+    List<QuizOptionRequest> options; // Phương án lựa chọn (cho MULTIPLE_CHOICE hoặc MATCHING)
 }

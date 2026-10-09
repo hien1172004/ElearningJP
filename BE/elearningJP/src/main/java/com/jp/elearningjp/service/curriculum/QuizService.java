@@ -105,6 +105,8 @@ public class QuizService {
                             .id(q.getId())
                             .questionText(q.getQuestionText())
                             .orderIndex(q.getOrderIndex())
+                            .questionType(q.getQuestionType())
+                            .matchingData(q.getMatchingData())
                             .options(optionResponses)
                             .build();
                 })
@@ -158,39 +160,99 @@ public class QuizService {
         List<QuizDetailItemResponse> details = new ArrayList<>();
 
         for (QuizQuestion question : questions) {
-            List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(question.getId());
-            QuizOption correctOption = options.stream()
-                    .filter(QuizOption::isCorrect)
-                    .findFirst()
-                    .orElse(null);
-
             QuizAnswerItem answerItem = userAnswers.get(question.getId());
-            Long selectedOptionId = answerItem != null ? answerItem.getSelectedOptionId() : null;
             Integer responseTimeMs = answerItem != null ? answerItem.getResponseTimeMs() : null;
+            boolean isCorrect = false;
 
-            QuizOption selectedOption = options.stream()
-                    .filter(opt -> opt.getId().equals(selectedOptionId))
-                    .findFirst()
-                    .orElse(null);
+            QuizDetailItemResponse.QuizDetailItemResponseBuilder detailBuilder = QuizDetailItemResponse.builder()
+                    .questionId(question.getId())
+                    .questionText(question.getQuestionText())
+                    .questionType(question.getQuestionType())
+                    .explanation(question.getExplanation());
 
-            boolean isCorrect = (selectedOption != null && correctOption != null && selectedOption.getId().equals(correctOption.getId()));
+            if (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.FILL_IN_THE_BLANK) {
+                // Dạng 1: Tự gõ đáp án vào ô trống
+                String userText = (answerItem != null && answerItem.getTextAnswer() != null)
+                        ? answerItem.getTextAnswer().trim()
+                        : "";
+                String correctText = question.getCorrectTextAnswer() != null ? question.getCorrectTextAnswer().trim() : "";
+
+                // So sánh không phân biệt hoa thường hoặc khoảng trắng thừa
+                isCorrect = !correctText.isEmpty() && userText.equalsIgnoreCase(correctText);
+
+                detailBuilder.userTextAnswer(userText)
+                        .correctTextAnswer(correctText)
+                        .isCorrect(isCorrect);
+
+            } else if (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING) {
+                // Dạng 2: Kéo thả nối cặp / điền ô trống (MATCHING)
+                List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(question.getId());
+                Map<String, String> userPairs = (answerItem != null && answerItem.getMatchingAnswers() != null)
+                        ? answerItem.getMatchingAnswers()
+                        : Collections.emptyMap();
+
+                // Đếm số ô ghép đúng và tổng số ô cần ghép
+                Map<String, String> correctPairs = new HashMap<>();
+                int validOptionsCount = 0;
+                int matchedCorrectCount = 0;
+                for (QuizOption opt : options) {
+                    if (opt.getMatchKey() != null && !opt.getMatchKey().isBlank()) {
+                        validOptionsCount++;
+                        correctPairs.put(opt.getMatchKey(), opt.getOptionText());
+                        String userMatchedValue = userPairs.get(opt.getMatchKey());
+                        if (userMatchedValue != null && userMatchedValue.trim().equalsIgnoreCase(opt.getOptionText().trim())) {
+                            matchedCorrectCount++;
+                        }
+                    }
+                }
+
+                double accuracy = validOptionsCount > 0 ? ((double) matchedCorrectCount / validOptionsCount * 100.0) : 0.0;
+                isCorrect = (validOptionsCount > 0 && matchedCorrectCount == validOptionsCount);
+
+                detailBuilder.isCorrect(isCorrect)
+                        .accuracyPercent(Math.round(accuracy * 10.0) / 10.0)
+                        .responseTimeMs(responseTimeMs)
+                        .matchingData(question.getMatchingData())
+                        .userMatchingAnswers(userPairs)
+                        .correctMatchingAnswers(correctPairs)
+                        .correctTextAnswer("Số ô ghép chính xác: " + matchedCorrectCount + "/" + validOptionsCount + " (" + Math.round(accuracy) + "%)");
+
+            } else {
+                // Dạng 3: Trắc nghiệm ABCD chọn 1 đáp án (MULTIPLE_CHOICE)
+                List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(question.getId());
+                QuizOption correctOption = options.stream()
+                        .filter(QuizOption::isCorrect)
+                        .findFirst()
+                        .orElse(null);
+
+                Long selectedOptionId = answerItem != null ? answerItem.getSelectedOptionId() : null;
+                QuizOption selectedOption = options.stream()
+                        .filter(opt -> opt.getId().equals(selectedOptionId))
+                        .findFirst()
+                        .orElse(null);
+
+                isCorrect = (selectedOption != null && correctOption != null && selectedOption.getId().equals(correctOption.getId()));
+
+                detailBuilder.selectedOptionId(selectedOptionId)
+                        .selectedOptionText(selectedOption != null ? selectedOption.getOptionText() : "Chưa chọn")
+                        .correctOptionId(correctOption != null ? correctOption.getId() : null)
+                        .correctOptionText(correctOption != null ? correctOption.getOptionText() : "")
+                        .responseTimeMs(responseTimeMs)
+                        .accuracyPercent(isCorrect ? 100.0 : 0.0)
+                        .isCorrect(isCorrect);
+            }
+
             if (isCorrect) {
                 correctCount++;
             }
 
-            // Tự động đồng bộ kết quả câu hỏi trắc nghiệm vào SRS
-            syncQuestionResultToSrs(currentUser, question, isCorrect, responseTimeMs);
+            // Tự động đồng bộ kết quả câu hỏi vào SRS dựa theo dạng câu hỏi, tỉ lệ đúng và thời gian làm bài
+            Double accuracyForSrs = (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING)
+                    ? detailBuilder.build().getAccuracyPercent()
+                    : (isCorrect ? 100.0 : 0.0);
+            syncQuestionResultToSrs(currentUser, question, isCorrect, accuracyForSrs, responseTimeMs);
 
-            details.add(QuizDetailItemResponse.builder()
-                    .questionId(question.getId())
-                    .questionText(question.getQuestionText())
-                    .selectedOptionId(selectedOptionId)
-                    .selectedOptionText(selectedOption != null ? selectedOption.getOptionText() : "Chưa chọn")
-                    .correctOptionId(correctOption != null ? correctOption.getId() : null)
-                    .correctOptionText(correctOption != null ? correctOption.getOptionText() : "")
-                    .isCorrect(isCorrect)
-                    .explanation(question.getExplanation())
-                    .build());
+            details.add(detailBuilder.build());
         }
 
         // Tính điểm phần trăm
@@ -264,6 +326,9 @@ public class QuizService {
                 .questionText(request.getQuestionText())
                 .explanation(request.getExplanation())
                 .orderIndex(orderIndex)
+                .questionType(request.getQuestionType() != null ? request.getQuestionType() : com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE)
+                .correctTextAnswer(request.getCorrectTextAnswer())
+                .matchingData(request.getMatchingData())
                 .build();
 
         if (request.getVocabId() != null) {
@@ -283,6 +348,7 @@ public class QuizService {
                         .optionKey(optReq.getOptionKey())
                         .optionText(optReq.getOptionText())
                         .correct(optReq.isCorrect())
+                        .matchKey(optReq.getMatchKey())
                         .build();
                 QuizOption savedOpt = optionRepository.save(option);
                 optionResponses.add(QuizOptionResponse.builder()
@@ -299,6 +365,8 @@ public class QuizService {
                 .id(savedQuestion.getId())
                 .questionText(savedQuestion.getQuestionText())
                 .orderIndex(savedQuestion.getOrderIndex())
+                .questionType(savedQuestion.getQuestionType())
+                .matchingData(savedQuestion.getMatchingData())
                 .options(optionResponses)
                 .build();
     }
@@ -320,13 +388,18 @@ public class QuizService {
     // SRS INTEGRATION HELPER METHODS
     // =========================================================
 
-    private void syncQuestionResultToSrs(User user, QuizQuestion question, boolean isCorrect, Integer responseTimeMs) {
+    private void syncQuestionResultToSrs(User user, QuizQuestion question, boolean isCorrect, Double accuracyPercent, Integer responseTimeMs) {
         // Chỉ xử lý nếu câu hỏi gắn liền với từ vựng hoặc chữ Hán
         if (question.getVocab() == null && question.getCharacter() == null) {
             return;
         }
 
-        SrsRating rating = determineRating(isCorrect, responseTimeMs);
+        SrsRating rating;
+        if (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING) {
+            rating = determineMatchingRating(accuracyPercent != null ? accuracyPercent : (isCorrect ? 100.0 : 0.0), responseTimeMs);
+        } else {
+            rating = determineRating(isCorrect, responseTimeMs);
+        }
 
         SrsItem srsItem = null;
         if (question.getVocab() != null) {
@@ -395,6 +468,29 @@ public class QuizService {
                 .reviewedAt(Instant.now())
                 .build();
         srsReviewLogRepository.save(logEntity);
+    }
+
+    /**
+     * Xác định mức SRS cho dạng MATCHING dựa trên Tỉ lệ chính xác (%) và Thời gian làm bài
+     */
+    private SrsRating determineMatchingRating(double accuracyPercent, Integer responseTimeMs) {
+        if (accuracyPercent < 60.0) {
+            // Dưới 60% đúng -> Học lại ngay
+            return SrsRating.AGAIN;
+        } else if (accuracyPercent < 100.0) {
+            // Đúng đa số (60% - 99%) nhưng còn lỗi -> Khó nhớ
+            return SrsRating.HARD;
+        } else {
+            // Đúng tuyệt đối 100%
+            if (responseTimeMs != null && responseTimeMs < 10000) {
+                // Hoàn thành xuất sắc dưới 10 giây -> Quá dễ
+                return SrsRating.EASY;
+            } else if (responseTimeMs != null && responseTimeMs > 30000) {
+                // Đúng 100% nhưng mất hơn 30s suy nghĩ kéo thả -> Khó
+                return SrsRating.HARD;
+            }
+            return SrsRating.GOOD; // Phản xạ chuẩn
+        }
     }
 
     private SrsRating determineRating(boolean isCorrect, Integer responseTimeMs) {

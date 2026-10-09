@@ -14,8 +14,14 @@ public class QuizAnswerItem {
     @NotNull(message = "ID câu hỏi không được để trống")
     Long questionId;
 
-    @NotNull(message = "ID phương án lựa chọn không được để trống")
+    // Dùng cho dạng MULTIPLE_CHOICE
     Long selectedOptionId;
+
+    // Dùng cho dạng FILL_IN_THE_BLANK (tự gõ đáp án)
+    String textAnswer;
+
+    // Dùng cho dạng MATCHING: Map giữa mã ô trống (targetKey) -> nội dung/key được kéo vào (selectedKey)
+    java.util.Map<String, String> matchingAnswers;
 
     Integer responseTimeMs;
 }
