@@ -31,6 +31,18 @@ public class QuizQuestion extends SoftDeletableEntity {
     private String explanation;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "question_type", nullable = false, length = 30)
+    private com.jp.elearningjp.shared.enums.QuizQuestionType questionType = com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE;
+
+    @Column(name = "correct_text_answer", columnDefinition = "text")
+    private String correctTextAnswer;
+
+    @Column(name = "matching_data", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    private com.fasterxml.jackson.databind.JsonNode matchingData;
+
+    @Builder.Default
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex = 1;
 

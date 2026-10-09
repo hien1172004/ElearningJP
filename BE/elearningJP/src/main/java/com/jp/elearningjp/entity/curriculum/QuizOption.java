@@ -28,4 +28,7 @@ public class QuizOption extends SoftDeletableEntity {
     @Builder.Default
     @Column(name = "is_correct", nullable = false)
     private boolean correct = false;
+
+    @Column(name = "match_key", length = 100)
+    private String matchKey; // Dành cho dạng MATCHING (khóa liên kết giữa câu/ô trống và đáp án)
 }
