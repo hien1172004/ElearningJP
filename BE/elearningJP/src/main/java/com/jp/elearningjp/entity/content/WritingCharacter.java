@@ -46,13 +46,15 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Column(name = "stroke_count", nullable = false)
     private Integer strokeCount;
 
-    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "onyomi", columnDefinition = "text[]")
-    private List<String> onyomi;
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private String[] onyomi;
 
-    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "kunyomi", columnDefinition = "text[]")
-    private List<String> kunyomi;
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private String[] kunyomi;
 
     @Column(name = "han_viet", length = 100)
     private String hanViet;
@@ -67,9 +69,10 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Column(name = "jlpt_level", length = 2)
     private JlptLevel jlptLevel;
 
-    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "radicals", columnDefinition = "text[]")
-    private List<String> radicals;
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
+    private String[] radicals;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)
@@ -107,5 +110,29 @@ public class WritingCharacter extends SoftDeletableEntity {
     public void removeStroke(CharacterStroke child) {
         strokes.remove(child);
         child.setCharacter(null);
+    }
+
+    public List<String> getOnyomi() {
+        return onyomi != null ? java.util.Arrays.asList(onyomi) : java.util.Collections.emptyList();
+    }
+
+    public void setOnyomi(List<String> list) {
+        this.onyomi = (list != null) ? list.toArray(new String[0]) : null;
+    }
+
+    public List<String> getKunyomi() {
+        return kunyomi != null ? java.util.Arrays.asList(kunyomi) : java.util.Collections.emptyList();
+    }
+
+    public void setKunyomi(List<String> list) {
+        this.kunyomi = (list != null) ? list.toArray(new String[0]) : null;
+    }
+
+    public List<String> getRadicals() {
+        return radicals != null ? java.util.Arrays.asList(radicals) : java.util.Collections.emptyList();
+    }
+
+    public void setRadicals(List<String> list) {
+        this.radicals = (list != null) ? list.toArray(new String[0]) : null;
     }
 }

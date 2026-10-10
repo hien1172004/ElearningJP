@@ -73,6 +73,7 @@ public class GlobalExceptionHandle {
 
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ApiResponse<?>> handleGenericException(Exception e) {
+        org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class).error("Uncaught exception: ", e);
         ErrorCode errorCode = ErrorCode.UNCAUGHT_EXCEPTION;
         return ResponseEntity.status(errorCode.getHttpStatusCode()).body(
                 ApiResponse.builder()

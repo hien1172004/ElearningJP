@@ -1,7 +1,7 @@
 import React from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { MainLayout, AuthLayout } from '@/layouts'
-import { HomePage, LoginPage } from '@/pages'
+import { HomePage, LoginPage, DictionaryPage } from '@/pages'
 
 export const router = createBrowserRouter([
   {
@@ -9,6 +9,7 @@ export const router = createBrowserRouter([
     element: <MainLayout />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: 'dictionary', element: <DictionaryPage /> },
     ],
   },
   {

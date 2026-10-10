@@ -46,7 +46,9 @@ public class SecurityConfig {
             "/api/v1/courses/slug/*",
             "/api/v1/courses/level/*",
             "/api/v1/courses/*/lessons",
-            "/api/v1/courses/*/lessons/*"
+            "/api/v1/courses/*/lessons/*",
+            // Tra cứu từ điển & Bảng chữ cái công khai
+            "/api/v1/dictionary/**"
             // POST /api/v1/courses/*/lessons/reorder cần auth (owner/admin) - để mặc định
     };
 
