@@ -77,4 +77,18 @@ public final class ApiPaths {
         public static final String REVIEW = "/items/{id}/review";
         public static final String STATS = "/stats";
     }
+
+    public static final class Dictionary {
+        public static final String BASE = "/dictionary";
+        public static final String SEARCH = "/search";
+        public static final String SEARCH_VOCAB = "/search/vocab";
+        public static final String SEARCH_KANJI = "/search/kanji";
+        public static final String SEARCH_GRAMMAR = "/search/grammar";
+        public static final String VOCAB = "/vocab/{id}";
+        public static final String KANJI = "/kanji/{character}";
+        public static final String GRAMMAR = "/grammar/{id}";
+        public static final String KANA = "/kana";
+        public static final String KANA_DETAIL = "/kana/{character}";
+        public static final String QUICK_LOOKUP = "/quick-lookup";
+    }
 }

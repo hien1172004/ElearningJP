@@ -13,6 +13,10 @@ spring:
       maximum-pool-size: 10
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
+  data:
+    redis:
+      repositories:
+        enabled: false
   config:
     import: optional:file:.env[.properties]
 
