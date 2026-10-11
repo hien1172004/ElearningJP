@@ -9,7 +9,10 @@ import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
 import com.jp.elearningjp.entity.content.GrammarPoint;
 import com.jp.elearningjp.entity.content.Vocabulary;
 import com.jp.elearningjp.entity.content.WritingCharacter;
-import com.jp.elearningjp.entity.curriculum.LessonItem;
+import com.jp.elearningjp.entity.curriculum.LessonGrammarItem;
+import com.jp.elearningjp.entity.curriculum.LessonKanjiItem;
+import com.jp.elearningjp.entity.curriculum.LessonSection;
+import com.jp.elearningjp.entity.curriculum.LessonVocabularyItem;
 import com.jp.elearningjp.entity.srs.SrsItem;
 import com.jp.elearningjp.entity.srs.SrsReviewLog;
 import com.jp.elearningjp.entity.user.User;
@@ -18,7 +21,10 @@ import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.repository.content.GrammarPointRepository;
 import com.jp.elearningjp.repository.content.VocabularyRepository;
 import com.jp.elearningjp.repository.content.WritingCharacterRepository;
-import com.jp.elearningjp.repository.curriculum.LessonItemRepository;
+import com.jp.elearningjp.repository.curriculum.LessonGrammarItemRepository;
+import com.jp.elearningjp.repository.curriculum.LessonKanjiItemRepository;
+import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
+import com.jp.elearningjp.repository.curriculum.LessonVocabularyItemRepository;
 import com.jp.elearningjp.repository.srs.SrsItemRepository;
 import com.jp.elearningjp.repository.srs.SrsReviewLogRepository;
 import com.jp.elearningjp.repository.user.UserRepository;
@@ -26,6 +32,7 @@ import com.jp.elearningjp.service.srs.Sm2Algorithm;
 import com.jp.elearningjp.service.srs.SrsService;
 import com.jp.elearningjp.shared.enums.SrsCardType;
 import com.jp.elearningjp.shared.enums.SrsStatus;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -50,8 +57,12 @@ public class SrsServiceImpl implements SrsService {
     VocabularyRepository vocabularyRepository;
     WritingCharacterRepository writingCharacterRepository;
     GrammarPointRepository grammarPointRepository;
-    LessonItemRepository lessonItemRepository;
+    LessonSectionRepository lessonSectionRepository;
+    LessonKanjiItemRepository lessonKanjiItemRepository;
+    LessonVocabularyItemRepository lessonVocabularyItemRepository;
+    LessonGrammarItemRepository lessonGrammarItemRepository;
     UserRepository userRepository;
+    CurrentUserService currentUserService;
 
     @Override
     @Transactional(readOnly = true)
@@ -118,38 +129,63 @@ public class SrsServiceImpl implements SrsService {
     @Transactional
     public int batchAddFromLesson(Long userId, Long lessonId) {
         User user = getUser(userId);
-        List<LessonItem> lessonItems = lessonItemRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
+
+        // Đọc tất cả section (chưa xoá) của lesson, sắp xếp theo orderIndex
+        List<LessonSection> sections = lessonSectionRepository
+                .findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
 
         List<SrsItem> toSave = new ArrayList<>();
         Instant now = Instant.now();
 
-        for (LessonItem item : lessonItems) {
-            if (item.getVocab() != null) {
-                Long vocabId = item.getVocab().getId();
-                if (!srsItemRepository.existsByUserIdAndVocabIdAndDeletedFalse(userId, vocabId)) {
-                    toSave.add(SrsItem.builder()
-                            .user(user)
-                            .vocab(item.getVocab())
-                            .nextReviewAt(now)
-                            .build());
+        for (LessonSection section : sections) {
+            switch (section.getSectionType()) {
+                case KANJI -> {
+                    List<LessonKanjiItem> kanjiItems = lessonKanjiItemRepository
+                            .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
+                    for (LessonKanjiItem item : kanjiItems) {
+                        WritingCharacter character = item.getCharacter();
+                        Long charId = character.getId();
+                        if (!srsItemRepository.existsByUserIdAndCharacterIdAndDeletedFalse(userId, charId)) {
+                            toSave.add(SrsItem.builder()
+                                    .user(user)
+                                    .character(character)
+                                    .nextReviewAt(now)
+                                    .build());
+                        }
+                    }
                 }
-            } else if (item.getCharacter() != null) {
-                Long charId = item.getCharacter().getId();
-                if (!srsItemRepository.existsByUserIdAndCharacterIdAndDeletedFalse(userId, charId)) {
-                    toSave.add(SrsItem.builder()
-                            .user(user)
-                            .character(item.getCharacter())
-                            .nextReviewAt(now)
-                            .build());
+                case VOCABULARY -> {
+                    List<LessonVocabularyItem> vocabItems = lessonVocabularyItemRepository
+                            .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
+                    for (LessonVocabularyItem item : vocabItems) {
+                        Vocabulary vocab = item.getVocab();
+                        Long vocabId = vocab.getId();
+                        if (!srsItemRepository.existsByUserIdAndVocabIdAndDeletedFalse(userId, vocabId)) {
+                            toSave.add(SrsItem.builder()
+                                    .user(user)
+                                    .vocab(vocab)
+                                    .nextReviewAt(now)
+                                    .build());
+                        }
+                    }
                 }
-            } else if (item.getGrammar() != null) {
-                Long grammarId = item.getGrammar().getId();
-                if (!srsItemRepository.existsByUserIdAndGrammarIdAndDeletedFalse(userId, grammarId)) {
-                    toSave.add(SrsItem.builder()
-                            .user(user)
-                            .grammar(item.getGrammar())
-                            .nextReviewAt(now)
-                            .build());
+                case GRAMMAR -> {
+                    List<LessonGrammarItem> grammarItems = lessonGrammarItemRepository
+                            .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
+                    for (LessonGrammarItem item : grammarItems) {
+                        GrammarPoint grammar = item.getGrammar();
+                        Long grammarId = grammar.getId();
+                        if (!srsItemRepository.existsByUserIdAndGrammarIdAndDeletedFalse(userId, grammarId)) {
+                            toSave.add(SrsItem.builder()
+                                    .user(user)
+                                    .grammar(grammar)
+                                    .nextReviewAt(now)
+                                    .build());
+                        }
+                    }
+                }
+                case TEST -> {
+                    // Quiz không được thêm vào SRS
                 }
             }
         }
@@ -345,48 +381,39 @@ public class SrsServiceImpl implements SrsService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
-    public User getCurrentUserRequired() {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
-        return userRepository.findUserByEmail(auth.getName())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-    }
-
     @Override
     @Transactional(readOnly = true)
     public List<SrsDueItemResponse> getDueCards(int limit) {
-        return getDueCards(getCurrentUserRequired().getId(), limit);
+        return getDueCards(currentUserService.getCurrentUserId(), limit);
     }
 
     @Override
     @Transactional
     public SrsDueItemResponse addItem(SrsItemCreateRequest request) {
-        return addItem(getCurrentUserRequired().getId(), request);
+        return addItem(currentUserService.getCurrentUserId(), request);
     }
 
     @Override
     @Transactional
     public int batchAddFromLesson(Long lessonId) {
-        return batchAddFromLesson(getCurrentUserRequired().getId(), lessonId);
+        return batchAddFromLesson(currentUserService.getCurrentUserId(), lessonId);
     }
 
     @Override
     @Transactional
     public int batchAdd(SrsBatchCreateRequest request) {
-        return batchAdd(getCurrentUserRequired().getId(), request);
+        return batchAdd(currentUserService.getCurrentUserId(), request);
     }
 
     @Override
     @Transactional
     public SrsReviewResultResponse reviewCard(Long srsItemId, SrsReviewRequest request) {
-        return reviewCard(getCurrentUserRequired().getId(), srsItemId, request);
+        return reviewCard(currentUserService.getCurrentUserId(), srsItemId, request);
     }
 
     @Override
     @Transactional(readOnly = true)
     public SrsStatsResponse getStatistics() {
-        return getStatistics(getCurrentUserRequired().getId());
+        return getStatistics(currentUserService.getCurrentUserId());
     }
 }

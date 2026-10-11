@@ -39,18 +39,26 @@ public enum ErrorCode {
     LESSON_NOT_FOUND(1200, "Lesson not found", HttpStatus.NOT_FOUND),
     LESSON_TYPE_INVALID(1201, "Invalid lesson type", HttpStatus.BAD_REQUEST),
     LESSON_ORDER_CONFLICT(1202, "Order index already used in this course", HttpStatus.CONFLICT),
+    LESSON_SECTION_NOT_FOUND(1203, "Lesson section not found", HttpStatus.NOT_FOUND),
+    LESSON_SECTION_TYPE_INVALID(1204, "Invalid lesson section type", HttpStatus.BAD_REQUEST),
+    LESSON_KANJI_ITEM_NOT_FOUND(1205, "Lesson kanji item not found", HttpStatus.NOT_FOUND),
+    LESSON_VOCABULARY_ITEM_NOT_FOUND(1206, "Lesson vocabulary item not found", HttpStatus.NOT_FOUND),
+    LESSON_GRAMMAR_ITEM_NOT_FOUND(1207, "Lesson grammar item not found", HttpStatus.NOT_FOUND),
+    LESSON_KANJI_ITEM_DUPLICATED(1208, "Kanji đã tồn tại trong section này", HttpStatus.CONFLICT),
+    LESSON_VOCABULARY_ITEM_DUPLICATED(1209, "Vocabulary đã tồn tại trong section này", HttpStatus.CONFLICT),
+    LESSON_GRAMMAR_ITEM_DUPLICATED(1210, "Grammar đã tồn tại trong section này", HttpStatus.CONFLICT),
+    LESSON_KANJI_RELATED_VOCAB_DUPLICATED(1211, "Related vocabulary đã tồn tại trong kanji item này", HttpStatus.CONFLICT),
 
     // CURRICULUM MODULE — Enrollment (1300-1399)
     ENROLLMENT_NOT_FOUND(1300, "Enrollment not found", HttpStatus.NOT_FOUND),
     ALREADY_ENROLLED(1301, "User already enrolled in this course", HttpStatus.CONFLICT),
     NOT_ENROLLED(1302, "User is not enrolled in this course", HttpStatus.FORBIDDEN),
-    ENROLLMENT_DROPPED(1303, "Enrollment has been dropped", HttpStatus.BAD_REQUEST),
 
     // CURRICULUM MODULE — Progress (1400-1499)
     PROGRESS_NOT_FOUND(1400, "Lesson progress not found", HttpStatus.NOT_FOUND),
     PROGRESS_ALREADY_COMPLETED(1401, "Lesson already completed", HttpStatus.BAD_REQUEST),
     CANNOT_COMPLETE_LESSON(1402, "Cannot mark this lesson as complete", HttpStatus.BAD_REQUEST),
-    INVALID_BEST_SCORE(1403, "Best score is invalid for non MINI_TEST course", HttpStatus.BAD_REQUEST),
+    INVALID_BEST_SCORE(1403, "Score is only allowed when the lesson has a TEST section (quiz)", HttpStatus.BAD_REQUEST),
 
     // CURRICULUM MODULE — Authorization (1500-1599)
     FORBIDDEN_COURSE_ACCESS(1500, "You don't have permission to access this course", HttpStatus.FORBIDDEN),
@@ -61,6 +69,8 @@ public enum ErrorCode {
     COURSE_NOT_ENROLLED(2002, "You are not enrolled in this course. Please enroll to access lessons and quizzes!", HttpStatus.FORBIDDEN),
     QUIZ_NOT_FOUND(2005, "This lesson has no quiz", HttpStatus.NOT_FOUND),
     QUESTION_NOT_FOUND(2006, "Question not found", HttpStatus.NOT_FOUND),
+    QUIZ_ALREADY_EXISTS(2007, "This TEST section already has a quiz. Each TEST section can only have one quiz.", HttpStatus.CONFLICT),
+    LESSON_HAS_NO_TEST_SECTION(2008, "This lesson does not have a TEST section. Create a TEST section first before accessing quiz features.", HttpStatus.BAD_REQUEST),
 
     // SRS Module (3000 - 3999)
     SRS_ITEM_NOT_FOUND(3001, "Srs item not found", HttpStatus.NOT_FOUND),

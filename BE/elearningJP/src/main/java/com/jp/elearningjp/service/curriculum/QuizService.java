@@ -16,10 +16,13 @@ import com.jp.elearningjp.repository.srs.SrsItemRepository;
 import com.jp.elearningjp.repository.srs.SrsReviewLogRepository;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.srs.Sm2Algorithm;
+import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.enums.SrsCardType;
 import com.jp.elearningjp.shared.enums.SrsRating;
 import com.jp.elearningjp.shared.enums.SrsStatus;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import com.jp.elearningjp.entity.srs.SrsItem;
 import com.jp.elearningjp.entity.srs.SrsReviewLog;
 import jakarta.persistence.EntityManager;
@@ -28,8 +31,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,25 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Service quản lý Quiz — gắn liền với TEST section của bài học.
+ *
+ * <p><b>Quy ước nghiệp vụ (sau refactor V13/V14):</b></p>
+ * <ul>
+ *   <li>Quiz KHÔNG tồn tại độc lập — phải thuộc về 1 section TEST của lesson.</li>
+ *   <li>Mỗi section TEST chỉ chứa tối đa 1 quiz.</li>
+ *   <li>Mỗi lesson chỉ có tối đa 1 section TEST (do đó ẩn ý mỗi lesson chỉ có 1 quiz).</li>
+ *   <li>Frontend gọi:
+ *     <ul>
+ *       <li>{@code GET /lessons/{id}/quiz}              — lấy đề của lesson (server tự tìm TEST section)</li>
+ *       <li>{@code POST /lessons/{id}/quiz/submit}      — nộp bài của lesson (server tự tìm TEST section)</li>
+ *       <li>{@code POST /lesson-sections/{sid}/quiz}    — tạo quiz mới cho TEST section</li>
+ *       <li>{@code POST /lesson-sections/{sid}/quiz/questions}   — thêm câu hỏi vào quiz đã có</li>
+ *       <li>{@code DELETE /quiz/questions/{qid}}        — xoá câu hỏi</li>
+ *     </ul>
+ *   </li>
+ * </ul>
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -49,58 +69,252 @@ public class QuizService {
     QuizQuestionRepository questionRepository;
     QuizOptionRepository optionRepository;
     LessonRepository lessonRepository;
+    LessonSectionRepository lessonSectionRepository;
     CourseEnrollmentRepository enrollmentRepository;
     UserLessonProgressRepository progressRepository;
     UserRepository userRepository;
+    CurrentUserService currentUserService;
+    CourseAccessGuard courseAccessGuard;
     SrsItemRepository srsItemRepository;
     SrsReviewLogRepository srsReviewLogRepository;
 
     @PersistenceContext
     EntityManager entityManager;
 
+    // =========================================================
+    // READ — luồng cũ theo lessonId (giữ tương thích ngược, gọi nội bộ)
+    // =========================================================
+
     /**
-     * Lấy đề thi trắc nghiệm của bài học
-     * BẢO MẬT: Bắt buộc đã đăng ký khóa học, và ẨN HOÀN TOÀN isCorrect
+     * Lấy đề thi trắc nghiệm của bài học (tìm qua TEST section).
+     * BẢO MẬT: Bắt buộc đã đăng ký khóa học, và ẨN HOÀN TOÀN isCorrect.
      */
     @Transactional(readOnly = true)
     public LessonQuizResponse getLessonQuiz(Long lessonId) {
-        User currentUser = getCurrentUserRequired();
-
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
 
-        Long courseId = lesson.getCourse().getId();
+        // Tìm quiz qua section TEST của lesson (luồng mới)
+        LessonSection testSection = findTestSectionOrThrow(lessonId);
+        Quiz quiz = findQuizOfSectionOrThrow(testSection);
 
-        // 1. Kiểm tra quyền truy cập: Bắt buộc phải là ADMIN hoặc ĐÃ ĐĂNG KÝ KHÓA HỌC
-        boolean isAdmin = currentUser.getRoles().stream()
-                .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getName()));
+        return buildLessonQuizResponse(quiz, lesson);
+    }
 
-        if (!isAdmin) {
-            boolean isEnrolled = enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), courseId);
-            if (!isEnrolled) {
-                log.warn("[SECURITY] User id={} attempted to access quiz of lesson id={} without enrollment", currentUser.getId(), lessonId);
-                throw new AppException(ErrorCode.COURSE_NOT_ENROLLED);
-            }
+    /**
+     * Lấy quiz theo sectionId (dùng nội bộ + trả qua controller section).
+     */
+    @Transactional(readOnly = true)
+    public LessonQuizResponse getQuizBySection(Long sectionId) {
+        LessonSection section = requireValidTestSection(sectionId);
+        Quiz quiz = findQuizOfSectionOrThrow(section);
+        return buildLessonQuizResponse(quiz, section.getLesson());
+    }
+
+    /**
+     * Lấy quiz theo quizId (tiện cho các thao tác CRUD question).
+     */
+    @Transactional(readOnly = true)
+    public LessonQuizResponse getQuiz(Long quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+        if (quiz.isDeleted()) {
+            throw new AppException(ErrorCode.QUIZ_NOT_FOUND);
+        }
+        // Load questions + options cho response
+        loadQuestionsForRead(quiz);
+        return buildLessonQuizResponse(quiz, quiz.getLesson());
+    }
+
+    // =========================================================
+    // SUBMIT
+    // =========================================================
+
+    /**
+     * Nộp bài làm trắc nghiệm & Chấm điểm tự động tại Server.
+     * Nếu điểm >= passingScorePercent (mặc định 80%) -> set bài học COMPLETED.
+     */
+    @Transactional
+    public QuizSubmitResponse submitQuiz(Long lessonId, QuizSubmitRequest request) {
+        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
+        User currentUser = currentUserService.getCurrentUser();
+
+        LessonSection testSection = findTestSectionOrThrow(lessonId);
+        Quiz quiz = findQuizOfSectionOrThrow(testSection);
+
+        return gradeQuiz(currentUser, lesson, quiz, request);
+    }
+
+    // =========================================================
+    // CREATE / UPDATE — gắn với section TEST
+    // =========================================================
+
+    /**
+     * Tạo quiz mới cho 1 TEST section (mỗi section TEST chỉ có tối đa 1 quiz).
+     * Body dùng {@link QuizQuestionCreateRequest} để tạo luôn câu hỏi đầu tiên + options.
+     */
+    @Transactional
+    public LessonQuizResponse createQuizForSection(Long sectionId, QuizQuestionCreateRequest request) {
+        LessonSection section = requireValidTestSection(sectionId);
+
+        // 1 section TEST chỉ chứa 1 quiz — dùng ErrorCode mới QUIZ_ALREADY_EXISTS
+        if (quizRepository.existsBySectionIdAndDeletedFalse(sectionId)) {
+            throw new AppException(ErrorCode.QUIZ_ALREADY_EXISTS);
         }
 
-        // 2. Lấy thông tin bài quiz
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+        Lesson lesson = section.getLesson();
+        Quiz quiz = Quiz.builder()
+                .lesson(lesson)
+                .section(section)
+                .title("Bài kiểm tra: " + (section.getTitle() != null ? section.getTitle() : lesson.getTitle()))
+                .passingScorePercent(80)
+                .build();
+        Quiz savedQuiz = quizRepository.save(quiz);
 
-        // 3. Lấy danh sách câu hỏi và lựa chọn (chống lộ đáp án đúng)
-        List<QuizQuestion> questions = questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId());
+        // Tạo question đầu tiên cho quiz này
+        if (request != null) {
+            createQuestionInternal(savedQuiz, request, 1);
+        }
+
+        log.info("[QUIZ] Created quiz id={} for TEST section id={} (lesson id={})",
+                savedQuiz.getId(), sectionId, lesson.getId());
+
+        loadQuestionsForRead(savedQuiz);
+        return buildLessonQuizResponse(savedQuiz, lesson);
+    }
+
+    /**
+     * Thêm 1 câu hỏi vào quiz đã tồn tại (theo quizId).
+     * Endpoint: POST /api/v1/lesson-sections/{sectionId}/quiz/questions
+     * (FE gửi sectionId, server tự tìm quiz của section đó).
+     */
+    @Transactional
+    public LessonQuizResponse addQuestionToQuiz(Long sectionId, QuizQuestionCreateRequest request) {
+        LessonSection section = requireValidTestSection(sectionId);
+        Quiz quiz = findQuizOfSectionOrThrow(section);
+
+        // Tính orderIndex tiếp theo
+        Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quiz.getId());
+        int nextOrder = (maxOrder != null ? maxOrder : 0) + 1;
+
+        createQuestionInternal(quiz, request, nextOrder);
+        log.info("[QUIZ] Added question to quiz id={} (section id={})", quiz.getId(), sectionId);
+
+        loadQuestionsForRead(quiz);
+        return buildLessonQuizResponse(quiz, section.getLesson());
+    }
+
+    /**
+     * Xoá mềm 1 câu hỏi (dùng chung).
+     */
+    @Transactional
+    public void deleteQuestion(Long questionId) {
+        QuizQuestion question = questionRepository.findByIdAndDeletedFalse(questionId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
+        question.softDelete();
+        questionRepository.save(question);
+        log.info("[QUIZ] Admin soft-deleted question id={}", questionId);
+    }
+
+    // =========================================================
+    // INTERNAL HELPERS
+    // =========================================================
+
+    /**
+     * Validate section: tồn tại, chưa xoá, thuộc loại TEST.
+     */
+    private LessonSection requireValidTestSection(Long sectionId) {
+        LessonSection section = lessonSectionRepository.findById(sectionId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
+        if (section.isDeleted()) {
+            throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
+        }
+        if (section.getSectionType() != LessonSectionType.TEST) {
+            throw new AppException(ErrorCode.LESSON_SECTION_TYPE_INVALID);
+        }
+        return section;
+    }
+
+    /**
+     * Tìm TEST section của 1 lesson. Nếu không có -> báo lỗi nghiệp vụ rõ ràng.
+     */
+    private LessonSection findTestSectionOrThrow(Long lessonId) {
+        return lessonSectionRepository
+                .findFirstByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(lessonId, LessonSectionType.TEST)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_HAS_NO_TEST_SECTION));
+    }
+
+    /**
+     * Tìm quiz duy nhất của 1 section TEST. Nếu chưa có -> QUIZ_NOT_FOUND.
+     */
+    private Quiz findQuizOfSectionOrThrow(LessonSection section) {
+        return quizRepository.findFirstBySectionIdAndDeletedFalse(section.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+    }
+
+    /**
+     * Tạo 1 question + options cho quiz.
+     */
+    private void createQuestionInternal(Quiz quiz, QuizQuestionCreateRequest request, int orderIndex) {
+        QuizQuestion question = QuizQuestion.builder()
+                .quiz(quiz)
+                .questionText(request.getQuestionText())
+                .explanation(request.getExplanation())
+                .orderIndex(orderIndex)
+                .questionType(request.getQuestionType() != null
+                        ? request.getQuestionType()
+                        : com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE)
+                .correctTextAnswer(request.getCorrectTextAnswer())
+                .matchingData(request.getMatchingData())
+                .build();
+
+        if (request.getVocabId() != null) {
+            question.setVocab(entityManager.getReference(Vocabulary.class, request.getVocabId()));
+        }
+        if (request.getCharacterId() != null) {
+            question.setCharacter(entityManager.getReference(WritingCharacter.class, request.getCharacterId()));
+        }
+        QuizQuestion savedQuestion = questionRepository.save(question);
+
+        if (request.getOptions() != null) {
+            for (QuizOptionRequest optReq : request.getOptions()) {
+                QuizOption option = QuizOption.builder()
+                        .question(savedQuestion)
+                        .optionKey(optReq.getOptionKey())
+                        .optionText(optReq.getOptionText())
+                        .correct(optReq.isCorrect())
+                        .matchKey(optReq.getMatchKey())
+                        .build();
+                optionRepository.save(option);
+            }
+        }
+    }
+
+    /**
+     * Build {@link LessonQuizResponse} từ entity + lesson (đã load questions + options).
+     */
+    private LessonQuizResponse buildLessonQuizResponse(Quiz quiz, Lesson lesson) {
+        List<QuizQuestion> questions = (quiz.getQuestions() == null || quiz.getQuestions().isEmpty())
+                ? questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId())
+                : new ArrayList<>(quiz.getQuestions());
 
         List<QuizQuestionResponse> questionResponses = questions.stream()
+                .filter(q -> !q.isDeleted())
                 .map(q -> {
-                    List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(q.getId());
+                    List<QuizOption> options = (q.getOptions() == null || q.getOptions().isEmpty())
+                            ? optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(q.getId())
+                            : new ArrayList<>(q.getOptions());
                     List<QuizOptionResponse> optionResponses = options.stream()
+                            .filter(o -> !o.isDeleted())
                             .map(opt -> QuizOptionResponse.builder()
                                     .id(opt.getId())
                                     .optionKey(opt.getOptionKey())
                                     .optionText(opt.getOptionText())
                                     .build())
                             .toList();
-
                     return QuizQuestionResponse.builder()
                             .id(q.getId())
                             .questionText(q.getQuestionText())
@@ -114,7 +328,7 @@ public class QuizService {
 
         return LessonQuizResponse.builder()
                 .quizId(quiz.getId())
-                .lessonId(lessonId)
+                .lessonId(lesson.getId())
                 .title(quiz.getTitle())
                 .description(quiz.getDescription())
                 .passingScorePercent(quiz.getPassingScorePercent())
@@ -124,33 +338,46 @@ public class QuizService {
     }
 
     /**
-     * Nộp bài làm trắc nghiệm & Chấm điểm tự động tại Server
-     * Nếu điểm >= passingScorePercent (mặc định 80%) -> set bài học COMPLETED
+     * Force load questions + options vào entity (tránh Lazy trong transaction readOnly).
+     *
+     * <p><b>Lưu ý quan trọng:</b> PHẢI dùng {@code clear() + addAll(...)} trên collection
+     * hiện tại của entity, KHÔNG dùng {@code set...(new ArrayList<>(...))}.</p>
+     * <p>Vì {@code Quiz.questions} và {@code QuizQuestion.options} đều có
+     * {@code cascade = ALL, orphanRemoval = true}, Hibernate wrap chúng bằng
+     * {@code PersistentBag} ngay từ lúc {@code save()}. Nếu ta thay thế reference bằng
+     * {@code new ArrayList<>(...)}, Hibernate lúc auto-flush sẽ thấy collection cũ
+     * "không còn được reference bởi owning entity" và ném
+     * {@code HibernateException: A collection with cascade="all-delete-orphan" was no
+     * longer referenced by the owning entity instance}.</p>
      */
-    @Transactional
-    public QuizSubmitResponse submitQuiz(Long lessonId, QuizSubmitRequest request) {
-        User currentUser = getCurrentUserRequired();
-
-        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-
-        Long courseId = lesson.getCourse().getId();
-
-        boolean isEnrolled = enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), courseId);
-        if (!isEnrolled) {
-            throw new AppException(ErrorCode.COURSE_NOT_ENROLLED);
+    private void loadQuestionsForRead(Quiz quiz) {
+        if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
+            List<QuizQuestion> qs = questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId());
+            // ✅ Giữ reference PersistentBag managed bằng clear + addAll
+            quiz.getQuestions().clear();
+            quiz.getQuestions().addAll(qs);
         }
+        for (QuizQuestion q : quiz.getQuestions()) {
+            if (q.getOptions() == null || q.getOptions().isEmpty()) {
+                List<QuizOption> opts = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(q.getId());
+                // ✅ Tương tự cho options
+                q.getOptions().clear();
+                q.getOptions().addAll(opts);
+            }
+        }
+    }
 
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
-
+    /**
+     * Chấm điểm 1 quiz (tách ra để dùng chung cho cả luồng theo lesson / theo section).
+     */
+    private QuizSubmitResponse gradeQuiz(User currentUser, Lesson lesson, Quiz quiz, QuizSubmitRequest request) {
         List<QuizQuestion> questions = questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId());
         int totalQuestions = questions.size();
         if (totalQuestions == 0) {
             throw new AppException(ErrorCode.QUIZ_NOT_FOUND);
         }
 
-        // Tạo map câu trả lời của học viên: QuestionId -> QuizAnswerItem
+        // Tạo map câu trả lời của học viên
         Map<Long, QuizAnswerItem> userAnswers = (request.getAnswers() != null)
                 ? request.getAnswers().stream()
                     .collect(Collectors.toMap(QuizAnswerItem::getQuestionId, item -> item, (a, b) -> a))
@@ -171,13 +398,10 @@ public class QuizService {
                     .explanation(question.getExplanation());
 
             if (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.FILL_IN_THE_BLANK) {
-                // Dạng 1: Tự gõ đáp án vào ô trống
                 String userText = (answerItem != null && answerItem.getTextAnswer() != null)
-                        ? answerItem.getTextAnswer().trim()
-                        : "";
-                String correctText = question.getCorrectTextAnswer() != null ? question.getCorrectTextAnswer().trim() : "";
-
-                // So sánh không phân biệt hoa thường hoặc khoảng trắng thừa
+                        ? answerItem.getTextAnswer().trim() : "";
+                String correctText = question.getCorrectTextAnswer() != null
+                        ? question.getCorrectTextAnswer().trim() : "";
                 isCorrect = !correctText.isEmpty() && userText.equalsIgnoreCase(correctText);
 
                 detailBuilder.userTextAnswer(userText)
@@ -185,13 +409,11 @@ public class QuizService {
                         .isCorrect(isCorrect);
 
             } else if (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING) {
-                // Dạng 2: Kéo thả nối cặp / điền ô trống (MATCHING)
                 List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(question.getId());
                 Map<String, String> userPairs = (answerItem != null && answerItem.getMatchingAnswers() != null)
                         ? answerItem.getMatchingAnswers()
                         : Collections.emptyMap();
 
-                // Đếm số ô ghép đúng và tổng số ô cần ghép
                 Map<String, String> correctPairs = new HashMap<>();
                 int validOptionsCount = 0;
                 int matchedCorrectCount = 0;
@@ -215,10 +437,11 @@ public class QuizService {
                         .matchingData(question.getMatchingData())
                         .userMatchingAnswers(userPairs)
                         .correctMatchingAnswers(correctPairs)
-                        .correctTextAnswer("Số ô ghép chính xác: " + matchedCorrectCount + "/" + validOptionsCount + " (" + Math.round(accuracy) + "%)");
+                        .correctTextAnswer("Số ô ghép chính xác: " + matchedCorrectCount + "/" + validOptionsCount
+                                + " (" + Math.round(accuracy) + "%)");
 
             } else {
-                // Dạng 3: Trắc nghiệm ABCD chọn 1 đáp án (MULTIPLE_CHOICE)
+                // MULTIPLE_CHOICE
                 List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(question.getId());
                 QuizOption correctOption = options.stream()
                         .filter(QuizOption::isCorrect)
@@ -231,7 +454,8 @@ public class QuizService {
                         .findFirst()
                         .orElse(null);
 
-                isCorrect = (selectedOption != null && correctOption != null && selectedOption.getId().equals(correctOption.getId()));
+                isCorrect = (selectedOption != null && correctOption != null
+                        && selectedOption.getId().equals(correctOption.getId()));
 
                 detailBuilder.selectedOptionId(selectedOptionId)
                         .selectedOptionText(selectedOption != null ? selectedOption.getOptionText() : "Chưa chọn")
@@ -246,7 +470,7 @@ public class QuizService {
                 correctCount++;
             }
 
-            // Tự động đồng bộ kết quả câu hỏi vào SRS dựa theo dạng câu hỏi, tỉ lệ đúng và thời gian làm bài
+            // Sync sang SRS
             Double accuracyForSrs = (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING)
                     ? detailBuilder.build().getAccuracyPercent()
                     : (isCorrect ? 100.0 : 0.0);
@@ -255,15 +479,14 @@ public class QuizService {
             details.add(detailBuilder.build());
         }
 
-        // Tính điểm phần trăm
+        // Tính điểm
         BigDecimal scorePercent = BigDecimal.valueOf((double) correctCount / totalQuestions * 100)
                 .setScale(1, RoundingMode.HALF_UP);
-
         boolean isPassed = scorePercent.compareTo(BigDecimal.valueOf(quiz.getPassingScorePercent())) >= 0;
 
-        // Cập nhật tiến độ học tập của người dùng
+        // Cập nhật progress
         UserLessonProgress progress = progressRepository
-                .findByUserIdAndLessonIdAndDeletedFalse(currentUser.getId(), lessonId)
+                .findByUserIdAndLessonIdAndDeletedFalse(currentUser.getId(), lesson.getId())
                 .orElseGet(() -> UserLessonProgress.builder()
                         .user(currentUser)
                         .lesson(lesson)
@@ -283,7 +506,7 @@ public class QuizService {
         progressRepository.save(progress);
 
         log.info("[QUIZ] User id={} submitted quiz for lesson id={}, score={} %, isPassed={}",
-                currentUser.getId(), lessonId, scorePercent, isPassed);
+                currentUser.getId(), lesson.getId(), scorePercent, isPassed);
 
         return QuizSubmitResponse.builder()
                 .totalQuestions(totalQuestions)
@@ -297,99 +520,12 @@ public class QuizService {
                 .build();
     }
 
-    /**
-     * Admin thêm câu hỏi trắc nghiệm vào bài học (tự động tạo Quiz nếu bài học chưa có)
-     */
-    @Transactional
-    public QuizQuestionResponse addQuestionToLesson(Long lessonId, QuizQuestionCreateRequest request) {
-        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
-                .orElseGet(() -> {
-                    Quiz newQuiz = Quiz.builder()
-                            .lesson(lesson)
-                            .title("Bài kiểm tra: " + lesson.getTitle())
-                            .passingScorePercent(80)
-                            .build();
-                    return quizRepository.save(newQuiz);
-                });
-
-        Integer orderIndex = request.getOrderIndex();
-        if (orderIndex == null || orderIndex <= 0) {
-            Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quiz.getId());
-            orderIndex = (maxOrder != null ? maxOrder : 0) + 1;
-        }
-
-        QuizQuestion question = QuizQuestion.builder()
-                .quiz(quiz)
-                .questionText(request.getQuestionText())
-                .explanation(request.getExplanation())
-                .orderIndex(orderIndex)
-                .questionType(request.getQuestionType() != null ? request.getQuestionType() : com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE)
-                .correctTextAnswer(request.getCorrectTextAnswer())
-                .matchingData(request.getMatchingData())
-                .build();
-
-        if (request.getVocabId() != null) {
-            question.setVocab(entityManager.getReference(Vocabulary.class, request.getVocabId()));
-        }
-        if (request.getCharacterId() != null) {
-            question.setCharacter(entityManager.getReference(WritingCharacter.class, request.getCharacterId()));
-        }
-
-        QuizQuestion savedQuestion = questionRepository.save(question);
-
-        List<QuizOptionResponse> optionResponses = new ArrayList<>();
-        if (request.getOptions() != null) {
-            for (QuizOptionRequest optReq : request.getOptions()) {
-                QuizOption option = QuizOption.builder()
-                        .question(savedQuestion)
-                        .optionKey(optReq.getOptionKey())
-                        .optionText(optReq.getOptionText())
-                        .correct(optReq.isCorrect())
-                        .matchKey(optReq.getMatchKey())
-                        .build();
-                QuizOption savedOpt = optionRepository.save(option);
-                optionResponses.add(QuizOptionResponse.builder()
-                        .id(savedOpt.getId())
-                        .optionKey(savedOpt.getOptionKey())
-                        .optionText(savedOpt.getOptionText())
-                        .build());
-            }
-        }
-
-        log.info("[QUIZ] Admin added question id={} to lesson id={}", savedQuestion.getId(), lessonId);
-
-        return QuizQuestionResponse.builder()
-                .id(savedQuestion.getId())
-                .questionText(savedQuestion.getQuestionText())
-                .orderIndex(savedQuestion.getOrderIndex())
-                .questionType(savedQuestion.getQuestionType())
-                .matchingData(savedQuestion.getMatchingData())
-                .options(optionResponses)
-                .build();
-    }
-
-    /**
-     * Admin xóa câu hỏi trắc nghiệm
-     */
-    @Transactional
-    public void deleteQuestion(Long questionId) {
-        QuizQuestion question = questionRepository.findByIdAndDeletedFalse(questionId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
-
-        question.softDelete();
-        questionRepository.save(question);
-        log.info("[QUIZ] Admin soft-deleted question id={}", questionId);
-    }
-
     // =========================================================
-    // SRS INTEGRATION HELPER METHODS
+    // SRS INTEGRATION
     // =========================================================
 
-    private void syncQuestionResultToSrs(User user, QuizQuestion question, boolean isCorrect, Double accuracyPercent, Integer responseTimeMs) {
-        // Chỉ xử lý nếu câu hỏi gắn liền với từ vựng hoặc chữ Hán
+    private void syncQuestionResultToSrs(User user, QuizQuestion question, boolean isCorrect,
+                                         Double accuracyPercent, Integer responseTimeMs) {
         if (question.getVocab() == null && question.getCharacter() == null) {
             return;
         }
@@ -435,12 +571,9 @@ public class QuizService {
         BigDecimal prevEf = srsItem.getEaseFactor();
         Integer prevInterval = srsItem.getIntervalDays();
 
-        // Chạy thuật toán SM-2
         Sm2Algorithm.CalculationResult calc = Sm2Algorithm.calculate(
-                prevEf,
-                prevInterval,
-                srsItem.getRepetitionCount(),
-                srsItem.getLapseCount(),
+                prevEf, prevInterval,
+                srsItem.getRepetitionCount(), srsItem.getLapseCount(),
                 rating
         );
 
@@ -453,7 +586,6 @@ public class QuizService {
         srsItem.setLastReviewedAt(Instant.now());
         srsItemRepository.save(srsItem);
 
-        // Lưu vết lịch sử ôn tập vào srs_review_logs
         SrsReviewLog logEntity = SrsReviewLog.builder()
                 .srsItem(srsItem)
                 .user(user)
@@ -470,51 +602,19 @@ public class QuizService {
         srsReviewLogRepository.save(logEntity);
     }
 
-    /**
-     * Xác định mức SRS cho dạng MATCHING dựa trên Tỉ lệ chính xác (%) và Thời gian làm bài
-     */
     private SrsRating determineMatchingRating(double accuracyPercent, Integer responseTimeMs) {
-        if (accuracyPercent < 60.0) {
-            // Dưới 60% đúng -> Học lại ngay
-            return SrsRating.AGAIN;
-        } else if (accuracyPercent < 100.0) {
-            // Đúng đa số (60% - 99%) nhưng còn lỗi -> Khó nhớ
-            return SrsRating.HARD;
-        } else {
-            // Đúng tuyệt đối 100%
-            if (responseTimeMs != null && responseTimeMs < 10000) {
-                // Hoàn thành xuất sắc dưới 10 giây -> Quá dễ
-                return SrsRating.EASY;
-            } else if (responseTimeMs != null && responseTimeMs > 30000) {
-                // Đúng 100% nhưng mất hơn 30s suy nghĩ kéo thả -> Khó
-                return SrsRating.HARD;
-            }
-            return SrsRating.GOOD; // Phản xạ chuẩn
-        }
+        if (accuracyPercent < 60.0) return SrsRating.AGAIN;
+        if (accuracyPercent < 100.0) return SrsRating.HARD;
+        if (responseTimeMs != null && responseTimeMs < 10000) return SrsRating.EASY;
+        if (responseTimeMs != null && responseTimeMs > 30000) return SrsRating.HARD;
+        return SrsRating.GOOD;
     }
 
     private SrsRating determineRating(boolean isCorrect, Integer responseTimeMs) {
-        if (!isCorrect) {
-            return SrsRating.AGAIN; // Sai -> Học lại ngay
-        }
-        if (responseTimeMs == null) {
-            return SrsRating.GOOD;  // Mặc định chuẩn nếu không đo thời gian
-        }
-        if (responseTimeMs < 3000) {
-            return SrsRating.EASY;  // Dưới 3s -> Quá nhanh, quá dễ
-        } else if (responseTimeMs > 15000) {
-            return SrsRating.HARD;  // Trên 15s -> Khó khăn, đắn đo
-        } else {
-            return SrsRating.GOOD;  // 3s - 15s -> Phản xạ tốt
-        }
-    }
-
-    public User getCurrentUserRequired() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
-        return userRepository.findUserByEmail(auth.getName())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        if (!isCorrect) return SrsRating.AGAIN;
+        if (responseTimeMs == null) return SrsRating.GOOD;
+        if (responseTimeMs < 3000) return SrsRating.EASY;
+        if (responseTimeMs > 15000) return SrsRating.HARD;
+        return SrsRating.GOOD;
     }
 }

@@ -1,0 +1,255 @@
+### ============================================================
+### 9) COURSE & LESSON OWNERSHIP TEST
+###    - Test teacher chỉ thao tác được course/lesson DO MÌNH TẠO
+###    - Test admin được thao tác tất cả
+###    - Test student luôn bị 403
+###
+###  PREREQUISITES:
+###    1. Chạy 01-auth.http để có @teacherToken, @studentToken
+###    2. Cần 1 teacher thứ 2 (@teacher2Token) — xem bước 1 bên dưới
+###
+###  SAU REFACTOR (V15):
+###    - ADMIN: full quyền (bypass ownership)
+###    - TEACHER: chỉ thao tác course có createdBy = mình
+###    - STUDENT: luôn 403 với các endpoint write
+### ============================================================
+
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@teacherToken = {{teacherLogin.response.body.data.accessToken}}
+@studentToken = {{studentLogin.response.body.data.accessToken}}
+
+####################################################################
+## BƯỚC 1 — Tạo TEACHER #2 để test cross-ownership
+####################################################################
+### 1.1) Đăng ký teacher2
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "teacher2.jp@gmail.com",
+  "password": "Teacher2@123",
+  "confirmPassword": "Teacher2@123",
+  "fullName": "Suzuki Sensei"
+}
+
+### 1.2) Login teacher2 (lấy token)
+# @name teacher2Login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "teacher2.jp@gmail.com",
+  "password": "Teacher2@123"
+}
+
+###
+@teacher2Token = {{teacher2Login.response.body.data.accessToken}}
+
+####################################################################
+## BƯỚC 2 — TEACHER #1 tạo course (do teacher #1 sở hữu)
+####################################################################
+# @name createCourseByT1
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Course do Teacher #1 tạo",
+  "slug": "course-by-teacher-1",
+  "jlptLevel": "N5",
+  "published": false
+}
+
+###
+@courseByT1Id = {{createCourseByT1.response.body.data.id}}
+
+### 2.1) TEACHER #2 tạo course (do teacher #2 sở hữu)
+# @name createCourseByT2
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{teacher2Token}}
+
+{
+  "title": "Course do Teacher #2 tạo",
+  "slug": "course-by-teacher-2",
+  "jlptLevel": "N4",
+  "published": false
+}
+
+###
+@courseByT2Id = {{createCourseByT2.response.body.data.id}}
+
+####################################################################
+## BƯỚC 3 — TEACHER #1 thêm lesson vào course CỦA MÌNH → OK
+####################################################################
+# @name createLessonByT1
+POST {{baseUrl}}/courses/{{courseByT1Id}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Lesson do Teacher #1 tạo",
+  "orderIndex": 1
+}
+
+###
+@lessonByT1Id = {{createLessonByT1.response.body.data.id}}
+
+####################################################################
+## BƯỚC 4 — TEST OWNERSHIP (403 cho cross-teacher, 200 cho cùng teacher)
+####################################################################
+
+### 4.1) (EXPECTED 200) Teacher #1 update course CỦA MÌNH
+###   Lưu ý: CourseUpdateRequest yêu cầu @NotBlank title + @NotNull jlptLevel.
+PUT {{baseUrl}}/courses/{{courseByT1Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Course do Teacher #1 tạo",
+  "jlptLevel": "N5",
+  "description": "Teacher #1 tự sửa course của mình",
+  "published": false
+}
+
+### 4.2) (EXPECTED 403) Teacher #2 update course CỦA TEACHER #1
+###     → FORBIDDEN_COURSE_ACCESS (1500)
+PUT {{baseUrl}}/courses/{{courseByT1Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacher2Token}}
+
+{
+  "title": "Course do Teacher #1 tạo",
+  "jlptLevel": "N5",
+  "description": "Teacher #2 cố sửa course của Teacher #1",
+  "published": false
+}
+
+### 4.3) (EXPECTED 200) Teacher #1 publish course CỦA MÌNH
+PATCH {{baseUrl}}/courses/{{courseByT1Id}}/publish?publish=true
+Authorization: Bearer {{teacherToken}}
+
+### 4.4) (EXPECTED 403) Teacher #2 publish course CỦA TEACHER #1
+PATCH {{baseUrl}}/courses/{{courseByT1Id}}/publish?publish=false
+Authorization: Bearer {{teacher2Token}}
+
+### 4.5) (EXPECTED 200) Teacher #1 update lesson CỦA MÌNH
+PUT {{baseUrl}}/lessons/{{lessonByT1Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Teacher #1 tự sửa lesson của mình"
+}
+
+### 4.6) (EXPECTED 403) Teacher #2 update lesson CỦA TEACHER #1
+###     → FORBIDDEN_LESSON_ACCESS (1501)
+PUT {{baseUrl}}/lessons/{{lessonByT1Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacher2Token}}
+
+{
+  "title": "Teacher #2 cố sửa lesson của Teacher #1"
+}
+
+### 4.7) (EXPECTED 403) Student update bất kỳ course nào
+PUT {{baseUrl}}/courses/{{courseByT1Id}}
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "title": "Student cố sửa title",
+  "jlptLevel": "N5",
+  "description": "Student cố sửa",
+  "published": false
+}
+
+### 4.8) (EXPECTED 403) Student thêm lesson vào bất kỳ course nào
+POST {{baseUrl}}/courses/{{courseByT1Id}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "title": "Student cố tạo lesson",
+  "orderIndex": 99
+}
+
+### 4.9) (EXPECTED 403) Student xoá course
+DELETE {{baseUrl}}/courses/{{courseByT1Id}}
+Authorization: Bearer {{studentToken}}
+
+### 4.10) (EXPECTED 403) Student xoá lesson
+DELETE {{baseUrl}}/lessons/{{lessonByT1Id}}
+Authorization: Bearer {{studentToken}}
+
+####################################################################
+## BƯỚC 5 — TEST ADMIN (bypass ownership)
+####################################################################
+### 5.1) Đăng ký ADMIN
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "admin.jp@gmail.com",
+  "password": "Admin@123",
+  "confirmPassword": "Admin@123",
+  "fullName": "Admin Hệ Thống"
+}
+
+### 5.2) (EXPECTED 409 nếu admin đã tồn tại) — nếu 409 thì bỏ qua, chỉ cần login
+# @name adminLogin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin.jp@gmail.com",
+  "password": "Admin@123"
+}
+
+###
+@adminToken = {{adminLogin.response.body.data.accessToken}}
+
+### 5.3) (EXPECTED 200) ADMIN update course CỦA TEACHER #1 (bypass)
+PUT {{baseUrl}}/courses/{{courseByT1Id}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "Course do Teacher #1 tạo",
+  "jlptLevel": "N5",
+  "description": "Admin sửa course của Teacher #1 (được phép)",
+  "published": false
+}
+
+### 5.4) (EXPECTED 200) ADMIN update lesson CỦA TEACHER #1 (bypass)
+PUT {{baseUrl}}/lessons/{{lessonByT1Id}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "title": "Admin sửa lesson của Teacher #1 (được phép)"
+}
+
+### 5.5) (EXPECTED 200) ADMIN publish course CỦA TEACHER #1
+PATCH {{baseUrl}}/courses/{{courseByT1Id}}/publish?publish=false
+Authorization: Bearer {{adminToken}}
+
+### 5.6) (EXPECTED 200) ADMIN xem /admin endpoint
+GET {{baseUrl}}/courses/admin
+Authorization: Bearer {{adminToken}}
+
+### 5.7) (EXPECTED 200) ADMIN xoá lesson CỦA TEACHER #1
+DELETE {{baseUrl}}/lessons/{{lessonByT1Id}}
+Authorization: Bearer {{adminToken}}
+
+### 5.8) (EXPECTED 200) ADMIN xoá course CỦA TEACHER #1
+DELETE {{baseUrl}}/courses/{{courseByT1Id}}
+Authorization: Bearer {{adminToken}}
+
+####################################################################
+## BƯỚC 6 — DỌN DẸP (xoá course của teacher #2)
+####################################################################
+### 6.1) Teacher #2 xoá course CỦA MÌNH (OK)
+DELETE {{baseUrl}}/courses/{{courseByT2Id}}
+Authorization: Bearer {{teacher2Token}}

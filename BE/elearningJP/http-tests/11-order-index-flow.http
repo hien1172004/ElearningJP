@@ -1,0 +1,303 @@
+### ============================================================
+### 10) ORDER INDEX FLOW (e2e test cho logic MAX+1 / SHIFT / CLAMP)
+###    - Test các case quan trọng của orderIndex qua HTTP API
+###    - Bổ sung cho OrderIndexResolverTest (unit test)
+###
+###  CÁC CASE ĐƯỢC COVER:
+###    A) Auto max+1 khi tạo mà KHÔNG gửi orderIndex
+###    B) Shift các record cũ khi tạo mới với orderIndex = 1 (chen đầu)
+###    C) Move-up: cập nhật orderIndex từ cuối lên đầu (shift các lesson giữa)
+###    D) Move-down: cập nhật orderIndex từ đầu xuống cuối (shift các lesson giữa)
+###    E) Clamp khi set orderIndex vượt MAX
+###    F) Section orderIndex tự gán max+1 khi tạo mới
+###    G) Kanji item orderIndex tự gán max+1 khi tạo mới
+###
+###  PREREQUISITES:
+###    1. Chạy 01-auth.http trước (có @teacherToken)
+###    2. Có 1 course đã tạo (dùng @courseId hoặc chạy 02-course-crud.http trước)
+### ============================================================
+
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@teacherToken = {{teacherLogin.response.body.data.accessToken}}
+@courseId = {{createCourseN5.response.body.data.id}}
+
+####################################################################
+## SETUP: Tạo course mới sạch để test orderIndex (không bị nhiễu từ test cũ)
+####################################################################
+# @name createOrderIndexCourse
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Test OrderIndex E2E",
+  "slug": "test-order-index-e2e",
+  "jlptLevel": "N5",
+  "published": true
+}
+
+###
+@courseId = {{createOrderIndexCourse.response.body.data.id}}
+
+####################################################################
+## CASE A) Auto max+1 khi tạo mà KHÔNG gửi orderIndex
+## Mong đợi: L1=1, L2=2, L3=3
+####################################################################
+# @name autoA1
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "A.Lesson 1 (auto)" }
+
+###
+@lessonA1Id = {{autoA1.response.body.data.orderIndex}}
+# → expect 1
+
+###
+# @name autoA2
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "A.Lesson 2 (auto)" }
+
+###
+@lessonA2Id = {{autoA2.response.body.data.orderIndex}}
+# → expect 2
+
+###
+# @name autoA3
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "A.Lesson 3 (auto)" }
+
+###
+@lessonA3Id = {{autoA3.response.body.data.orderIndex}}
+# → expect 3
+
+### Verify: GET outline course xem thứ tự
+GET {{baseUrl}}/courses/{{courseId}}
+# → expect lessons[].orderIndex = [1, 2, 3]
+
+####################################################################
+## CASE B) Shift khi tạo mới với orderIndex = 1 (chen đầu)
+## Trước: [A1=1, A2=2, A3=3]. Sau khi tạo "B" với orderIndex=1:
+## Mong đợi: [B=1, A1=2, A2=3, A3=4]
+####################################################################
+# @name shiftB
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "B.Lesson chen đầu (orderIndex=1)", "orderIndex": 1 }
+
+###
+@lessonBId = {{shiftB.response.body.data.id}}
+# → expect orderIndex=1
+
+### Verify A1 đã bị shift lên 2
+GET {{baseUrl}}/lessons/{{lessonA1Id}}
+# → expect orderIndex=2
+
+GET {{baseUrl}}/lessons/{{lessonA2Id}}
+# → expect orderIndex=3
+
+GET {{baseUrl}}/lessons/{{lessonA3Id}}
+# → expect orderIndex=4
+
+####################################################################
+## CASE C) Move-up: cập nhật orderIndex từ cuối lên đầu
+## Trước: [B=1, A1=2, A2=3, A3=4]
+## PUT A3 lên orderIndex=1
+## Mong đợi: [A3=1, B=2, A1=3, A2=4]
+####################################################################
+PUT {{baseUrl}}/lessons/{{lessonA3Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "A.Lesson 3 (đã lên đầu)", "orderIndex": 1 }
+
+### Verify
+GET {{baseUrl}}/lessons/{{lessonBId}}
+# → expect orderIndex=2
+
+GET {{baseUrl}}/lessons/{{lessonA1Id}}
+# → expect orderIndex=3
+
+GET {{baseUrl}}/lessons/{{lessonA2Id}}
+# → expect orderIndex=4
+
+GET {{baseUrl}}/lessons/{{lessonA3Id}}
+# → expect orderIndex=1
+
+####################################################################
+## CASE D) Move-down: cập nhật orderIndex từ đầu xuống cuối
+## Trước: [A3=1, B=2, A1=3, A2=4]
+## PUT A3 xuống orderIndex=4
+## Mong đợi: [B=1, A1=2, A2=3, A3=4]
+####################################################################
+PUT {{baseUrl}}/lessons/{{lessonA3Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "A.Lesson 3 (đã xuống cuối)", "orderIndex": 4 }
+
+### Verify
+GET {{baseUrl}}/lessons/{{lessonBId}}
+# → expect orderIndex=1
+
+GET {{baseUrl}}/lessons/{{lessonA1Id}}
+# → expect orderIndex=2
+
+GET {{baseUrl}}/lessons/{{lessonA2Id}}
+# → expect orderIndex=3
+
+GET {{baseUrl}}/lessons/{{lessonA3Id}}
+# → expect orderIndex=4
+
+####################################################################
+## CASE E) Clamp khi set orderIndex vượt MAX
+## Trước: [B=1, A1=2, A2=3, A3=4] (max=4)
+## PUT B với orderIndex=99
+## Mong đợi: B bị clamp về 4 (MAX), các lesson khác giữ nguyên
+## (Thực tế A3 đã ở 4 → B sẽ đẩy A3 xuống 5? Hay A3 sẽ bị shift?)
+##   → Cần xem logic clampToMaxPlusOne: target=99, currentMax=4
+##     → kẹp về 4, rồi planMove(2, 4) = MOVE_DOWN → shift (2, 4] lên -1
+##     → B=4, A1=2, A2=3, A3=5? Không, planMove(2, 4) MOVE_DOWN:
+##        dời các lesson trong (2, 4] lên -1 → A1=1, A2=2, A3=3, B=4
+##        (Vì A1=2 đang ở vị trí cũ của B; shift các lesson ở giữa)
+##   → Mong đợi: [A1=1, A2=2, A3=3, B=4]
+####################################################################
+PUT {{baseUrl}}/lessons/{{lessonBId}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "B.Lesson (clamp về MAX)", "orderIndex": 99 }
+
+### Verify
+GET {{baseUrl}}/lessons/{{lessonBId}}
+# → expect orderIndex=4
+
+GET {{baseUrl}}/lessons/{{lessonA1Id}}
+# → expect orderIndex=1
+
+GET {{baseUrl}}/lessons/{{lessonA2Id}}
+# → expect orderIndex=2
+
+GET {{baseUrl}}/lessons/{{lessonA3Id}}
+# → expect orderIndex=3
+
+####################################################################
+## CASE F) Section orderIndex tự gán max+1
+## Setup: tạo 1 lesson test riêng
+####################################################################
+# @name lessonForSectionOI
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "title": "Lesson test section OI" }
+
+###
+@lessonSectionOIId = {{lessonForSectionOI.response.body.data.id}}
+
+### Tạo section 1 (KANJI) — không gửi orderIndex
+# @name sectionF1
+POST {{baseUrl}}/lessons/{{lessonSectionOIId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "sectionType": "KANJI", "title": "F.Section 1 (auto)" }
+
+###
+@sectionF1Order = {{sectionF1.response.body.data.orderIndex}}
+# → expect 1
+
+### Tạo section 2 (VOCAB) — không gửi orderIndex
+# @name sectionF2
+POST {{baseUrl}}/lessons/{{lessonSectionOIId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "sectionType": "VOCABULARY", "title": "F.Section 2 (auto)" }
+
+###
+@sectionF2Order = {{sectionF2.response.body.data.orderIndex}}
+# → expect 2
+
+### Tạo section 3 (GRAMMAR) — không gửi orderIndex
+# @name sectionF3
+POST {{baseUrl}}/lessons/{{lessonSectionOIId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "sectionType": "GRAMMAR", "title": "F.Section 3 (auto)" }
+
+###
+@sectionF3Order = {{sectionF3.response.body.data.orderIndex}}
+# → expect 3
+
+### Tạo section 4 (TEST) — không gửi orderIndex
+# @name sectionF4
+POST {{baseUrl}}/lessons/{{lessonSectionOIId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "sectionType": "TEST", "title": "F.Section 4 (auto)" }
+
+###
+@sectionF4Order = {{sectionF4.response.body.data.orderIndex}}
+# → expect 4
+
+####################################################################
+## CASE G) Kanji item orderIndex tự gán max+1
+## Setup: lấy section KANJI ở case F
+####################################################################
+# @name itemG1
+POST {{baseUrl}}/lesson-sections/{{sectionF1.response.body.data.id}}/kanji-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "characterId": 1, "note": "G.Kanji 1 (auto)" }
+
+###
+@itemG1Order = {{itemG1.response.body.data.orderIndex}}
+# → expect 1
+
+### @name itemG2
+POST {{baseUrl}}/lesson-sections/{{sectionF1.response.body.data.id}}/kanji-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "characterId": 2, "note": "G.Kanji 2 (auto)" }
+
+###
+@itemG2Order = {{itemG2.response.body.data.orderIndex}}
+# → expect 2
+
+### Chen giữa: tạo với orderIndex=1 → G1 phải shift lên 2
+# @name itemG3
+POST {{baseUrl}}/lesson-sections/{{sectionF1.response.body.data.id}}/kanji-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{ "characterId": 3, "orderIndex": 1, "note": "G.Kanji 3 (chen đầu)" }
+
+###
+@itemG3Id = {{itemG3.response.body.data.id}}
+@itemG3Order = {{itemG3.response.body.data.orderIndex}}
+# → expect 1
+
+### Verify G1 đã bị shift lên 2
+GET {{baseUrl}}/lessons/{{lessonSectionOIId}}
+# → expect sectionF1.items[0].orderIndex=2 (G1), items[1].orderIndex=1 (G3), items[2].orderIndex=2 (G2)
+
+####################################################################
+## CLEANUP (optional) — xoá course test
+####################################################################
+# DELETE {{baseUrl}}/courses/{{courseId}}
+# Authorization: Bearer {{teacherToken}}

@@ -79,32 +79,4 @@ public class EnrollmentController {
                 .data(enrollmentService.getEnrollmentById(enrollmentId))
                 .build();
     }
-
-    // ============================================================
-    // DROP
-    // ============================================================
-
-    @Operation(summary = "Drop enrollment theo enrollmentId (owner hoặc admin)")
-    @SecurityRequirement(name = "bearerAuth")
-    @PostMapping(ApiPaths.Enrollment.BASE + ApiPaths.Enrollment.DROP)
-    public ResponseEntity<ApiResponse<Void>> dropEnrollment(
-            @PathVariable Long enrollmentId) {
-        enrollmentService.dropEnrollment(enrollmentId);
-        return ResponseEntity.ok(ApiResponse.<Void>builder()
-                .success(true)
-                .message("Enrollment dropped successfully")
-                .build());
-    }
-
-    @Operation(summary = "Drop enrollment theo courseId (tiện cho FE, không cần biết enrollmentId)")
-    @SecurityRequirement(name = "bearerAuth")
-    @PostMapping(ApiPaths.Enrollment.BASE + "/by-course/{courseId}/drop")
-    public ResponseEntity<ApiResponse<Void>> dropEnrollmentByCourseId(
-            @PathVariable Long courseId) {
-        enrollmentService.dropEnrollmentByCourseId(courseId);
-        return ResponseEntity.ok(ApiResponse.<Void>builder()
-                .success(true)
-                .message("Enrollment dropped successfully")
-                .build());
-    }
 }

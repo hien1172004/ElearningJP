@@ -1,0 +1,412 @@
+### ============================================================
+### 8) QUY TRÌNH TẠO 1 BÀI HỌC HOÀN CHỈNH (END-TO-END)
+###    - Mục đích: Hướng dẫn teacher/admin tạo 1 lesson đầy đủ
+###      (Course → Lesson → 4 Section → Items → Quiz).
+###    - Phải chạy 01-auth.http trước để có @teacherToken.
+###
+###  ENDPOINTS THEO THỨ TỰ:
+###    1. Tạo Course (chỉ cần 1 lần)
+###    2. Publish Course (chỉ cần 1 lần)
+###    3. Tạo Lesson trong Course                              [ADMIN]
+###    4. Tạo Section KANJI / VOCABULARY / GRAMMAR / TEST      [GV/ADMIN]
+###    5. Tạo Items trong từng Section                          [GV/ADMIN]
+###       5.1 KANJI items + related vocabulary
+###       5.2 VOCABULARY items + examples
+###       5.3 GRAMMAR items + examples
+###    6. Tạo Quiz cho section TEST                             [GV/ADMIN]
+###
+###  SAU REFACTOR (V14):
+###    - Body lesson chỉ còn { title, orderIndex }.
+###    - "Lesson có quiz" = tồn tại section TEST.
+###    - Section TEST có 1 quiz (multiple choice).
+### ============================================================
+
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@teacherToken = {{teacherLogin.response.body.data.accessToken}}
+
+####################################################################
+## BƯỚC 1 — TẠO COURSE
+####################################################################
+### 1.1) Tạo course mới (sau đó sẽ publish rồi thêm bài học)
+# @name createCourseForLesson
+POST {{baseUrl}}/courses
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "JLPT N5 - Ngữ pháp cơ bản",
+  "slug": "jlpt-n5-ngu-phap-co-ban",
+  "jlptLevel": "N5",
+  "description": "Khóa học ngữ pháp N5 cho người mới bắt đầu",
+  "published": false
+}
+
+###
+@courseId = {{createCourseForLesson.response.body.data.id}}
+
+####################################################################
+## BƯỚC 2 — PUBLISH COURSE
+####################################################################
+### 2.1) Publish course để học viên có thể truy cập
+POST {{baseUrl}}/courses/{{courseId}}/publish
+Authorization: Bearer {{teacherToken}}
+
+####################################################################
+## BƯỚC 3 — TẠO LESSON
+####################################################################
+### 3.1) Tạo lesson (chỉ ADMIN) — body chỉ cần title + orderIndex
+# @name createLessonFull
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Bài 1: 〜です và 〜ます",
+  "orderIndex": 1
+}
+
+###
+@lessonId = {{createLessonFull.response.body.data.id}}
+
+### 3.2) (Optional) Cập nhật title hoặc orderIndex sau này
+PUT {{baseUrl}}/lessons/{{lessonId}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Bài 1: Ngữ pháp 〜です và 〜ます (đã chỉnh)"
+}
+
+####################################################################
+## BƯỚC 4 — TẠO CÁC SECTION TRONG LESSON
+##         (4 loại: KANJI / VOCABULARY / GRAMMAR / TEST)
+####################################################################
+
+### 4.1) Section KANJI — nhóm chữ Hán cần học
+# @name createKanjiSec
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "sectionType": "KANJI",
+  "title": "Phần 1: Chữ Hán trong bài"
+}
+
+###
+@kanjiSecId = {{createKanjiSec.response.body.data.id}}
+
+### 4.2) Section VOCABULARY — nhóm từ vựng cần học
+# @name createVocabSec
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "sectionType": "VOCABULARY",
+  "title": "Phần 2: Từ vựng theo chủ đề"
+}
+
+###
+@vocabSecId = {{createVocabSec.response.body.data.id}}
+
+### 4.3) Section GRAMMAR — các điểm ngữ pháp chính
+# @name createGrammarSec
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "sectionType": "GRAMMAR",
+  "title": "Phần 3: Ngữ pháp 〜です / 〜ます"
+}
+
+###
+@grammarSecId = {{createGrammarSec.response.body.data.id}}
+
+### 4.4) Section TEST — bài kiểm tra cuối bài
+# @name createTestSec
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "sectionType": "TEST",
+  "title": "Phần 4: Mini test cuối bài"
+}
+
+###
+@testSecId = {{createTestSec.response.body.data.id}}
+
+### 4.5) (Optional) Cập nhật tiêu đề hoặc orderIndex của 1 section
+PUT {{baseUrl}}/lessons/{{lessonId}}/sections/{{kanjiSecId}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Phần 1: Chữ Hán trong bài (đã chỉnh)",
+  "orderIndex": 1
+}
+
+### 4.6) GET toàn bộ section của lesson (xác nhận 4 section đã tạo)
+GET {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+
+####################################################################
+## BƯỚC 5 — THÊM ITEMS VÀO TỪNG SECTION
+####################################################################
+
+# ------------------------------------------------------------------
+# 5.1) KANJI SECTION — thêm chữ Hán + từ vựng liên quan
+# ------------------------------------------------------------------
+
+### 5.1.1) Thêm 1 chữ Hán (characterId = 1 là ví dụ — lấy từ /api/v1/dictionary/kanji)
+# @name addKanji1
+POST {{baseUrl}}/lesson-sections/{{kanjiSecId}}/kanji-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "characterId": 1,
+  "orderIndex": 1,
+  "note": "Chữ Hán 学 (học) — nghĩa: học tập"
+}
+
+###
+@kanjiItem1Id = {{addKanji1.response.body.data.id}}
+
+### 5.1.2) Thêm chữ Hán thứ 2
+# @name addKanji2
+POST {{baseUrl}}/lesson-sections/{{kanjiSecId}}/kanji-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "characterId": 2,
+  "note": "Chữ Hán 生 (sinh) — nghĩa: sinh ra, học sinh"
+}
+
+###
+@kanjiItem2Id = {{addKanji2.response.body.data.id}}
+
+### 5.1.3) Gắn từ vựng liên quan cho chữ Hán 学 (vocabId = 1 là ví dụ)
+# @name addRelatedVocab
+POST {{baseUrl}}/lesson-kanji-items/{{kanjiItem1Id}}/related-vocabulary
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "vocabId": 1,
+  "note": "Từ 学生 chứa chữ 学"
+}
+
+###
+@relatedVocabId = {{addRelatedVocab.response.body.data.id}}
+
+### 5.1.4) (Optional) Cập nhật ghi chú kanji
+PUT {{baseUrl}}/lesson-kanji-items/{{kanjiItem1Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "note": "Chữ Hán 学 — đã cập nhật"
+}
+
+# ------------------------------------------------------------------
+# 5.2) VOCABULARY SECTION — thêm từ vựng + ví dụ
+# ------------------------------------------------------------------
+
+### 5.2.1) Thêm 1 từ vựng (vocabId lấy từ /api/v1/dictionary/vocab)
+# @name addVocab1
+POST {{baseUrl}}/lesson-sections/{{vocabSecId}}/vocabulary-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "vocabId": 1,
+  "orderIndex": 1,
+  "customHiragana": "がくせい",
+  "customMeaning": "học sinh",
+  "imageUrl": "https://example.com/student.jpg",
+  "note": "Từ vựng chính trong bài"
+}
+
+###
+@vocabItem1Id = {{addVocab1.response.body.data.id}}
+
+### 5.2.2) Thêm ví dụ cho từ vựng
+# @name addVocabExample
+POST {{baseUrl}}/lesson-vocabulary-items/{{vocabItem1Id}}/examples
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "exampleJp": "私は学生です。",
+  "exampleVi": "Tôi là học sinh.",
+  "exampleRomaji": "Watashi wa gakusei desu.",
+  "isPrimary": true,
+  "orderIndex": 1
+}
+
+###
+@vocabExampleId = {{addVocabExample.response.body.data.id}}
+
+### 5.2.3) Thêm ví dụ thứ 2 (không primary)
+# @name addVocabExample2
+POST {{baseUrl}}/lesson-vocabulary-items/{{vocabItem1Id}}/examples
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "exampleJp": "学生は毎日勉強します。",
+  "exampleVi": "Học sinh học mỗi ngày.",
+  "orderIndex": 2
+}
+
+###
+@vocabExample2Id = {{addVocabExample2.response.body.data.id}}
+
+# ------------------------------------------------------------------
+# 5.3) GRAMMAR SECTION — thêm điểm ngữ pháp + ví dụ
+# ------------------------------------------------------------------
+
+### 5.3.1) Thêm 1 điểm ngữ pháp (grammarId lấy từ /api/v1/dictionary/grammar)
+# @name addGrammar1
+POST {{baseUrl}}/lesson-sections/{{grammarSecId}}/grammar-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "grammarId": 1,
+  "orderIndex": 1,
+  "customMeaning": "Là (lịch sự)",
+  "customStructure": "A は B です",
+  "note": "Ngữ pháp cơ bản nhất trong tiếng Nhật"
+}
+
+###
+@grammarItem1Id = {{addGrammar1.response.body.data.id}}
+
+### 5.3.2) Thêm ví dụ cho ngữ pháp
+# @name addGrammarExample
+POST {{baseUrl}}/lesson-grammar-items/{{grammarItem1Id}}/examples
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "exampleJp": "私は先生です。",
+  "exampleVi": "Tôi là giáo viên.",
+  "orderIndex": 1
+}
+
+###
+@grammarExampleId = {{addGrammarExample.response.body.data.id}}
+
+### 5.3.3) Thêm điểm ngữ pháp thứ 2 (〜ます)
+# @name addGrammar2
+POST {{baseUrl}}/lesson-sections/{{grammarSecId}}/grammar-items
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "grammarId": 2,
+  "customStructure": "V-ます",
+  "note": "Thể lịch sự của động từ"
+}
+
+###
+@grammarItem2Id = {{addGrammar2.response.body.data.id}}
+
+####################################################################
+## BƯỚC 6 — TẠO QUIZ CHO SECTION TEST
+####################################################################
+
+### 6.1) Tạo quiz cho section TEST (kèm câu hỏi + 4 lựa chọn)
+# Body tạo luôn 1 câu hỏi MULTIPLE_CHOICE với 4 options (A/B/C/D)
+# @name createQuiz
+POST {{baseUrl}}/lesson-sections/{{testSecId}}/quiz
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "questionText": "「私は学生です。」 nghĩa là gì?",
+  "explanation": "「学生」= học sinh, 「です」= là (lịch sự)",
+  "orderIndex": 1,
+  "questionType": "MULTIPLE_CHOICE",
+  "options": [
+    { "optionKey": 1, "optionText": "Tôi là học sinh.", "correct": true },
+    { "optionKey": 2, "optionText": "Tôi là giáo viên.", "correct": false },
+    { "optionKey": 3, "optionText": "Bạn là học sinh.", "correct": false },
+    { "optionKey": 4, "optionText": "Anh ấy là học sinh.", "correct": false }
+  ]
+}
+
+###
+@quizId = {{createQuiz.response.body.data.id}}
+
+### 6.2) Thêm câu hỏi thứ 2 vào cùng quiz (endpoint mới theo section)
+POST {{baseUrl}}/lesson-sections/{{testSecId}}/quiz/questions
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "questionText": "「〜ます」 dùng cho đối tượng nào?",
+  "explanation": "Thể lịch sự, dùng khi nói chuyện với người lớn tuổi, sếp, khách.",
+  "orderIndex": 2,
+  "questionType": "MULTIPLE_CHOICE",
+  "options": [
+    { "optionKey": 1, "optionText": "Bạn bè đồng trang lứa", "correct": false },
+    { "optionKey": 2, "optionText": "Người lớn tuổi / khách / sếp", "correct": true },
+    { "optionKey": 3, "optionText": "Chỉ trong văn viết", "correct": false },
+    { "optionKey": 4, "optionText": "Chỉ dùng cho nữ", "correct": false }
+  ]
+}
+
+### 6.3) GET lại quiz để xác nhận có 2 câu hỏi
+GET {{baseUrl}}/lessons/{{lessonId}}/quiz
+Authorization: Bearer {{teacherToken}}
+
+####################################################################
+## BƯỚC 7 — VERIFY TOÀN BỘ
+####################################################################
+
+### 7.1) GET lesson detail (cần token student đã enroll — xem 04-enrollment-flow)
+GET {{baseUrl}}/lessons/{{lessonId}}
+Authorization: Bearer {{teacherToken}}
+
+### 7.2) GET section chi tiết (KANJI — xem có items + related vocab)
+GET {{baseUrl}}/lessons/{{lessonId}}/sections/{{kanjiSecId}}
+Authorization: Bearer {{teacherToken}}
+
+### 7.3) GET section chi tiết (VOCABULARY — xem có items + examples)
+GET {{baseUrl}}/lessons/{{lessonId}}/sections/{{vocabSecId}}
+Authorization: Bearer {{teacherToken}}
+
+### 7.4) GET section chi tiết (GRAMMAR — xem có items + examples)
+GET {{baseUrl}}/lessons/{{lessonId}}/sections/{{grammarSecId}}
+Authorization: Bearer {{teacherToken}}
+
+### 7.5) GET section chi tiết (TEST — xem có quiz)
+GET {{baseUrl}}/lessons/{{lessonId}}/sections/{{testSecId}}
+Authorization: Bearer {{teacherToken}}
+
+####################################################################
+## (OPTIONAL) BƯỚC 8 — DỌN DẸP / SỬA
+####################################################################
+
+### 8.1) Xoá 1 example không cần
+DELETE {{baseUrl}}/lesson-vocabulary-items/examples/{{vocabExample2Id}}
+Authorization: Bearer {{teacherToken}}
+
+### 8.2) Xoá 1 kanji item
+DELETE {{baseUrl}}/lesson-kanji-items/{{kanjiItem2Id}}
+Authorization: Bearer {{teacherToken}}
+
+### 8.3) Xoá related vocab
+DELETE {{baseUrl}}/lesson-kanji-items/related-vocabulary/{{relatedVocabId}}
+Authorization: Bearer {{teacherToken}}
+
+### 8.4) Xoá mềm cả lesson (ẩn khỏi course)
+DELETE {{baseUrl}}/lessons/{{lessonId}}
+Authorization: Bearer {{teacherToken}}

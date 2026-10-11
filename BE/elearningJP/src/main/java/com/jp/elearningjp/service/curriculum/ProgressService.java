@@ -13,12 +13,14 @@ import com.jp.elearningjp.mapper.curriculum.ProgressMapper;
 import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
 import com.jp.elearningjp.repository.curriculum.CourseRepository;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
+import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
 import com.jp.elearningjp.shared.enums.EnrollmentStatus;
-import com.jp.elearningjp.shared.enums.LessonType;
+import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.event.curriculum.LessonCompletedEvent;
 import com.jp.elearningjp.shared.event.curriculum.LessonStartedEvent;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -39,8 +42,10 @@ public class ProgressService {
     private final LessonRepository lessonRepository;
     private final CourseRepository courseRepository;
     private final CourseEnrollmentRepository enrollmentRepository;
+    private final LessonSectionRepository lessonSectionRepository;
     private final ProgressMapper progressMapper;
     private final CurrentUserService currentUserService;
+    private final CourseAccessGuard courseAccessGuard;
     private final EnrollmentService enrollmentService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -58,9 +63,9 @@ public class ProgressService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
-        requireEnrolledUser(currentUser.getId(), lesson.getCourse().getId());
+        courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
 
-        var existing = progressRepository
+        Optional<UserLessonProgress> existing = progressRepository
                 .findByUser_IdAndLesson_IdAndDeletedFalse(currentUser.getId(), lessonId);
 
         UserLessonProgress progress;
@@ -100,6 +105,20 @@ public class ProgressService {
     // COMPLETE LESSON
     // ============================================================
 
+    /**
+     * User hoàn thành 1 lesson.
+     *
+     * <p>SAU REFACTOR (V14): khái niệm "lesson có quiz" được xác định bằng
+     * sự tồn tại của section {@code TEST} (chứ không còn dựa vào
+     * {@code lesson.lessonType == MINI_TEST}).</p>
+     *
+     * <ul>
+     *   <li>Nếu lesson có section TEST → bắt buộc phải gửi {@code score} để
+     *       hoàn thành (đây là điểm quiz).</li>
+     *   <li>Nếu lesson KHÔNG có section TEST → KHÔNG được gửi score (vì
+     *       không có quiz để chấm).</li>
+     * </ul>
+     */
     @Transactional
     public ProgressResponse completeLesson(Long lessonId, LessonCompleteRequest request) {
         User currentUser = currentUserService.getCurrentUser();
@@ -107,11 +126,13 @@ public class ProgressService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Long courseId = lesson.getCourse().getId();
-        requireEnrolledUser(currentUser.getId(), courseId);
+        courseAccessGuard.requireEnrolled(courseId);
 
-        // Validate score theo lesson type
+        // Xác định "có quiz" dựa trên section TEST
+        boolean isMiniTest = lessonSectionRepository
+                .existsByLessonIdAndSectionTypeAndDeletedFalse(lessonId, LessonSectionType.TEST);
+
         BigDecimal score = request.getScore();
-        boolean isMiniTest = lesson.getLessonType() == LessonType.MINI_TEST;
         if (isMiniTest) {
             if (score == null) {
                 throw new AppException(ErrorCode.CANNOT_COMPLETE_LESSON);
@@ -123,7 +144,7 @@ public class ProgressService {
         }
 
         // Lấy / tạo progress
-        var existing = progressRepository
+        Optional<UserLessonProgress> existing = progressRepository
                 .findByUser_IdAndLesson_IdAndDeletedFalse(currentUser.getId(), lessonId);
 
         UserLessonProgress progress;
@@ -138,7 +159,7 @@ public class ProgressService {
             progress.setCompletedAt(now);
             progress.setLastAccessedAt(now);
 
-            // Update bestScore (chỉ khi cao hơn)
+            // Update bestScore (chỉ khi cao hơn và có quiz)
             if (isMiniTest && score != null) {
                 if (progress.getBestScore() == null || score.compareTo(progress.getBestScore()) > 0) {
                     progress.setBestScore(score);
@@ -172,8 +193,8 @@ public class ProgressService {
             enrollmentService.markAsCompletedIfFull(currentUser.getId(), courseId);
         }
 
-        log.info("Lesson {} completed: userId={}, courseId={}, progressPercent={}",
-                lessonId, currentUser.getId(), courseId, courseProgressPercent);
+        log.info("Lesson {} completed: userId={}, courseId={}, progressPercent={}, hasQuiz={}",
+                lessonId, currentUser.getId(), courseId, courseProgressPercent, isMiniTest);
 
         return progressMapper.toResponse(saved);
     }
@@ -230,35 +251,26 @@ public class ProgressService {
                 .max(Instant::compareTo)
                 .orElse(null);
 
-        return CourseProgressResponse.builder()
-                .courseId(courseId)
-                .courseTitle(course.getTitle())
-                .courseLevel(course.getJlptLevel())
-                .totalLessons((int) totalLessons)
-                .completedLessons((int) completed)
-                .inProgressLessons((int) inProgress)
-                .notStartedLessons((int) notStarted)
-                .progressPercent(BigDecimal.valueOf(progressPercent))
-                .isCompleted(isCompleted)
-                .enrolledAt(firstStartedAt)
-                .lastAccessedAt(lastAccessedAt)
-                .progress(progresses.stream().map(progressMapper::toResponse).toList())
-                .build();
+        // Bước 4: dùng factory detailed, sau đó override isCompleted theo nghiệp vụ
+        // (ProgressService: isCompleted = enrollment.status = COMPLETED,
+        //  KHÔNG dựa vào completed/totalLessons như công thức mặc định của factory).
+        CourseProgressResponse response = CourseProgressResponse.detailed(
+                courseId,
+                course.getTitle(),
+                course.getJlptLevel(),
+                (int) totalLessons,
+                completed,
+                inProgress,
+                firstStartedAt,
+                lastAccessedAt,
+                progresses.stream().map(progressMapper::toResponse).toList(),
+                progressPercent
+        );
+        response.setCompleted(isCompleted);
+        return response;
     }
 
     // ============================================================
-    // PRIVATE HELPERS
+    // (Đã chuyển logic check enrollment sang CourseAccessGuard)
     // ============================================================
-
-    /**
-     * Check user hiện tại có enrollment ACTIVE cho course không.
-     */
-    private void requireEnrolledUser(Long userId, Long courseId) {
-        boolean isEnrolled = enrollmentRepository
-                .existsByUser_IdAndCourse_IdAndStatusAndDeletedFalse(
-                        userId, courseId, EnrollmentStatus.ACTIVE);
-        if (!isEnrolled) {
-            throw new AppException(ErrorCode.NOT_ENROLLED);
-        }
-    }
 }

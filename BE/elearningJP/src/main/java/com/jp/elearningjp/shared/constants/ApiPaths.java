@@ -51,13 +51,44 @@ public final class ApiPaths {
         public static final String QUIZ = "/{id}/quiz";
         public static final String QUIZ_SUBMIT = "/{id}/quiz/submit";
         public static final String QUIZ_QUESTIONS = "/{id}/quiz/questions";
+
+        // ===== Section endpoints =====
+        public static final String SECTIONS = "/{id}/sections";
+        public static final String SECTION_BY_ID = "/{id}/sections/{sectionId}";
+
+        // ===== Lesson Items endpoints (controller riêng, root path: /lesson-sections) =====
+        public static final String LESSON_SECTIONS = "/lesson-sections";
+        public static final String KANJI_ITEMS = "/{sectionId}/kanji-items";
+        public static final String KANJI_ITEM_BY_ID = "/kanji-items/{itemId}";
+        public static final String VOCABULARY_ITEMS = "/{sectionId}/vocabulary-items";
+        public static final String VOCABULARY_ITEM_BY_ID = "/vocabulary-items/{itemId}";
+        public static final String GRAMMAR_ITEMS = "/{sectionId}/grammar-items";
+        public static final String GRAMMAR_ITEM_BY_ID = "/grammar-items/{itemId}";
+
+    // ===== Quiz endpoints (gắn vào 1 section TEST cụ thể) =====
+    public static final String SECTION_QUIZ = "/{sectionId}/quiz";
+    public static final String SECTION_QUIZ_QUESTIONS = "/{sectionId}/quiz/questions";
+    public static final String SECTION_QUIZ_BY_ID = "/{sectionId}/quiz/{quizId}";
+
+        // ===== Lesson examples endpoints (controller riêng) =====
+        public static final String LESSON_VOCABULARY_ITEMS = "/lesson-vocabulary-items";
+        public static final String LESSON_VOCABULARY_EXAMPLES = "/{vocabItemId}/examples";
+        public static final String VOCAB_EXAMPLE_BY_ID = "/examples/{exampleId}";
+
+        public static final String LESSON_GRAMMAR_ITEMS = "/lesson-grammar-items";
+        public static final String LESSON_GRAMMAR_EXAMPLES = "/{grammarItemId}/examples";
+        public static final String GRAMMAR_EXAMPLE_BY_ID = "/examples/{exampleId}";
+
+        // ===== Related vocab (kanji) =====
+        public static final String LESSON_KANJI_ITEMS = "/lesson-kanji-items";
+        public static final String KANJI_RELATED_VOCAB = "/{kanjiItemId}/related-vocabulary";
+        public static final String KANJI_RELATED_VOCAB_BY_ID = "/related-vocabulary/{relatedVocabId}";
     }
 
     public static final class Enrollment {
         public static final String BASE = "/enrollments";
         public static final String ME = "/me";
         public static final String BY_ID = "/{enrollmentId}";
-        public static final String DROP = "/{enrollmentId}/drop";
     }
 
     public static final class Progress {

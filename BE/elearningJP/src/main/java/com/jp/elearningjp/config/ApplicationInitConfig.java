@@ -65,7 +65,7 @@ public class ApplicationInitConfig {
                             return saved;
                         });
 
-                var roles = new HashSet<Role>();
+                HashSet<Role> roles = new HashSet<>();
                 roles.add(adminRole);
                 roles.add(userRole);
                 roles.add(teacherRole);

@@ -1,0 +1,248 @@
+### ============================================================
+### 6) LESSON SECTION FLOW
+###    - Test CRUD section (KANJI / VOCABULARY / GRAMMAR / TEST)
+###    - Cần token giáo viên/admin
+###    - Chạy 01 → 02 → 03 trước (cần course + token)
+###
+###  SAU REFACTOR (V14):
+###    - Lesson body chỉ còn { title, orderIndex } — KHÔNG còn lessonType,
+###      contentMarkdown, durationMinutes.
+###    - "Loại bài học" giờ được suy ra từ section đầu tiên / section TEST.
+###    - Section TEST = bài kiểm tra / quiz (thay thế MINI_TEST ở lesson-level).
+### ============================================================
+
+### Variables
+@baseUrl = http://localhost:8080/api/v1
+@teacherToken = {{teacherLogin.response.body.data.accessToken}}
+@studentToken = {{studentLogin.response.body.data.accessToken}}
+@courseId = {{createCourseN5.response.body.data.id}}
+### ============================================================
+### 6.1) (Optional) Setup: tạo 1 lesson mới để test section
+###        Nếu đã có lesson1 từ 03, có thể bỏ qua bước này
+### ============================================================
+# @name createLessonForSection
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "title": "Bài Section Test: Hiragana nâng cao"
+}
+
+###
+@lessonId = {{createLessonForSection.response.body.data.id}}
+
+
+### ============================================================
+### 6.2) GET — Lấy tất cả section của lesson (ban đầu rỗng)
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+
+### ============================================================
+### 6.3) POST — Tạo section KANJI
+### ============================================================
+# @name createKanjiSection
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "KANJI",
+  "title": "Phần 1: Chữ Hán N5"
+}
+
+###
+@kanjiSectionId = {{createKanjiSection.response.body.data.id}}
+
+
+### ============================================================
+### 6.4) POST — Tạo section VOCABULARY
+### ============================================================
+# @name createVocabSection
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "VOCABULARY",
+  "title": "Phần 2: Từ vựng theo chủ đề"
+}
+
+###
+@vocabSectionId = {{createVocabSection.response.body.data.id}}
+
+
+### ============================================================
+### 6.5) POST — Tạo section GRAMMAR
+### ============================================================
+# @name createGrammarSection
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "GRAMMAR",
+  "title": "Phần 3: Ngữ pháp 〜です/〜ます"
+}
+
+###
+@grammarSectionId = {{createGrammarSection.response.body.data.id}}
+
+
+### ============================================================
+### 6.6) POST — Tạo section TEST
+### ============================================================
+# @name createTestSection
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "TEST",
+  "title": "Phần 4: Mini test cuối bài"
+}
+
+###
+@testSectionId = {{createTestSection.response.body.data.id}}
+
+
+### ============================================================
+### 6.7) GET — Lấy lại toàn bộ section (giờ có 4 section)
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.8) GET — Lấy chi tiết 1 section (KANJI)
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}/sections/{{kanjiSectionId}}
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.9) PUT — Cập nhật tiêu đề + orderIndex
+### ============================================================
+PUT {{baseUrl}}/lessons/{{lessonId}}/sections/{{kanjiSectionId}}
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "title": "Phần 1: Chữ Hán N5 (cập nhật)",
+  "orderIndex": 1
+}
+
+
+### ============================================================
+### 6.10) PUT — Chỉ đổi title (không gửi orderIndex)
+### ============================================================
+PUT {{baseUrl}}/lessons/{{lessonId}}/sections/{{vocabSectionId}}
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "title": "Phần 2: Từ vựng mới"
+}
+
+
+### ============================================================
+### 6.11) GET — Verify sau khi update
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.12) (EXPECTED 400) POST không gửi sectionType
+### ============================================================
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "title": "Section lỗi - thiếu sectionType"
+}
+
+
+### ============================================================
+### 6.13) (EXPECTED 400) POST gửi sectionType không hợp lệ
+### ============================================================
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "INVALID_TYPE",
+  "title": "Section lỗi"
+}
+
+
+### ============================================================
+### 6.14) (EXPECTED 403) Student thử tạo section (không có quyền)
+### ============================================================
+POST {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "KANJI",
+  "title": "Student thử tạo"
+}
+
+
+### ============================================================
+### 6.15) (EXPECTED 404) GET section không tồn tại
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}/sections/999999
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.16) (EXPECTED 404) POST lên lesson không tồn tại
+### ============================================================
+POST {{baseUrl}}/lessons/999999/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "KANJI",
+  "title": "Section cho lesson ảo"
+}
+
+
+### ============================================================
+### 6.17) DELETE — Xoá mềm 1 section (TEST)
+### ============================================================
+DELETE {{baseUrl}}/lessons/{{lessonId}}/sections/{{testSectionId}}
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.18) GET — Verify section đã bị ẩn
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}/sections
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.19) (EXPECTED 404) GET section đã xoá
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}/sections/{{testSectionId}}
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.20) DELETE — Xoá idempotent (gọi lại không lỗi)
+### ============================================================
+DELETE {{baseUrl}}/lessons/{{lessonId}}/sections/{{testSectionId}}
+Authorization: Bearer {{teacherToken}}
+
+
+### ============================================================
+### 6.21) GET full lesson detail (kèm sections)
+###        Lưu ý: cần student đã enroll ACTIVE (chạy 04 trước)
+###        Response có isEnrolled, sections[].sectionType, items, etc.
+### ============================================================
+GET {{baseUrl}}/lessons/{{lessonId}}
+Authorization: Bearer {{studentToken}}

@@ -11,6 +11,10 @@ import lombok.experimental.FieldDefaults;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+/**
+ * SAU REFACTOR (V14): bỏ trường {@code lessonType} vì bảng lessons không còn cột này.
+ * Việc xác định lesson có quiz được xử lý ở service (dựa trên section TEST).
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -22,7 +26,6 @@ public class ProgressResponse {
     Long lessonId;
     String lessonTitle;
     Integer lessonOrderIndex;
-    String lessonType;
     ProgressStatus status;
     BigDecimal bestScore;
     Instant startedAt;

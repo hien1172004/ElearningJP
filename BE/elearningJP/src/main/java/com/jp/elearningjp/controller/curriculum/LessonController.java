@@ -36,9 +36,9 @@ public class LessonController {
                 .build();
     }
 
-    @Operation(summary = "[Admin] Thêm bài học mới vào khóa học", description = "Thêm bài học mới, tự động tính số thứ tự tiếp theo nếu không nhập")
+    @Operation(summary = "[Admin/Teacher] Thêm bài học mới vào khóa học", description = "Thêm bài học mới, tự động tính số thứ tự tiếp theo nếu không nhập (Teacher chỉ thêm được lesson vào course do mình tạo)")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.Course.BASE + ApiPaths.Course.LESSONS)
     public ApiResponse<LessonDetailResponse> createLesson(
             @Parameter(description = "ID của khóa học chứa bài học", example = "1", required = true)
@@ -52,9 +52,9 @@ public class LessonController {
                 .build();
     }
 
-    @Operation(summary = "[Admin] Chỉnh sửa bài học", description = "Cập nhật nội dung, tiêu đề hoặc thời lượng bài học")
+    @Operation(summary = "[Admin/Teacher] Chỉnh sửa bài học", description = "Cập nhật tiêu đề hoặc thứ tự bài học (Teacher chỉ sửa được lesson trong course do mình tạo)")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @PutMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.BY_ID)
     public ApiResponse<LessonDetailResponse> updateLesson(
             @PathVariable Long id,
@@ -67,9 +67,9 @@ public class LessonController {
                 .build();
     }
 
-    @Operation(summary = "[Admin] Xóa mềm bài học", description = "Ẩn bài học khỏi khóa học")
+    @Operation(summary = "[Admin/Teacher] Xóa mềm bài học", description = "Ẩn bài học khỏi khóa học (Teacher chỉ xoá được lesson trong course do mình tạo)")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @DeleteMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.BY_ID)
     public ApiResponse<Void> deleteLesson(@PathVariable Long id) {
         lessonService.deleteLesson(id);

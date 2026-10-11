@@ -1,25 +1,34 @@
+### ============================================================
+### 5) PROGRESS FLOW
+###    - Test start / complete lesson, cập nhật progress
+###    - Cần chạy 01 → 02 → 03 → 04 trước (đã có student ACTIVE enrollment)
+###
+###  SAU REFACTOR (V14):
+###    - "Lesson có quiz" giờ được xác định bằng sự tồn tại section TEST
+###      (xem 06-lesson-section-flow.http để biết cách tạo section TEST).
+###    - Nếu lesson có section TEST → bắt buộc gửi `score` khi complete.
+###    - Nếu lesson KHÔNG có section TEST → KHÔNG được gửi score.
+### ============================================================
+
 ### Variables
 @baseUrl = http://localhost:8080/api/v1
+@teacherToken = {{teacherLogin.response.body.data.accessToken}}
 @studentToken = {{studentLogin.response.body.data.accessToken}}
 @courseId = {{createCourseN5.response.body.data.id}}
 
-### ============================================================
-### PRE-REQUISITE: Phải chạy 04-enrollment-flow đến bước 4.7
-### (student đã enroll ACTIVE) trước khi chạy file này
-### ============================================================
-
 @lesson1Id = {{createLesson1.response.body.data.id}}
 @lesson2Id = {{createLesson2.response.body.data.id}}
+@lesson3Id = {{createLesson3.response.body.data.id}}
 
 ### ============================================================
-### 5.1) Start lesson THEORY
+### 5.1) Start lesson #1 (KHÔNG có section TEST → không cần score)
 ### ============================================================
 # @name startL1
 POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/start
 Authorization: Bearer {{studentToken}}
 
 ### ============================================================
-### 5.2) Complete lesson THEORY (không score)
+### 5.2) Complete lesson #1 (không score) — phải OK vì không có section TEST
 ### ============================================================
 POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/complete
 Content-Type: application/json
@@ -41,13 +50,13 @@ Authorization: Bearer {{studentToken}}
 }
 
 ### ============================================================
-### 5.4) Start lesson VOCABULARY
+### 5.4) Start lesson #2
 ### ============================================================
 POST {{baseUrl}}/progress/lessons/{{lesson2Id}}/start
 Authorization: Bearer {{studentToken}}
 
 ### ============================================================
-### 5.5) Complete lesson VOCABULARY
+### 5.5) Complete lesson #2 (không score)
 ### ============================================================
 POST {{baseUrl}}/progress/lessons/{{lesson2Id}}/complete
 Content-Type: application/json
@@ -58,40 +67,29 @@ Authorization: Bearer {{studentToken}}
 }
 
 ### ============================================================
-### 5.6) Complete MINI_TEST lần 1 với score 70
+### 5.6) Setup: tạo section TEST cho lesson #3
+###       → sau khi có section TEST, lesson #3 mới được coi là "có quiz"
 ### ============================================================
-# Tạo lesson MINI_TEST từ test 3.3
-@lesson3Id = {{createLesson3.response.body.data.id}}
+# @name createTestSectionForL3
+POST {{baseUrl}}/lessons/{{lesson3Id}}/sections
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "sectionType": "TEST",
+  "title": "Mini test cuối bài"
+}
+
+###
+@testSectionForL3Id = {{createTestSectionForL3.response.body.data.id}}
+
+### ============================================================
+### 5.7) (EXPECTED 400) Complete lesson #3 (có section TEST) nhưng KHÔNG gửi score
+### ============================================================
 POST {{baseUrl}}/progress/lessons/{{lesson3Id}}/start
 Authorization: Bearer {{studentToken}}
 
-### ... (cần có lesson3 thực tế - xem 03-lesson-crud)
-
 ###
-### Note: 2 lesson đã complete (lesson1 + lesson2) → progress 100% nếu course chỉ có 2 lesson
-### → Enrollment tự động COMPLETED
-
-### ============================================================
-### 5.7) GET progress 1 lesson
-### ============================================================
-GET {{baseUrl}}/progress/lessons/{{lesson1Id}}
-Authorization: Bearer {{studentToken}}
-
-### ============================================================
-### 5.8) GET toàn bộ progress trong course (kèm stats)
-### ============================================================
-GET {{baseUrl}}/progress/courses/{{courseId}}
-Authorization: Bearer {{studentToken}}
-
-### ============================================================
-### 5.9) Kiểm tra enrollment đã COMPLETED
-### ============================================================
-GET {{baseUrl}}/enrollments/me/active
-Authorization: Bearer {{studentToken}}
-
-### ============================================================
-### 5.10) (EXPECTED 400) Complete MINI_TEST không có score
-### ============================================================
 POST {{baseUrl}}/progress/lessons/{{lesson3Id}}/complete
 Content-Type: application/json
 Authorization: Bearer {{studentToken}}
@@ -101,26 +99,73 @@ Authorization: Bearer {{studentToken}}
 }
 
 ### ============================================================
-### 5.11) Complete MINI_TEST với score 85
+### 5.8) Complete lesson #3 với score 85.5 (BigDecimal)
+###   Lưu ý: Backend lưu bestScore — gửi score thấp hơn sẽ không ghi đè.
 ### ============================================================
 POST {{baseUrl}}/progress/lessons/{{lesson3Id}}/complete
 Content-Type: application/json
 Authorization: Bearer {{studentToken}}
 
 {
-  "score": 85
+  "score": 85.5
 }
 
 ### ============================================================
-### 5.12) (EXPECTED 400) Complete lại với score thấp hơn (bestScore 85)
-### → bestScore vẫn phải là 85
+### 5.8a) (EXPECTED 400) Complete lại lesson #3 đã complete
 ### ============================================================
-# Lưu ý: hiện tại code reject re-complete; bestScore giữ nguyên qua lần đầu
+POST {{baseUrl}}/progress/lessons/{{lesson3Id}}/complete
+Content-Type: application/json
+Authorization: Bearer {{studentToken}}
+
+{
+  "score": 70
+}
 
 ### ============================================================
-### 5.13) (EXPECTED 400) Complete THEORY với score (sai rule)
+### Note: cả 3 lesson đã complete → course progress = 100%
+### → Enrollment tự động COMPLETED
 ### ============================================================
-POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/complete
+
+### ============================================================
+### 5.9) GET progress 1 lesson
+### ============================================================
+GET {{baseUrl}}/progress/lessons/{{lesson1Id}}
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.10) GET toàn bộ progress trong course (kèm stats)
+### ============================================================
+GET {{baseUrl}}/progress/courses/{{courseId}}
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.11) Kiểm tra enrollment đã COMPLETED
+### ============================================================
+GET {{baseUrl}}/enrollments/me/active
+Authorization: Bearer {{studentToken}}
+
+### ============================================================
+### 5.12) (EXPECTED 400) Complete lesson không có section TEST nhưng gửi score
+### → Tạo lesson #4 mới (không có TEST section) rồi thử complete với score
+### ============================================================
+# @name createLesson4
+POST {{baseUrl}}/courses/{{courseId}}/lessons
+Authorization: Bearer {{teacherToken}}
+Content-Type: application/json
+
+{
+  "title": "Bài 4: Luyện nghe (không quiz)"
+}
+
+###
+@lesson4Id = {{createLesson4.response.body.data.id}}
+
+###
+POST {{baseUrl}}/progress/lessons/{{lesson4Id}}/start
+Authorization: Bearer {{studentToken}}
+
+###
+POST {{baseUrl}}/progress/lessons/{{lesson4Id}}/complete
 Content-Type: application/json
 Authorization: Bearer {{studentToken}}
 
@@ -129,12 +174,8 @@ Authorization: Bearer {{studentToken}}
 }
 
 ### ============================================================
-### 5.14) (EXPECTED 403) Complete lesson khi chưa enroll
+### 5.13) (EXPECTED 403) Start lesson khi chưa enroll
+### → Dùng teacher token (chưa enroll) thay vì student
 ### ============================================================
-# Drop trước rồi mới complete
-POST {{baseUrl}}/enrollments/by-course/{{courseId}}/drop
-Authorization: Bearer {{studentToken}}
-
-### Sau đó:
 POST {{baseUrl}}/progress/lessons/{{lesson1Id}}/start
-Authorization: Bearer {{studentToken}}
+Authorization: Bearer {{teacherToken}}

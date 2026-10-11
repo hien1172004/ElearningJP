@@ -45,38 +45,16 @@ GET {{baseUrl}}/enrollments/{{enrollmentId}}
 Authorization: Bearer {{teacherToken}}
 
 ### ============================================================
-### 4.7) GET course detail - giờ student đã enroll → contentMarkdown có
+### 4.7) GET course detail - student đã enroll
+### → response có isEnrolled=true, progressPercent, outline lessons
 ### ============================================================
 GET {{baseUrl}}/courses/{{courseId}}
 Authorization: Bearer {{studentToken}}
 
 ### ============================================================
 ### 4.8) GET lesson detail - student đã enroll → OK
+### → response kèm sections (KANJI/VOCAB/GRAMMAR/TEST nếu có)
 ### ============================================================
 @lesson1Id = {{createLesson1.response.body.data.id}}
-GET {{baseUrl}}/courses/{{courseId}}/lessons/{{lesson1Id}}
-Authorization: Bearer {{studentToken}}
-
-### ============================================================
-### 4.9) Drop enrollment theo enrollmentId
-### ============================================================
-POST {{baseUrl}}/enrollments/{{enrollmentId}}/drop
-Authorization: Bearer {{studentToken}}
-
-### ============================================================
-### 4.10) (EXPECTED 400) Drop lần 2
-### ============================================================
-POST {{baseUrl}}/enrollments/{{enrollmentId}}/drop
-Authorization: Bearer {{studentToken}}
-
-### ============================================================
-### 4.11) Re-enroll
-### ============================================================
-POST {{baseUrl}}/courses/{{courseId}}/enroll
-Authorization: Bearer {{studentToken}}
-
-### ============================================================
-### 4.12) Drop theo courseId (tiện cho FE)
-### ============================================================
-POST {{baseUrl}}/enrollments/by-course/{{courseId}}/drop
+GET {{baseUrl}}/lessons/{{lesson1Id}}
 Authorization: Bearer {{studentToken}}

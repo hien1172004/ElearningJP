@@ -109,11 +109,6 @@ class CurriculumRoutingTest {
     }
 
     @Test
-    void enrollCourse_route() throws Exception {
-        assertRouteExists(post("/api/v1/courses/1/enroll"));
-    }
-
-    @Test
     void getAllCoursesForAdmin_route() throws Exception {
         assertRouteExists(get("/api/v1/courses/admin"));
     }
@@ -202,16 +197,6 @@ class CurriculumRoutingTest {
     @Test
     void enrollInCourse_route() throws Exception {
         assertRouteExists(post("/api/v1/courses/1/enroll"));
-    }
-
-    @Test
-    void dropEnrollment_route() throws Exception {
-        assertRouteExists(post("/api/v1/enrollments/1/drop"));
-    }
-
-    @Test
-    void dropEnrollmentByCourseId_route() throws Exception {
-        assertRouteExists(post("/api/v1/enrollments/by-course/1/drop"));
     }
 
     // ============================================================

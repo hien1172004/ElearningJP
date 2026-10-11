@@ -1,3 +1,16 @@
+### ============================================================
+### 3) LESSON CRUD FLOW
+###    - Test tạo / sửa / xoá / cập nhật orderIndex / lấy lesson
+###    - Phải chạy 01-auth.http + 02-course-crud.http trước
+###
+###  SAU REFACTOR (V14):
+###    - Bỏ hoàn toàn các field cũ: lessonType, contentMarkdown, durationMinutes
+###    - Body chỉ còn: title (bắt buộc) + orderIndex (optional, tự gán max+1)
+###    - "Lesson có quiz" giờ được xác định thông qua section TEST
+###      (xem chi tiết ở 06-lesson-section-flow.http)
+###    - Backend KHÔNG có bulk reorder endpoint — chỉ update orderIndex từng lesson.
+### ============================================================
+
 ### Variables
 @baseUrl = http://localhost:8080/api/v1
 @teacherToken = {{teacherLogin.response.body.data.accessToken}}
@@ -5,7 +18,7 @@
 @courseId = {{createCourseN5.response.body.data.id}}
 
 ### ============================================================
-### 3.1) Tạo lesson THEORY (orderIndex=1)
+### 3.1) Tạo lesson #1 (orderIndex=1)
 ### ============================================================
 # @name createLesson1
 POST {{baseUrl}}/courses/{{courseId}}/lessons
@@ -14,17 +27,14 @@ Authorization: Bearer {{teacherToken}}
 
 {
   "title": "Bài 1: Hiragana cơ bản",
-  "lessonType": "THEORY",
-  "orderIndex": 1,
-  "durationMinutes": 30,
-  "contentMarkdown": "# Hiragana\n\nHiragana gồm 46 ký tự..."
+  "orderIndex": 1
 }
 
 ###
 @lesson1Id = {{createLesson1.response.body.data.id}}
 
 ### ============================================================
-### 3.2) Tạo lesson VOCABULARY (orderIndex=2)
+### 3.2) Tạo lesson #2 (orderIndex=2) — bỏ trống orderIndex để auto
 ### ============================================================
 # @name createLesson2
 POST {{baseUrl}}/courses/{{courseId}}/lessons
@@ -32,18 +42,14 @@ Content-Type: application/json
 Authorization: Bearer {{teacherToken}}
 
 {
-  "title": "Bài 2: Từ vựng chào hỏi",
-  "lessonType": "VOCABULARY",
-  "orderIndex": 2,
-  "durationMinutes": 20,
-  "contentMarkdown": "## あいさつ\n- おはよう: Chào buổi sáng"
+  "title": "Bài 2: Từ vựng chào hỏi"
 }
 
 ###
 @lesson2Id = {{createLesson2.response.body.data.id}}
 
 ### ============================================================
-### 3.3) Tạo lesson MINI_TEST (orderIndex=3)
+### 3.3) Tạo lesson #3 (orderIndex=3) — sẽ gắn section TEST sau
 ### ============================================================
 # @name createLesson3
 POST {{baseUrl}}/courses/{{courseId}}/lessons
@@ -52,30 +58,26 @@ Authorization: Bearer {{teacherToken}}
 
 {
   "title": "Bài 3: Mini Test",
-  "lessonType": "MINI_TEST",
-  "orderIndex": 3,
-  "durationMinutes": 15,
-  "contentMarkdown": "Bài kiểm tra 10 câu"
+  "orderIndex": 3
 }
 
 ###
 @lesson3Id = {{createLesson3.response.body.data.id}}
 
 ### ============================================================
-### 3.4) (EXPECTED 409) Tạo lesson với orderIndex trùng
+### 3.4) (EXPECTED 400) Tạo lesson thiếu title
 ### ============================================================
 POST {{baseUrl}}/courses/{{courseId}}/lessons
 Content-Type: application/json
 Authorization: Bearer {{teacherToken}}
 
 {
-  "title": "Trùng order",
-  "lessonType": "THEORY",
-  "orderIndex": 1
+  "orderIndex": 99
 }
 
 ### ============================================================
-### 3.5) (EXPECTED 401) Student tạo lesson - không đủ quyền
+### 3.5) (EXPECTED 403) Student tạo lesson - không đủ quyền
+### (chỉ ADMIN được tạo lesson, không phải TEACHER/LEARNER)
 ### ============================================================
 POST {{baseUrl}}/courses/{{courseId}}/lessons
 Content-Type: application/json
@@ -83,62 +85,105 @@ Authorization: Bearer {{studentToken}}
 
 {
   "title": "Student tạo lesson",
-  "lessonType": "THEORY",
   "orderIndex": 99
 }
 
 ### ============================================================
-### 3.6) GET list lesson trong course (public - không contentMarkdown)
+### 3.6) GET list lesson trong course (public - không có sections)
 ### ============================================================
 GET {{baseUrl}}/courses/{{courseId}}/lessons
 
 ### ============================================================
 ### 3.7) GET lesson detail - Student chưa enroll → EXPECTED 403
 ### ============================================================
-GET {{baseUrl}}/courses/{{courseId}}/lessons/{{lesson1Id}}
+GET {{baseUrl}}/lessons/{{lesson1Id}}
 Authorization: Bearer {{studentToken}}
 
 ### ============================================================
-### 3.8) Update lesson
+### 3.8) Update lesson - chỉ đổi title (không contentMarkdown)
 ### ============================================================
-PUT {{baseUrl}}/courses/{{courseId}}/lessons/{{lesson1Id}}
+PUT {{baseUrl}}/lessons/{{lesson1Id}}
 Content-Type: application/json
 Authorization: Bearer {{teacherToken}}
 
 {
-  "durationMinutes": 45,
-  "contentMarkdown": "Nội dung đã cập nhật"
+  "title": "Bài 1: Hiragana cơ bản (đã cập nhật)",
+  "orderIndex": 1
 }
 
 ### ============================================================
-### 3.9) Reorder lessons
+### 3.9) Update chỉ orderIndex (giữ title cũ)
 ### ============================================================
-POST {{baseUrl}}/courses/{{courseId}}/lessons/reorder
+PUT {{baseUrl}}/lessons/{{lesson2Id}}
 Content-Type: application/json
 Authorization: Bearer {{teacherToken}}
 
 {
-  "lessonIds": [{{lesson3Id}}, {{lesson1Id}}, {{lesson2Id}}]
+  "orderIndex": 5
 }
 
 ### ============================================================
-### 3.10) (EXPECTED 400) Reorder sai số lượng
+### 3.10) (EXPECTED 400) Update thiếu title
+###   LessonUpdateRequest yêu cầu @NotBlank title.
 ### ============================================================
-POST {{baseUrl}}/courses/{{courseId}}/lessons/reorder
+PUT {{baseUrl}}/lessons/{{lesson1Id}}
 Content-Type: application/json
 Authorization: Bearer {{teacherToken}}
 
 {
-  "lessonIds": [{{lesson1Id}}]
+  "orderIndex": 2
 }
 
 ### ============================================================
-### 3.11) Delete lesson
+### 3.11) GET lesson detail trở lại (lưu content markdown không còn)
 ### ============================================================
-DELETE {{baseUrl}}/courses/{{courseId}}/lessons/{{lesson3Id}}
+GET {{baseUrl}}/lessons/{{lesson1Id}}
+
+### ============================================================
+### 3.12) Đổi thứ tự bằng cách update orderIndex từng lesson
+###   Lưu ý: Backend KHÔNG có bulk reorder endpoint. Mỗi lần đổi 1 lesson
+###   → service tự shift các lesson khác để bảo toàn thứ tự 1..N.
+###   Thứ tự ban đầu: [L1=1, L2=2, L3=3]. Mục tiêu: L3 về 1, L1 về 2.
+### ============================================================
+PUT {{baseUrl}}/lessons/{{lesson3Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Bài 3: Mini Test",
+  "orderIndex": 1
+}
+
+###
+PUT {{baseUrl}}/lessons/{{lesson1Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Bài 1: Hiragana cơ bản (đã cập nhật)",
+  "orderIndex": 2
+}
+
+### ============================================================
+### 3.13) (EXPECTED 400) OrderIndex không hợp lệ (≤0)
+###   LessonUpdateRequest: @Min(1) trên orderIndex
+### ============================================================
+PUT {{baseUrl}}/lessons/{{lesson2Id}}
+Content-Type: application/json
+Authorization: Bearer {{teacherToken}}
+
+{
+  "title": "Bài 2: Từ vựng chào hỏi",
+  "orderIndex": 0
+}
+
+### ============================================================
+### 3.14) Delete lesson (soft delete)
+### ============================================================
+DELETE {{baseUrl}}/lessons/{{lesson3Id}}
 Authorization: Bearer {{teacherToken}}
 
 ### ============================================================
-### 3.12) (EXPECTED 404) GET lesson đã xóa
+### 3.15) (EXPECTED 404) GET lesson đã xoá
 ### ============================================================
-GET {{baseUrl}}/courses/{{courseId}}/lessons/{{lesson3Id}}
+GET {{baseUrl}}/lessons/{{lesson3Id}}

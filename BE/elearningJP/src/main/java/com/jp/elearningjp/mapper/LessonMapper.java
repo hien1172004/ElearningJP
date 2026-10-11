@@ -26,6 +26,7 @@ public interface LessonMapper {
     @Mapping(target = "bestScore", ignore = true)
     @Mapping(target = "lastAccessedAt", ignore = true)
     @Mapping(target = "completedAt", ignore = true)
+    @Mapping(target = "sections", ignore = true)
     LessonDetailResponse toLessonDetailResponse(Lesson lesson);
 
     void updateLessonFromRequest(LessonUpdateRequest request, @MappingTarget Lesson lesson);
