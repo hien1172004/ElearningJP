@@ -1,24 +1,33 @@
--- =============================================================================
--- V22: Đảm bảo tính duy nhất của order_index trong lessons và lesson_sections
--- Mục tiêu:
---   1) Tránh 2 lesson cùng course có cùng order_index (kể cả khi soft-delete)
---      → dùng PARTIAL UNIQUE INDEX (chỉ áp dụng khi deleted = false)
---   2) Tương tự cho lesson_sections trong 1 lesson
---   3) Cũng dùng cho các bảng items con để có hành vi nhất quán
---
--- Lưu ý: Dùng PARTIAL UNIQUE INDEX thay vì UNIQUE CONSTRAINT để soft-deleted
---        records không chiếm slot index, cho phép user tạo lại với cùng
---        order_index sau khi lesson cũ bị xoá mềm.
---
--- Quan trọng: Vì dữ liệu cũ có thể đã bị trùng order_index do bug ở V21 trở về
--- trước, ta cần DEDUPLICATE trước khi tạo UNIQUE INDEX.
+-- Flyway Database Migration: V18__add_unique_order_indexes.sql
+-- Module: Lesson Management (Lesson, Section, Item)
 -- =============================================================================
 
+-- 1. Đảm bảo tính duy nhất của order_index trong lessons và lesson_sections
+-- 2. Đảm bảo tính duy nhất của order_index trong lesson_sections
+-- 3. Đảm bảo tính duy nhất của order_index trong lesson_kanji_items
+-- 4. Đảm bảo tính duy nhất của order_index trong lesson_vocabulary_items
+-- 5. Đảm bảo tính duy nhất của order_index trong lesson_grammar_items
+-- 6. Tạo PARTIAL UNIQUE INDEXES
+-- 7. Ghi chú cho backend (Java):
+--    Khi insert/update order_index trùng → Postgres sẽ ném
+--    org.springframework.dao.DataIntegrityViolationException
+--    Service cần BẮT exception này và map sang ErrorCode.LESSON_ORDER_CONFLICT
+--    để trả về HTTP 409 Conflict thân thiện với client thay vì 500.
+--    Ngoài ra, trước khi insert, service nên check tồn tại để:
+--      - Tránh để DB ném exception (giảm log noise)
+--      - Chủ động shift các bản ghi phía sau +1 (UX mượt hơn)
 -- =============================================================================
--- BƯỚC 1: DEDUPLICATE lessons (cập nhật order_index để không trùng trong cùng course)
--- =============================================================================
--- Với mỗi course, ta reorder lại toàn bộ lesson theo id tăng dần để có order_index
--- liên tục 1, 2, 3, ... (chỉ áp dụng cho các lesson chưa xoá).
+
+-- 1. DEDUPLICATE lessons (cập nhật order_index để không trùng trong cùng course)
+-- 2. DEDUPLICATE lesson_sections
+-- 3. DEDUPLICATE lesson_kanji_items
+-- 4. DEDUPLICATE lesson_vocabulary_items
+-- 5. DEDUPLICATE lesson_grammar_items
+-- 6. Tạo PARTIAL UNIQUE INDEXES
+-- 7. Ghi chú cho backend (Java):
+--    Khi insert/update order_index trùng → Postgres sẽ ném
+--    org.springframework.dao.DataIntegrityViolationException
+--    Service cần BẮT exception này và map sang ErrorCode.LESSON_ORDER_CONFLICT
 DO $$
 DECLARE
     course_rec RECORD;
@@ -185,14 +194,3 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_lesson_grammar_items_section_order_active
     ON lesson_grammar_items (section_id, order_index)
     WHERE deleted = FALSE;
 
--- =============================================================================
--- Ghi chú cho backend (Java):
---   Khi insert/update order_index trùng → Postgres sẽ ném
---   org.springframework.dao.DataIntegrityViolationException
---   Service cần BẮT exception này và map sang ErrorCode.LESSON_ORDER_CONFLICT
---   để trả về HTTP 409 Conflict thân thiện với client thay vì 500.
---
---   Ngoài ra, trước khi insert, service nên check tồn tại để:
---     - Tránh để DB ném exception (giảm log noise)
---     - Chủ động shift các bản ghi phía sau +1 (UX mượt hơn)
--- =============================================================================

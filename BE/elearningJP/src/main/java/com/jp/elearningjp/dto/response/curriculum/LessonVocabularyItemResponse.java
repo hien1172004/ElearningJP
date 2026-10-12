@@ -39,11 +39,15 @@ public class LessonVocabularyItemResponse {
 
     // ===== Override của giáo viên (nếu có) =====
     String customHiragana;
+    String customRomaji;
+    String customAudioUrl;
     String customMeaning;
     String imageUrl;           // ảnh riêng cho bài học này
 
-    // ===== Field thực tế sẽ hiển thị (ưu tiên custom nếu có) =====
+    // ===== Field thực tế sẽ hiển thị (ưu tiên custom nếu có, fallback từ từ điển) =====
     String displayHiragana;
+    String displayRomaji;
+    String displayAudioUrl;
     String displayMeaning;
 
     // ===== Ví dụ do giáo viên tự thêm =====

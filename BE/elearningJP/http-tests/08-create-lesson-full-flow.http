@@ -10,7 +10,7 @@
 ###    3. Tạo Lesson trong Course                              [ADMIN]
 ###    4. Tạo Section KANJI / VOCABULARY / GRAMMAR / TEST      [GV/ADMIN]
 ###    5. Tạo Items trong từng Section                          [GV/ADMIN]
-###       5.1 KANJI items + related vocabulary
+###       5.1 KANJI items (related vocab tự động từ từ điển)
 ###       5.2 VOCABULARY items + examples
 ###       5.3 GRAMMAR items + examples
 ###    6. Tạo Quiz cho section TEST                             [GV/ADMIN]
@@ -158,7 +158,7 @@ Authorization: Bearer {{teacherToken}}
 ####################################################################
 
 # ------------------------------------------------------------------
-# 5.1) KANJI SECTION — thêm chữ Hán + từ vựng liên quan
+# 5.1) KANJI SECTION — thêm chữ Hán (related vocab tự động từ từ điển)
 # ------------------------------------------------------------------
 
 ### 5.1.1) Thêm 1 chữ Hán (characterId = 1 là ví dụ — lấy từ /api/v1/dictionary/kanji)
@@ -190,21 +190,7 @@ Authorization: Bearer {{teacherToken}}
 ###
 @kanjiItem2Id = {{addKanji2.response.body.data.id}}
 
-### 5.1.3) Gắn từ vựng liên quan cho chữ Hán 学 (vocabId = 1 là ví dụ)
-# @name addRelatedVocab
-POST {{baseUrl}}/lesson-kanji-items/{{kanjiItem1Id}}/related-vocabulary
-Content-Type: application/json
-Authorization: Bearer {{teacherToken}}
-
-{
-  "vocabId": 1,
-  "note": "Từ 学生 chứa chữ 学"
-}
-
-###
-@relatedVocabId = {{addRelatedVocab.response.body.data.id}}
-
-### 5.1.4) (Optional) Cập nhật ghi chú kanji
+### 5.1.3) Cập nhật ghi chú kanji
 PUT {{baseUrl}}/lesson-kanji-items/{{kanjiItem1Id}}
 Content-Type: application/json
 Authorization: Bearer {{teacherToken}}
@@ -229,43 +215,16 @@ Authorization: Bearer {{teacherToken}}
   "customHiragana": "がくせい",
   "customMeaning": "học sinh",
   "imageUrl": "https://example.com/student.jpg",
-  "note": "Từ vựng chính trong bài"
+  "note": "Từ vựng chính trong bài",
+  "examples": [
+    { "exampleJp": "私は学生です。", "exampleVi": "Tôi là học sinh.", "exampleRomaji": "Watashi wa gakusei desu.", "isPrimary": true, "orderIndex": 1 },
+    { "exampleJp": "学生は毎日勉強します。", "exampleVi": "Học sinh học mỗi ngày.", "orderIndex": 2 }
+  ]
 }
 
 ###
 @vocabItem1Id = {{addVocab1.response.body.data.id}}
-
-### 5.2.2) Thêm ví dụ cho từ vựng
-# @name addVocabExample
-POST {{baseUrl}}/lesson-vocabulary-items/{{vocabItem1Id}}/examples
-Content-Type: application/json
-Authorization: Bearer {{teacherToken}}
-
-{
-  "exampleJp": "私は学生です。",
-  "exampleVi": "Tôi là học sinh.",
-  "exampleRomaji": "Watashi wa gakusei desu.",
-  "isPrimary": true,
-  "orderIndex": 1
-}
-
 ###
-@vocabExampleId = {{addVocabExample.response.body.data.id}}
-
-### 5.2.3) Thêm ví dụ thứ 2 (không primary)
-# @name addVocabExample2
-POST {{baseUrl}}/lesson-vocabulary-items/{{vocabItem1Id}}/examples
-Content-Type: application/json
-Authorization: Bearer {{teacherToken}}
-
-{
-  "exampleJp": "学生は毎日勉強します。",
-  "exampleVi": "Học sinh học mỗi ngày.",
-  "orderIndex": 2
-}
-
-###
-@vocabExample2Id = {{addVocabExample2.response.body.data.id}}
 
 # ------------------------------------------------------------------
 # 5.3) GRAMMAR SECTION — thêm điểm ngữ pháp + ví dụ
@@ -375,7 +334,7 @@ Authorization: Bearer {{teacherToken}}
 GET {{baseUrl}}/lessons/{{lessonId}}
 Authorization: Bearer {{teacherToken}}
 
-### 7.2) GET section chi tiết (KANJI — xem có items + related vocab)
+### 7.2) GET section chi tiết (KANJI — xem items + related vocab tự động từ từ điển)
 GET {{baseUrl}}/lessons/{{lessonId}}/sections/{{kanjiSecId}}
 Authorization: Bearer {{teacherToken}}
 
@@ -395,18 +354,10 @@ Authorization: Bearer {{teacherToken}}
 ## (OPTIONAL) BƯỚC 8 — DỌN DẸP / SỬA
 ####################################################################
 
-### 8.1) Xoá 1 example không cần
-DELETE {{baseUrl}}/lesson-vocabulary-items/examples/{{vocabExample2Id}}
-Authorization: Bearer {{teacherToken}}
-
-### 8.2) Xoá 1 kanji item
+### 8.1) Xoá 1 kanji item
 DELETE {{baseUrl}}/lesson-kanji-items/{{kanjiItem2Id}}
 Authorization: Bearer {{teacherToken}}
 
-### 8.3) Xoá related vocab
-DELETE {{baseUrl}}/lesson-kanji-items/related-vocabulary/{{relatedVocabId}}
-Authorization: Bearer {{teacherToken}}
-
-### 8.4) Xoá mềm cả lesson (ẩn khỏi course)
+### 8.2) Xoá mềm cả lesson (ẩn khỏi course)
 DELETE {{baseUrl}}/lessons/{{lessonId}}
 Authorization: Bearer {{teacherToken}}

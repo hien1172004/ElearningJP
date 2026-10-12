@@ -48,6 +48,12 @@ public enum ErrorCode {
     LESSON_VOCABULARY_ITEM_DUPLICATED(1209, "Vocabulary đã tồn tại trong section này", HttpStatus.CONFLICT),
     LESSON_GRAMMAR_ITEM_DUPLICATED(1210, "Grammar đã tồn tại trong section này", HttpStatus.CONFLICT),
     LESSON_KANJI_RELATED_VOCAB_DUPLICATED(1211, "Related vocabulary đã tồn tại trong kanji item này", HttpStatus.CONFLICT),
+    LESSON_KANJI_RELATED_VOCAB_NOT_FOUND(1212, "Related vocabulary không tồn tại", HttpStatus.NOT_FOUND),
+    LESSON_VOCAB_EXAMPLE_DUPLICATED(1213, "Ví dụ trùng lặp trong cùng request", HttpStatus.CONFLICT),
+    LESSON_VOCAB_EXAMPLE_MULTIPLE_PRIMARY(1214, "Chỉ được phép có tối đa 1 ví dụ primary", HttpStatus.BAD_REQUEST),
+    LESSON_VOCAB_EXAMPLE_NOT_FOUND(1215, "Ví dụ từ vựng không tồn tại", HttpStatus.NOT_FOUND),
+    LESSON_GRAMMAR_EXAMPLE_DUPLICATED(1216, "Ví dụ trùng lặp trong cùng request", HttpStatus.CONFLICT),
+    LESSON_GRAMMAR_EXAMPLE_NOT_FOUND(1217, "Ví dụ ngữ pháp không tồn tại", HttpStatus.NOT_FOUND),
 
     // CURRICULUM MODULE — Enrollment (1300-1399)
     ENROLLMENT_NOT_FOUND(1300, "Enrollment not found", HttpStatus.NOT_FOUND),
@@ -79,7 +85,8 @@ public enum ErrorCode {
     VOCAB_NOT_FOUND(3004, "Corresponding vocab not found", HttpStatus.NOT_FOUND),
     CHARACTER_NOT_FOUND(3005, "Corresponding kanji not found", HttpStatus.NOT_FOUND),
     GRAMMAR_NOT_FOUND(3006, "Corresponding grammar point not found", HttpStatus.NOT_FOUND),
-    INVALID_SRS_REQUEST(3007, "Invalid SRS add request (need to select vocab, kanji or grammar)", HttpStatus.BAD_REQUEST)
+    INVALID_SRS_REQUEST(3007, "Invalid SRS add request (need to select vocab, kanji or grammar)", HttpStatus.BAD_REQUEST),
+    INVALID_REQUEST(3008, "Invalid request payload", HttpStatus.BAD_REQUEST),
     ;
 
 

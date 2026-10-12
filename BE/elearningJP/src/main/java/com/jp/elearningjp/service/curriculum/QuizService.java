@@ -1,12 +1,8 @@
 package com.jp.elearningjp.service.curriculum;
 
 import com.jp.elearningjp.dto.request.curriculum.QuizAnswerItem;
-import com.jp.elearningjp.dto.request.curriculum.QuizOptionRequest;
-import com.jp.elearningjp.dto.request.curriculum.QuizQuestionCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.QuizSubmitRequest;
 import com.jp.elearningjp.dto.response.curriculum.*;
-import com.jp.elearningjp.entity.content.Vocabulary;
-import com.jp.elearningjp.entity.content.WritingCharacter;
 import com.jp.elearningjp.entity.curriculum.*;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
@@ -14,7 +10,6 @@ import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.repository.curriculum.*;
 import com.jp.elearningjp.repository.srs.SrsItemRepository;
 import com.jp.elearningjp.repository.srs.SrsReviewLogRepository;
-import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.srs.Sm2Algorithm;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
@@ -25,8 +20,6 @@ import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import com.jp.elearningjp.entity.srs.SrsItem;
 import com.jp.elearningjp.entity.srs.SrsReviewLog;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -52,8 +45,6 @@ import java.util.stream.Collectors;
  *     <ul>
  *       <li>{@code GET /lessons/{id}/quiz}              — lấy đề của lesson (server tự tìm TEST section)</li>
  *       <li>{@code POST /lessons/{id}/quiz/submit}      — nộp bài của lesson (server tự tìm TEST section)</li>
- *       <li>{@code POST /lesson-sections/{sid}/quiz}    — tạo quiz mới cho TEST section</li>
- *       <li>{@code POST /lesson-sections/{sid}/quiz/questions}   — thêm câu hỏi vào quiz đã có</li>
  *       <li>{@code DELETE /quiz/questions/{qid}}        — xoá câu hỏi</li>
  *     </ul>
  *   </li>
@@ -70,16 +61,11 @@ public class QuizService {
     QuizOptionRepository optionRepository;
     LessonRepository lessonRepository;
     LessonSectionRepository lessonSectionRepository;
-    CourseEnrollmentRepository enrollmentRepository;
     UserLessonProgressRepository progressRepository;
-    UserRepository userRepository;
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
     SrsItemRepository srsItemRepository;
     SrsReviewLogRepository srsReviewLogRepository;
-
-    @PersistenceContext
-    EntityManager entityManager;
 
     // =========================================================
     // READ — luồng cũ theo lessonId (giữ tương thích ngược, gọi nội bộ)
@@ -100,16 +86,6 @@ public class QuizService {
         Quiz quiz = findQuizOfSectionOrThrow(testSection);
 
         return buildLessonQuizResponse(quiz, lesson);
-    }
-
-    /**
-     * Lấy quiz theo sectionId (dùng nội bộ + trả qua controller section).
-     */
-    @Transactional(readOnly = true)
-    public LessonQuizResponse getQuizBySection(Long sectionId) {
-        LessonSection section = requireValidTestSection(sectionId);
-        Quiz quiz = findQuizOfSectionOrThrow(section);
-        return buildLessonQuizResponse(quiz, section.getLesson());
     }
 
     /**
@@ -149,63 +125,8 @@ public class QuizService {
     }
 
     // =========================================================
-    // CREATE / UPDATE — gắn với section TEST
+    // DELETE
     // =========================================================
-
-    /**
-     * Tạo quiz mới cho 1 TEST section (mỗi section TEST chỉ có tối đa 1 quiz).
-     * Body dùng {@link QuizQuestionCreateRequest} để tạo luôn câu hỏi đầu tiên + options.
-     */
-    @Transactional
-    public LessonQuizResponse createQuizForSection(Long sectionId, QuizQuestionCreateRequest request) {
-        LessonSection section = requireValidTestSection(sectionId);
-
-        // 1 section TEST chỉ chứa 1 quiz — dùng ErrorCode mới QUIZ_ALREADY_EXISTS
-        if (quizRepository.existsBySectionIdAndDeletedFalse(sectionId)) {
-            throw new AppException(ErrorCode.QUIZ_ALREADY_EXISTS);
-        }
-
-        Lesson lesson = section.getLesson();
-        Quiz quiz = Quiz.builder()
-                .lesson(lesson)
-                .section(section)
-                .title("Bài kiểm tra: " + (section.getTitle() != null ? section.getTitle() : lesson.getTitle()))
-                .passingScorePercent(80)
-                .build();
-        Quiz savedQuiz = quizRepository.save(quiz);
-
-        // Tạo question đầu tiên cho quiz này
-        if (request != null) {
-            createQuestionInternal(savedQuiz, request, 1);
-        }
-
-        log.info("[QUIZ] Created quiz id={} for TEST section id={} (lesson id={})",
-                savedQuiz.getId(), sectionId, lesson.getId());
-
-        loadQuestionsForRead(savedQuiz);
-        return buildLessonQuizResponse(savedQuiz, lesson);
-    }
-
-    /**
-     * Thêm 1 câu hỏi vào quiz đã tồn tại (theo quizId).
-     * Endpoint: POST /api/v1/lesson-sections/{sectionId}/quiz/questions
-     * (FE gửi sectionId, server tự tìm quiz của section đó).
-     */
-    @Transactional
-    public LessonQuizResponse addQuestionToQuiz(Long sectionId, QuizQuestionCreateRequest request) {
-        LessonSection section = requireValidTestSection(sectionId);
-        Quiz quiz = findQuizOfSectionOrThrow(section);
-
-        // Tính orderIndex tiếp theo
-        Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quiz.getId());
-        int nextOrder = (maxOrder != null ? maxOrder : 0) + 1;
-
-        createQuestionInternal(quiz, request, nextOrder);
-        log.info("[QUIZ] Added question to quiz id={} (section id={})", quiz.getId(), sectionId);
-
-        loadQuestionsForRead(quiz);
-        return buildLessonQuizResponse(quiz, section.getLesson());
-    }
 
     /**
      * Xoá mềm 1 câu hỏi (dùng chung).
@@ -224,21 +145,6 @@ public class QuizService {
     // =========================================================
 
     /**
-     * Validate section: tồn tại, chưa xoá, thuộc loại TEST.
-     */
-    private LessonSection requireValidTestSection(Long sectionId) {
-        LessonSection section = lessonSectionRepository.findById(sectionId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
-        if (section.isDeleted()) {
-            throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
-        }
-        if (section.getSectionType() != LessonSectionType.TEST) {
-            throw new AppException(ErrorCode.LESSON_SECTION_TYPE_INVALID);
-        }
-        return section;
-    }
-
-    /**
      * Tìm TEST section của 1 lesson. Nếu không có -> báo lỗi nghiệp vụ rõ ràng.
      */
     private LessonSection findTestSectionOrThrow(Long lessonId) {
@@ -253,44 +159,6 @@ public class QuizService {
     private Quiz findQuizOfSectionOrThrow(LessonSection section) {
         return quizRepository.findFirstBySectionIdAndDeletedFalse(section.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
-    }
-
-    /**
-     * Tạo 1 question + options cho quiz.
-     */
-    private void createQuestionInternal(Quiz quiz, QuizQuestionCreateRequest request, int orderIndex) {
-        QuizQuestion question = QuizQuestion.builder()
-                .quiz(quiz)
-                .questionText(request.getQuestionText())
-                .explanation(request.getExplanation())
-                .orderIndex(orderIndex)
-                .questionType(request.getQuestionType() != null
-                        ? request.getQuestionType()
-                        : com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE)
-                .correctTextAnswer(request.getCorrectTextAnswer())
-                .matchingData(request.getMatchingData())
-                .build();
-
-        if (request.getVocabId() != null) {
-            question.setVocab(entityManager.getReference(Vocabulary.class, request.getVocabId()));
-        }
-        if (request.getCharacterId() != null) {
-            question.setCharacter(entityManager.getReference(WritingCharacter.class, request.getCharacterId()));
-        }
-        QuizQuestion savedQuestion = questionRepository.save(question);
-
-        if (request.getOptions() != null) {
-            for (QuizOptionRequest optReq : request.getOptions()) {
-                QuizOption option = QuizOption.builder()
-                        .question(savedQuestion)
-                        .optionKey(optReq.getOptionKey())
-                        .optionText(optReq.getOptionText())
-                        .correct(optReq.isCorrect())
-                        .matchKey(optReq.getMatchKey())
-                        .build();
-                optionRepository.save(option);
-            }
-        }
     }
 
     /**

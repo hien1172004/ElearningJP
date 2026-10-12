@@ -4,7 +4,6 @@ import com.jp.elearningjp.dto.request.curriculum.LessonCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.LessonDetailResponse;
-import com.jp.elearningjp.dto.response.curriculum.LessonSectionResponse;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.curriculum.LessonSection;
@@ -14,7 +13,11 @@ import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.mapper.LessonMapper;
 import com.jp.elearningjp.mapper.LessonSectionMapper;
-import com.jp.elearningjp.repository.curriculum.*;
+import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
+import com.jp.elearningjp.repository.curriculum.CourseRepository;
+import com.jp.elearningjp.repository.curriculum.LessonRepository;
+import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
+import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
@@ -32,6 +35,10 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * Service quản lý {@link Lesson} — bài học trong một khóa học.
+ * <p>Logic CRUD cho {@code LessonSection} đã được tách ra {@link SectionService}.</p>
+ */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -42,23 +49,16 @@ public class LessonService {
     CourseRepository courseRepository;
     CourseEnrollmentRepository enrollmentRepository;
     UserLessonProgressRepository progressRepository;
-    QuizRepository quizRepository;
     LessonSectionRepository lessonSectionRepository;
-    LessonKanjiItemRepository kanjiItemRepository;
-    LessonVocabularyItemRepository vocabularyItemRepository;
-    LessonGrammarItemRepository grammarItemRepository;
-    LessonKanjiRelatedVocabRepository kanjiRelatedVocabRepository;
-    LessonGrammarExampleRepository grammarExampleRepository;
-    LessonVocabularyExampleRepository vocabularyExampleRepository;
-    QuizOptionRepository quizOptionRepository;
+    SectionService sectionService;
     LessonMapper lessonMapper;
     LessonSectionMapper lessonSectionMapper;
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
 
     /**
-     * Xem nội dung chi tiết bài học (kèm sections + items)
-     * BẢO VỆ BẢN QUYỀN: Bắt buộc người dùng phải là ADMIN hoặc ĐÃ ĐĂNG KÝ KHÓA HỌC
+     * Xem nội dung chi tiết bài học (kèm sections + items).
+     * BẢO VỆ BẢN QUYỀN: Bắt buộc người dùng phải là ADMIN hoặc ĐÃ ĐĂNG KÝ KHÓA HỌC.
      */
     @Transactional
     public LessonDetailResponse getLessonDetail(Long lessonId) {
@@ -102,54 +102,12 @@ public class LessonService {
         response.setLastAccessedAt(progress.getLastAccessedAt());
         response.setCompletedAt(progress.getCompletedAt());
 
-        // 4. Load sections kèm tất cả items.
-        // Repository chỉ load section cơ bản; các collection (kanjiItems, vocabularyItems,
-        // grammarItems, quizzes + các collection con bên trong) được load tách riêng trong
-        // loadNestedCollections() để tránh MultipleBagFetchException.
-        // Cùng persistence context → Hibernate tự merge collection vào entity đã load.
+        // 4. Load sections + nested collections qua SectionService
         List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
-        loadNestedCollections(sections, lessonId);
-        List<LessonSectionResponse> sectionResponses = lessonSectionMapper.toSectionResponses(sections);
-        response.setSections(sectionResponses);
+        sectionService.loadNestedCollections(sections);
+        response.setSections(lessonSectionMapper.toSectionResponses(sections));
 
         return response;
-    }
-
-    /**
-     * Load các collection (kanjiItems, vocabularyItems, grammarItems, quizzes + các
-     * collection bên trong: examples, relatedVocabulary, questions, options) theo
-     * từng query riêng biệt. Mỗi query chỉ fetch tối đa 1 collection List<>, nên
-     * KHÔNG BAO GIỜ trigger MultipleBagFetchException.
-     * <p>
-     * Cơ chế: vì cùng {@code EntityManager} (persistence context), Hibernate tự động
-     * resolve entity đã load trước đó (theo id) và gắn collection vào. Ta chỉ cần
-     * truy cập collection trong mapper là Hibernate trả về dữ liệu đã batch.
-     * </p>
-     * <p>
-     * Tổng cộng 8 query (1 section + 3 item kanji/vocab/grammar + 1 quiz + 3 collection con),
-     * nhưng mỗi query đều có index theo FK nên rẻ. Tránh được N+1 hoàn toàn.
-     * </p>
-     */
-    private void loadNestedCollections(List<LessonSection> sections, Long lessonId) {
-        if (sections == null || sections.isEmpty()) {
-            return;
-        }
-        List<Long> sectionIds = sections.stream().map(LessonSection::getId).toList();
-
-        // === Level 1: 4 collection trên LessonSection — mỗi query 1 collection List<> ===
-        kanjiItemRepository.findByLessonIdWithCharacter(lessonId);      // + character (many-to-1)
-        vocabularyItemRepository.findByLessonIdWithVocab(lessonId);     // + vocab (many-to-1)
-        grammarItemRepository.findByLessonIdWithGrammar(lessonId);      // + grammar (many-to-1)
-        quizRepository.findByLessonIdWithQuestions(lessonId);           // + questions (List, 1 collection)
-
-        // === Level 2: collection bên trong item — mỗi query 1 collection List<> ===
-        kanjiRelatedVocabRepository.findBySectionIds(sectionIds);
-        grammarExampleRepository.findBySectionIds(sectionIds);
-        vocabularyExampleRepository.findBySectionIds(sectionIds);
-        quizOptionRepository.findByLessonId(lessonId);
-
-        // Hibernate persistence context tự merge các collection này vào entity đã load.
-        // Mapper chỉ cần section.getKanjiItems(), ki.getExamples(), ... là có dữ liệu.
     }
 
     /**
@@ -286,7 +244,7 @@ public class LessonService {
 
         // Load sections sau khi update
         List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
-        loadNestedCollections(sections, lessonId);
+        sectionService.loadNestedCollections(sections);
         response.setSections(lessonSectionMapper.toSectionResponses(sections));
 
         return response;
@@ -354,159 +312,6 @@ public class LessonService {
                 completedCount,
                 progressPercentDecimal
         );
-    }
-
-    // =========================================================
-    // SECTION MANAGEMENT — dành cho giáo viên/admin
-    // =========================================================
-
-    /**
-     * Lấy danh sách sections của 1 lesson
-     */
-    @Transactional(readOnly = true)
-    public List<LessonSectionResponse> getLessonSections(Long lessonId) {
-        if (lessonRepository.findByIdAndDeletedFalse(lessonId).isEmpty()) {
-            throw new AppException(ErrorCode.LESSON_NOT_FOUND);
-        }
-        List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
-        loadNestedCollections(sections, lessonId);
-        return lessonSectionMapper.toSectionResponses(sections);
-    }
-
-    /**
-     * Lấy 1 section theo id
-     */
-    @Transactional(readOnly = true)
-    public LessonSectionResponse getSection(Long sectionId) {
-        LessonSection section = lessonSectionRepository.findById(sectionId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
-        if (section.isDeleted()) {
-            throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
-        }
-        // Load full graph
-        List<LessonSection> sections = lessonSectionRepository
-                .findByLessonIdWithAllItems(section.getLesson().getId());
-        loadNestedCollections(sections, section.getLesson().getId());
-        return sections.stream()
-                .filter(s -> s.getId().equals(sectionId))
-                .findFirst()
-                .map(lessonSectionMapper::toSectionResponse)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
-    }
-
-    /**
-     * Admin/Giáo viên tạo section mới trong lesson.
-     *
-     * <p>Sau V19: orderIndex của section được bảo vệ tương tự lesson —
-     * check trùng + shift các section phía sau +1.</p>
-     */
-    @Transactional
-    public LessonSectionResponse createSection(Long lessonId, LessonSectionType sectionType, String title) {
-        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-
-        // Bước 5: dùng OrderIndexResolver với maxOrder lấy từ list sections
-        int newOrderIndex = OrderIndexResolver.maxOrderIndex(
-                lessonSectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId),
-                LessonSection::getOrderIndex
-        ) + 1;
-
-        // Check phòng race condition (hiếm nhưng vẫn nên có)
-        if (lessonSectionRepository.existsByLessonIdAndOrderIndexExcludingId(lessonId, newOrderIndex, null)) {
-            log.warn("[SECTION] OrderIndex conflict detected at createSection for lesson id={}, orderIndex={}",
-                    lessonId, newOrderIndex);
-            throw new AppException(ErrorCode.LESSON_ORDER_CONFLICT);
-        }
-
-        LessonSection section = LessonSection.builder()
-                .lesson(lesson)
-                .sectionType(sectionType)
-                .title(title)
-                .orderIndex(newOrderIndex)
-                .build();
-
-        lesson.addSection(section);
-        LessonSection saved = lessonSectionRepository.save(section);
-        log.info("[SECTION] Created section id={}, type={}, orderIndex={} in lesson id={}",
-                saved.getId(), sectionType, saved.getOrderIndex(), lessonId);
-
-        return lessonSectionMapper.toSectionResponse(saved);
-    }
-
-    /**
-     * Admin/Giáo viên cập nhật tiêu đề / orderIndex section.
-     *
-     * <p>Sau V19: nếu client đổi orderIndex sang giá trị khác thì shift các
-     * section khác để giải phóng slot (giống logic lesson).</p>
-     */
-    @Transactional
-    public LessonSectionResponse updateSection(Long sectionId, String title, Integer orderIndex) {
-        LessonSection section = lessonSectionRepository.findById(sectionId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
-        if (section.isDeleted()) {
-            throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
-        }
-
-        if (title != null) {
-            section.setTitle(title);
-        }
-
-        if (orderIndex != null && orderIndex > 0 && !orderIndex.equals(section.getOrderIndex())) {
-            Long lessonId = section.getLesson().getId();
-            int currentMax = OrderIndexResolver.maxOrderIndex(
-                    lessonSectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId),
-                    LessonSection::getOrderIndex
-            );
-            int target = OrderIndexResolver.clampToMaxPlusOne(
-                    orderIndex, () -> currentMax
-            );
-
-            if (target != section.getOrderIndex()) {
-                int oldOrderIndex = section.getOrderIndex();
-                // Marker tạm để tránh UNIQUE conflict khi shift
-                section.setOrderIndex(-oldOrderIndex);
-
-                if (target < oldOrderIndex) {
-                    // Move up: shift [target, oldOrderIndex-1] lên +1
-                    int shifted = lessonSectionRepository.shiftOrderIndexesUp(lessonId, target, sectionId);
-                    log.info("[SECTION] Move-up: shifted {} section(s) in lesson id={}", shifted, lessonId);
-                } else if (target <= currentMax) {
-                    // Move down: shift (oldOrderIndex, target] xuống -1
-                    int shifted = lessonSectionRepository.shiftOrderIndexesDownInRange(
-                            lessonId, oldOrderIndex, target, sectionId);
-                    log.info("[SECTION] Move-down: shifted {} section(s) in lesson id={}", shifted, lessonId);
-                }
-                section.setOrderIndex(target);
-            }
-
-            // Check phòng race condition
-            if (lessonSectionRepository.existsByLessonIdAndOrderIndexExcludingId(
-                    section.getLesson().getId(), section.getOrderIndex(), sectionId)) {
-                log.warn("[SECTION] OrderIndex conflict detected at updateSection for section id={}, orderIndex={}",
-                        sectionId, section.getOrderIndex());
-                throw new AppException(ErrorCode.LESSON_ORDER_CONFLICT);
-            }
-        }
-
-        lessonSectionRepository.save(section);
-        log.info("[SECTION] Updated section id={}, orderIndex={}", sectionId, section.getOrderIndex());
-
-        return lessonSectionMapper.toSectionResponse(section);
-    }
-
-    /**
-     * Admin/Giáo viên xoá mềm section
-     */
-    @Transactional
-    public void deleteSection(Long sectionId) {
-        LessonSection section = lessonSectionRepository.findById(sectionId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
-        if (section.isDeleted()) {
-            return; // đã xoá rồi, idempotent
-        }
-        section.softDelete();
-        lessonSectionRepository.save(section);
-        log.info("[SECTION] Soft-deleted section id={}", sectionId);
     }
 
     // =========================================================

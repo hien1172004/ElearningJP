@@ -65,11 +65,6 @@ public final class ApiPaths {
         public static final String GRAMMAR_ITEMS = "/{sectionId}/grammar-items";
         public static final String GRAMMAR_ITEM_BY_ID = "/grammar-items/{itemId}";
 
-    // ===== Quiz endpoints (gắn vào 1 section TEST cụ thể) =====
-    public static final String SECTION_QUIZ = "/{sectionId}/quiz";
-    public static final String SECTION_QUIZ_QUESTIONS = "/{sectionId}/quiz/questions";
-    public static final String SECTION_QUIZ_BY_ID = "/{sectionId}/quiz/{quizId}";
-
         // ===== Lesson examples endpoints (controller riêng) =====
         public static final String LESSON_VOCABULARY_ITEMS = "/lesson-vocabulary-items";
         public static final String LESSON_VOCABULARY_EXAMPLES = "/{vocabItemId}/examples";
@@ -79,10 +74,8 @@ public final class ApiPaths {
         public static final String LESSON_GRAMMAR_EXAMPLES = "/{grammarItemId}/examples";
         public static final String GRAMMAR_EXAMPLE_BY_ID = "/examples/{exampleId}";
 
-        // ===== Related vocab (kanji) =====
+        // ===== Kanji items (related vocab do giáo viên chọn từ từ điển hoặc tạo mới) =====
         public static final String LESSON_KANJI_ITEMS = "/lesson-kanji-items";
-        public static final String KANJI_RELATED_VOCAB = "/{kanjiItemId}/related-vocabulary";
-        public static final String KANJI_RELATED_VOCAB_BY_ID = "/related-vocabulary/{relatedVocabId}";
     }
 
     public static final class Enrollment {

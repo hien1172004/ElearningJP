@@ -3,7 +3,7 @@ package com.jp.elearningjp.controller.curriculum;
 import com.jp.elearningjp.dto.request.curriculum.LessonSectionCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonSectionUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonSectionResponse;
-import com.jp.elearningjp.service.curriculum.LessonService;
+import com.jp.elearningjp.service.curriculum.SectionService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,7 +38,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class LessonSectionController {
 
-    LessonService lessonService;
+    SectionService sectionService;
 
     // ============================================================
     // READ
@@ -56,7 +56,7 @@ public class LessonSectionController {
     ) {
         return ApiResponse.<List<LessonSectionResponse>>builder()
                 .success(true)
-                .data(lessonService.getLessonSections(lessonId))
+                .data(sectionService.getLessonSections(lessonId))
                 .build();
     }
 
@@ -78,7 +78,7 @@ public class LessonSectionController {
     ) {
         return ApiResponse.<LessonSectionResponse>builder()
                 .success(true)
-                .data(lessonService.getSection(sectionId))
+                .data(sectionService.getSection(sectionId))
                 .build();
     }
 
@@ -105,7 +105,7 @@ public class LessonSectionController {
         return ApiResponse.<LessonSectionResponse>builder()
                 .success(true)
                 .message("Tạo section thành công")
-                .data(lessonService.createSection(lessonId, request.getSectionType(), request.getTitle()))
+                .data(sectionService.createSection(lessonId, request.getSectionType(), request.getTitle()))
                 .build();
     }
 
@@ -130,7 +130,7 @@ public class LessonSectionController {
         return ApiResponse.<LessonSectionResponse>builder()
                 .success(true)
                 .message("Cập nhật section thành công")
-                .data(lessonService.updateSection(sectionId, request.getTitle(), request.getOrderIndex()))
+                .data(sectionService.updateSection(sectionId, request.getTitle(), request.getOrderIndex()))
                 .build();
     }
 
@@ -151,7 +151,7 @@ public class LessonSectionController {
             @Parameter(description = "ID của section", example = "5", required = true)
             @PathVariable("sectionId") Long sectionId
     ) {
-        lessonService.deleteSection(sectionId);
+        sectionService.deleteSection(sectionId);
         return ApiResponse.<Void>builder()
                 .success(true)
                 .message("Đã xoá section thành công")

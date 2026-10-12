@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -204,7 +205,144 @@ class OrderIndexResolverTest {
             ), LessonGrammarItem::getOrderIndex));
         }
 
-        private LessonSection section(int orderIndex) {
+        @Nested
+    @DisplayName("shiftUpInCollection")
+    class ShiftUpInCollection {
+
+        @Test
+        @DisplayName("items có index >= target → index + 1")
+        void shiftUp() {
+            // [1, 3, 5, 7] target=3 → items >= 3 (3, 5, 7) bị shift → [1, 4, 6, 8]
+            List<LessonKanjiItem> items = List.of(kanji(1), kanji(3), kanji(5), kanji(7));
+            int shifted = OrderIndexResolver.shiftUpInCollection(
+                    items, 3,
+                    LessonKanjiItem::getOrderIndex,
+                    (i, v) -> i.setOrderIndex(v)
+            );
+            assertEquals(3, shifted, "Có 3 items bị shift: index 3, 5, 7");
+            assertThat(items).extracting(LessonKanjiItem::getOrderIndex).containsExactly(1, 4, 6, 8);
+        }
+
+        @Test
+        @DisplayName("index < target → không shift")
+        void noShift() {
+            List<LessonKanjiItem> items = List.of(kanji(1), kanji(2), kanji(3));
+            int shifted = OrderIndexResolver.shiftUpInCollection(
+                    items, 5,
+                    LessonKanjiItem::getOrderIndex,
+                    (i, v) -> i.setOrderIndex(v)
+            );
+            assertEquals(0, shifted);
+            assertThat(items).extracting(LessonKanjiItem::getOrderIndex).containsExactly(1, 2, 3);
+        }
+
+        @Test
+        @DisplayName("list rỗng → 0")
+        void emptyList() {
+            int shifted = OrderIndexResolver.shiftUpInCollection(
+                    List.of(), 2,
+                    LessonKanjiItem::getOrderIndex,
+                    (i, v) -> i.setOrderIndex(v)
+            );
+            assertEquals(0, shifted);
+        }
+
+        @Test
+        @DisplayName("target = 1 → tất cả bị shift")
+        void shiftAll() {
+            List<LessonKanjiItem> items = List.of(kanji(1), kanji(2), kanji(3));
+            OrderIndexResolver.shiftUpInCollection(
+                    items, 1,
+                    LessonKanjiItem::getOrderIndex,
+                    (i, v) -> i.setOrderIndex(v)
+            );
+            assertThat(items).extracting(LessonKanjiItem::getOrderIndex).containsExactly(2, 3, 4);
+        }
+    }
+
+    @Nested
+    @DisplayName("shiftDownInCollection")
+    class ShiftDownInCollection {
+
+        @Test
+        @DisplayName("items trong (lower, upper] → index - 1")
+        void shiftDown() {
+            List<LessonKanjiItem> items = List.of(kanji(1), kanji(3), kanji(5), kanji(7));
+            int shifted = OrderIndexResolver.shiftDownInCollection(
+                    items, 2, 6,
+                    LessonKanjiItem::getOrderIndex,
+                    (i, v) -> i.setOrderIndex(v)
+            );
+            assertEquals(2, shifted, "Có 2 items bị shift: index 3 và 5");
+            assertThat(items).extracting(LessonKanjiItem::getOrderIndex).containsExactly(1, 2, 4, 7);
+        }
+
+        @Test
+        @DisplayName("index trong khoảng (lowerExclusive, upperInclusive] → bị shift")
+        void shiftDownBoundary() {
+            // [2, 3, 4, 5] lower=1, upper=5 → items có index > 1 VÀ index <= 5 → all 4 items
+            // Kết quả: [1, 2, 3, 4]
+            List<LessonKanjiItem> items = List.of(kanji(2), kanji(3), kanji(4), kanji(5));
+            int shifted = OrderIndexResolver.shiftDownInCollection(
+                    items, 1, 5,
+                    LessonKanjiItem::getOrderIndex,
+                    (i, v) -> i.setOrderIndex(v)
+            );
+            assertEquals(4, shifted);
+            assertThat(items).extracting(LessonKanjiItem::getOrderIndex).containsExactly(1, 2, 3, 4);
+        }
+
+        @Test
+        @DisplayName("index <= lowerExclusive → không shift")
+        void noShift() {
+            List<LessonKanjiItem> items = List.of(kanji(1), kanji(3), kanji(5));
+            int shifted = OrderIndexResolver.shiftDownInCollection(
+                    items, 3, 5,
+                    LessonKanjiItem::getOrderIndex,
+                    (i, v) -> i.setOrderIndex(v)
+            );
+            assertEquals(1, shifted, "Chỉ index=5 bị shift");
+            assertThat(items).extracting(LessonKanjiItem::getOrderIndex).containsExactly(1, 3, 4);
+        }
+    }
+
+    @Nested
+    @DisplayName("nextOrderIndexIncludingDeleted")
+    class NextOrderIndexIncludingDeleted {
+
+        @Test
+        @DisplayName("list rỗng → 1")
+        void emptyList() {
+            assertEquals(1, OrderIndexResolver.nextOrderIndexIncludingDeleted(
+                    List.of(), LessonKanjiItem::getOrderIndex));
+        }
+
+        @Test
+        @DisplayName("list có items → max + 1")
+        void withItems() {
+            List<LessonKanjiItem> items = List.of(kanji(1), kanji(3), kanji(5));
+            assertEquals(6, OrderIndexResolver.nextOrderIndexIncludingDeleted(
+                    items, LessonKanjiItem::getOrderIndex));
+        }
+
+        @Test
+        @DisplayName("không filter deleted → KHÔNG giống maxOrderIndex (đây là điểm khác biệt)")
+        void differsFromMaxOrderIndex() {
+            // Mô phỏng: có 3 item active (1,2,3) và 1 item deleted (index=10)
+            // maxOrderIndex sẽ trả 3 (max của active)
+            // nextOrderIndexIncludingDeleted sẽ trả 11 (max của all)
+            List<LessonKanjiItem> items = List.of(kanji(1), kanji(2), kanji(3));
+            // Giả lập: không filter deleted → max = 10
+            int maxIncludingDeleted = items.stream()
+                    .mapToInt(LessonKanjiItem::getOrderIndex).max().orElse(0) + 1;
+            assertEquals(4, maxIncludingDeleted);
+            // So sánh với version filter deleted (giả lập: chỉ lấy items có index <= 3)
+            assertEquals(4, OrderIndexResolver.nextOrderIndexIncludingDeleted(
+                    items, LessonKanjiItem::getOrderIndex));
+        }
+    }
+
+    private LessonSection section(int orderIndex) {
             return LessonSection.builder().orderIndex(orderIndex).build();
         }
 

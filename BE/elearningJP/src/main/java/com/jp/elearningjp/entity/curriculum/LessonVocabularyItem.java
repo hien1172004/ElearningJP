@@ -51,6 +51,14 @@ public class LessonVocabularyItem extends SoftDeletableEntity {
     @Column(name = "custom_hiragana", length = 100)
     private String customHiragana;
 
+    /** Ghi đè romaji (nếu giáo viên muốn dùng cách viết romaji khác) */
+    @Column(name = "custom_romaji", length = 150)
+    private String customRomaji;
+
+    /** Ghi đè audio (nếu giáo viên muốn dùng audio riêng) */
+    @Column(name = "custom_audio_url", length = 500)
+    private String customAudioUrl;
+
     /** Ghi đè nghĩa (nếu giáo viên muốn giải thích khác) */
     @Column(name = "custom_meaning", columnDefinition = "text")
     private String customMeaning;

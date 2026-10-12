@@ -1,5 +1,9 @@
 -- =============================================================================
--- V21: Loại bỏ các cột cũ trên bảng lessons
+-- Flyway Database Migration: V17__drop_legacy_lesson_columns.sql
+-- Module: Lesson Management (Lesson, Section, Item)
+-- =============================================================================
+
+-- 1. Loại bỏ các cột cũ trên bảng lessons
 --   - lesson_type        : đã được thay thế bằng lesson_sections.section_type
 --   - content_markdown   : nội dung giờ nằm trong sections + items
 --   - duration_minutes   : không còn ý nghĩa nghiệp vụ (đã có thời lượng trong section/quiz)
@@ -8,11 +12,6 @@
 -- giờ "lesson có quiz" = lesson có section TEST (section_type = 'TEST').
 -- Đồng thời drop enum LessonType không còn dùng (chỉ còn ExamType.MINI_TEST).
 --
--- Lưu ý: File này được đổi tên từ V14 → V18 → V21 để tránh xung đột version
---        với file cũ V14__seed_kana_yoon_and_vocabulary_examples.sql (vẫn còn
---        trên develop). V21 nằm sau V20 nên chạy đúng thứ tự.
--- =============================================================================
-
 -- Drop CHECK constraint trên lesson_type nếu còn tồn tại (do V1 không tạo CHECK
 -- nhưng một số môi trường có thể đã add thêm — an toàn vẫn DROP IF EXISTS)
 ALTER TABLE lessons DROP CONSTRAINT IF EXISTS chk_lesson_type;

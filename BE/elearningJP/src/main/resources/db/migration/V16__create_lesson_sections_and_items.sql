@@ -1,18 +1,17 @@
 -- =============================================================================
--- V20: Refactor curriculum — tách lesson_items thành lesson_sections + items
+-- Flyway Database Migration: V16__create_lesson_sections_and_items.sql
+-- Module: Lesson Management (Lesson, Section, Item)
+-- =============================================================================
+
+-- 1. Refactor curriculum — tách lesson_items thành lesson_sections + items
 -- Tạo: lesson_sections, lesson_kanji_items, lesson_kanji_related_vocabulary,
 --       lesson_vocabulary_items, lesson_vocabulary_examples,
 --       lesson_grammar_items, lesson_grammar_examples
--- Bổ sung: lesson_quizzes.section_id
--- Hợp nhất logic từ file cũ V13__add_quiz_question_types.sql (vẫn còn trên
---   develop). Toàn bộ thao tác dùng IF NOT EXISTS nên idempotent nếu DB đã
---   apply V13 cũ trước đó — thêm các cột multi-format câu hỏi
---   (question_type, correct_text_answer, matching_data, match_key) + index.
---
--- Lưu ý: Bảng lesson_items (cũ) vẫn giữ để tránh phá vỡ code chưa refactor.
---        Sẽ được xóa ở V21 sau khi SrsServiceImpl + Lesson đã migrate xong.
--- =============================================================================
-
+-- 2. Bổ sung: lesson_quizzes.section_id
+-- 3. Hợp nhất logic từ file cũ V13__add_quiz_question_types.sql (vẫn còn trên
+--    develop). Toàn bộ thao tác dùng IF NOT EXISTS nên idempotent nếu DB đã
+--    apply V13 cũ trước đó — thêm các cột multi-format câu hỏi
+--    (question_type, correct_text_answer, matching_data, match_key) + index.
 -- -----------------------------------------------------------------------------
 -- 1. lesson_sections — nhóm nội dung trong lesson
 -- -----------------------------------------------------------------------------

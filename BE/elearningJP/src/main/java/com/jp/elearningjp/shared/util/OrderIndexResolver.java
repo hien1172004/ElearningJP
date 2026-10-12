@@ -147,6 +147,95 @@ public final class OrderIndexResolver {
         return items.stream().mapToInt(extractor).max().orElse(0);
     }
 
+    // ============================================================
+    // IN-MEMORY SHIFT (dùng cho SectionItem — vì item đã load vào collection)
+    // ============================================================
+
+    /**
+     * Dời orderIndex của các item có index &gt;= target lên +1, bỏ qua các item đã soft-delete.
+     * Áp dụng cho collection đã load sẵn (không qua DB).
+     *
+     * <p>Pattern (sửa nhận xét #2: add với orderIndex từ client):</p>
+     * <pre>{@code
+     * int resolved = OrderIndexResolver.resolveForCreate(
+     *         request.getOrderIndex(),
+     *         () -> OrderIndexResolver.maxOrderIndex(items, Item::getOrderIndex)
+     * );
+     * if (request.getOrderIndex() != null && request.getOrderIndex() > 0
+     *         && resolved == request.getOrderIndex()) {
+     *     OrderIndexResolver.shiftUpInCollection(items, resolved, Item::getOrderIndex, Item::setOrderIndex);
+     * }
+     * }</pre>
+     *
+     * @param items     collection đã load (sẽ mutate)
+     * @param target    orderIndex bắt đầu shift (target trở đi → +1)
+     * @param getter    function lấy orderIndex
+     * @param setter    function set orderIndex
+     * @return số item bị shift
+     */
+    public static <T> int shiftUpInCollection(
+            List<T> items,
+            int target,
+            java.util.function.ToIntFunction<? super T> getter,
+            java.util.function.BiConsumer<T, Integer> setter
+    ) {
+        if (items == null || items.isEmpty()) return 0;
+        int count = 0;
+        for (T item : items) {
+            if (getter.applyAsInt(item) >= target) {
+                setter.accept(item, getter.applyAsInt(item) + 1);
+                count++;
+            }
+        }
+        if (count > 0) {
+            log.debug("[ORDER] Shifted {} item(s) with orderIndex >= {} in collection", count, target);
+        }
+        return count;
+    }
+
+    /**
+     * Dời orderIndex của các item có index trong khoảng (lowerExclusive, upperInclusive] xuống -1.
+     * Áp dụng cho collection đã load sẵn.
+     *
+     * @return số item bị shift
+     */
+    public static <T> int shiftDownInCollection(
+            List<T> items,
+            int lowerExclusive,
+            int upperInclusive,
+            java.util.function.ToIntFunction<? super T> getter,
+            java.util.function.BiConsumer<T, Integer> setter
+    ) {
+        if (items == null || items.isEmpty()) return 0;
+        int count = 0;
+        for (T item : items) {
+            int idx = getter.applyAsInt(item);
+            if (idx > lowerExclusive && idx <= upperInclusive) {
+                setter.accept(item, idx - 1);
+                count++;
+            }
+        }
+        if (count > 0) {
+            log.debug("[ORDER] Shifted {} item(s) in ({}, {}] in collection", count, lowerExclusive, upperInclusive);
+        }
+        return count;
+    }
+
+    /**
+     * Tính next orderIndex dựa trên max hiện tại (kể cả các item đã soft-delete).
+     * Khác với {@link #maxOrderIndex}, version này KHÔNG filter deleted, để tránh
+     * đụng với index của item đã soft-delete.
+     *
+     * <p>Sửa nhận xét #2 vấn đề #3: nextExampleOrderIndex bỏ qua deleted → trùng index.</p>
+     */
+    public static <T> int nextOrderIndexIncludingDeleted(
+            List<T> items,
+            java.util.function.ToIntFunction<? super T> getter
+    ) {
+        if (items == null || items.isEmpty()) return 1;
+        return items.stream().mapToInt(getter).max().orElse(0) + 1;
+    }
+
     private static int nullToZero(Integer value) {
         return value == null ? 0 : value;
     }
