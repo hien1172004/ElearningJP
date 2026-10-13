@@ -22,8 +22,8 @@ public class LessonCompletedEvent extends CurriculumEvent {
     private final Long userId;
     private final Long lessonId;
     private final Long courseId;
-    private final BigDecimal bestScore;        // null nếu lesson không có section TEST
-    private final boolean isMiniTest;          // true nếu lesson có section TEST
+    private final BigDecimal bestScore;        // null nếu lesson không có quiz
+    private final boolean isMiniTest;          // true nếu lesson có quiz
     private final int currentCourseProgressPercent; // % progress của course SAU khi complete
 
     public LessonCompletedEvent(Object source, Long userId, Long lessonId, Long courseId,

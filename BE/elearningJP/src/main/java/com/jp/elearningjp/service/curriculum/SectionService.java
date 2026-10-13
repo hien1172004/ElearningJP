@@ -45,6 +45,10 @@ import java.util.stream.Collectors;
  *   <li>Tạo / cập nhật / xoá mềm section.</li>
  *   <li>Load section + các collection lồng nhau (kanji, vocab, grammar, examples, ...).</li>
  * </ul>
+ *
+ * <p><b>SAU REFACTOR (V20/V21):</b> Section TEST đã bị loại bỏ. Nếu client
+ * gửi {@code sectionType = TEST}, Jackson sẽ tự reject vì giá trị này
+ * không tồn tại trong {@link LessonSectionType} nữa.</p>
  */
 @Service
 @RequiredArgsConstructor

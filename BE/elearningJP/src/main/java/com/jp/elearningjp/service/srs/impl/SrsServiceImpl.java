@@ -184,9 +184,6 @@ public class SrsServiceImpl implements SrsService {
                         }
                     }
                 }
-                case TEST -> {
-                    // Quiz không được thêm vào SRS
-                }
             }
         }
 

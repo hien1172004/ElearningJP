@@ -13,7 +13,10 @@ import java.util.List;
 
 /**
  * Thông tin 1 section trong bài học.
- * Mỗi section thuộc 1 loại (KANJI / VOCABULARY / GRAMMAR / TEST) và chứa items tương ứng.
+ * Mỗi section thuộc 1 loại (KANJI / VOCABULARY / GRAMMAR) và chứa items tương ứng.
+ *
+ * <p><b>Refactor V20/V21:</b> Section TEST đã bị loại bỏ — Quiz được
+ * liên kết trực tiếp với Lesson. Lấy quiz qua endpoint {@code GET /lessons/{id}/quiz}.</p>
  */
 @Data
 @Builder
@@ -32,7 +35,4 @@ public class LessonSectionResponse {
     List<LessonKanjiItemResponse> kanjiItems;
     List<LessonVocabularyItemResponse> vocabularyItems;
     List<LessonGrammarItemResponse> grammarItems;
-
-    /** Quiz (chỉ section TEST mới có) */
-    LessonQuizResponse quiz;
 }

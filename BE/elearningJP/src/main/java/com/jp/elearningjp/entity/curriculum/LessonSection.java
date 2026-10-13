@@ -26,7 +26,11 @@ import java.util.List;
 /**
  * Nhóm nội dung trong một bài học.
  * Mỗi lesson được chia thành nhiều section theo {@link LessonSectionType}
- * (KANJI, VOCABULARY, GRAMMAR, TEST) để dễ quản lý thứ tự và phân loại nội dung.
+ * (KANJI, VOCABULARY, GRAMMAR) để dễ quản lý thứ tự và phân loại nội dung.
+ *
+ * <p><b>Sau V20/V21:</b> Section TEST đã bị loại bỏ — Quiz giờ gắn trực tiếp
+ * với {@code Lesson} qua bảng {@code lesson_quizzes}, không còn thuộc section
+ * nào trung gian.</p>
  */
 @Entity
 @Table(name = "lesson_sections")
@@ -71,11 +75,6 @@ public class LessonSection extends SoftDeletableEntity {
     @OrderBy("orderIndex ASC")
     private List<LessonGrammarItem> grammarItems = new ArrayList<>();
 
-    // ===== TEST (Quiz) — mỗi TEST section có tối đa 1 quiz =====
-    @Builder.Default
-    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Quiz> quizzes = new ArrayList<>();
-
     // ===== Helper methods =====
     public void addKanjiItem(LessonKanjiItem item) {
         kanjiItems.add(item);
@@ -105,15 +104,5 @@ public class LessonSection extends SoftDeletableEntity {
     public void removeGrammarItem(LessonGrammarItem item) {
         grammarItems.remove(item);
         item.setSection(null);
-    }
-
-    public void addQuiz(Quiz quiz) {
-        quizzes.add(quiz);
-        quiz.setSection(this);
-    }
-
-    public void removeQuiz(Quiz quiz) {
-        quizzes.remove(quiz);
-        quiz.setSection(null);
     }
 }

@@ -8,6 +8,22 @@ import org.hibernate.annotations.DynamicInsert;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Bài kiểm tra trắc nghiệm cuối bài học.
+ * <p>
+ * <b>Refactor V20:</b> Quiz chỉ liên kết trực tiếp với {@link Lesson} qua
+ * {@code lesson_id} (UNIQUE). 1 lesson có tối đa 1 quiz. Không còn qua
+ * Section trung gian.
+ * </p>
+ *
+ * <p><b>Quy ước nghiệp vụ:</b></p>
+ * <ul>
+ *   <li>1 quiz gắn với đúng 1 lesson.</li>
+ *   <li>1 lesson chỉ có 1 quiz (UNIQUE constraint).</li>
+ *   <li>Sau V20/V21: section TEST đã bị loại bỏ — quiz tạo/quản lý độc lập
+ *       với các section KANJI / VOCABULARY / GRAMMAR.</li>
+ * </ul>
+ */
 @Entity
 @Table(name = "lesson_quizzes")
 @DynamicInsert
@@ -18,10 +34,10 @@ import java.util.List;
 @Builder
 public class Quiz extends SoftDeletableEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "section_id")
-    private LessonSection section;
-
+    /**
+     * Bài học chứa quiz này.
+     * UNIQUE constraint đảm bảo 1 lesson = 1 quiz.
+     */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "lesson_id", nullable = false)
     private Lesson lesson;

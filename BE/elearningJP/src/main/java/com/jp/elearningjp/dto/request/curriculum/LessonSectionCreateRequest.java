@@ -29,7 +29,7 @@ import lombok.experimental.FieldDefaults;
 public class LessonSectionCreateRequest {
 
     @NotNull(message = "Loại section không được để trống")
-    @Schema(description = "Loại section: KANJI / VOCABULARY / GRAMMAR / TEST", example = "KANJI", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Loại section: KANJI / VOCABULARY / GRAMMAR (TEST đã bị loại bỏ — Quiz gắn trực tiếp với Lesson)", example = "KANJI", requiredMode = Schema.RequiredMode.REQUIRED)
     LessonSectionType sectionType;
 
     @Size(max = 255, message = "Tiêu đề section tối đa 255 ký tự")

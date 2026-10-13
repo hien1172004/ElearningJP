@@ -32,7 +32,7 @@ import java.util.List;
  *   <li>{@code DELETE /api/v1/lessons/{id}/sections/{sid}} — [GV/Admin] Xoá mềm section</li>
  * </ul>
  */
-@Tag(name = "Lesson Sections", description = "Quản lý section (nhóm nội dung KANJI / VOCABULARY / GRAMMAR / TEST) trong bài học")
+@Tag(name = "Lesson Sections", description = "Quản lý section (nhóm nội dung KANJI / VOCABULARY / GRAMMAR) trong bài học")
 @RestController
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -62,7 +62,7 @@ public class LessonSectionController {
 
     @Operation(
             summary = "Lấy chi tiết 1 section (kèm toàn bộ items)",
-            description = "Trả về section theo ID, bao gồm: kanji items (với related vocab), vocabulary items (với examples), grammar items (với examples), hoặc quiz (nếu là TEST section)."
+            description = "Trả về section theo ID, bao gồm: kanji items (với related vocab), vocabulary items (với examples), grammar items (với examples). Quiz của lesson lấy riêng qua GET /lessons/{id}/quiz."
     )
     @SecurityRequirement(name = "bearerAuth")
     @ApiResponses({
@@ -89,9 +89,10 @@ public class LessonSectionController {
     @Operation(
             summary = "[Giáo viên / Admin] Tạo section mới trong bài học",
             description = """
-                    Tạo 1 section mới với `sectionType` thuộc: **KANJI / VOCABULARY / GRAMMAR / TEST**.
+                    Tạo 1 section mới với `sectionType` thuộc: **KANJI / VOCABULARY / GRAMMAR**.
                     orderIndex sẽ được tự động gán = (max orderIndex hiện tại + 1).
                     Sau khi tạo section, dùng các endpoint `/api/v1/lesson-items/...` để thêm kanji/vocab/grammar items.
+                    Quiz của lesson tạo/quản lý riêng qua module Lesson Quiz.
                     """
     )
     @SecurityRequirement(name = "bearerAuth")

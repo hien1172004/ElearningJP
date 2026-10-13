@@ -78,6 +78,11 @@ public final class ApiPaths {
         public static final String LESSON_KANJI_ITEMS = "/lesson-kanji-items";
     }
 
+    public static final class Quiz {
+        public static final String BASE = "/quiz";
+        public static final String QUESTION_BY_ID = "/questions/{id}";
+    }
+
     public static final class Enrollment {
         public static final String BASE = "/enrollments";
         public static final String ME = "/me";

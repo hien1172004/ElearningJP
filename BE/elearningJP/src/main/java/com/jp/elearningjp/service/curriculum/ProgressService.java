@@ -13,10 +13,9 @@ import com.jp.elearningjp.mapper.curriculum.ProgressMapper;
 import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
 import com.jp.elearningjp.repository.curriculum.CourseRepository;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
-import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
+import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
 import com.jp.elearningjp.shared.enums.EnrollmentStatus;
-import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.event.curriculum.LessonCompletedEvent;
 import com.jp.elearningjp.shared.event.curriculum.LessonStartedEvent;
@@ -42,7 +41,7 @@ public class ProgressService {
     private final LessonRepository lessonRepository;
     private final CourseRepository courseRepository;
     private final CourseEnrollmentRepository enrollmentRepository;
-    private final LessonSectionRepository lessonSectionRepository;
+    private final QuizRepository quizRepository;
     private final ProgressMapper progressMapper;
     private final CurrentUserService currentUserService;
     private final CourseAccessGuard courseAccessGuard;
@@ -108,14 +107,14 @@ public class ProgressService {
     /**
      * User hoàn thành 1 lesson.
      *
-     * <p>SAU REFACTOR (V14): khái niệm "lesson có quiz" được xác định bằng
-     * sự tồn tại của section {@code TEST} (chứ không còn dựa vào
-     * {@code lesson.lessonType == MINI_TEST}).</p>
+     * <p>SAU REFACTOR (V20/V21): khái niệm "lesson có quiz" được xác định
+     * trực tiếp bằng sự tồn tại của row trong bảng {@code lesson_quizzes}
+     * (đã bỏ hoàn toàn {@code LessonSectionType.TEST}).</p>
      *
      * <ul>
-     *   <li>Nếu lesson có section TEST → bắt buộc phải gửi {@code score} để
+     *   <li>Nếu lesson có quiz → bắt buộc phải gửi {@code score} để
      *       hoàn thành (đây là điểm quiz).</li>
-     *   <li>Nếu lesson KHÔNG có section TEST → KHÔNG được gửi score (vì
+     *   <li>Nếu lesson KHÔNG có quiz → KHÔNG được gửi score (vì
      *       không có quiz để chấm).</li>
      * </ul>
      */
@@ -128,9 +127,8 @@ public class ProgressService {
         Long courseId = lesson.getCourse().getId();
         courseAccessGuard.requireEnrolled(courseId);
 
-        // Xác định "có quiz" dựa trên section TEST
-        boolean isMiniTest = lessonSectionRepository
-                .existsByLessonIdAndSectionTypeAndDeletedFalse(lessonId, LessonSectionType.TEST);
+        // Xác định "có quiz" dựa trên bảng lesson_quizzes (source of truth)
+        boolean isMiniTest = quizRepository.existsByLessonIdAndDeletedFalse(lessonId);
 
         BigDecimal score = request.getScore();
         if (isMiniTest) {

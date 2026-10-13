@@ -9,8 +9,9 @@ import org.mapstruct.Named;
 
 /**
  * SAU REFACTOR (V14): bỏ trường {@code lessonType} trên {@link ProgressResponse}.
- * Việc xác định lesson có quiz được dựa vào sự tồn tại section TEST, không còn
- * dựa vào {@code lesson.lessonType}.
+ * Việc xác định lesson có quiz được dựa vào sự tồn tại row trong bảng
+ * {@code lesson_quizzes} (xem {@code QuizRepository.existsByLessonIdAndDeletedFalse}),
+ * không còn dựa vào section TEST hay {@code lesson.lessonType}.
  */
 @Mapper(componentModel = "spring")
 public interface ProgressMapper {

@@ -13,7 +13,8 @@ import java.time.Instant;
 
 /**
  * SAU REFACTOR (V14): bỏ trường {@code lessonType} vì bảng lessons không còn cột này.
- * Việc xác định lesson có quiz được xử lý ở service (dựa trên section TEST).
+ * Việc xác định lesson có quiz được xử lý ở service (dựa trên bảng lesson_quizzes,
+ * xem {@code QuizRepository.existsByLessonIdAndDeletedFalse}).
  */
 @Data
 @Builder

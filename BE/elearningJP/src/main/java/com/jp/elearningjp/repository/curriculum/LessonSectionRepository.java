@@ -19,15 +19,16 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
     List<LessonSection> findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(Long lessonId);
 
     /**
-     * Lấy section theo lesson + loại section (KANJI / VOCABULARY / GRAMMAR / TEST).
+     * Lấy section theo lesson + loại section (KANJI / VOCABULARY / GRAMMAR).
      */
     List<LessonSection> findByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(
             Long lessonId, LessonSectionType sectionType);
 
     /**
-     * Kiểm tra lesson có chứa section thuộc loại nào đó (vd: TEST) hay không.
-     * <p>SAU REFACTOR (V14): dùng để xác định "lesson có quiz" thay cho
-     * logic cũ dựa trên {@code lesson.lessonType}.</p>
+     * Kiểm tra lesson có chứa section thuộc loại nào đó hay không.
+     * <p>SAU REFACTOR (V20/V21): KHÔNG dùng để xác định "lesson có quiz" nữa.
+     * Hãy dùng {@link com.jp.elearningjp.repository.curriculum.QuizRepository#existsByLessonIdAndDeletedFalse}
+     * (query thẳng bảng {@code lesson_quizzes}).</p>
      */
     boolean existsByLessonIdAndSectionTypeAndDeletedFalse(
             Long lessonId, LessonSectionType sectionType);
@@ -44,13 +45,6 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
      */
     @Query("SELECT DISTINCT s FROM LessonSection s WHERE s.lesson.id = :lessonId AND s.deleted = false ORDER BY s.orderIndex ASC")
     List<LessonSection> findByLessonIdWithAllItems(@Param("lessonId") Long lessonId);
-
-    /**
-     * Lấy section TEST (chưa xoá) của 1 lesson.
-     * Theo nghiệp vụ mới: 1 lesson chỉ có tối đa 1 section TEST.
-     */
-    java.util.Optional<LessonSection> findFirstByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(
-            Long lessonId, LessonSectionType sectionType);
 
     // ========================================================================
     // ORDER INDEX HELPERS — dùng để tránh trùng order_index (V19+)

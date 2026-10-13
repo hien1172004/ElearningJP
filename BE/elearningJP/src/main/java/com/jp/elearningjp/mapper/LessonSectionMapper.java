@@ -7,12 +7,9 @@ import com.jp.elearningjp.entity.content.WritingCharacter;
 import com.jp.elearningjp.entity.curriculum.*;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -79,62 +76,9 @@ public class LessonSectionMapper {
                             .filter(i -> !i.isDeleted())
                             .map(this::toGrammarItemResponse)
                             .toList());
-            case TEST -> {
-                // Quiz đã được load kèm qua JOIN FETCH trong repository
-                if (section.getQuizzes() != null && !section.getQuizzes().isEmpty()) {
-                    Quiz quiz = section.getQuizzes().stream()
-                            .filter(q -> !q.isDeleted())
-                            .findFirst()
-                            .orElse(null);
-                    if (quiz != null) {
-                        builder.quiz(buildQuizSummary(quiz));
-                    }
-                }
-            }
         }
 
         return builder.build();
-    }
-
-    /**
-     * Build {@link LessonQuizResponse} từ entity Quiz (kèm questions + options nếu đã load).
-     * Dùng trong {@link LessonSectionResponse} khi trả về section TEST.
-     */
-    private LessonQuizResponse buildQuizSummary(Quiz quiz) {
-        if (quiz == null || quiz.isDeleted()) {
-            return null;
-        }
-        List<QuizQuestionResponse> qs = (quiz.getQuestions() == null)
-                ? List.of()
-                : quiz.getQuestions().stream()
-                .filter(q -> !q.isDeleted())
-                .map(q -> QuizQuestionResponse.builder()
-                        .id(q.getId())
-                        .questionText(q.getQuestionText())
-                        .orderIndex(q.getOrderIndex())
-                        .questionType(q.getQuestionType())
-                        .matchingData(q.getMatchingData())
-                        .options(q.getOptions() == null ? List.of()
-                                : q.getOptions().stream()
-                                .filter(o -> !o.isDeleted())
-                                .map(o -> QuizOptionResponse.builder()
-                                        .id(o.getId())
-                                        .optionKey(o.getOptionKey())
-                                        .optionText(o.getOptionText())
-                                        .build())
-                                .toList())
-                        .build())
-                .toList();
-
-        return LessonQuizResponse.builder()
-                .quizId(quiz.getId())
-                .lessonId(quiz.getLesson() != null ? quiz.getLesson().getId() : null)
-                .title(quiz.getTitle())
-                .description(quiz.getDescription())
-                .passingScorePercent(quiz.getPassingScorePercent())
-                .totalQuestions(qs.size())
-                .questions(qs)
-                .build();
     }
 
     // ============================================================
