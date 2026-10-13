@@ -7,6 +7,11 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
+/**
+ * SAU REFACTOR (V14): bỏ trường {@code lessonType} trên {@link ProgressResponse}.
+ * Việc xác định lesson có quiz được dựa vào sự tồn tại section TEST, không còn
+ * dựa vào {@code lesson.lessonType}.
+ */
 @Mapper(componentModel = "spring")
 public interface ProgressMapper {
 
@@ -14,7 +19,6 @@ public interface ProgressMapper {
     @Mapping(target = "lessonId", source = "lesson.id")
     @Mapping(target = "lessonTitle", source = "lesson", qualifiedByName = "lessonTitle")
     @Mapping(target = "lessonOrderIndex", source = "lesson", qualifiedByName = "lessonOrderIndex")
-    @Mapping(target = "lessonType", source = "lesson", qualifiedByName = "lessonTypeName")
     ProgressResponse toResponse(UserLessonProgress progress);
 
     // ============================================================
@@ -29,11 +33,5 @@ public interface ProgressMapper {
     @Named("lessonOrderIndex")
     default Integer mapLessonOrderIndex(Lesson lesson) {
         return lesson == null ? null : lesson.getOrderIndex();
-    }
-
-    @Named("lessonTypeName")
-    default String mapLessonTypeName(Lesson lesson) {
-        if (lesson == null || lesson.getLessonType() == null) return null;
-        return lesson.getLessonType().name();
     }
 }

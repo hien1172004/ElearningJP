@@ -9,9 +9,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -22,9 +19,9 @@ import java.util.List;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
+import io.hypersistence.utils.hibernate.type.array.ListArrayType;
 
 @Entity
 @Table(name = "writing_characters")
@@ -46,15 +43,13 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Column(name = "stroke_count", nullable = false)
     private Integer strokeCount;
 
+    @Type(ListArrayType.class)
     @Column(name = "onyomi", columnDefinition = "text[]")
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    private String[] onyomi;
+    private List<String> onyomi;
 
+    @Type(ListArrayType.class)
     @Column(name = "kunyomi", columnDefinition = "text[]")
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    private String[] kunyomi;
+    private List<String> kunyomi;
 
     @Column(name = "han_viet", length = 100)
     private String hanViet;
@@ -69,10 +64,9 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Column(name = "jlpt_level", length = 2)
     private JlptLevel jlptLevel;
 
+    @Type(ListArrayType.class)
     @Column(name = "radicals", columnDefinition = "text[]")
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    private String[] radicals;
+    private List<String> radicals;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)
@@ -112,27 +106,4 @@ public class WritingCharacter extends SoftDeletableEntity {
         child.setCharacter(null);
     }
 
-    public List<String> getOnyomi() {
-        return onyomi != null ? java.util.Arrays.asList(onyomi) : java.util.Collections.emptyList();
-    }
-
-    public void setOnyomi(List<String> list) {
-        this.onyomi = (list != null) ? list.toArray(new String[0]) : null;
-    }
-
-    public List<String> getKunyomi() {
-        return kunyomi != null ? java.util.Arrays.asList(kunyomi) : java.util.Collections.emptyList();
-    }
-
-    public void setKunyomi(List<String> list) {
-        this.kunyomi = (list != null) ? list.toArray(new String[0]) : null;
-    }
-
-    public List<String> getRadicals() {
-        return radicals != null ? java.util.Arrays.asList(radicals) : java.util.Collections.emptyList();
-    }
-
-    public void setRadicals(List<String> list) {
-        this.radicals = (list != null) ? list.toArray(new String[0]) : null;
-    }
 }

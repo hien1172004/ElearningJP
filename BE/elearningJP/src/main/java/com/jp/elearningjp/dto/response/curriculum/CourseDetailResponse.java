@@ -21,7 +21,7 @@ public class CourseDetailResponse {
     JlptLevel jlptLevel;
     String description;
     String thumbnailUrl;
-    boolean published;
+    Boolean published;
     Instant createdAt;
 
     // Thông tin người tạo

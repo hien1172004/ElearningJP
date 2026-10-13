@@ -4,7 +4,6 @@ import com.jp.elearningjp.dto.request.curriculum.CourseCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.CourseUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.*;
 import com.jp.elearningjp.entity.curriculum.Course;
-import com.jp.elearningjp.entity.curriculum.CourseEnrollment;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.curriculum.UserLessonProgress;
 import com.jp.elearningjp.entity.user.User;
@@ -14,11 +13,12 @@ import com.jp.elearningjp.mapper.CourseMapper;
 import com.jp.elearningjp.mapper.LessonMapper;
 import com.jp.elearningjp.repository.curriculum.*;
 import com.jp.elearningjp.repository.user.UserRepository;
-import com.jp.elearningjp.shared.enums.EnrollmentStatus;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.response.PageResponse;
 import com.jp.elearningjp.shared.utils.SlugUtils;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -27,8 +27,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +49,8 @@ public class CourseService {
     UserRepository userRepository;
     CourseMapper courseMapper;
     LessonMapper lessonMapper;
+    CurrentUserService currentUserService;
+    CourseAccessGuard courseAccessGuard;
 
     /**
      * Lấy danh sách khóa học công khai cho học viên (có phân trang và lọc theo cấp độ JLPT)
@@ -115,7 +115,7 @@ public class CourseService {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
 
-        User currentUser = getCurrentUserOrNull();
+        User currentUser = currentUserService.getCurrentUserOrNull();
         boolean isEnrolled = false;
         Map<Long, UserLessonProgress> progressMap = Collections.emptyMap();
         int completedCount = 0;
@@ -151,8 +151,10 @@ public class CourseService {
                 })
                 .toList();
 
-        BigDecimal progressPercent = (totalLessons > 0 && isEnrolled)
-                ? BigDecimal.valueOf((double) completedCount / totalLessons * 100).setScale(1, RoundingMode.HALF_UP)
+        // Bước 2: dùng query SQL tổng hợp đã có sẵn (chính xác, tránh lệch do tính tay)
+        BigDecimal progressPercent = isEnrolled && currentUser != null
+                ? toProgressDecimal(progressRepository.calculateCourseProgressPercent(
+                        currentUser.getId(), courseId))
                 : BigDecimal.ZERO;
 
         CourseDetailResponse response = courseMapper.toCourseDetailResponse(course);
@@ -166,11 +168,12 @@ public class CourseService {
     }
 
     /**
-     * Admin tạo khóa học mới
+     * Admin/Teacher tạo khóa học mới.
+     * ADMIN tạo được tất cả. TEACHER tạo được và course sẽ gán createdBy = teacher.
      */
     @Transactional
     public CourseResponse createCourse(CourseCreateRequest request) {
-        User admin = getCurrentUserRequired();
+        User owner = currentUserService.getCurrentUser();
 
         String baseSlug = SlugUtils.toSlug(request.getTitle());
         String slug = baseSlug;
@@ -181,11 +184,11 @@ public class CourseService {
 
         Course course = courseMapper.toCourseEntity(request);
         course.setSlug(slug);
-        course.setCreatedBy(admin);
-        course.setPublished(false);
+        course.setCreatedBy(owner);
+        course.setPublished(request.getPublished() != null ? request.getPublished() : false);
 
         Course saved = courseRepository.save(course);
-        log.info("[COURSE] Created course id={}, title='{}' by user id={}", saved.getId(), saved.getTitle(), admin.getId());
+        log.info("[COURSE] Created course id={}, title='{}' by user id={}", saved.getId(), saved.getTitle(), owner.getId());
 
         CourseResponse response = courseMapper.toCourseResponse(saved);
         response.setTotalLessons(0);
@@ -193,12 +196,13 @@ public class CourseService {
     }
 
     /**
-     * Admin cập nhật thông tin khóa học
+     * Admin hoặc Teacher (chỉ course do mình tạo) cập nhật thông tin khóa học.
      */
     @Transactional
     public CourseResponse updateCourse(Long courseId, CourseUpdateRequest request) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        ensureCourseOwnerOrAdmin(course);
 
         courseMapper.updateCourseFromRequest(request, course);
         Course updated = courseRepository.save(course);
@@ -211,12 +215,13 @@ public class CourseService {
     }
 
     /**
-     * Admin xóa mềm khóa học
+     * Admin hoặc Teacher (chỉ course do mình tạo) xóa mềm khóa học.
      */
     @Transactional
     public void deleteCourse(Long courseId) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        ensureCourseOwnerOrAdmin(course);
 
         course.softDelete();
         courseRepository.save(course);
@@ -224,12 +229,13 @@ public class CourseService {
     }
 
     /**
-     * Admin bật/tắt xuất bản khóa học
+     * Admin hoặc Teacher (chỉ course do mình tạo) bật/tắt xuất bản khóa học.
      */
     @Transactional
     public CourseResponse publishCourse(Long courseId, boolean publish) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        ensureCourseOwnerOrAdmin(course);
 
         course.setPublished(publish);
         Course saved = courseRepository.save(course);
@@ -242,34 +248,11 @@ public class CourseService {
     }
 
     /**
-     * Học viên đăng ký tham gia khóa học
-     */
-    @Transactional
-    public void enrollCourse(Long courseId) {
-        User user = getCurrentUserRequired();
-        Course course = courseRepository.findByIdAndDeletedFalse(courseId)
-                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-
-        if (enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(user.getId(), courseId)) {
-            throw new AppException(ErrorCode.ALREADY_ENROLLED);
-        }
-
-        CourseEnrollment enrollment = CourseEnrollment.builder()
-                .user(user)
-                .course(course)
-                .status(EnrollmentStatus.ACTIVE)
-                .build();
-
-        enrollmentRepository.save(enrollment);
-        log.info("[ENROLLMENT] User id={} successfully enrolled in course id={}", user.getId(), courseId);
-    }
-
-    /**
      * Lấy tiến độ học tập chi tiết của học viên trong khóa học
      */
     @Transactional(readOnly = true)
     public CourseProgressResponse getCourseProgress(Long courseId) {
-        User user = getCurrentUserRequired();
+        User user = currentUserService.getCurrentUser();
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
 
@@ -281,37 +264,42 @@ public class CourseService {
         int completedLessons = (int) progressRepository.countCompletedLessonsByCourse(
                 user.getId(), courseId, ProgressStatus.COMPLETED);
 
-        BigDecimal progressPercent = totalLessons > 0
-                ? BigDecimal.valueOf((double) completedLessons / totalLessons * 100).setScale(1, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
+        // Bước 2: dùng query SQL tổng hợp có sẵn
+        BigDecimal progressPercent = toProgressDecimal(
+                progressRepository.calculateCourseProgressPercent(user.getId(), courseId));
 
-        return CourseProgressResponse.builder()
-                .courseId(course.getId())
-                .courseTitle(course.getTitle())
-                .totalLessons(totalLessons)
-                .completedLessons(completedLessons)
-                .progressPercent(progressPercent)
-                .isCompleted(totalLessons > 0 && completedLessons >= totalLessons)
-                .build();
+        // Bước 4: dùng factory summary để gom logic build response
+        return CourseProgressResponse.summary(
+                course.getId(),
+                course.getTitle(),
+                totalLessons,
+                completedLessons,
+                progressPercent
+        );
     }
 
     // =========================================================
     // HELPER METHODS
     // =========================================================
 
-    public User getCurrentUserOrNull() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            return null;
-        }
-        return userRepository.findUserByEmail(auth.getName()).orElse(null);
+    /**
+     * Kiểm tra quyền sửa/xoá/publish course:
+     *  - ADMIN: luôn pass
+     *  - TEACHER: chỉ pass nếu course.createdBy == currentUser
+     *  - Các role khác: 403
+     */
+    private void ensureCourseOwnerOrAdmin(Course course) {
+        courseAccessGuard.requireOwnerOrAdmin(course);
     }
 
-    public User getCurrentUserRequired() {
-        User user = getCurrentUserOrNull();
-        if (user == null) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
+    /**
+     * Chuyển Integer từ {@code calculateCourseProgressPercent} (đã làm tròn số nguyên ở SQL)
+     * sang BigDecimal có 1 chữ số thập phân — đồng nhất với format cũ khi tính tay.
+     */
+    private static BigDecimal toProgressDecimal(Integer percent) {
+        if (percent == null) {
+            return BigDecimal.ZERO;
         }
-        return user;
+        return BigDecimal.valueOf(percent).setScale(1, RoundingMode.HALF_UP);
     }
 }

@@ -18,8 +18,12 @@ import java.util.List;
 @Builder
 public class Quiz extends SoftDeletableEntity {
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "lesson_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "section_id")
+    private LessonSection section;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "lesson_id", nullable = false)
     private Lesson lesson;
 
     @Column(name = "title", nullable = false, length = 255)

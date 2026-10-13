@@ -25,4 +25,7 @@ public class CourseCreateRequest {
 
     @Size(max = 500, message = "Link ảnh thumbnail tối đa 500 ký tự")
     String thumbnailUrl;
+
+    @NotNull(message = "Public không được để trống")
+    Boolean published;
 }

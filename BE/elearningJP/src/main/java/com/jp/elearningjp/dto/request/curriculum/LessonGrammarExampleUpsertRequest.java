@@ -1,0 +1,43 @@
+package com.jp.elearningjp.dto.request.curriculum;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.FieldDefaults;
+
+/**
+ * Request body dùng trong {@link LessonGrammarItemUpdateRequest#examples}
+ * để upsert 1 ví dụ ngữ pháp.
+ *
+ * <ul>
+ *   <li>{@code id} = null → tạo mới</li>
+ *   <li>{@code id} != null → cập nhật bản ghi hiện tại (404 nếu không tồn tại)</li>
+ * </ul>
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class LessonGrammarExampleUpsertRequest {
+
+    @Schema(description = "ID của example hiện tại (null = tạo mới)", example = "300")
+    Long id;
+
+    @NotBlank(message = "Câu tiếng Nhật không được để trống")
+    @Schema(description = "Câu ví dụ tiếng Nhật", example = "私は毎日日本語を勉強します。", requiredMode = Schema.RequiredMode.REQUIRED)
+    String exampleJp;
+
+    @NotBlank(message = "Bản dịch tiếng Việt không được để trống")
+    @Schema(description = "Bản dịch tiếng Việt", example = "Tôi học tiếng Nhật mỗi ngày.", requiredMode = Schema.RequiredMode.REQUIRED)
+    String exampleVi;
+
+    @Positive(message = "orderIndex phải > 0")
+    @Schema(description = "Thứ tự hiển thị (tùy chọn)")
+    Integer orderIndex;
+}

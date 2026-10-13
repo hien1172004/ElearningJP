@@ -41,3 +41,7 @@ BE/**/src/main/resources/static/audio/
 BE/**/tools/
 AGENTS.md
 **/AGENTS.md
+
+
+#HTTP-TEST
+BE/elearningJP/http-tests/

@@ -17,9 +17,25 @@ public interface VocabularyRepository extends JpaRepository<Vocabulary, Long> {
 
     Optional<Vocabulary> findByIdAndDeletedFalse(Long id);
 
+    /**
+     * Eager load vocabulary kèm danh sách examples (dùng khi cần đọc examples
+     * trong cùng transaction — ví dụ auto-copy sang lesson_vocabulary_items).
+     */
+    @Query("SELECT DISTINCT v FROM Vocabulary v " +
+           "LEFT JOIN FETCH v.examples e " +
+           "WHERE v.id = :id AND v.deleted = false AND (e IS NULL OR e.deleted = false)")
+    Optional<Vocabulary> findByIdWithActiveExamples(@Param("id") Long id);
+
     Optional<Vocabulary> findByWordAndDeletedFalse(String word);
 
     Optional<Vocabulary> findByHiraganaAndDeletedFalse(String hiragana);
+
+    /**
+     * Tra cứu vocab theo cặp (word, hiragana) — dùng để chống trùng khi teacher
+     * tạo mới vocab trong related vocab của kanji item.
+     * Nếu đã tồn tại thì reuse thay vì insert mới (tránh vi phạm unique constraint).
+     */
+    Optional<Vocabulary> findByWordAndHiraganaAndDeletedFalse(String word, String hiragana);
 
     /**
      * Tra cứu nhanh từ vựng theo từ viết, cách đọc, romaji, hán việt hoặc nghĩa.

@@ -116,6 +116,37 @@ public class CurrentUserService {
     }
 
     /**
+     * Lấy user hiện tại, hoặc trả về {@code null} nếu anonymous / chưa đăng nhập.
+     * Dùng cho các API public cho phép xem không cần auth (vd: course detail).
+     */
+    public User getCurrentUserOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        // anonymousUser là principal mặc định khi chưa login
+        if (principal == null || "anonymousUser".equals(principal)) {
+            return null;
+        }
+        try {
+            if (principal instanceof Jwt jwt) {
+                Long userId = jwt.getClaim("userId");
+                if (userId != null) {
+                    return userRepository.findById(userId).orElse(null);
+                }
+                String email = jwt.getSubject();
+                if (email != null) {
+                    return userRepository.findUserByEmail(email).orElse(null);
+                }
+            }
+            return userRepository.findUserByEmail(authentication.getName()).orElse(null);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
      * Kiểm tra user hiện tại có phải là ADMIN hoặc TEACHER có role {@code TEACHER}
      * (kết hợp với owner check ở Service layer).
      */
