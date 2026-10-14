@@ -120,4 +120,25 @@ public final class ApiPaths {
         public static final String KANA_DETAIL = "/kana/{character}";
         public static final String QUICK_LOOKUP = "/quick-lookup";
     }
+
+    /**
+     * Comment endpoints — gắn với target (LESSON / VOCABULARY / KANJI / GRAMMAR)
+     * thông qua cặp ({@code targetType}, {@code targetId}).
+     *
+     * <p>URL theo target: {@code /api/v1/{targetType}/{targetId}/comments}</p>
+     */
+    public static final class Comment {
+        public static final String BY_TARGET = "/{targetType}/{targetId}/comments";
+        public static final String BY_ID = "/comments/{id}";
+        public static final String LIKE = "/comments/{id}/like";
+        public static final String DISLIKE = "/comments/{id}/dislike";
+        public static final String REPLIES = "/comments/{id}/replies";
+    }
+
+    /** Reply endpoints. Reply lồng nhau qua {@code parentReplyId} trong payload. */
+    public static final class CommentReply {
+        public static final String BY_ID = "/comment-replies/{id}";
+        public static final String LIKE = "/comment-replies/{id}/like";
+        public static final String DISLIKE = "/comment-replies/{id}/dislike";
+    }
 }

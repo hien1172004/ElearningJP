@@ -86,6 +86,15 @@ public enum ErrorCode {
     GRAMMAR_NOT_FOUND(3006, "Corresponding grammar point not found", HttpStatus.NOT_FOUND),
     INVALID_SRS_REQUEST(3007, "Invalid SRS add request (need to select vocab, kanji or grammar)", HttpStatus.BAD_REQUEST),
     INVALID_REQUEST(3008, "Invalid request payload", HttpStatus.BAD_REQUEST),
+
+    // COMMENT MODULE (4000 - 4099)
+    COMMENT_NOT_FOUND(4000, "Comment not found", HttpStatus.NOT_FOUND),
+    COMMENT_FORBIDDEN(4001, "You don't have permission to modify this comment", HttpStatus.FORBIDDEN),
+    COMMENT_INVALID_TARGET(4002, "Invalid comment target type or target does not exist", HttpStatus.BAD_REQUEST),
+    COMMENT_CONTENT_EMPTY(4003, "Comment content must not be empty", HttpStatus.BAD_REQUEST),
+    COMMENT_REPLY_NOT_FOUND(4004, "Comment reply not found", HttpStatus.NOT_FOUND),
+    COMMENT_REPLY_FORBIDDEN(4005, "You don't have permission to modify this reply", HttpStatus.FORBIDDEN),
+    COMMENT_REPLY_INVALID_PARENT(4006, "Parent reply must belong to the same comment", HttpStatus.BAD_REQUEST),
     ;
 
 

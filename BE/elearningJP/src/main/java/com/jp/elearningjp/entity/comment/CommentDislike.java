@@ -1,5 +1,4 @@
-package com.jp.elearningjp.entity.community;
-
+package com.jp.elearningjp.entity.comment;
 
 import com.jp.elearningjp.entity.user.User;
 import jakarta.persistence.Column;
@@ -10,44 +9,40 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
-import java.time.Instant;
-
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.Instant;
+
+/**
+ * Dislike cho {@link Comment} — backend có sẵn, frontend hiện chưa dùng.
+ */
 @Entity
-@Table(name = "discussion_reply_likes")
+@Table(name = "comment_dislikes")
 @DynamicInsert
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DiscussionReplyLike {
+public class CommentDislike {
 
     @Builder.Default
     @EmbeddedId
-    private DiscussionReplyLikeId id = new DiscussionReplyLikeId();
+    private CommentDislikeId id = new CommentDislikeId();
 
     @MapsId("userId")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @MapsId("replyId")
+    @MapsId("commentId")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "reply_id")
-    private DiscussionReply reply;
+    @JoinColumn(name = "comment_id")
+    private Comment comment;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false, updatable = false)
-    private Instant updatedAt;
-
-
 }
