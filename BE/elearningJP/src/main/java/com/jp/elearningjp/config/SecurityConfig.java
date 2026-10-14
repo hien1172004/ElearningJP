@@ -48,7 +48,15 @@ public class SecurityConfig {
             "/api/v1/courses/*/lessons",
             "/api/v1/courses/*/lessons/*",
             // Tra cứu từ điển & Bảng chữ cái công khai
-            "/api/v1/dictionary/**"
+            "/api/v1/dictionary/**",
+            // Comments — cho phép xem danh sách / chi tiết / reply công khai
+            // (các method POST/PUT/DELETE tự bảo vệ qua @PreAuthorize("isAuthenticated()"))
+            "/api/v1/LESSON/*/comments",
+            "/api/v1/VOCABULARY/*/comments",
+            "/api/v1/KANJI/*/comments",
+            "/api/v1/GRAMMAR/*/comments",
+            "/api/v1/comments/*",
+            "/api/v1/comments/*/replies"
             // POST /api/v1/courses/*/lessons/reorder cần auth (owner/admin) - để mặc định
     };
 
