@@ -17,8 +17,8 @@ import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
 import com.jp.elearningjp.repository.curriculum.CourseRepository;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
+import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
-import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
@@ -50,6 +50,7 @@ public class LessonService {
     CourseEnrollmentRepository enrollmentRepository;
     UserLessonProgressRepository progressRepository;
     LessonSectionRepository lessonSectionRepository;
+    QuizRepository quizRepository;
     SectionService sectionService;
     LessonMapper lessonMapper;
     LessonSectionMapper lessonSectionMapper;
@@ -94,9 +95,8 @@ public class LessonService {
 
         // 3. Chuẩn bị dữ liệu phản hồi
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(lesson);
-        // "Lesson có quiz" = lesson có section TEST chưa bị xoá (sau refactor V13/V14)
-        response.setHasQuiz(lessonSectionRepository
-                .existsByLessonIdAndSectionTypeAndDeletedFalse(lessonId, LessonSectionType.TEST));
+        // "Lesson có quiz" = lesson_quizzes có row chưa bị xoá (refactor V20, source of truth là bảng lesson_quizzes)
+        response.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lessonId));
         response.setStatus(progress.getStatus());
         response.setBestScore(progress.getBestScore());
         response.setLastAccessedAt(progress.getLastAccessedAt());
@@ -239,8 +239,7 @@ public class LessonService {
         log.info("[LESSON] Updated lesson id={}, orderIndex={}", updated.getId(), updated.getOrderIndex());
 
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(updated);
-        response.setHasQuiz(lessonSectionRepository
-                .existsByLessonIdAndSectionTypeAndDeletedFalse(lessonId, LessonSectionType.TEST));
+        response.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lessonId));
 
         // Load sections sau khi update
         List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);

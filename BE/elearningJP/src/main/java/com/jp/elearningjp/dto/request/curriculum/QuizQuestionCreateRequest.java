@@ -9,6 +9,9 @@ import lombok.experimental.FieldDefaults;
 
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.jp.elearningjp.shared.enums.QuizQuestionType;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,11 +28,11 @@ public class QuizQuestionCreateRequest {
     Integer orderIndex = 1;
 
     @Builder.Default
-    com.jp.elearningjp.shared.enums.QuizQuestionType questionType = com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE;
+    QuizQuestionType questionType = com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE;
 
     String correctTextAnswer; // Đáp án đúng nếu dạng FILL_IN_THE_BLANK
 
-    com.fasterxml.jackson.databind.JsonNode matchingData; // Cấu trúc ô trống / cột nối nếu dạng MATCHING
+    JsonNode matchingData; // Cấu trúc ô trống / cột nối nếu dạng MATCHING
 
     Long vocabId;
 

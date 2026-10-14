@@ -11,15 +11,20 @@ import com.jp.elearningjp.repository.curriculum.*;
 import com.jp.elearningjp.repository.srs.SrsItemRepository;
 import com.jp.elearningjp.repository.srs.SrsReviewLogRepository;
 import com.jp.elearningjp.service.srs.Sm2Algorithm;
-import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
+import com.jp.elearningjp.shared.enums.QuizQuestionType;
 import com.jp.elearningjp.shared.enums.SrsCardType;
 import com.jp.elearningjp.shared.enums.SrsRating;
 import com.jp.elearningjp.shared.enums.SrsStatus;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
+import com.jp.elearningjp.entity.content.Vocabulary;
+import com.jp.elearningjp.entity.content.WritingCharacter;
+import com.jp.elearningjp.dto.request.curriculum.QuizOptionRequest;
+import com.jp.elearningjp.dto.request.curriculum.QuizQuestionCreateRequest;
 import com.jp.elearningjp.entity.srs.SrsItem;
 import com.jp.elearningjp.entity.srs.SrsReviewLog;
+import jakarta.persistence.EntityManager;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -34,17 +39,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service quản lý Quiz — gắn liền với TEST section của bài học.
+ * Service quản lý Quiz — gắn trực tiếp với Lesson.
  *
- * <p><b>Quy ước nghiệp vụ (sau refactor V13/V14):</b></p>
+ * <p><b>Refactor V20:</b> Quiz chỉ liên kết trực tiếp với {@link Lesson} qua
+ * {@code lesson_id} (UNIQUE). 1 lesson = 1 quiz. Không còn qua Section trung gian.</p>
+ *
+ * <p><b>Quy ước nghiệp vụ:</b></p>
  * <ul>
- *   <li>Quiz KHÔNG tồn tại độc lập — phải thuộc về 1 section TEST của lesson.</li>
- *   <li>Mỗi section TEST chỉ chứa tối đa 1 quiz.</li>
- *   <li>Mỗi lesson chỉ có tối đa 1 section TEST (do đó ẩn ý mỗi lesson chỉ có 1 quiz).</li>
+ *   <li>Quiz gắn trực tiếp với 1 lesson (lesson_id UNIQUE).</li>
+ *   <li>Mỗi lesson chỉ có tối đa 1 quiz.</li>
  *   <li>Frontend gọi:
  *     <ul>
- *       <li>{@code GET /lessons/{id}/quiz}              — lấy đề của lesson (server tự tìm TEST section)</li>
- *       <li>{@code POST /lessons/{id}/quiz/submit}      — nộp bài của lesson (server tự tìm TEST section)</li>
+ *       <li>{@code GET /lessons/{id}/quiz}              — lấy đề của lesson</li>
+ *       <li>{@code POST /lessons/{id}/quiz/submit}      — nộp bài của lesson</li>
  *       <li>{@code DELETE /quiz/questions/{qid}}        — xoá câu hỏi</li>
  *     </ul>
  *   </li>
@@ -60,19 +67,19 @@ public class QuizService {
     QuizQuestionRepository questionRepository;
     QuizOptionRepository optionRepository;
     LessonRepository lessonRepository;
-    LessonSectionRepository lessonSectionRepository;
     UserLessonProgressRepository progressRepository;
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
     SrsItemRepository srsItemRepository;
     SrsReviewLogRepository srsReviewLogRepository;
+    EntityManager entityManager;
 
     // =========================================================
-    // READ — luồng cũ theo lessonId (giữ tương thích ngược, gọi nội bộ)
+    // READ
     // =========================================================
 
     /**
-     * Lấy đề thi trắc nghiệm của bài học (tìm qua TEST section).
+     * Lấy đề thi trắc nghiệm của bài học.
      * BẢO MẬT: Bắt buộc đã đăng ký khóa học, và ẨN HOÀN TOÀN isCorrect.
      */
     @Transactional(readOnly = true)
@@ -81,9 +88,8 @@ public class QuizService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
 
-        // Tìm quiz qua section TEST của lesson (luồng mới)
-        LessonSection testSection = findTestSectionOrThrow(lessonId);
-        Quiz quiz = findQuizOfSectionOrThrow(testSection);
+        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
         return buildLessonQuizResponse(quiz, lesson);
     }
@@ -118,10 +124,92 @@ public class QuizService {
         courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
         User currentUser = currentUserService.getCurrentUser();
 
-        LessonSection testSection = findTestSectionOrThrow(lessonId);
-        Quiz quiz = findQuizOfSectionOrThrow(testSection);
+        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
         return gradeQuiz(currentUser, lesson, quiz, request);
+    }
+
+    // =========================================================
+    // CREATE QUESTION (Admin/Teacher)
+    // =========================================================
+
+    /**
+     * Admin hoặc Teacher (chỉ trong course do mình tạo) thêm 1 câu hỏi vào quiz
+     * của lesson. Nếu lesson chưa có quiz thì tự tạo mới với title mặc định và
+     * passingScorePercent = 80%.
+     */
+    @Transactional
+    public QuizQuestionResponse addQuestionToLesson(Long lessonId, QuizQuestionCreateRequest request) {
+        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+
+        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+                .orElseGet(() -> {
+                    Quiz newQuiz = Quiz.builder()
+                            .lesson(lesson)
+                            .title("Bài kiểm tra: " + lesson.getTitle())
+                            .passingScorePercent(80)
+                            .build();
+                    return quizRepository.save(newQuiz);
+                });
+
+        Integer orderIndex = resolveOrderIndex(quiz.getId(), request.getOrderIndex());
+        if (questionRepository.existsByQuizIdAndOrderIndexExcludingId(quiz.getId(), orderIndex)) {
+            log.warn("[QUIZ] OrderIndex conflict detected at addQuestionToLesson for quiz id={}, orderIndex={}",
+                    quiz.getId(), orderIndex);
+            throw new AppException(ErrorCode.QUESTION_ORDER_CONFLICT);
+        }
+
+        QuizQuestion question = QuizQuestion.builder()
+                .quiz(quiz)
+                .questionText(request.getQuestionText())
+                .explanation(request.getExplanation())
+                .orderIndex(orderIndex)
+                .questionType(request.getQuestionType() != null ? request.getQuestionType() : QuizQuestionType.MULTIPLE_CHOICE)
+                .correctTextAnswer(request.getCorrectTextAnswer())
+                .matchingData(request.getMatchingData())
+                .build();
+
+        if (request.getVocabId() != null) {
+            question.setVocab(entityManager.getReference(Vocabulary.class, request.getVocabId()));
+        }
+        if (request.getCharacterId() != null) {
+            question.setCharacter(entityManager.getReference(WritingCharacter.class, request.getCharacterId()));
+        }
+
+        QuizQuestion savedQuestion = questionRepository.save(question);
+
+        List<QuizOptionResponse> optionResponses = new ArrayList<>();
+        if (request.getOptions() != null) {
+            for (QuizOptionRequest optReq : request.getOptions()) {
+                QuizOption option = QuizOption.builder()
+                        .question(savedQuestion)
+                        .optionKey(optReq.getOptionKey())
+                        .optionText(optReq.getOptionText())
+                        .correct(optReq.isCorrect())
+                        .matchKey(optReq.getMatchKey())
+                        .build();
+                QuizOption savedOpt = optionRepository.save(option);
+                optionResponses.add(QuizOptionResponse.builder()
+                        .id(savedOpt.getId())
+                        .optionKey(savedOpt.getOptionKey())
+                        .optionText(savedOpt.getOptionText())
+                        .build());
+            }
+        }
+
+        log.info("[QUIZ] Admin/Teacher added question id={} to lesson id={}", savedQuestion.getId(), lessonId);
+
+        return QuizQuestionResponse.builder()
+                .id(savedQuestion.getId())
+                .questionText(savedQuestion.getQuestionText())
+                .orderIndex(savedQuestion.getOrderIndex())
+                .questionType(savedQuestion.getQuestionType())
+                .matchingData(savedQuestion.getMatchingData())
+                .options(optionResponses)
+                .build();
     }
 
     // =========================================================
@@ -129,15 +217,22 @@ public class QuizService {
     // =========================================================
 
     /**
-     * Xoá mềm 1 câu hỏi (dùng chung).
+     * Admin hoặc Teacher (chỉ trong course do mình tạo) xoá mềm 1 câu hỏi.
+     * Idempotent — gọi lại với câu đã xoá sẽ ném {@code QUESTION_NOT_FOUND}.
      */
     @Transactional
     public void deleteQuestion(Long questionId) {
         QuizQuestion question = questionRepository.findByIdAndDeletedFalse(questionId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
+        // Check quyền: admin pass, teacher chỉ xoá được câu hỏi thuộc course do mình tạo
+        courseAccessGuard.requireOwnerOrAdmin(
+                question.getQuiz().getLesson().getCourse(),
+                ErrorCode.FORBIDDEN_LESSON_ACCESS
+        );
         question.softDelete();
         questionRepository.save(question);
-        log.info("[QUIZ] Admin soft-deleted question id={}", questionId);
+        log.info("[QUIZ] Soft-deleted question id={} (quiz id={}, lesson id={})",
+                questionId, question.getQuiz().getId(), question.getQuiz().getLesson().getId());
     }
 
     // =========================================================
@@ -145,20 +240,47 @@ public class QuizService {
     // =========================================================
 
     /**
-     * Tìm TEST section của 1 lesson. Nếu không có -> báo lỗi nghiệp vụ rõ ràng.
+     * Tính orderIndex hợp lệ khi thêm câu hỏi mới vào quiz.
+     *
+     * <p><b>Quy ước:</b></p>
+     * <ul>
+     *   <li>Client gửi orderIndex hợp lệ (1..MAX+1): dời tất cả câu có orderIndex
+     *       &gt;= target lên +1 (dùng marker tạm) để chèn vào giữa.</li>
+     *   <li>Client không gửi (null hoặc &lt;= 0): fill gap nhỏ nhất; nếu không có
+     *       gap thì lấy MAX + 1. Mục đích: tái sử dụng slot trống do xoá mềm
+     *       thay vì luôn tăng dần vô tận.</li>
+     *   <li>orderIndex &gt; MAX+1: clamp về MAX+1 (giống pattern của Lesson).</li>
+     * </ul>
+     *
+     * <p>Sau khi resolve, method {@code existsByQuizIdAndOrderIndexExcludingId}
+     * nên được gọi ở caller để báo lỗi 409 sớm trước khi insert.</p>
      */
-    private LessonSection findTestSectionOrThrow(Long lessonId) {
-        return lessonSectionRepository
-                .findFirstByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(lessonId, LessonSectionType.TEST)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_HAS_NO_TEST_SECTION));
-    }
+    private Integer resolveOrderIndex(Long quizId, Integer requestedIndex) {
+        Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quizId);
+        int max = (maxOrder != null ? maxOrder : 0);
 
-    /**
-     * Tìm quiz duy nhất của 1 section TEST. Nếu chưa có -> QUIZ_NOT_FOUND.
-     */
-    private Quiz findQuizOfSectionOrThrow(LessonSection section) {
-        return quizRepository.findFirstBySectionIdAndDeletedFalse(section.getId())
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+        // Case 1: client không gửi orderIndex -> fill gap nhỏ nhất
+        if (requestedIndex == null || requestedIndex <= 0) {
+            Integer firstAvailable = questionRepository.findFirstAvailableOrderIndex(quizId);
+            return (firstAvailable != null ? firstAvailable : max + 1);
+        }
+
+        // Case 2: client gửi orderIndex vượt quá max+1 -> clamp
+        int target = Math.min(requestedIndex, max + 1);
+        if (target < 1) target = 1;
+
+        // Nếu target > max+1 đã bị clamp, không cần shift
+        if (target > max) {
+            return target;
+        }
+
+        // Case 3: target nằm trong khoảng hiện có (1..max) -> shift UP các câu >= target
+        // Vì chưa có câu nào ở target (giả định caller đã check exists trước),
+        // shift an toàn không cần marker tạm.
+        int shifted = questionRepository.shiftOrderIndexesUp(quizId, target);
+        log.info("[QUIZ] Shifted {} question(s) with orderIndex >= {} in quiz id={}",
+                shifted, target, quizId);
+        return target;
     }
 
     /**

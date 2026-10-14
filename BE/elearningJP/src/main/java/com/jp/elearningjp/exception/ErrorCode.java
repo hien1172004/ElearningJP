@@ -64,7 +64,7 @@ public enum ErrorCode {
     PROGRESS_NOT_FOUND(1400, "Lesson progress not found", HttpStatus.NOT_FOUND),
     PROGRESS_ALREADY_COMPLETED(1401, "Lesson already completed", HttpStatus.BAD_REQUEST),
     CANNOT_COMPLETE_LESSON(1402, "Cannot mark this lesson as complete", HttpStatus.BAD_REQUEST),
-    INVALID_BEST_SCORE(1403, "Score is only allowed when the lesson has a TEST section (quiz)", HttpStatus.BAD_REQUEST),
+    INVALID_BEST_SCORE(1403, "Score is only allowed when the lesson has a quiz", HttpStatus.BAD_REQUEST),
 
     // CURRICULUM MODULE — Authorization (1500-1599)
     FORBIDDEN_COURSE_ACCESS(1500, "You don't have permission to access this course", HttpStatus.FORBIDDEN),
@@ -75,8 +75,7 @@ public enum ErrorCode {
     COURSE_NOT_ENROLLED(2002, "You are not enrolled in this course. Please enroll to access lessons and quizzes!", HttpStatus.FORBIDDEN),
     QUIZ_NOT_FOUND(2005, "This lesson has no quiz", HttpStatus.NOT_FOUND),
     QUESTION_NOT_FOUND(2006, "Question not found", HttpStatus.NOT_FOUND),
-    QUIZ_ALREADY_EXISTS(2007, "This TEST section already has a quiz. Each TEST section can only have one quiz.", HttpStatus.CONFLICT),
-    LESSON_HAS_NO_TEST_SECTION(2008, "This lesson does not have a TEST section. Create a TEST section first before accessing quiz features.", HttpStatus.BAD_REQUEST),
+    QUESTION_ORDER_CONFLICT(2007, "Order index already used in this quiz", HttpStatus.CONFLICT),
 
     // SRS Module (3000 - 3999)
     SRS_ITEM_NOT_FOUND(3001, "Srs item not found", HttpStatus.NOT_FOUND),

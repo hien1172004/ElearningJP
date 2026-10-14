@@ -51,7 +51,7 @@ public class ProgressController {
     // ============================================================
 
     @Operation(summary = "Hoàn thành 1 lesson",
-            description = "Body: { \"score\": 85.5 } — score chỉ bắt buộc nếu lesson có section TEST (quiz). " +
+            description = "Body: { \"score\": 85.5 } — score chỉ bắt buộc nếu lesson có quiz. " +
                     "bestScore chỉ update khi score mới cao hơn. " +
                     "Khi progress đạt 100%, enrollment tự động COMPLETED.")
     @SecurityRequirement(name = "bearerAuth")
