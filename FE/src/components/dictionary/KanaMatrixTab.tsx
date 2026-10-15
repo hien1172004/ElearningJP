@@ -54,7 +54,7 @@ export const KanaMatrixTab: React.FC = () => {
   }
 
   // Đọc tuần tự cả hàng (ví dụ: a -> i -> u -> e -> o) kèm highlight từng ô
-  const handleReadRow = (rowRomaji: string, characters: KanaCharacter[]) => {
+  const handleReadRow = (_rowRomaji: string, characters: KanaCharacter[]) => {
     readingQueueRef.current.cancel = true
     stopSpeaking()
 

@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Flame,
   Award,
+  PenTool,
 } from 'lucide-react'
 import type {
   JlptLevel,
@@ -26,6 +27,8 @@ import {
   KanjiDetailPanel,
   GrammarDetailPanel,
   KanaMatrixTab,
+  KanjiHandwritingModal,
+  KanjiPracticeModal,
 } from '@/components/dictionary'
 
 type TabType = 'vocab' | 'kanji' | 'grammar' | 'kana'
@@ -47,6 +50,8 @@ export const DictionaryPage: React.FC = () => {
   const [debouncedKeyword, setDebouncedKeyword] = useState<string>('')
   const [activeTab, setActiveTab] = useState<TabType>('vocab')
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | undefined>(undefined)
+  const [isHandwritingOpen, setIsHandwritingOpen] = useState<boolean>(false)
+  const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
 
   // Autocomplete Suggestions Dropdown
   const [suggestions, setSuggestions] = useState<DictionaryUnifiedSearch | null>(null)
@@ -406,6 +411,24 @@ export const DictionaryPage: React.FC = () => {
                     <X className="w-5 h-5" />
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setIsHandwritingOpen(true)}
+                  className="p-2 mr-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-xl transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer"
+                  title="Nhận dạng chữ viết tay Kanji (AI)"
+                >
+                  <PenTool className="w-4 h-4" />
+                  <span className="hidden sm:inline text-xs font-bold">Vẽ Kanji</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPracticeOpen(true)}
+                  className="p-2 mr-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-xl transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer shadow-2xs"
+                  title="Luyện viết & Chấm điểm nét vẽ AI"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span className="hidden sm:inline text-xs font-bold">Luyện viết AI</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(false)}
@@ -1115,6 +1138,24 @@ export const DictionaryPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal nhận dạng chữ viết tay Kanji bằng AI */}
+      <KanjiHandwritingModal
+        isOpen={isHandwritingOpen}
+        onClose={() => setIsHandwritingOpen(false)}
+        onSelectCharacter={(char) => {
+          setKeyword(char)
+          setActiveTab('kanji')
+          setIsDropdownOpen(false)
+        }}
+      />
+
+      {/* Modal Luyện viết & Chấm điểm nét AI */}
+      <KanjiPracticeModal
+        isOpen={isPracticeOpen}
+        onClose={() => setIsPracticeOpen(false)}
+        character={selectedKanjiChar || (keyword.trim().length === 1 ? keyword.trim() : '木')}
+      />
     </div>
   )
 }

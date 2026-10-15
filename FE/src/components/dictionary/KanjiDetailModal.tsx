@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { X, Volume2, BookmarkPlus, Check, Sparkles } from 'lucide-react'
+import { X, Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { speakJapanese } from '@/utils'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
+import { KanjiPracticeModal } from './KanjiPracticeModal'
 
 interface KanjiDetailModalProps {
   character: string | null
@@ -19,6 +20,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
   const [detail, setDetail] = useState<KanjiDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
 
   useEffect(() => {
     if (!character) {
@@ -85,9 +87,19 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setIsPracticeOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition bg-amber-500 hover:bg-amber-600 text-white shadow-xs cursor-pointer"
+              title="Luyện viết & Chấm điểm nét AI"
+            >
+              <PenTool className="w-4 h-4" />
+              <span>Luyện viết</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleAddToSrs}
               disabled={isAddedToSrs}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
                 isAddedToSrs
                   ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -100,7 +112,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-xl transition"
+              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-xl transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -124,6 +136,14 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                     strokes={detail.strokes || []}
                     size={170}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setIsPracticeOpen(true)}
+                    className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <PenTool className="w-3.5 h-3.5" />
+                    <span>Luyện viết & Chấm điểm AI</span>
+                  </button>
                 </div>
 
                 {/* Cột phải: Thông số âm On / Kun / Số nét */}
@@ -267,6 +287,17 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
           )}
         </div>
       </div>
+
+      {detail && (
+        <KanjiPracticeModal
+          isOpen={isPracticeOpen}
+          onClose={() => setIsPracticeOpen(false)}
+          character={detail.character}
+          meaningVi={detail.meaningVi}
+          hanViet={detail.hanViet}
+          strokes={detail.strokes || []}
+        />
+      )}
     </div>
   )
 }

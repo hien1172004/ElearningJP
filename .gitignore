@@ -45,3 +45,14 @@ AGENTS.md
 
 #HTTP-TEST
 BE/elearningJP/http-tests/
+
+# ------------------------------------------
+# AI Service (FastAPI / Python)
+# ------------------------------------------
+AI/**/__pycache__/
+AI/**/*.pyc
+AI/**/venv/
+AI/**/.venv/
+AI/**/.env
+AI/**/.pytest_cache/
+AI/**/test/
