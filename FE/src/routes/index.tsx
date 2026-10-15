@@ -13,6 +13,12 @@ import {
   TeacherCoursesPage,
   TeacherCourseEditorPage,
   LessonViewerPage,
+  ExamLobbyPage,
+  ExamRoomPage,
+  ExamResultPage,
+  ExamReviewPage,
+  ExamHistoryPage,
+  AdminExamPreviewPage,
 } from '@/pages'
 import { ProtectedRoute } from './ProtectedRoute'
 
@@ -35,6 +41,9 @@ export const router = createBrowserRouter([
       { path: 'dictionary', element: <DictionaryPage /> },
       { path: 'courses', element: <CourseCatalogPage /> },
       { path: 'courses/:id', element: <CourseDetailPage /> },
+      { path: 'exams', element: <ExamLobbyPage /> },
+      { path: 'exam-history', element: <ExamHistoryPage /> },
+      { path: 'exams/result/:attemptId', element: <ExamResultPage /> },
     ],
   },
 
@@ -43,6 +52,22 @@ export const router = createBrowserRouter([
   { path: '/register', element: <RegisterPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
+
+  // ====================================================================
+  // Dedicated fullscreen exam routes (No header/footer distractions)
+  // ====================================================================
+  {
+    path: '/exams/:examId/taking/:attemptId',
+    element: <ExamRoomPage />,
+  },
+  {
+    path: '/exams/review/:attemptId',
+    element: <ExamReviewPage />,
+  },
+  {
+    path: '/admin/exams/:examId/preview',
+    element: <AdminExamPreviewPage />,
+  },
 
   // ====================================================================
   // Protected: Teacher / Admin pages (with MainLayout)

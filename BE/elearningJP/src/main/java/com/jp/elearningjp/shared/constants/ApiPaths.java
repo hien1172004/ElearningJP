@@ -147,4 +147,29 @@ public final class ApiPaths {
         public static final String LIKE = "/comment-replies/{id}/like";
         public static final String DISLIKE = "/comment-replies/{id}/dislike";
     }
+
+    public static final class Exam {
+        public static final String BASE = "/exams";
+        public static final String BY_ID = "/{id}";
+        public static final String START = "/{id}/attempts";
+    }
+
+    public static final class ExamAttempt {
+        public static final String BASE = "/exam-attempts";
+        public static final String BY_ID = "/{id}";
+        public static final String SAVE_ANSWER = "/{id}/answers";
+        public static final String SUBMIT = "/{id}/submit";
+        public static final String RESULT = "/{id}/result";
+        public static final String REVIEW = "/{id}/review";
+        public static final String MY_HISTORY = "/my-history";
+    }
+
+    public static final class AdminExam {
+        public static final String BASE = "/admin/exams";
+        public static final String BY_ID = "/{id}";
+        public static final String AI_EXTRACT = "/ai-extract";
+        public static final String PREVIEW = "/{id}/preview";
+        public static final String UPDATE_QUESTION = "/{id}/questions/{questionId}";
+        public static final String PUBLISH = "/{id}/publish";
+    }
 }

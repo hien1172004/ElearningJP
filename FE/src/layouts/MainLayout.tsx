@@ -82,6 +82,26 @@ export const MainLayout: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <Link
+              to="/exams"
+              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
+                location.pathname.startsWith('/exams')
+                  ? 'text-indigo-600 bg-indigo-50/80 font-bold'
+                  : 'hover:text-indigo-600 hover:bg-gray-50'
+              }`}
+            >
+              <span>Thi thử JLPT</span>
+            </Link>
+            <Link
+              to="/exam-history"
+              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
+                location.pathname.startsWith('/exam-history')
+                  ? 'text-indigo-600 bg-indigo-50/80 font-bold'
+                  : 'hover:text-indigo-600 hover:bg-gray-50'
+              }`}
+            >
+              <span>Lịch sử thi</span>
+            </Link>
+            <Link
               to="/dictionary"
               className="md:hidden p-2 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-md"
               title="Tra từ điển"

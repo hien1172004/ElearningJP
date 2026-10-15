@@ -98,6 +98,16 @@ public enum ErrorCode {
     COMMENT_REPLY_NOT_FOUND(4004, "Comment reply not found", HttpStatus.NOT_FOUND),
     COMMENT_REPLY_FORBIDDEN(4005, "You don't have permission to modify this reply", HttpStatus.FORBIDDEN),
     COMMENT_REPLY_INVALID_PARENT(4006, "Parent reply must belong to the same comment", HttpStatus.BAD_REQUEST),
+
+    // EXAM MODULE (5000 - 5099)
+    EXAM_NOT_FOUND(5000, "Exam not found", HttpStatus.NOT_FOUND),
+    EXAM_NOT_PUBLISHED(5001, "Exam is not published yet", HttpStatus.BAD_REQUEST),
+    EXAM_SECTION_NOT_FOUND(5002, "Exam section not found", HttpStatus.NOT_FOUND),
+    EXAM_ATTEMPT_NOT_FOUND(5003, "Exam attempt not found", HttpStatus.NOT_FOUND),
+    EXAM_ATTEMPT_ALREADY_SUBMITTED(5004, "Exam attempt has already been submitted", HttpStatus.BAD_REQUEST),
+    EXAM_ATTEMPT_FORBIDDEN(5005, "You don't have permission to access this exam attempt", HttpStatus.FORBIDDEN),
+    EXAM_QUESTION_NOT_FOUND(5006, "Exam question not found", HttpStatus.NOT_FOUND),
+    EXAM_OPTION_NOT_FOUND(5007, "Question option not found", HttpStatus.NOT_FOUND),
     ;
 
 

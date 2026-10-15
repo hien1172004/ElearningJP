@@ -4,21 +4,18 @@ package com.jp.elearningjp.entity.exam;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.shared.enums.ExamType;
 import com.jp.elearningjp.shared.enums.JlptLevel;
+import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
@@ -32,11 +29,7 @@ import org.hibernate.annotations.DynamicInsert;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class Exam {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Exam extends SoftDeletableEntity {
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;
@@ -59,9 +52,9 @@ public class Exam {
     @Column(name = "overall_passing_score")
     private Integer overallPassingScore;
 
-    /** do trigger của DB cập nhật, chỉ đọc */
-    @Column(name = "total_questions", nullable = false, insertable = false, updatable = false)
-    private Integer totalQuestions;
+    @Builder.Default
+    @Column(name = "total_questions", nullable = false)
+    private Integer totalQuestions = 0;
 
     @Column(name = "source_file_name", length = 255)
     private String sourceFileName;
@@ -78,21 +71,14 @@ public class Exam {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_for_user_id")
-    private User createdForUser;
-
-    @Column(name = "archived_at")
-    private Instant archivedAt;
-
     @Builder.Default
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ExamScoreGroup> scoreGroups = new ArrayList<>();
+    private java.util.Set<ExamScoreGroup> scoreGroups = new java.util.LinkedHashSet<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex ASC")
-    private List<ExamSection> sections = new ArrayList<>();
+    private java.util.Set<ExamSection> sections = new java.util.LinkedHashSet<>();
 
     public void addScoreGroup(ExamScoreGroup child) {
         scoreGroups.add(child);

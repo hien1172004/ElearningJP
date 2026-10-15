@@ -38,6 +38,18 @@ public class ExamAttempt extends SoftDeletableEntity {
     private Exam exam;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "attempt_type", nullable = false, length = 30)
+    private com.jp.elearningjp.shared.enums.AttemptType attemptType = com.jp.elearningjp.shared.enums.AttemptType.FULL_EXAM;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "section_id")
+    private ExamSection section;
+
+    @Column(name = "target_duration_minutes")
+    private Integer targetDurationMinutes;
+
+    @Builder.Default
     @Column(name = "started_at", nullable = false)
     private Instant startedAt = Instant.now();
 
