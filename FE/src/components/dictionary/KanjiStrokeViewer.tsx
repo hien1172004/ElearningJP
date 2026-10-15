@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, PenTool } from 'lucide-react'
 import type { CharacterStroke } from '@/types'
+import { KanjiPracticeModal } from './KanjiPracticeModal'
 
 interface KanjiStrokeViewerProps {
   character: string
@@ -15,6 +16,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
 }) => {
   const [currentStrokeIndex, setCurrentStrokeIndex] = useState<number>(strokes.length)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
+  const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Reset khi đổi ký tự
@@ -189,7 +191,25 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
             </button>
           </div>
         )}
+
+        {strokes && strokes.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setIsPracticeOpen(true)}
+            className="mt-2 w-full py-2 px-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
+          >
+            <PenTool className="w-3.5 h-3.5 text-amber-300" />
+            <span>Thực hành viết & Chấm điểm AI</span>
+          </button>
+        )}
       </div>
+
+      <KanjiPracticeModal
+        isOpen={isPracticeOpen}
+        onClose={() => setIsPracticeOpen(false)}
+        character={character}
+        strokes={strokes}
+      />
     </div>
   )
 }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Volume2, BookmarkPlus, Check, Sparkles, BookOpen } from 'lucide-react'
+import { Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
+import { KanjiPracticeModal } from './KanjiPracticeModal'
 
 interface KanjiDetailPanelProps {
   character: string
@@ -14,6 +15,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({ character, o
   const [detail, setDetail] = useState<KanjiDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
   const [expandedReadings, setExpandedReadings] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
@@ -100,7 +102,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({ character, o
           <button
             type="button"
             onClick={() => playSmartAudio({ text: detail.character })}
-            className="p-3.5 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm"
+            className="p-3.5 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm cursor-pointer"
             title="Nghe phát âm"
           >
             <Volume2 className="w-5 h-5" />
@@ -109,9 +111,19 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({ character, o
 
           <button
             type="button"
+            onClick={() => setIsPracticeOpen(true)}
+            className="p-3.5 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm cursor-pointer"
+            title="Luyện viết & Chấm điểm nét AI"
+          >
+            <PenTool className="w-5 h-5" />
+            <span className="hidden sm:inline">Luyện viết</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleAddToSrs}
             disabled={isAddedToSrs}
-            className={`px-4 py-3.5 rounded-2xl text-sm font-semibold flex items-center gap-2 transition ${
+            className={`px-4 py-3.5 rounded-2xl text-sm font-semibold flex items-center gap-2 transition cursor-pointer ${
               isAddedToSrs
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
@@ -131,6 +143,14 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({ character, o
             strokes={detail.strokes || []}
             size={180}
           />
+          <button
+            type="button"
+            onClick={() => setIsPracticeOpen(true)}
+            className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <PenTool className="w-3.5 h-3.5" />
+            <span>Thực hành viết & Chấm điểm AI</span>
+          </button>
         </div>
 
         <div className="space-y-4 text-sm justify-center flex flex-col">
@@ -283,6 +303,15 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({ character, o
           </div>
         )}
       </div>
+
+      <KanjiPracticeModal
+        isOpen={isPracticeOpen}
+        onClose={() => setIsPracticeOpen(false)}
+        character={detail.character}
+        meaningVi={detail.meaningVi}
+        hanViet={detail.hanViet}
+        strokes={detail.strokes || []}
+      />
     </div>
   )
 }

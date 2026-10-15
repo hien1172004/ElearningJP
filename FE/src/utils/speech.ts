@@ -25,7 +25,9 @@ export const stopSpeaking = (): void => {
   }
 
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel()
+    if (currentUtterance || window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel()
+    }
     currentUtterance = null
   }
 }

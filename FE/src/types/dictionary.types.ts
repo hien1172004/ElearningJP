@@ -4,6 +4,7 @@ export type CharacterType = 'HIRAGANA' | 'KATAKANA' | 'KANJI'
 export interface CharacterStroke {
   strokeNumber: number
   svgPathData: string
+  samplePointsJson?: number[][]
 }
 
 export interface KanjiSimple {
@@ -44,6 +45,8 @@ export interface VocabularySummary {
   jlptLevel?: JlptLevel
   partOfSpeech?: string
   audioUrl?: string
+  exampleJp?: string
+  exampleVi?: string
 }
 
 export interface VocabularyDetail extends VocabularySummary {
