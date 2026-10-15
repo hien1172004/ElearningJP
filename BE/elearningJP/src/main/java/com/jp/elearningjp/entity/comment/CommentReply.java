@@ -1,6 +1,5 @@
-package com.jp.elearningjp.entity.community;
+package com.jp.elearningjp.entity.comment;
 
-import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.shared.enums.ContentStatus;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
@@ -15,26 +14,31 @@ import jakarta.persistence.Table;
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
 
+/**
+ * Reply cho {@link Comment}. Hỗ trợ reply lồng nhau qua {@code parentReply}
+ * (self-reference). Một reply chỉ thuộc về 1 comment gốc.
+ */
 @Entity
-@Table(name = "discussions")
+@Table(name = "comment_replies")
 @DynamicInsert
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Discussion extends SoftDeletableEntity {
+public class CommentReply extends SoftDeletableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "lesson_id", nullable = false)
-    private Lesson lesson;
+    @JoinColumn(name = "comment_id", nullable = false)
+    private Comment comment;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "title", nullable = false, length = 255)
-    private String title;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_reply_id")
+    private CommentReply parentReply;
 
     @Column(name = "content", nullable = false, columnDefinition = "text")
     private String content;
@@ -44,13 +48,11 @@ public class Discussion extends SoftDeletableEntity {
     @Column(name = "status", nullable = false, length = 10)
     private ContentStatus status = ContentStatus.VISIBLE;
 
-    /** do trigger của DB cập nhật, chỉ đọc */
-    @Column(name = "like_count", nullable = false, insertable = false, updatable = false)
-    private Integer likeCount;
+    @Builder.Default
+    @Column(name = "like_count", nullable = false)
+    private Integer likeCount = 0;
 
-    /** do trigger của DB cập nhật, chỉ đọc */
-    @Column(name = "reply_count", nullable = false, insertable = false, updatable = false)
-    private Integer replyCount;
-
-
+    @Builder.Default
+    @Column(name = "dislike_count", nullable = false)
+    private Integer dislikeCount = 0;
 }
