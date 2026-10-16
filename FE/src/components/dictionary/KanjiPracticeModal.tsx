@@ -13,6 +13,7 @@ import {
   ChevronRight,
   HelpCircle,
   Search,
+  PenLine,
 } from 'lucide-react'
 import type { CharacterStroke } from '@/types'
 import {
@@ -20,6 +21,7 @@ import {
   type StrokePoint,
   type StrokeAssessmentResponse,
 } from '@/services'
+import { HanziWriterPractice } from './HanziWriterPractice'
 
 const PRESET_KANJI: Record<string, { hanViet: string; meaningVi: string; strokes: CharacterStroke[] }> = {
   '二': {
@@ -102,6 +104,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
   const [isEvaluating, setIsEvaluating] = useState<boolean>(false)
   const [assessment, setAssessment] = useState<StrokeAssessmentResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [practiceMode, setPracticeMode] = useState<'guided' | 'freehand'>('guided')
 
   // Hỗ trợ gõ chữ bất kỳ & chọn theo cấp độ JLPT
   const [customInputChar, setCustomInputChar] = useState<string>('')
@@ -513,124 +516,187 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
           </div>
         </div>
 
+        {/* Thanh chuyển đổi Chế độ Luyện viết */}
+        <div className="px-6 py-2 bg-indigo-50/50 border-b border-indigo-100/60 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-gray-200/80 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setPracticeMode('guided')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                practiceMode === 'guided'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50/60'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Chế độ 1: Luyện theo nét chuẩn (Hanzi-Writer)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPracticeMode('freehand')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                practiceMode === 'freehand'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50/60'
+              }`}
+            >
+              <PenLine className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Chế độ 2: Tự do viết & AI Chấm điểm</span>
+            </button>
+          </div>
+
+          <div className="text-[11px] font-semibold text-gray-400 hidden sm:block">
+            {practiceMode === 'guided' ? '💡 Nhận diện & phản hồi từng nét tức thì' : '🤖 Chấm điểm tổng thể toàn bộ chữ'}
+          </div>
+        </div>
+
         {/* Thân Modal: Khung vẽ & Bảng kết quả */}
         <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Cột trái: Khung Canvas tương tác (7 cột) */}
+          {/* Cột trái: Khung tương tác (7 cột) */}
           <div className="lg:col-span-7 flex flex-col items-center">
-            {/* Thanh trạng thái nét & Nút chuyển nét gợi ý */}
-            <div className="w-full flex items-center justify-between mb-3 px-1 text-xs font-medium">
-              <span className="text-gray-600">
-                Số nét đã vẽ:{' '}
-                <strong
-                  className={`font-black text-sm ${
-                    userStrokes.length === expectedStrokes
-                      ? 'text-emerald-600'
-                      : userStrokes.length > expectedStrokes
-                      ? 'text-rose-600'
-                      : 'text-indigo-600'
-                  }`}
+            {practiceMode === 'guided' ? (
+              /* CHẾ ĐỘ 1: Hanzi-Writer Interactive Practice */
+              <div className="w-full flex flex-col items-center">
+                <HanziWriterPractice
+                  character={currentChar}
+                  size={CANVAS_SIZE}
+                  onCompleteQuiz={(summary) => {
+                    setAssessment({
+                      success: true,
+                      character: summary.character,
+                      total_strokes_expected: expectedStrokes,
+                      total_strokes_received: expectedStrokes,
+                      is_stroke_count_correct: true,
+                      is_all_correct: summary.totalMistakes === 0,
+                      overall_score: summary.accuracyScore,
+                      feedback:
+                        summary.totalMistakes === 0
+                          ? 'Xuất sắc! Bạn đã viết đúng 100% thứ tự và chiều của từng nét ngay lần đầu!'
+                          : `Tốt lắm! Bạn đã hoàn thành toàn bộ chữ với ${summary.totalMistakes} lần cần sửa nét.`,
+                      stroke_details: [],
+                    })
+                  }}
+                />
+              </div>
+            ) : (
+              /* CHẾ ĐỘ 2: Freehand Canvas & AI Evaluator */
+              <>
+                {/* Thanh trạng thái nét & Nút chuyển nét gợi ý */}
+                <div className="w-full flex items-center justify-between mb-3 px-1 text-xs font-medium">
+                  <span className="text-gray-600">
+                    Số nét đã vẽ:{' '}
+                    <strong
+                      className={`font-black text-sm ${
+                        userStrokes.length === expectedStrokes
+                          ? 'text-emerald-600'
+                          : userStrokes.length > expectedStrokes
+                          ? 'text-rose-600'
+                          : 'text-indigo-600'
+                      }`}
+                    >
+                      {userStrokes.length}
+                    </strong>{' '}
+                    / {expectedStrokes} nét
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowGhostGuide(!showGhostGuide)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition ${
+                      showGhostGuide
+                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-semibold'
+                        : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                    }`}
+                  >
+                    {showGhostGuide ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span>{showGhostGuide ? 'Hiện nét mờ' : 'Ẩn nét mờ'}</span>
+                  </button>
+                </div>
+
+                {/* Container Canvas + Lớp nét gợi ý SVG */}
+                <div
+                  className="relative bg-white rounded-3xl border-2 border-indigo-200/80 shadow-md overflow-hidden select-none touch-none flex items-center justify-center"
+                  style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}
                 >
-                  {userStrokes.length}
-                </strong>{' '}
-                / {expectedStrokes} nét
-              </span>
+                  {/* Nét mờ KanjiVG làm mẫu nền (Ghost guide) */}
+                  {showGhostGuide && activeStrokes && activeStrokes.length > 0 && (
+                    <svg
+                      viewBox="0 0 109 109"
+                      className="absolute inset-0 w-full h-full pointer-events-none z-0"
+                      style={{ strokeLinecap: 'round', strokeLinejoin: 'round' }}
+                    >
+                      {activeStrokes.map((s, idx) => (
+                        <path
+                          key={idx}
+                          d={s.svgPathData}
+                          fill="none"
+                          stroke="#818cf8"
+                          strokeWidth="6"
+                          opacity="0.45"
+                        />
+                      ))}
+                    </svg>
+                  )}
 
-              <button
-                type="button"
-                onClick={() => setShowGhostGuide(!showGhostGuide)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition ${
-                  showGhostGuide
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-semibold'
-                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                }`}
-              >
-                {showGhostGuide ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                <span>{showGhostGuide ? 'Hiện nét mờ' : 'Ẩn nét mờ'}</span>
-              </button>
-            </div>
+                  {/* Canvas viết tay */}
+                  <canvas
+                    ref={canvasRef}
+                    width={CANVAS_SIZE}
+                    height={CANVAS_SIZE}
+                    className="w-full h-full cursor-crosshair relative z-10"
+                    onMouseDown={handleStart}
+                    onMouseMove={handleMove}
+                    onMouseUp={handleEnd}
+                    onMouseLeave={handleEnd}
+                    onTouchStart={handleStart}
+                    onTouchMove={handleMove}
+                    onTouchEnd={handleEnd}
+                  />
+                </div>
 
-            {/* Container Canvas + Lớp nét gợi ý SVG */}
-            <div
-              className="relative bg-white rounded-3xl border-2 border-indigo-200/80 shadow-md overflow-hidden select-none touch-none flex items-center justify-center"
-              style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}
-            >
-              {/* Nét mờ KanjiVG làm mẫu nền (Ghost guide) */}
-              {showGhostGuide && activeStrokes && activeStrokes.length > 0 && (
-                <svg
-                  viewBox="0 0 109 109"
-                  className="absolute inset-0 w-full h-full pointer-events-none z-0"
-                  style={{ strokeLinecap: 'round', strokeLinejoin: 'round' }}
-                >
-                  {activeStrokes.map((s, idx) => (
-                    <path
-                      key={idx}
-                      d={s.svgPathData}
-                      fill="none"
-                      stroke="#818cf8"
-                      strokeWidth="6"
-                      opacity="0.45"
-                    />
-                  ))}
-                </svg>
-              )}
+                {/* Thanh công cụ vẽ: Xóa nét, Xóa hết, Chấm điểm */}
+                <div className="flex items-center gap-2 mt-4 w-full justify-center">
+                  <button
+                    type="button"
+                    onClick={handleUndo}
+                    disabled={userStrokes.length === 0}
+                    className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
+                  >
+                    <RotateCcw className="w-4 h-4 text-gray-500" />
+                    <span>Hoàn tác nét</span>
+                  </button>
 
-              {/* Canvas viết tay */}
-              <canvas
-                ref={canvasRef}
-                width={CANVAS_SIZE}
-                height={CANVAS_SIZE}
-                className="w-full h-full cursor-crosshair relative z-10"
-                onMouseDown={handleStart}
-                onMouseMove={handleMove}
-                onMouseUp={handleEnd}
-                onMouseLeave={handleEnd}
-                onTouchStart={handleStart}
-                onTouchMove={handleMove}
-                onTouchEnd={handleEnd}
-              />
-            </div>
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    disabled={userStrokes.length === 0}
+                    className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
+                  >
+                    <Trash2 className="w-4 h-4 text-gray-400" />
+                    <span>Viết lại</span>
+                  </button>
 
-            {/* Thanh công cụ vẽ: Xóa nét, Xóa hết, Chấm điểm */}
-            <div className="flex items-center gap-2 mt-4 w-full justify-center">
-              <button
-                type="button"
-                onClick={handleUndo}
-                disabled={userStrokes.length === 0}
-                className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
-              >
-                <RotateCcw className="w-4 h-4 text-gray-500" />
-                <span>Hoàn tác nét</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleClear}
-                disabled={userStrokes.length === 0}
-                className="px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
-              >
-                <Trash2 className="w-4 h-4 text-gray-400" />
-                <span>Viết lại</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleEvaluate}
-                disabled={userStrokes.length === 0 || isEvaluating}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 transition shadow-sm disabled:opacity-50 cursor-pointer"
-              >
-                {isEvaluating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang chấm điểm...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Chấm điểm nét</span>
-                  </>
-                )}
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={handleEvaluate}
+                    disabled={userStrokes.length === 0 || isEvaluating}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold flex items-center gap-2 transition shadow-sm disabled:opacity-50 cursor-pointer"
+                  >
+                    {isEvaluating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Đang chấm điểm...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Chấm điểm nét</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
 
             {errorMessage && (
               <div className="mt-3 p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-xl w-full text-center">
