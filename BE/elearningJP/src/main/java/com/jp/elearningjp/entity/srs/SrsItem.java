@@ -12,6 +12,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -22,7 +23,9 @@ import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
 
 @Entity
-@Table(name = "srs_items")
+@Table(name = "srs_items", indexes = {
+    @Index(name = "idx_srs_items_user_due", columnList = "user_id, next_review_at")
+})
 @DynamicInsert
 @Getter
 @Setter

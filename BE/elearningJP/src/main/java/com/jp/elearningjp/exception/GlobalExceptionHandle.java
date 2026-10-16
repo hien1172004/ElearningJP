@@ -71,8 +71,59 @@ public class GlobalExceptionHandle {
                         .build());
     }
 
+    /**
+     * Bắt lỗi vi phạm UNIQUE constraint từ DB (ví dụ: trùng order_index
+     * do race condition giữa EXISTS check và INSERT/UPDATE).
+     *
+     * <p>Mapping:</p>
+     * <ul>
+     *   <li>Postgres error code 23505 (unique_violation) liên quan đến
+     *       {@code order_index} → {@link ErrorCode#LESSON_ORDER_CONFLICT} (409)</li>
+     *   <li>Các constraint khác → fallback 409 với message generic</li>
+     * </ul>
+     */
+    @ExceptionHandler(value = org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException e) {
+        String rootMsg = e.getMostSpecificCause() != null
+                ? e.getMostSpecificCause().getMessage()
+                : e.getMessage();
+        boolean isOrderIndexConflict = rootMsg != null
+                && rootMsg.toLowerCase().contains("order_index");
+
+        ErrorCode errorCode = isOrderIndexConflict
+                ? ErrorCode.LESSON_ORDER_CONFLICT
+                : ErrorCode.UNCAUGHT_EXCEPTION;
+
+        if (isOrderIndexConflict) {
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class)
+                    .warn("[DB-CONFLICT] Order index unique constraint violated: {}", rootMsg);
+        } else {
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class)
+                    .error("[DB-CONFLICT] Data integrity violation: ", e);
+        }
+
+        return ResponseEntity.status(errorCode.getHttpStatusCode()).body(
+                ApiResponse.builder()
+                        .code(errorCode.getCode())
+                        .message(errorCode.getMessage())
+                        .build());
+    }
+
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ApiResponse<?>> handleGenericException(Exception e) {
+        // ClientAbort / AsyncRequestNotUsable = client closed connection before response was sent.
+        // This is not a real error — log at DEBUG and return 499 (no body).
+        if (e instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException
+                || e instanceof org.apache.catalina.connector.ClientAbortException
+                || (e.getCause() instanceof java.io.IOException
+                        && e.getCause().getMessage() != null
+                        && e.getCause().getMessage().toLowerCase().contains("connection reset"))) {
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class)
+                    .debug("Client closed connection (ignored): {}", e.getMessage());
+            return null; // 499
+        }
+        org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class).error("Uncaught exception: ", e);
         ErrorCode errorCode = ErrorCode.UNCAUGHT_EXCEPTION;
         return ResponseEntity.status(errorCode.getHttpStatusCode()).body(
                 ApiResponse.builder()

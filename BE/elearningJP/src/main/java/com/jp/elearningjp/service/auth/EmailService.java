@@ -37,7 +37,7 @@ public class EmailService {
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject("[Cinema Booking] Đặt lại mật khẩu");
+            helper.setSubject("[E-Learning JP] Đặt lại mật khẩu");
 
             String resetLink = frontendUrl + "/reset-password?token=" + token;
             String htmlContent = buildEmailContent(resetLink, expiryMinutes);
@@ -56,7 +56,7 @@ public class EmailService {
     private String buildEmailContent(String resetLink, long expiryMinutes) {
         return """
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
-                    <h2 style="color: #e50914;">🎬 Cinema Booking</h2>
+                    <h2 style="color: #e50914;">E-Learning JP</h2>
                     <p>Bạn vừa yêu cầu đặt lại mật khẩu.</p>
                     <p>Nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
                     <a href="%s"
@@ -74,7 +74,7 @@ public class EmailService {
                     </p>
                     <hr style="border: none; border-top: 1px solid #eee;" />
                     <p style="color: #aaa; font-size: 12px;">
-                        © 2025 Cinema Booking System
+                        © 2026 E-Learning JP
                     </p>
                 </div>
                 """.formatted(resetLink, expiryMinutes);

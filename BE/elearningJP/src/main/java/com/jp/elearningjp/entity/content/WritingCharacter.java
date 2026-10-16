@@ -9,9 +9,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -22,9 +19,9 @@ import java.util.List;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
+import io.hypersistence.utils.hibernate.type.array.ListArrayType;
 
 @Entity
 @Table(name = "writing_characters")
@@ -46,11 +43,11 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Column(name = "stroke_count", nullable = false)
     private Integer strokeCount;
 
-    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Type(ListArrayType.class)
     @Column(name = "onyomi", columnDefinition = "text[]")
     private List<String> onyomi;
 
-    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Type(ListArrayType.class)
     @Column(name = "kunyomi", columnDefinition = "text[]")
     private List<String> kunyomi;
 
@@ -67,8 +64,9 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Column(name = "jlpt_level", length = 2)
     private JlptLevel jlptLevel;
 
-    @Column(name = "radicals", length = 50)
-    private String radicals;
+    @Type(ListArrayType.class)
+    @Column(name = "radicals", columnDefinition = "text[]")
+    private List<String> radicals;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)
@@ -107,4 +105,5 @@ public class WritingCharacter extends SoftDeletableEntity {
         strokes.remove(child);
         child.setCharacter(null);
     }
+
 }

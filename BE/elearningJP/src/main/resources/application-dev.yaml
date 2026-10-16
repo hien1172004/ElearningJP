@@ -9,12 +9,19 @@ spring:
       minimum-idle: 5
   cache:
     type: redis
+    redis:
+      time-to-live: 600000          # default 10 phút (milliseconds)
+      cache-null-values: false       # không cache giá trị null
+      use-key-prefix: true           # caches jeden namespaced theo tên cache
+      key-prefix: "elearningjp:"     # prefix chung
 
   data:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
       timeout: 2000
+      repositories:
+        enabled: false
 
   flyway:
     enabled: true
@@ -69,3 +76,11 @@ springdoc:
     try-it-out-enabled: true
     persistAuthorization: true
     filter: true
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  health:
+    mail:
+      enabled: false

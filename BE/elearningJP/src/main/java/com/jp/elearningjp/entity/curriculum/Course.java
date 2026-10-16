@@ -45,9 +45,8 @@ public class Course extends SoftDeletableEntity {
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
-    @Builder.Default
     @Column(name = "is_published", nullable = false)
-    private boolean published = false;
+    private Boolean published;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")

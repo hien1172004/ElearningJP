@@ -4,6 +4,7 @@ import com.jp.elearningjp.dto.request.auth.ResetPasswordRequest;
 import com.jp.elearningjp.dto.response.user.ForgotPasswordRequest;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
+import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.redis.PasswordResetTokenService;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +59,7 @@ public class PasswordResetService {
         }
 
         // Tìm user
-        var user = userRepo.findUserByEmail(email)
+        User user = userRepo.findUserByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         // Kiểm tra mật khẩu mới không được trùng mật khẩu cũ

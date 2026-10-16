@@ -39,7 +39,25 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             // Auth
-            "/api/v1/auth/reset-password/validate"
+            "/api/v1/auth/reset-password/validate",
+            // Public courses browsing (catalog + detail + slug/level + public lesson list)
+            "/api/v1/courses",
+            "/api/v1/courses/{id:[0-9]+}",
+            "/api/v1/courses/slug/*",
+            "/api/v1/courses/level/*",
+            "/api/v1/courses/*/lessons",
+            "/api/v1/courses/*/lessons/*",
+            // Tra cứu từ điển & Bảng chữ cái công khai
+            "/api/v1/dictionary/**",
+            // Comments — cho phép xem danh sách / chi tiết / reply công khai
+            // (các method POST/PUT/DELETE tự bảo vệ qua @PreAuthorize("isAuthenticated()"))
+            "/api/v1/LESSON/*/comments",
+            "/api/v1/VOCABULARY/*/comments",
+            "/api/v1/KANJI/*/comments",
+            "/api/v1/GRAMMAR/*/comments",
+            "/api/v1/comments/*",
+            "/api/v1/comments/*/replies"
+            // POST /api/v1/courses/*/lessons/reorder cần auth (owner/admin) - để mặc định
     };
 
     private final CustomJwtDecoder customJwtDecoder;

@@ -26,7 +26,75 @@ public enum ErrorCode {
     PASSWORD_CONFIRM_NOT_MATCH(1012, "Password confirm not match", HttpStatus.BAD_REQUEST),
     USER_BANNED(1013, "User is banned", HttpStatus.FORBIDDEN),
     INVALID_RESET_TOKEN(1014, "Reset token is invalid", HttpStatus.BAD_REQUEST),
-    SAME_OLD_PASSWORD(1015, "New password must be different from old password", HttpStatus.BAD_REQUEST)
+    SAME_OLD_PASSWORD(1015, "New password must be different from old password", HttpStatus.BAD_REQUEST),
+
+// CURRICULUM MODULE — Course (1100-1199)
+    COURSE_NOT_FOUND(1100, "Course not found", HttpStatus.NOT_FOUND),
+    COURSE_NOT_PUBLISHED(1101, "Course is not published", HttpStatus.BAD_REQUEST),
+    COURSE_ARCHIVED(1102, "Course is archived", HttpStatus.BAD_REQUEST),
+    COURSE_SLUG_ALREADY_EXISTS(1103, "Course slug already exists", HttpStatus.CONFLICT),
+    COURSE_DELETED(1104, "Course has been deleted", HttpStatus.GONE),
+
+    // CURRICULUM MODULE — Lesson (1200-1299)
+    LESSON_NOT_FOUND(1200, "Lesson not found", HttpStatus.NOT_FOUND),
+    LESSON_TYPE_INVALID(1201, "Invalid lesson type", HttpStatus.BAD_REQUEST),
+    LESSON_ORDER_CONFLICT(1202, "Order index already used in this course", HttpStatus.CONFLICT),
+    LESSON_SECTION_NOT_FOUND(1203, "Lesson section not found", HttpStatus.NOT_FOUND),
+    LESSON_SECTION_TYPE_INVALID(1204, "Invalid lesson section type", HttpStatus.BAD_REQUEST),
+    LESSON_KANJI_ITEM_NOT_FOUND(1205, "Lesson kanji item not found", HttpStatus.NOT_FOUND),
+    LESSON_VOCABULARY_ITEM_NOT_FOUND(1206, "Lesson vocabulary item not found", HttpStatus.NOT_FOUND),
+    LESSON_GRAMMAR_ITEM_NOT_FOUND(1207, "Lesson grammar item not found", HttpStatus.NOT_FOUND),
+    LESSON_KANJI_ITEM_DUPLICATED(1208, "Kanji đã tồn tại trong section này", HttpStatus.CONFLICT),
+    LESSON_VOCABULARY_ITEM_DUPLICATED(1209, "Vocabulary đã tồn tại trong section này", HttpStatus.CONFLICT),
+    LESSON_GRAMMAR_ITEM_DUPLICATED(1210, "Grammar đã tồn tại trong section này", HttpStatus.CONFLICT),
+    LESSON_KANJI_RELATED_VOCAB_DUPLICATED(1211, "Related vocabulary đã tồn tại trong kanji item này", HttpStatus.CONFLICT),
+    LESSON_KANJI_RELATED_VOCAB_NOT_FOUND(1212, "Related vocabulary không tồn tại", HttpStatus.NOT_FOUND),
+    LESSON_VOCAB_EXAMPLE_DUPLICATED(1213, "Ví dụ trùng lặp trong cùng request", HttpStatus.CONFLICT),
+    LESSON_VOCAB_EXAMPLE_MULTIPLE_PRIMARY(1214, "Chỉ được phép có tối đa 1 ví dụ primary", HttpStatus.BAD_REQUEST),
+    LESSON_VOCAB_EXAMPLE_NOT_FOUND(1215, "Ví dụ từ vựng không tồn tại", HttpStatus.NOT_FOUND),
+    LESSON_GRAMMAR_EXAMPLE_DUPLICATED(1216, "Ví dụ trùng lặp trong cùng request", HttpStatus.CONFLICT),
+    LESSON_GRAMMAR_EXAMPLE_NOT_FOUND(1217, "Ví dụ ngữ pháp không tồn tại", HttpStatus.NOT_FOUND),
+
+    // CURRICULUM MODULE — Enrollment (1300-1399)
+    ENROLLMENT_NOT_FOUND(1300, "Enrollment not found", HttpStatus.NOT_FOUND),
+    ALREADY_ENROLLED(1301, "User already enrolled in this course", HttpStatus.CONFLICT),
+    NOT_ENROLLED(1302, "User is not enrolled in this course", HttpStatus.FORBIDDEN),
+
+    // CURRICULUM MODULE — Progress (1400-1499)
+    PROGRESS_NOT_FOUND(1400, "Lesson progress not found", HttpStatus.NOT_FOUND),
+    PROGRESS_ALREADY_COMPLETED(1401, "Lesson already completed", HttpStatus.BAD_REQUEST),
+    CANNOT_COMPLETE_LESSON(1402, "Cannot mark this lesson as complete", HttpStatus.BAD_REQUEST),
+    INVALID_BEST_SCORE(1403, "Score is only allowed when the lesson has a quiz", HttpStatus.BAD_REQUEST),
+
+    // CURRICULUM MODULE — Authorization (1500-1599)
+    FORBIDDEN_COURSE_ACCESS(1500, "You don't have permission to access this course", HttpStatus.FORBIDDEN),
+    FORBIDDEN_LESSON_ACCESS(1501, "You don't have permission to access this lesson", HttpStatus.FORBIDDEN),
+    FORBIDDEN_PROGRESS_ACCESS(1502, "You don't have permission to update this progress", HttpStatus.FORBIDDEN),
+
+    // CURRICULUM MODULE — Quiz (2000-2999)
+    COURSE_NOT_ENROLLED(2002, "You are not enrolled in this course. Please enroll to access lessons and quizzes!", HttpStatus.FORBIDDEN),
+    QUIZ_NOT_FOUND(2005, "This lesson has no quiz", HttpStatus.NOT_FOUND),
+    QUESTION_NOT_FOUND(2006, "Question not found", HttpStatus.NOT_FOUND),
+    QUESTION_ORDER_CONFLICT(2007, "Order index already used in this quiz", HttpStatus.CONFLICT),
+
+    // SRS Module (3000 - 3999)
+    SRS_ITEM_NOT_FOUND(3001, "Srs item not found", HttpStatus.NOT_FOUND),
+    SRS_ITEM_ALREADY_EXISTS(3002, "Item already exists in your SRS review list", HttpStatus.BAD_REQUEST),
+    SRS_ITEM_ACCESS_DENIED(3003, "You don't have permission to access this Srs item", HttpStatus.FORBIDDEN),
+    VOCAB_NOT_FOUND(3004, "Corresponding vocab not found", HttpStatus.NOT_FOUND),
+    CHARACTER_NOT_FOUND(3005, "Corresponding kanji not found", HttpStatus.NOT_FOUND),
+    GRAMMAR_NOT_FOUND(3006, "Corresponding grammar point not found", HttpStatus.NOT_FOUND),
+    INVALID_SRS_REQUEST(3007, "Invalid SRS add request (need to select vocab, kanji or grammar)", HttpStatus.BAD_REQUEST),
+    INVALID_REQUEST(3008, "Invalid request payload", HttpStatus.BAD_REQUEST),
+
+    // COMMENT MODULE (4000 - 4099)
+    COMMENT_NOT_FOUND(4000, "Comment not found", HttpStatus.NOT_FOUND),
+    COMMENT_FORBIDDEN(4001, "You don't have permission to modify this comment", HttpStatus.FORBIDDEN),
+    COMMENT_INVALID_TARGET(4002, "Invalid comment target type or target does not exist", HttpStatus.BAD_REQUEST),
+    COMMENT_CONTENT_EMPTY(4003, "Comment content must not be empty", HttpStatus.BAD_REQUEST),
+    COMMENT_REPLY_NOT_FOUND(4004, "Comment reply not found", HttpStatus.NOT_FOUND),
+    COMMENT_REPLY_FORBIDDEN(4005, "You don't have permission to modify this reply", HttpStatus.FORBIDDEN),
+    COMMENT_REPLY_INVALID_PARENT(4006, "Parent reply must belong to the same comment", HttpStatus.BAD_REQUEST),
     ;
 
 
