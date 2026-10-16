@@ -16,16 +16,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 CURRENT_DIR = Path(__file__).resolve().parent
 MODELS_DIR = CURRENT_DIR.parent / "models"
 
-# Tự động ưu tiên mô hình mở rộng 3.169 lớp (gồm Kanji, Katakana, Số, Chữ cái) nếu có
-EXTENDED_MODEL = MODELS_DIR / "kanji_model_extended.h5"
-EXTENDED_LABEL = MODELS_DIR / "label_3169.json"
-
-if EXTENDED_MODEL.exists() and EXTENDED_LABEL.exists():
-    MODEL_PATH = EXTENDED_MODEL
-    LABEL_PATH = EXTENDED_LABEL
-else:
-    MODEL_PATH = MODELS_DIR / "kanji_model_best.h5"
-    LABEL_PATH = MODELS_DIR / "label_3036.json"
+# Sử dụng mô hình nhận diện Kanji/Kana chuẩn 3.036 lớp đạt độ chính xác cao từ cnn-kanji
+MODEL_PATH = MODELS_DIR / "kanji_3036_best_e4.h5"
+LABEL_PATH = MODELS_DIR / "label_3036_raw.json"
 
 class KanjiRecognitionService:
     _instance: Optional["KanjiRecognitionService"] = None
