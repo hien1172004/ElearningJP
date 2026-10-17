@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemUpdateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiRelatedVocabRequest;
@@ -22,6 +23,7 @@ import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.service.dictionary.DictionaryService;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.VocabularySource;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
 import lombok.extern.slf4j.Slf4j;
@@ -31,8 +33,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Service quản lý {@link LessonKanjiItem} bên trong section KANJI.
@@ -68,6 +73,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     private final LessonSectionMapper lessonSectionMapper;
     private final DictionaryService dictionaryService;
     private final CurrentUserService currentUserService;
+    private final CourseAccessGuard courseAccessGuard;
 
     public KanjiSectionItemService(
             LessonSectionRepository lessonSectionRepository,
@@ -78,7 +84,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
             VocabularyCharacterRepository vocabularyCharacterRepository,
             LessonSectionMapper lessonSectionMapper,
             DictionaryService dictionaryService,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            CourseAccessGuard courseAccessGuard
     ) {
         super(lessonSectionRepository);
         this.kanjiItemRepository = kanjiItemRepository;
@@ -89,6 +96,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         this.lessonSectionMapper = lessonSectionMapper;
         this.dictionaryService = dictionaryService;
         this.currentUserService = currentUserService;
+        this.courseAccessGuard = courseAccessGuard;
     }
 
     // ============================================================
@@ -136,36 +144,50 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
 
         assertNoDuplicateKanji(sectionId, writingChar.getId());
 
-        // Nhận xét #2: xử lý orderIndex đúng cách (shift các item có index >= target lên +1)
+        // Nhận xét #2: xử lý orderIndex bằng ADJACENT SWAP (swap chain từng bước).
+        // Ví dụ chi tiết: xem comment trong LessonService.createLesson.
         List<LessonKanjiItem> existingItems = kanjiItemRepository
                 .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
         int maxOrder = OrderIndexResolver.maxOrderIndex(existingItems, LessonKanjiItem::getOrderIndex);
-        int resolvedIndex = OrderIndexResolver.resolveForCreate(
-                request.getOrderIndex(), () -> maxOrder
-        );
-        boolean clientChoseIndex = request.getOrderIndex() != null && request.getOrderIndex() > 0
-                && resolvedIndex == request.getOrderIndex();
-        if (clientChoseIndex) {
-            OrderIndexResolver.shiftUpInCollection(
-                    existingItems, resolvedIndex,
-                    LessonKanjiItem::getOrderIndex, LessonKanjiItem::setOrderIndex
-            );
-            log.info("[KANJI-ITEM] Shifted up items in section id={} with orderIndex >= {}", sectionId, resolvedIndex);
-        }
+        Integer requestedIndex = request.getOrderIndex();
+        boolean clientChoseIndex = requestedIndex != null && requestedIndex > 0
+                && requestedIndex <= maxOrder + 1;
+
+        int tempIndex = maxOrder + 1;
+        int finalIndex = clientChoseIndex ? requestedIndex : tempIndex;
 
         LessonKanjiItem item = LessonKanjiItem.builder()
                 .section(section)
                 .character(writingChar)
-                .orderIndex(resolvedIndex)
+                .orderIndex(tempIndex)
                 .note(request.getNote())
                 .build();
 
         section.addKanjiItem(item);
-        // Save tất cả kanji items trong section (kể cả những cái bị shift) trong 1 transaction
-        kanjiItemRepository.saveAll(existingItems);
         LessonKanjiItem saved = kanjiItemRepository.save(item);
-        log.info("[KANJI-ITEM] Added character='{}' (id={}) into section id={} at orderIndex={}",
-                character, writingChar.getId(), sectionId, saved.getOrderIndex());
+        kanjiItemRepository.flush();
+        log.info("[KANJI-ITEM] Added character='{}' (id={}) into section id={} at tempIndex={}",
+                character, writingChar.getId(), sectionId, tempIndex);
+
+        if (clientChoseIndex && finalIndex != tempIndex) {
+            Long newItemId = saved.getId();
+            int step = (finalIndex < tempIndex) ? -1 : 1;
+            int current = tempIndex;
+            int safetyCounter = 0;
+            final int MAX_SWAPS = tempIndex + 2;
+            while (current != finalIndex && safetyCounter++ < MAX_SWAPS) {
+                int nextIndex = current + step;
+                Long neighborId = kanjiItemRepository.findIdBySectionIdAndOrderIndex(sectionId, nextIndex);
+                if (neighborId == null) break;
+                kanjiItemRepository.swapOrderIndexes(newItemId, nextIndex, neighborId, current);
+                kanjiItemRepository.flush();
+                current = nextIndex;
+            }
+            saved.setOrderIndex(finalIndex);
+            kanjiItemRepository.flush();
+            log.info("[KANJI-ITEM] Swapped new kanji item id={} from tempIndex={} to orderIndex={} (sectionId={})",
+                    newItemId, tempIndex, finalIndex, sectionId);
+        }
 
         // V25+: tạo related vocab do giáo viên chọn (idempotent: nếu danh sách rỗng → không làm gì)
         int created = applyRelatedVocabCreate(saved, request.getRelatedVocabulary());
@@ -200,7 +222,12 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         Integer newOrderIndex = request.getOrderIndex();
         Integer oldOrderIndex = item.getOrderIndex();
 
-        // Nhận xét #2: xử lý di chuyển orderIndex (move up/down với shift)
+        // Nhận xét #2: xử lý di chuyển orderIndex bằng thuật toán ADJACENT SWAP.
+        // Thay vì shift nhiều row cùng lúc (gây UNIQUE conflict), ta hoán đổi item
+        // với hàng xóm liền kề nhiều lần cho đến khi đến đúng target.
+        // Ví dụ: items=[A(1),B(2),C(3),D(4)], move D(4) → 2:
+        //   - swap D↔C: [A(1),B(2),D(3),C(4)]
+        //   - swap D↔B: [A(1),D(2),B(3),C(4)] ✓
         if (newOrderIndex != null && newOrderIndex > 0 && !newOrderIndex.equals(oldOrderIndex)) {
             Long sectionId = item.getSection().getId();
             List<LessonKanjiItem> allItems = kanjiItemRepository
@@ -208,24 +235,26 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
             int maxOrder = OrderIndexResolver.maxOrderIndex(allItems, LessonKanjiItem::getOrderIndex);
             int target = OrderIndexResolver.clampToMaxPlusOne(newOrderIndex, () -> maxOrder);
             if (target != oldOrderIndex) {
-                // Loại bỏ item hiện tại khỏi list để không bị shift
-                allItems = allItems.stream().filter(i -> !i.getId().equals(itemId)).toList();
-                if (target < oldOrderIndex) {
-                    OrderIndexResolver.shiftUpInCollection(
-                            allItems, target,
-                            LessonKanjiItem::getOrderIndex, LessonKanjiItem::setOrderIndex
-                    );
-                    log.info("[KANJI-ITEM] Move-up: shifted items in [{}, {}] for kanji item id={}",
-                            target, oldOrderIndex - 1, itemId);
-                } else {
-                    OrderIndexResolver.shiftDownInCollection(
-                            allItems, oldOrderIndex, target,
-                            LessonKanjiItem::getOrderIndex, LessonKanjiItem::setOrderIndex
-                    );
-                    log.info("[KANJI-ITEM] Move-down: shifted items in ({}, {}] for kanji item id={}",
-                            oldOrderIndex, target, itemId);
+                log.info("[KANJI-ITEM] Adjacent-swap: moving kanji item id={} from orderIndex={} → target={} (sectionId={})",
+                        itemId, oldOrderIndex, target, sectionId);
+                int step = (target < oldOrderIndex) ? -1 : 1;
+                int current = oldOrderIndex;
+                int safetyCounter = 0;
+                final int MAX_SWAPS = maxOrder + 2; // an toàn chống vòng lặp vô hạn
+                while (current != target && safetyCounter++ < MAX_SWAPS) {
+                    int nextIndex = current + step;
+                    Long neighborId = kanjiItemRepository.findIdBySectionIdAndOrderIndex(sectionId, nextIndex);
+                    if (neighborId == null) {
+                        log.warn("[KANJI-ITEM] Adjacent-swap: không tìm thấy neighbor tại orderIndex={}", nextIndex);
+                        break;
+                    }
+                    // Swap trong 1 câu UPDATE: item@next ↔ neighbor@current
+                    kanjiItemRepository.swapOrderIndexes(itemId, nextIndex, neighborId, current);
+                    kanjiItemRepository.flush();
+                    log.debug("[KANJI-ITEM]   swap step: movingItem id={} {} ↔ neighbor id={} {}",
+                            itemId, current, neighborId, nextIndex);
+                    current = nextIndex;
                 }
-                kanjiItemRepository.saveAll(allItems);
                 item.setOrderIndex(target);
             }
         }
@@ -268,6 +297,53 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         item.softDelete();
         kanjiItemRepository.save(item);
         log.info("[KANJI-ITEM] Soft-deleted kanji item id={}", itemId);
+    }
+
+    /**
+     * Sắp xếp lại thứ tự hàng loạt các kanji item trong 1 section (drag-drop UI).
+     *
+     * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> kanji item active
+     * của section hiện tại (không thiếu, không thừa, không trùng).</p>
+     *
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     */
+    @Transactional
+    public List<LessonKanjiItemResponse> reorderKanjiItems(Long sectionId, ItemBulkReorderRequest request) {
+        LessonSection section = getActiveSection(sectionId, LessonSectionType.KANJI);
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+
+        if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
+        }
+
+        List<LessonKanjiItem> currentItems = kanjiItemRepository
+                .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
+        Set<Long> currentIds = new HashSet<>();
+        for (LessonKanjiItem i : currentItems) currentIds.add(i.getId());
+
+        Set<Long> requestedIds = new HashSet<>(request.getItemIds());
+        if (requestedIds.size() != request.getItemIds().size()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_INVALID);
+        }
+        if (!requestedIds.equals(currentIds)) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
+        }
+
+        OrderIndexResolver.bulkReorder(
+                currentItems,
+                request.getItemIds(),
+                LessonKanjiItem::getId,
+                LessonKanjiItem::getOrderIndex,
+                LessonKanjiItem::setOrderIndex
+        );
+
+        List<LessonKanjiItem> saved = kanjiItemRepository.saveAll(currentItems);
+        kanjiItemRepository.flush();
+
+        log.info("[KANJI-ITEM] Bulk reordered {} kanji item(s) in section id={}", saved.size(), sectionId);
+        return saved.stream()
+                .map(this::buildResponse)
+                .toList();
     }
 
     // ============================================================
@@ -393,46 +469,75 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
      * @return số lượng rv mới đã tạo.
      */
     private int replaceRelatedVocab(LessonKanjiItem item, List<LessonKanjiRelatedVocabRequest> newRequests) {
-        // 1) Soft-delete tất cả rv hiện tại (kể cả rỗng)
-        List<LessonKanjiRelatedVocab> existing = relatedVocabRepository.findByKanjiItemIdAndDeletedFalse(item.getId());
-        if (!existing.isEmpty()) {
-            existing.forEach(LessonKanjiRelatedVocab::softDelete);
-            relatedVocabRepository.saveAll(existing);
-            log.info("[KANJI-ITEM] Soft-deleted {} existing related vocab(s) for kanji item id={}",
-                    existing.size(), item.getId());
-        }
-        // 2) Tạo mới (re-use helper) — nhưng bỏ duplicate-check DB (vì đã xoá hết)
-        if (newRequests.isEmpty()) {
-            return 0;
-        }
+        Long kanjiItemId = item.getId();
 
-        // Validate và đếm tổng số vocab sẽ tạo
-        int totalVocabs = 0;
+        // 1) Load tất cả rv hiện tại (cả đã soft-delete, để biết key đã từng tồn tại)
+        List<LessonKanjiRelatedVocab> allExisting = relatedVocabRepository.findByKanjiItemId(kanjiItemId);
+
+        // 2) Build map vocabId -> rv (chỉ lấy rv chưa soft-delete)
+        Map<Long, LessonKanjiRelatedVocab> existingByVocabId = allExisting.stream()
+                .filter(rv -> !rv.isDeleted())
+                .collect(Collectors.toMap(rv -> rv.getVocab().getId(), Function.identity()));
+
+        // 3) Tính tập vocabId sẽ có sau update (từ newRequests)
+        Set<Long> targetVocabIds = new HashSet<>();
         for (LessonKanjiRelatedVocabRequest req : newRequests) {
             if (req == null || !req.isValid()) {
                 throw new AppException(ErrorCode.INVALID_REQUEST);
             }
+            if (req.getVocabIds() != null) {
+                for (Long vid : req.getVocabIds()) {
+                    if (vid != null && vid > 0) {
+                        targetVocabIds.add(vid);
+                    }
+                }
+            }
+        }
+
+        // 4) Soft-delete rv nào không còn trong target
+        List<LessonKanjiRelatedVocab> toDelete = existingByVocabId.values().stream()
+                .filter(rv -> !targetVocabIds.contains(rv.getVocab().getId()))
+                .toList();
+        if (!toDelete.isEmpty()) {
+            toDelete.forEach(LessonKanjiRelatedVocab::softDelete);
+            relatedVocabRepository.saveAll(toDelete);
+            log.info("[KANJI-ITEM] Soft-deleted {} existing related vocab(s) for kanji item id={}",
+                    toDelete.size(), kanjiItemId);
+        }
+
+        // 5) Nếu request rỗng → chỉ xoá, không tạo mới
+        if (newRequests.isEmpty()) {
+            return 0;
+        }
+
+        // 6) Validate tổng số vocab
+        int totalVocabs = 0;
+        for (LessonKanjiRelatedVocabRequest req : newRequests) {
             totalVocabs += req.countVocabs();
         }
         if (totalVocabs > MAX_RELATED_VOCAB_PER_REQUEST) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        Set<Long> seenVocabIds = new HashSet<>();
+        // 7) Tạo mới CHỈ những vocabId chưa có trong existing (tránh unique conflict)
         int created = 0;
         for (LessonKanjiRelatedVocabRequest req : newRequests) {
             List<LessonKanjiRelatedVocab> rvs = buildRelatedVocabs(item, req);
             for (LessonKanjiRelatedVocab rv : rvs) {
                 Long vocabId = rv.getVocab().getId();
-                if (!seenVocabIds.add(vocabId)) {
-                    log.warn("[KANJI-ITEM] Duplicate vocabId={} in update request for kanji item id={} — skipped",
-                            vocabId, item.getId());
+                if (existingByVocabId.containsKey(vocabId)) {
+                    // Đã có → skip (giữ nguyên, không insert mới)
+                    log.info("[KANJI-ITEM] vocabId={} already exists for kanji item id={} — kept",
+                            vocabId, kanjiItemId);
                     continue;
                 }
                 relatedVocabRepository.save(rv);
                 created++;
+                existingByVocabId.put(vocabId, rv); // cập nhật map để check duplicate trong cùng request
             }
         }
+        log.info("[KANJI-ITEM] Replaced related vocab for kanji item id={} → {} new entry(s), {} kept, {} deleted",
+                kanjiItemId, created, existingByVocabId.size() - created, toDelete.size());
         return created;
     }
 

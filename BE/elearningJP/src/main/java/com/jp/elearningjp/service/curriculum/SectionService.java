@@ -1,7 +1,9 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonSectionResponse;
 import com.jp.elearningjp.entity.content.Vocabulary;
+import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.curriculum.LessonKanjiItem;
 import com.jp.elearningjp.entity.curriculum.LessonKanjiRelatedVocab;
@@ -10,6 +12,7 @@ import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.mapper.LessonSectionMapper;
 import com.jp.elearningjp.repository.content.VocabularyCharacterRepository;
+import com.jp.elearningjp.repository.curriculum.CourseRepository;
 import com.jp.elearningjp.repository.curriculum.LessonGrammarExampleRepository;
 import com.jp.elearningjp.repository.curriculum.LessonGrammarItemRepository;
 import com.jp.elearningjp.repository.curriculum.LessonKanjiItemRepository;
@@ -21,6 +24,7 @@ import com.jp.elearningjp.repository.curriculum.LessonVocabularyItemRepository;
 import com.jp.elearningjp.repository.curriculum.QuizOptionRepository;
 import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +35,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -58,6 +64,8 @@ public class SectionService {
 
     LessonSectionRepository lessonSectionRepository;
     LessonRepository lessonRepository;
+    CourseRepository courseRepository;
+    CourseAccessGuard courseAccessGuard;
     LessonKanjiItemRepository kanjiItemRepository;
     LessonVocabularyItemRepository vocabularyItemRepository;
     LessonGrammarItemRepository grammarItemRepository;
@@ -114,34 +122,64 @@ public class SectionService {
     // ============================================================
 
     /**
-     * Tạo section mới trong lesson. orderIndex = max + 1.
+     * Tạo section mới trong lesson.
+     *
+     * <p>{@code requestedOrderIndex}:</p>
+     * <ul>
+     *   <li>Null hoặc {@code <= 0} → gán tự động = MAX + 1 (append cuối).</li>
+     *   <li>1..MAX+1 → insert vào slot cụ thể, dời các section có index ≥ target lên +1.</li>
+     *   <li>&gt; MAX+1 → clamp về MAX + 1 (giống pattern của Lesson).</li>
+     * </ul>
      */
     @Transactional
-    public LessonSectionResponse createSection(Long lessonId, LessonSectionType sectionType, String title) {
+    public LessonSectionResponse createSection(Long lessonId, LessonSectionType sectionType, String title,
+                                               Integer requestedOrderIndex) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
+        // ADJACENT SWAP: tạo section với orderIndex tạm = max+1, rồi swap chain
+        // từng bước về target (xem comment chi tiết trong LessonService.createLesson)
         List<LessonSection> existing = lessonSectionRepository
                 .findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
-        int newOrderIndex = OrderIndexResolver.maxOrderIndex(existing, LessonSection::getOrderIndex) + 1;
+        int currentMax = OrderIndexResolver.maxOrderIndex(existing, LessonSection::getOrderIndex);
+        Integer requestedIndex = requestedOrderIndex;
+        boolean clientChoseIndex = requestedIndex != null && requestedIndex > 0
+                && requestedIndex <= currentMax + 1;
 
-        // Check race condition (hiếm nhưng vẫn nên có)
-        if (lessonSectionRepository.existsByLessonIdAndOrderIndexExcludingId(lessonId, newOrderIndex, null)) {
-            log.warn("[SECTION] OrderIndex conflict detected at createSection for lesson id={}, orderIndex={}",
-                    lessonId, newOrderIndex);
-            throw new AppException(ErrorCode.LESSON_ORDER_CONFLICT);
-        }
+        int tempIndex = currentMax + 1;
+        int finalIndex = clientChoseIndex ? requestedIndex : tempIndex;
 
         LessonSection section = LessonSection.builder()
                 .lesson(lesson)
                 .sectionType(sectionType)
                 .title(title)
-                .orderIndex(newOrderIndex)
+                .orderIndex(tempIndex)
                 .build();
 
         LessonSection saved = lessonSectionRepository.save(section);
-        log.info("[SECTION] Created section id={}, type={}, orderIndex={} in lesson id={}",
-                saved.getId(), sectionType, saved.getOrderIndex(), lessonId);
+        lessonSectionRepository.flush();
+        log.info("[SECTION] Created section id={}, type={} at tempIndex={} in lesson id={}",
+                saved.getId(), sectionType, tempIndex, lessonId);
+
+        if (clientChoseIndex && finalIndex != tempIndex) {
+            Long newId = saved.getId();
+            int step = (finalIndex < tempIndex) ? -1 : 1;
+            int current = tempIndex;
+            int safetyCounter = 0;
+            final int MAX_SWAPS = tempIndex + 2;
+            while (current != finalIndex && safetyCounter++ < MAX_SWAPS) {
+                int nextIndex = current + step;
+                Long neighborId = lessonSectionRepository.findIdByLessonIdAndOrderIndex(lessonId, nextIndex);
+                if (neighborId == null) break;
+                lessonSectionRepository.swapOrderIndexes(newId, nextIndex, neighborId, current);
+                lessonSectionRepository.flush();
+                current = nextIndex;
+            }
+            saved.setOrderIndex(finalIndex);
+            lessonSectionRepository.flush();
+            log.info("[SECTION] Swapped new section id={} from tempIndex={} to orderIndex={} (lessonId={})",
+                    newId, tempIndex, finalIndex, lessonId);
+        }
 
         return lessonSectionMapper.toSectionResponse(saved);
     }
@@ -177,18 +215,19 @@ public class SectionService {
 
             if (target != section.getOrderIndex()) {
                 int oldOrderIndex = section.getOrderIndex();
-                // Marker tạm để tránh UNIQUE conflict khi shift
-                section.setOrderIndex(-oldOrderIndex);
-
-                if (target < oldOrderIndex) {
-                    // Move up: shift [target, oldOrderIndex-1] lên +1
-                    int shifted = lessonSectionRepository.shiftOrderIndexesUp(lessonId, target, sectionId);
-                    log.info("[SECTION] Move-up: shifted {} section(s) in lesson id={}", shifted, lessonId);
-                } else if (target <= currentMax) {
-                    // Move down: shift (oldOrderIndex, target] xuống -1
-                    int shifted = lessonSectionRepository.shiftOrderIndexesDownInRange(
-                            lessonId, oldOrderIndex, target, sectionId);
-                    log.info("[SECTION] Move-down: shifted {} section(s) in lesson id={}", shifted, lessonId);
+                log.info("[SECTION] Adjacent-swap: moving section id={} from orderIndex={} → target={} (lessonId={})",
+                        sectionId, oldOrderIndex, target, lessonId);
+                int step = (target < oldOrderIndex) ? -1 : 1;
+                int current = oldOrderIndex;
+                int safetyCounter = 0;
+                final int MAX_SWAPS = currentMax + 2;
+                while (current != target && safetyCounter++ < MAX_SWAPS) {
+                    int nextIndex = current + step;
+                    Long neighborId = lessonSectionRepository.findIdByLessonIdAndOrderIndex(lessonId, nextIndex);
+                    if (neighborId == null) break;
+                    lessonSectionRepository.swapOrderIndexes(sectionId, nextIndex, neighborId, current);
+                    lessonSectionRepository.flush();
+                    current = nextIndex;
                 }
                 section.setOrderIndex(target);
             }
@@ -225,6 +264,65 @@ public class SectionService {
         section.softDelete();
         lessonSectionRepository.save(section);
         log.info("[SECTION] Soft-deleted section id={}", sectionId);
+    }
+
+    /**
+     * Sắp xếp lại thứ tự hàng loạt các section trong 1 lesson (drag-drop UI).
+     *
+     * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> section active
+     * của lesson hiện tại (không thiếu, không thừa, không trùng).</p>
+     *
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder section trong course do mình tạo).</p>
+     *
+     * @param lessonId lesson cần reorder
+     * @param request  danh sách section ID theo thứ tự MỚI
+     * @return danh sách section sau khi reorder (theo thứ tự mới)
+     */
+    @Transactional
+    public List<LessonSectionResponse> reorderSections(Long lessonId, ItemBulkReorderRequest request) {
+        // Auth check
+        Course course = courseRepository.findByIdAndDeletedFalse(
+                lessonRepository.findByIdAndDeletedFalse(lessonId)
+                        .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND))
+                        .getCourse().getId()
+        ).orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(course, ErrorCode.FORBIDDEN_LESSON_ACCESS);
+
+        if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
+        }
+
+        // Load current sections
+        List<LessonSection> currentSections = lessonSectionRepository
+                .findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
+        Set<Long> currentIds = new HashSet<>();
+        for (LessonSection s : currentSections) currentIds.add(s.getId());
+
+        // Validate
+        Set<Long> requestedIds = new HashSet<>(request.getItemIds());
+        if (requestedIds.size() != request.getItemIds().size()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_INVALID);
+        }
+        if (!requestedIds.equals(currentIds)) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
+        }
+
+        // Dùng helper generic
+        OrderIndexResolver.bulkReorder(
+                currentSections,
+                request.getItemIds(),
+                LessonSection::getId,
+                LessonSection::getOrderIndex,
+                LessonSection::setOrderIndex
+        );
+
+        List<LessonSection> saved = lessonSectionRepository.saveAll(currentSections);
+        lessonSectionRepository.flush();
+
+        log.info("[SECTION] Bulk reordered {} section(s) in lesson id={}", saved.size(), lessonId);
+        return saved.stream()
+                .map(lessonSectionMapper::toSectionResponse)
+                .toList();
     }
 
     // ============================================================

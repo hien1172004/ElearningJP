@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import {
   Search,
   X,
@@ -363,25 +363,25 @@ export const DictionaryPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-16">
+    <div className="space-y-6 pb-16">
       {/* =========================================================================
           1. HEADER TRA CỨU MAZII: Ô TÌM KIẾM TẬP TRUNG + DROPDOWN GỢI Ý TỨC THÌ
          ========================================================================= */}
-      <div className="bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-xl relative">
+      <div className="bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 rounded-md p-6 md:p-8 text-white shadow-xl relative">
         <div className="max-w-3xl mx-auto space-y-4 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-indigo-200 text-xs font-semibold backdrop-blur-md">
             <Sparkles className="w-4 h-4 text-amber-300" />
             Tra từ điển thông minh chuẩn Mazii: <span className="text-white font-bold">{tabConfig.badge}</span>
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-color-brand tracking-tight">
             Tra cứu Từ điển Tiếng Nhật
           </h1>
 
           {/* Ô tìm kiếm lớn & Dropdown Autocomplete */}
           {activeTab !== 'kana' && (
             <div ref={searchContainerRef} className="relative mt-4">
-              <div className="relative flex items-center bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-white/20 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-300/30 transition">
+              <div className="relative flex items-center bg-white rounded-md shadow-lg overflow-hidden border-2 border-white/20 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-300/30 transition">
                 <Search className="w-5 h-5 text-gray-400 ml-4 shrink-0" />
                 <input
                   type="text"
@@ -405,7 +405,7 @@ export const DictionaryPage: React.FC = () => {
                       setKeyword('')
                       setIsDropdownOpen(false)
                     }}
-                    className="p-2 mr-1 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-gray-100 transition"
+                    className="p-2 mr-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 transition"
                     title="Xoá từ khoá"
                   >
                     <X className="w-5 h-5" />
@@ -414,7 +414,7 @@ export const DictionaryPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsHandwritingOpen(true)}
-                  className="p-2 mr-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-xl transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer"
+                  className="p-2 mr-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-md transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer"
                   title="Nhận dạng chữ viết tay Kanji (AI)"
                 >
                   <PenTool className="w-4 h-4" />
@@ -423,7 +423,7 @@ export const DictionaryPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsPracticeOpen(true)}
-                  className="p-2 mr-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-xl transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer shadow-2xs"
+                  className="p-2 mr-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-md transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer shadow-2xs"
                   title="Luyện viết & Chấm điểm nét vẽ AI"
                 >
                   <Sparkles className="w-4 h-4 text-amber-500" />
@@ -432,7 +432,7 @@ export const DictionaryPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(false)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3.5 mr-1 rounded-xl text-sm transition shrink-0"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3.5 mr-1 rounded-md text-sm transition shrink-0"
                 >
                   Tìm kiếm
                 </button>
@@ -440,7 +440,7 @@ export const DictionaryPage: React.FC = () => {
 
               {/* MAZII LIVE SUGGESTIONS DROPDOWN (Gợi ý tự động ngay khi gõ) */}
               {isDropdownOpen && suggestions && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 text-left overflow-hidden z-50 max-h-[460px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-2xl border border-gray-200 text-left overflow-hidden z-50 max-h-[460px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
                   {/* Nhóm Từ vựng */}
                   {suggestions.vocabularies && suggestions.vocabularies.length > 0 && (
                     <div className="p-2 border-b border-gray-100">
@@ -452,7 +452,7 @@ export const DictionaryPage: React.FC = () => {
                           <div
                             key={v.id}
                             onClick={() => handleSelectSuggestion('vocab', v.word, v.id)}
-                            className="px-3 py-2 rounded-xl hover:bg-indigo-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
+                            className="px-3 py-2 rounded-md hover:bg-indigo-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
                           >
                             <div className="flex items-baseline gap-2">
                               <span className="font-extrabold text-gray-900 text-base">{v.word}</span>
@@ -483,9 +483,9 @@ export const DictionaryPage: React.FC = () => {
                           <div
                             key={k.id}
                             onClick={() => handleSelectSuggestion('kanji', k.character, undefined, k.character)}
-                            className="px-3 py-2 rounded-xl hover:bg-amber-50/80 cursor-pointer flex items-center gap-3 transition"
+                            className="px-3 py-2 rounded-md hover:bg-amber-50/80 cursor-pointer flex items-center gap-3 transition"
                           >
-                            <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-900 font-serif font-bold text-lg flex items-center justify-center shrink-0">
+                            <div className="w-9 h-9 rounded bg-amber-100 text-amber-900 font-serif font-bold text-lg flex items-center justify-center shrink-0">
                               {k.character}
                             </div>
                             <div>
@@ -514,7 +514,7 @@ export const DictionaryPage: React.FC = () => {
                           <div
                             key={g.id}
                             onClick={() => handleSelectSuggestion('grammar', g.title, g.id)}
-                            className="px-3 py-2 rounded-xl hover:bg-purple-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
+                            className="px-3 py-2 rounded-md hover:bg-purple-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
                           >
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-sm text-gray-900">{g.title}</span>
@@ -551,7 +551,7 @@ export const DictionaryPage: React.FC = () => {
                       key={tag}
                       type="button"
                       onClick={() => setKeyword(tag)}
-                      className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 hover:text-white transition backdrop-blur-xs font-semibold"
+                      className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 hover:text-white transition backdrop-blur-xs font-semibold"
                     >
                       {tag}
                     </button>
@@ -566,13 +566,13 @@ export const DictionaryPage: React.FC = () => {
       {/* =========================================================================
           2. THANH CHUYỂN TAB & BỘ LỌC CẤP ĐỘ JLPT
          ========================================================================= */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-gray-200 shadow-xs sticky top-16 z-30 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3 rounded-md border border-gray-200 shadow-xs sticky top-16 z-30 backdrop-blur-md">
         {/* 4 Tab điều hướng chuyên biệt */}
-        <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto p-1 bg-gray-100 rounded-xl">
+        <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto p-1 bg-gray-100 rounded-md">
           <button
             type="button"
             onClick={() => setActiveTab('vocab')}
-            className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'vocab'
                 ? 'bg-white text-indigo-600 shadow-xs'
                 : 'text-gray-600 hover:text-gray-900'
@@ -583,7 +583,7 @@ export const DictionaryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('kanji')}
-            className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'kanji'
                 ? 'bg-white text-indigo-600 shadow-xs'
                 : 'text-gray-600 hover:text-gray-900'
@@ -594,7 +594,7 @@ export const DictionaryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('grammar')}
-            className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'grammar'
                 ? 'bg-white text-indigo-600 shadow-xs'
                 : 'text-gray-600 hover:text-gray-900'
@@ -605,7 +605,7 @@ export const DictionaryPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('kana')}
-            className={`px-4 py-2 rounded-lg text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'kana'
                 ? 'bg-white text-indigo-600 shadow-xs'
                 : 'text-gray-600 hover:text-gray-900'
@@ -624,7 +624,7 @@ export const DictionaryPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setSelectedLevel(undefined)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+              className={`px-2.5 py-1 rounded text-xs font-bold transition ${
                 selectedLevel === undefined
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -637,7 +637,7 @@ export const DictionaryPage: React.FC = () => {
                 key={lvl}
                 type="button"
                 onClick={() => setSelectedLevel(selectedLevel === lvl ? undefined : lvl)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                className={`px-2.5 py-1 rounded text-xs font-bold transition ${
                   selectedLevel === lvl
                     ? 'bg-indigo-600 text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -661,7 +661,7 @@ export const DictionaryPage: React.FC = () => {
         /* TRƯỜNG HỢP 2: ĐÃ CÓ TỪ KHÓA TÌM KIẾM -> BỐ CỤC 2 CỘT CHUẨN MAZII */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* 👈 CỘT TRÁI (DANH SÁCH KẾT QUẢ KHỚP TỪ KHÓA - 4 CỘT) */}
-          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-3xl border border-gray-200/80 shadow-xs p-4 space-y-3">
+          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-md border border-gray-200/80 shadow-xs p-4 space-y-3">
             {/* Header danh sách */}
             <div className="flex items-center justify-between px-2 pb-2 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
               <span>Kết quả tìm kiếm</span>
@@ -686,7 +686,7 @@ export const DictionaryPage: React.FC = () => {
                       <div
                         key={v.id}
                         onClick={() => setSelectedVocabId(v.id)}
-                        className={`p-3.5 rounded-2xl border transition cursor-pointer select-none ${
+                        className={`p-3.5 rounded-md border transition cursor-pointer select-none ${
                           isSelected
                             ? 'bg-indigo-50/90 border-indigo-500 shadow-xs ring-2 ring-indigo-200'
                             : 'bg-white border-gray-200/80 hover:border-indigo-300 hover:bg-slate-50/60'
@@ -742,14 +742,14 @@ export const DictionaryPage: React.FC = () => {
                       <div
                         key={k.id}
                         onClick={() => setSelectedKanjiChar(k.character)}
-                        className={`p-3 rounded-2xl border transition cursor-pointer flex items-center justify-between gap-3 ${
+                        className={`p-3 rounded-md border transition cursor-pointer flex items-center justify-between gap-3 ${
                           isSelected
                             ? 'bg-indigo-50/90 border-indigo-500 shadow-xs ring-2 ring-indigo-200'
                             : 'bg-white border-gray-200/80 hover:border-indigo-300 hover:bg-slate-50/60'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-amber-100/60 border border-amber-200 flex items-center justify-center text-2xl font-bold text-gray-900 font-serif shrink-0">
+                          <div className="w-12 h-12 rounded-md bg-amber-100/60 border border-amber-200 flex items-center justify-center text-2xl font-bold text-gray-900 font-serif shrink-0">
                             {k.character}
                           </div>
                           <div>
@@ -798,7 +798,7 @@ export const DictionaryPage: React.FC = () => {
                       <div
                         key={g.id}
                         onClick={() => setSelectedGrammarId(g.id)}
-                        className={`p-3.5 rounded-2xl border transition cursor-pointer ${
+                        className={`p-3.5 rounded-md border transition cursor-pointer ${
                           isSelected
                             ? 'bg-purple-50/90 border-purple-500 shadow-xs ring-2 ring-purple-200'
                             : 'bg-white border-gray-200/80 hover:border-purple-300 hover:bg-slate-50/60'
@@ -832,7 +832,7 @@ export const DictionaryPage: React.FC = () => {
                     type="button"
                     disabled={vocabPageIndex === 0}
                     onClick={() => setVocabPageIndex((p) => p - 1)}
-                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
+                    className="px-2.5 py-1.5 rounded bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
                   >
                     Trước
                   </button>
@@ -843,7 +843,7 @@ export const DictionaryPage: React.FC = () => {
                     type="button"
                     disabled={vocabPageIndex >= vocabPage.totalPages - 1}
                     onClick={() => setVocabPageIndex((p) => p + 1)}
-                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
+                    className="px-2.5 py-1.5 rounded bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
                   >
                     Sau
                   </button>
@@ -856,7 +856,7 @@ export const DictionaryPage: React.FC = () => {
                     type="button"
                     disabled={kanjiPageIndex === 0}
                     onClick={() => setKanjiPageIndex((p) => p - 1)}
-                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
+                    className="px-2.5 py-1.5 rounded bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
                   >
                     Trước
                   </button>
@@ -867,7 +867,7 @@ export const DictionaryPage: React.FC = () => {
                     type="button"
                     disabled={kanjiPageIndex >= kanjiPage.totalPages - 1}
                     onClick={() => setKanjiPageIndex((p) => p + 1)}
-                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
+                    className="px-2.5 py-1.5 rounded bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
                   >
                     Sau
                   </button>
@@ -880,7 +880,7 @@ export const DictionaryPage: React.FC = () => {
                     type="button"
                     disabled={grammarPageIndex === 0}
                     onClick={() => setGrammarPageIndex((p) => p - 1)}
-                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
+                    className="px-2.5 py-1.5 rounded bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
                   >
                     Trước
                   </button>
@@ -891,7 +891,7 @@ export const DictionaryPage: React.FC = () => {
                     type="button"
                     disabled={grammarPageIndex >= grammarPage.totalPages - 1}
                     onClick={() => setGrammarPageIndex((p) => p + 1)}
-                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
+                    className="px-2.5 py-1.5 rounded bg-gray-100 hover:bg-gray-200 font-semibold disabled:opacity-30"
                   >
                     Sau
                   </button>
@@ -913,7 +913,7 @@ export const DictionaryPage: React.FC = () => {
                   }}
                 />
               ) : (
-                <div className="bg-white rounded-3xl p-16 border border-gray-200 text-center text-gray-400 space-y-3">
+                <div className="bg-white rounded-md p-16 border border-gray-200 text-center text-gray-400 space-y-3">
                   <BookOpen className="w-12 h-12 mx-auto text-gray-300" />
                   <p className="font-medium text-base">Chọn một từ vựng bên trái để xem giải nghĩa chi tiết.</p>
                 </div>
@@ -931,7 +931,7 @@ export const DictionaryPage: React.FC = () => {
                   }}
                 />
               ) : (
-                <div className="bg-white rounded-3xl p-16 border border-gray-200 text-center text-gray-400 space-y-3">
+                <div className="bg-white rounded-md p-16 border border-gray-200 text-center text-gray-400 space-y-3">
                   <Sparkles className="w-12 h-12 mx-auto text-gray-300" />
                   <p className="font-medium text-base">Chọn một chữ Hán bên trái để xem nét vẽ và từ ghép.</p>
                 </div>
@@ -943,7 +943,7 @@ export const DictionaryPage: React.FC = () => {
               selectedGrammarId ? (
                 <GrammarDetailPanel grammarId={selectedGrammarId} />
               ) : (
-                <div className="bg-white rounded-3xl p-16 border border-gray-200 text-center text-gray-400 space-y-3">
+                <div className="bg-white rounded-md p-16 border border-gray-200 text-center text-gray-400 space-y-3">
                   <BookOpen className="w-12 h-12 mx-auto text-gray-300" />
                   <p className="font-medium text-base">Chọn một mẫu ngữ pháp bên trái để xem cấu trúc và ví dụ.</p>
                 </div>
@@ -958,7 +958,7 @@ export const DictionaryPage: React.FC = () => {
         <div className="space-y-6">
           {/* 1. Lịch sử tra cứu gần đây (Recent Searches) */}
           {history.length > 0 && (
-            <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-xs space-y-4">
+            <div className="bg-white rounded-md p-6 border border-gray-200/80 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
                   <Clock className="w-4 h-4 text-indigo-600" />
@@ -980,7 +980,7 @@ export const DictionaryPage: React.FC = () => {
                   <div
                     key={item.id}
                     onClick={() => handleSelectHistory(item)}
-                    className="p-3 rounded-2xl border border-gray-200/80 hover:border-indigo-400 hover:bg-indigo-50/50 cursor-pointer group transition relative flex flex-col justify-between"
+                    className="p-3 rounded-md border border-gray-200/80 hover:border-indigo-400 hover:bg-indigo-50/50 cursor-pointer group transition relative flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between gap-1">
@@ -1016,7 +1016,7 @@ export const DictionaryPage: React.FC = () => {
           {/* 2. Khám phá nổi bật & Lối tắt nhanh */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Thẻ 1: Khám phá Chữ Hán tiêu biểu */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-6 border border-amber-200/60 shadow-xs space-y-4">
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-md p-6 border border-amber-200/60 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
                   <Flame className="w-4 h-4 text-amber-600" /> Chữ Hán hôm nay
@@ -1026,7 +1026,7 @@ export const DictionaryPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-white shadow-xs border border-amber-200 flex items-center justify-center text-4xl font-serif font-bold text-gray-900">
+                <div className="w-16 h-16 rounded-md bg-white shadow-xs border border-amber-200 flex items-center justify-center text-4xl font-serif font-bold text-gray-900">
                   日
                 </div>
                 <div>
@@ -1041,7 +1041,7 @@ export const DictionaryPage: React.FC = () => {
                   setActiveTab('kanji')
                   setKeyword('日')
                 }}
-                className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
+                className="w-full py-2.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <span>Xem thứ tự nét vẽ & Từ ghép</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -1049,7 +1049,7 @@ export const DictionaryPage: React.FC = () => {
             </div>
 
             {/* Thẻ 2: Khám phá Từ vựng thông dụng */}
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl p-6 border border-indigo-200/60 shadow-xs space-y-4">
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-md p-6 border border-indigo-200/60 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-indigo-600" /> Từ vựng thông dụng
@@ -1072,7 +1072,7 @@ export const DictionaryPage: React.FC = () => {
                   setActiveTab('vocab')
                   setKeyword('食べる')
                 }}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
+                className="w-full py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <span>Xem chi tiết & Ví dụ câu</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -1080,7 +1080,7 @@ export const DictionaryPage: React.FC = () => {
             </div>
 
             {/* Thẻ 3: Khám phá Bảng chữ cái tương tác */}
-            <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-3xl p-6 border border-pink-200/60 shadow-xs space-y-4">
+            <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-md p-6 border border-pink-200/60 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-pink-700 flex items-center gap-1.5">
                   <Award className="w-4 h-4 text-pink-600" /> Bảng chữ cái tương tác
@@ -1098,7 +1098,7 @@ export const DictionaryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('kana')}
-                className="w-full py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
+                className="w-full py-2.5 rounded-md bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <span>Mở bảng chữ cái</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -1107,7 +1107,7 @@ export const DictionaryPage: React.FC = () => {
           </div>
 
           {/* 3. Lối tắt tìm kiếm theo cấp độ JLPT */}
-          <div className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-xs space-y-3">
+          <div className="bg-white rounded-md p-6 border border-gray-200/80 shadow-xs space-y-3">
             <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
               <Filter className="w-4 h-4 text-indigo-600" />
               Khám phá từ vựng theo Cấp độ JLPT
@@ -1128,7 +1128,7 @@ export const DictionaryPage: React.FC = () => {
                     setActiveTab('vocab')
                     setSelectedLevel(item.level as JlptLevel)
                   }}
-                  className={`p-4 rounded-2xl border transition cursor-pointer hover:shadow-md ${item.color} flex flex-col justify-between`}
+                  className={`p-4 rounded-md border transition cursor-pointer hover:shadow-md ${item.color} flex flex-col justify-between`}
                 >
                   <span className="font-extrabold text-xl">{item.level}</span>
                   <span className="text-xs font-medium mt-1 opacity-90">{item.label}</span>

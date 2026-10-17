@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react'
+﻿import React, { useRef, useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Trash2, RotateCcw, Search, Sparkles, Loader2, Delete } from 'lucide-react'
 import { aiService, type PredictionItem } from '../../services/ai.service'
 
@@ -27,7 +28,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
   const [selectedChars, setSelectedChars] = useState<string[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const CANVAS_SIZE = 360
+  const CANVAS_SIZE = 480
 
   // 1. Vẽ lại toàn bộ canvas: Lưới chữ thập + Các nét vẽ
   const redrawCanvas = useCallback(() => {
@@ -94,6 +95,16 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
       setPredictions([])
       setSelectedChars([])
       setErrorMessage(null)
+    }
+  }, [isOpen])
+
+  // Khóa scroll body khi modal mở (tránh Antd mask chồng lên khi scroll)
+  useEffect(() => {
+    if (!isOpen) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
     }
   }, [isOpen])
 
@@ -243,33 +254,39 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
 
   if (!isOpen) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-gray-100 overflow-hidden transform animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-md shadow-2xl w-full max-w-6xl border border-gray-100 overflow-hidden transform animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <Sparkles className="w-4 h-4" />
+        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-md bg-indigo-50 flex items-center justify-center text-indigo-600">
+              <Sparkles className="w-5 h-5" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Nhận dạng nét vẽ</h3>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Nhận dạng nét viết tay</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Vẽ chữ Kanji hoặc Kana vào khung bên trái để AI gợi ý kết quả
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+            className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+            aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Nội dung Modal: Canvas bên trái, Kết quả gợi ý bên phải */}
-        <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+        <div className="p-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* VÙNG VẼ CANVAS (Bên trái - 7 cột) */}
-          <div className="md:col-span-7 flex flex-col items-center space-y-4">
-            <div className="relative border-2 border-gray-200 rounded-2xl overflow-hidden shadow-inner bg-white cursor-crosshair touch-none">
+          <div className="md:col-span-7 flex flex-col items-center space-y-5">
+            <div className="relative border-2 border-gray-200 rounded-md overflow-hidden shadow-inner bg-white cursor-crosshair touch-none">
               <canvas
                 ref={canvasRef}
                 width={CANVAS_SIZE}
@@ -282,13 +299,13 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                 onTouchMove={handleMove}
                 onTouchEnd={handleEnd}
                 className="block max-w-full h-auto"
-                style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}
+                style={{ width: '100%', maxWidth: CANVAS_SIZE, height: 'auto', aspectRatio: '1 / 1' }}
               />
 
               {/* Loading overlay nhẹ khi AI đang nhận diện */}
               {isPredicting && (
-                <div className="absolute top-2 right-2 bg-indigo-600/90 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-md backdrop-blur-xs">
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                <div className="absolute top-3 right-3 bg-indigo-600/90 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-md backdrop-blur-xs">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Đang nhận diện...</span>
                 </div>
               )}
@@ -300,7 +317,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                 type="button"
                 onClick={handleClearAll}
                 disabled={strokes.length === 0}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:bg-transparent transition"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-md text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:bg-transparent transition"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Xóa tất cả</span>
@@ -310,7 +327,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                 type="button"
                 onClick={handleUndo}
                 disabled={strokes.length === 0}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent transition"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-md text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-transparent transition"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span>Hoàn tác</span>
@@ -320,7 +337,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                 type="button"
                 onClick={() => handleConfirmSearch()}
                 disabled={strokes.length === 0 && selectedChars.length === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition shadow-sm"
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-md text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition shadow-sm"
               >
                 <Search className="w-4 h-4" />
                 <span>Tra cứu</span>
@@ -329,9 +346,9 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
           </div>
 
           {/* VÙNG KẾT QUẢ GỢI Ý (Bên phải - 5 cột) */}
-          <div className="md:col-span-5 flex flex-col h-full justify-between space-y-4">
+          <div className="md:col-span-5 flex flex-col h-full justify-between space-y-5">
             <div>
-              <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                   Kết quả gợi ý
                 </span>
@@ -344,7 +361,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
 
               {/* Lưới các ô chữ gợi ý */}
               {predictions.length > 0 ? (
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-2.5">
                   {predictions.map((p, idx) => (
                     <button
                       key={idx}
@@ -354,7 +371,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                         // Bấm đúp hoặc bấm trực tiếp để tra cứu ngay
                         handleConfirmSearch(p.char)
                       }}
-                      className="group relative flex flex-col items-center justify-center p-3 rounded-2xl border border-gray-200 bg-white hover:border-indigo-500 hover:bg-indigo-50/50 hover:shadow-md transition active:scale-95"
+                      className="group relative flex flex-col items-center justify-center p-3.5 rounded-md border border-gray-200 bg-white hover:border-indigo-500 hover:bg-indigo-50/50 hover:shadow-md transition active:scale-95"
                       title={`Độ tin cậy: ${p.percentage}%`}
                     >
                       <span className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition">
@@ -367,9 +384,9 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                   ))}
                 </div>
               ) : (
-                <div className="py-12 text-center text-gray-400 text-xs">
+                <div className="py-16 text-center text-gray-400 text-xs">
                   {strokes.length === 0 ? (
-                    <p>Hãy vẽ nét chữ Kanji hoặc Kana vào ô bên trái để nhận dạng.</p>
+                    <p>Hãy vẽ nét chữ Kanji hoặc Kana vào khung bên trái để nhận dạng.</p>
                   ) : isPredicting ? (
                     <div className="flex flex-col items-center gap-2">
                       <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
@@ -382,7 +399,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
               )}
 
               {errorMessage && (
-                <div className="mt-3 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                <div className="mt-3 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-xs">
                   {errorMessage}
                 </div>
               )}
@@ -390,8 +407,8 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
 
             {/* Ô chữ đã chọn & Nút Backspace */}
             {selectedChars.length > 0 && (
-              <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl flex-1 overflow-x-auto">
+              <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-md flex-1 overflow-x-auto">
                   <span className="text-xs text-gray-400 font-medium">Đã chọn:</span>
                   <span className="text-base font-extrabold text-indigo-600 tracking-wider">
                     {selectedChars.join('')}
@@ -400,7 +417,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                 <button
                   type="button"
                   onClick={handleBackspace}
-                  className="p-2 rounded-xl text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-gray-200 transition"
+                  className="p-2.5 rounded-md text-gray-500 hover:text-rose-600 hover:bg-rose-50 border border-gray-200 transition"
                   title="Xóa ký tự cuối"
                 >
                   <Delete className="w-4 h-4" />
@@ -410,6 +427,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
