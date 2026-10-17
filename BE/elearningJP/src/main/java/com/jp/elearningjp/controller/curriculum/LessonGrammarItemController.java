@@ -1,5 +1,6 @@
 package com.jp.elearningjp.controller.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarItemUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonGrammarItemResponse;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "Lesson Grammar Items", description = "Quản lý điểm ngữ pháp trong section GRAMMAR. "
         + "Examples do giáo viên cấu hình được nhúng trong payload create/update của grammar item "
@@ -83,6 +86,21 @@ public class LessonGrammarItemController {
         return ApiResponse.<Void>builder()
                 .success(true)
                 .message("Đã xoá ngữ pháp (kèm examples)")
+                .build();
+    }
+
+    @Operation(summary = "[GV/Admin] Sắp xếp lại thứ tự hàng loạt các grammar item trong section (drag-drop)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.GRAMMAR_ITEMS_REORDER)
+    public ApiResponse<List<LessonGrammarItemResponse>> reorderGrammarItems(
+            @PathVariable Long sectionId,
+            @Valid @RequestBody ItemBulkReorderRequest request
+    ) {
+        return ApiResponse.<List<LessonGrammarItemResponse>>builder()
+                .success(true)
+                .message("Sắp xếp lại thứ tự grammar item thành công")
+                .data(grammarSectionItemService.reorderGrammarItems(sectionId, request))
                 .build();
     }
 }

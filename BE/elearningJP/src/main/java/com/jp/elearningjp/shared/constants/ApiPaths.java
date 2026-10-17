@@ -49,21 +49,27 @@ public final class ApiPaths {
         public static final String BY_ID = "/{id}";
         public static final String COMPLETE = "/{id}/complete";
         public static final String QUIZ = "/{id}/quiz";
+        public static final String QUIZ_MANAGE = "/{id}/quiz/manage";
         public static final String QUIZ_SUBMIT = "/{id}/quiz/submit";
         public static final String QUIZ_QUESTIONS = "/{id}/quiz/questions";
+        public static final String QUIZ_QUESTIONS_REORDER = "/{id}/quiz/questions/reorder";
 
         // ===== Section endpoints =====
         public static final String SECTIONS = "/{id}/sections";
         public static final String SECTION_BY_ID = "/{id}/sections/{sectionId}";
+        public static final String SECTIONS_REORDER = "/{id}/sections/reorder";
 
         // ===== Lesson Items endpoints (controller riêng, root path: /lesson-sections) =====
         public static final String LESSON_SECTIONS = "/lesson-sections";
         public static final String KANJI_ITEMS = "/{sectionId}/kanji-items";
         public static final String KANJI_ITEM_BY_ID = "/kanji-items/{itemId}";
+        public static final String KANJI_ITEMS_REORDER = "/{sectionId}/kanji-items/reorder";
         public static final String VOCABULARY_ITEMS = "/{sectionId}/vocabulary-items";
         public static final String VOCABULARY_ITEM_BY_ID = "/vocabulary-items/{itemId}";
+        public static final String VOCABULARY_ITEMS_REORDER = "/{sectionId}/vocabulary-items/reorder";
         public static final String GRAMMAR_ITEMS = "/{sectionId}/grammar-items";
         public static final String GRAMMAR_ITEM_BY_ID = "/grammar-items/{itemId}";
+        public static final String GRAMMAR_ITEMS_REORDER = "/{sectionId}/grammar-items/reorder";
 
         // ===== Lesson examples endpoints (controller riêng) =====
         public static final String LESSON_VOCABULARY_ITEMS = "/lesson-vocabulary-items";

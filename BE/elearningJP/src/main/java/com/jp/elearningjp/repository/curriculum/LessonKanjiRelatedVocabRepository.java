@@ -13,6 +13,9 @@ import java.util.List;
 public interface LessonKanjiRelatedVocabRepository extends JpaRepository<LessonKanjiRelatedVocab, Long> {
     List<LessonKanjiRelatedVocab> findByKanjiItemIdAndDeletedFalse(Long kanjiItemId);
 
+    /** Lấy tất cả related vocab (kể cả soft-delete) của 1 kanji item — dùng cho logic diff/replace. */
+    List<LessonKanjiRelatedVocab> findByKanjiItemId(Long kanjiItemId);
+
     /** Batch fetch related vocab cho tất cả kanji items trong các section của 1 lesson. */
     @Query("SELECT rv FROM LessonKanjiRelatedVocab rv WHERE rv.kanjiItem.section.id IN :sectionIds AND rv.deleted = false ORDER BY rv.kanjiItem.id")
     List<LessonKanjiRelatedVocab> findBySectionIds(@Param("sectionIds") List<Long> sectionIds);

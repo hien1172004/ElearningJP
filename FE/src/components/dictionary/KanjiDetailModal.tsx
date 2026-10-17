@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { X, Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
@@ -65,7 +65,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-md shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-3">
@@ -73,12 +73,12 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
               {character}
             </span>
             {detail && (
-              <span className="px-3 py-1 rounded-lg bg-amber-50 text-amber-700 font-bold uppercase text-sm border border-amber-200">
+              <span className="px-3 py-1 rounded bg-amber-50 text-amber-700 font-bold uppercase text-sm border border-amber-200">
                 {detail.hanViet || 'Hán tự'}
               </span>
             )}
             {detail?.jlptLevel && (
-              <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200">
+              <span className="px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200">
                 {detail.jlptLevel}
               </span>
             )}
@@ -88,7 +88,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
             <button
               type="button"
               onClick={() => setIsPracticeOpen(true)}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition bg-amber-500 hover:bg-amber-600 text-white shadow-xs cursor-pointer"
+              className="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition bg-amber-500 hover:bg-amber-600 text-white shadow-xs cursor-pointer"
               title="Luyện viết & Chấm điểm nét AI"
             >
               <PenTool className="w-4 h-4" />
@@ -99,7 +99,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
               type="button"
               onClick={handleAddToSrs}
               disabled={isAddedToSrs}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
                 isAddedToSrs
                   ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -112,7 +112,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-xl transition cursor-pointer"
+              className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 rounded-md transition cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -128,7 +128,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
           ) : detail ? (
             <>
               {/* Phần 1: Khung nét viết & Thông số Hán tự */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/40 p-5 rounded-2xl border border-indigo-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-indigo-50/40 p-5 rounded-md border border-indigo-100">
                 {/* Cột trái: Trình diễn nét viết */}
                 <div className="flex flex-col items-center justify-center">
                   <KanjiStrokeViewer
@@ -139,7 +139,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsPracticeOpen(true)}
-                    className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+                    className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-md shadow-xs hover:shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
                   >
                     <PenTool className="w-3.5 h-3.5" />
                     <span>Luyện viết & Chấm điểm AI</span>
@@ -156,13 +156,13 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/80">
+                    <div className="bg-white p-2.5 rounded-md border border-gray-200/80">
                       <span className="text-xs text-gray-400 block">Số nét</span>
                       <span className="text-base font-bold text-indigo-600">
                         {detail.strokeCount || detail.strokes?.length || 0} nét
                       </span>
                     </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200/80">
+                    <div className="bg-white p-2.5 rounded-md border border-gray-200/80">
                       <span className="text-xs text-gray-400 block">Bộ thủ</span>
                       <span className="text-base font-bold text-gray-700">
                         {detail.radicals && detail.radicals.length > 0
@@ -184,7 +184,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                             key={i}
                             type="button"
                             onClick={() => speakJapanese(on)}
-                            className="px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-900 font-bold rounded-lg border border-indigo-200 text-xs flex items-center gap-1 transition"
+                            className="px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-900 font-bold rounded border border-indigo-200 text-xs flex items-center gap-1 transition"
                           >
                             {on} <Volume2 className="w-3 h-3 text-indigo-400" />
                           </button>
@@ -207,7 +207,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                             key={i}
                             type="button"
                             onClick={() => speakJapanese(kun)}
-                            className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-900 font-bold rounded-lg border border-emerald-200 text-xs flex items-center gap-1 transition"
+                            className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-900 font-bold rounded border border-emerald-200 text-xs flex items-center gap-1 transition"
                           >
                             {kun} <Volume2 className="w-3 h-3 text-emerald-400" />
                           </button>
@@ -232,7 +232,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                 {detail.wordsByReading && Object.keys(detail.wordsByReading).length > 0 ? (
                   <div className="space-y-4">
                     {Object.entries(detail.wordsByReading).map(([reading, words]) => (
-                      <div key={reading} className="bg-slate-50/80 rounded-2xl p-4 border border-gray-200/80">
+                      <div key={reading} className="bg-slate-50/80 rounded-md p-4 border border-gray-200/80">
                         <div className="flex items-center gap-2 mb-2.5">
                           <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-bold text-xs">
                             Âm: {reading}
@@ -245,7 +245,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                             <div
                               key={idx}
                               onClick={() => onSelectVocab?.(w.vocabId)}
-                              className="bg-white p-3 rounded-xl border border-gray-200/70 hover:border-indigo-400 hover:shadow-xs transition cursor-pointer flex items-center justify-between"
+                              className="bg-white p-3 rounded-md border border-gray-200/70 hover:border-indigo-400 hover:shadow-xs transition cursor-pointer flex items-center justify-between"
                             >
                               <div>
                                 <div className="flex items-baseline gap-2">
@@ -265,7 +265,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                                   e.stopPropagation()
                                   speakJapanese(w.word)
                                 }}
-                                className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-100 transition shrink-0"
+                                className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-gray-100 transition shrink-0"
                               >
                                 <Volume2 className="w-4 h-4" />
                               </button>
@@ -276,7 +276,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-sm text-gray-500 bg-gray-50 rounded-2xl">
+                  <div className="text-center py-6 text-sm text-gray-500 bg-gray-50 rounded-md">
                     Chưa có từ ghép liên kết cho chữ Hán này trong từ điển.
                   </div>
                 )}

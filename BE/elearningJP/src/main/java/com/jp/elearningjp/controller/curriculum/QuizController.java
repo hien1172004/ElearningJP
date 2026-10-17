@@ -1,7 +1,10 @@
 package com.jp.elearningjp.controller.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.QuizQuestionCreateRequest;
+import com.jp.elearningjp.dto.request.curriculum.QuizQuestionUpdateRequest;
 import com.jp.elearningjp.dto.request.curriculum.QuizSubmitRequest;
+import com.jp.elearningjp.dto.response.curriculum.LessonQuizManageResponse;
 import com.jp.elearningjp.dto.response.curriculum.LessonQuizResponse;
 import com.jp.elearningjp.dto.response.curriculum.QuizQuestionResponse;
 import com.jp.elearningjp.dto.response.curriculum.QuizSubmitResponse;
@@ -17,6 +20,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * Controller lấy đề và nộp bài Quiz theo {@code lessonId}.
@@ -43,6 +48,20 @@ public class QuizController {
         return ApiResponse.<LessonQuizResponse>builder()
                 .success(true)
                 .data(quizService.getLessonQuiz(id))
+                .build();
+    }
+
+    @Operation(
+            summary = "[Giáo viên / Admin] Lấy đề quiz kèm đáp án đúng để quản lý",
+            description = "Tương tự GET /lessons/{id}/quiz nhưng trả thêm đáp án đúng cho từng câu hỏi (correct, correctOptionId, correctTextAnswer, correctMatchingAnswers, explanation). Chỉ Admin/Teacher (owner course) mới có quyền truy cập — dùng cho trang quản lý câu hỏi."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @GetMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.QUIZ_MANAGE)
+    public ApiResponse<LessonQuizManageResponse> getLessonQuizManage(@PathVariable Long id) {
+        return ApiResponse.<LessonQuizManageResponse>builder()
+                .success(true)
+                .data(quizService.getLessonQuizManage(id))
                 .build();
     }
 
@@ -82,6 +101,24 @@ public class QuizController {
     }
 
     @Operation(
+            summary = "[Giáo viên / Admin] Cập nhật câu hỏi trắc nghiệm",
+            description = "Sửa nội dung câu hỏi quiz. Hỗ trợ partial update — chỉ field nào gửi mới thay đổi. Nếu gửi options sẽ THAY THẾ toàn bộ options cũ. Teacher chỉ sửa được câu hỏi thuộc course do mình tạo."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PutMapping(ApiPaths.API_V1 + ApiPaths.Quiz.BASE + ApiPaths.Quiz.QUESTION_BY_ID)
+    public ApiResponse<QuizQuestionResponse> updateQuestion(
+            @PathVariable Long id,
+            @Valid @RequestBody QuizQuestionUpdateRequest request
+    ) {
+        return ApiResponse.<QuizQuestionResponse>builder()
+                .success(true)
+                .message("Cập nhật câu hỏi trắc nghiệm thành công")
+                .data(quizService.updateQuestion(id, request))
+                .build();
+    }
+
+    @Operation(
             summary = "[Giáo viên / Admin] Xoá mềm câu hỏi trắc nghiệm",
             description = "Xoá mềm 1 câu hỏi theo questionId. Teacher chỉ xoá được câu hỏi thuộc course do mình tạo. Idempotent — gọi lại với câu đã xoá sẽ trả 404."
     )
@@ -93,6 +130,25 @@ public class QuizController {
         return ApiResponse.<Void>builder()
                 .success(true)
                 .message("Đã xoá câu hỏi thành công")
+                .build();
+    }
+
+    @Operation(
+            summary = "[Giáo viên / Admin] Sắp xếp lại thứ tự hàng loạt các câu hỏi trong quiz (drag-drop)",
+            description = "Reorder nhiều câu hỏi cùng lúc. Body chứa danh sách questionId theo thứ tự MỚI. " +
+                    "Danh sách phải chứa đúng tất cả câu hỏi active của quiz. (Teacher chỉ reorder trong course do mình tạo)"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.QUIZ_QUESTIONS_REORDER)
+    public ApiResponse<List<QuizQuestionResponse>> reorderQuizQuestions(
+            @PathVariable Long id,
+            @Valid @RequestBody ItemBulkReorderRequest request
+    ) {
+        return ApiResponse.<List<QuizQuestionResponse>>builder()
+                .success(true)
+                .message("Sắp xếp lại thứ tự câu hỏi thành công")
+                .data(quizService.reorderQuizQuestions(id, request))
                 .build();
     }
 }

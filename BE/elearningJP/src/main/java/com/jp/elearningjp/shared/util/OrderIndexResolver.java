@@ -239,4 +239,130 @@ public final class OrderIndexResolver {
     private static int nullToZero(Integer value) {
         return value == null ? 0 : value;
     }
+
+    // ============================================================
+    // BULK REORDER (dùng cho drag-drop reorder nhiều item cùng lúc)
+    // ============================================================
+
+    /**
+     * Reorder nhiều entity cùng lúc bằng cách gán lại {@code orderIndex = 1..N}
+     * theo thứ tự trong list. Áp dụng cho bất kỳ entity nào có field {@code orderIndex}.
+     *
+     * <p>Use case: frontend dùng thư viện kéo-thả (react-beautiful-dnd, dnd-kit, ...) để
+     * reorder nhiều lesson/section/item/question cùng lúc. Thay vì gọi N lần
+     * {@code update} (gây N+1 query + N lần shift + có thể xung đột), endpoint bulk
+     * nhận list ID theo thứ tự MỚI và reassign index liên tục trong 1 transaction.</p>
+     *
+     * <p>Quy tắc (dùng marker tạm âm để tránh UNIQUE conflict khi swap chỉ số):</p>
+     * <ol>
+     *   <li>Phase 1: Set TẤT CẢ entity về {@code -|oldIndex|} (giải phóng slot).</li>
+     *   <li>Phase 2: Gán lại theo thứ tự list: entity thứ 0 → 1, thứ 1 → 2, ...</li>
+     * </ol>
+     *
+     * <p>Hàm này CHỈ thực hiện logic reorder — caller phải:</p>
+     * <ul>
+     *   <li>Validate list ID khớp 100% với current active entities (cùng parent).</li>
+     *   <li>Check quyền trước khi gọi.</li>
+     *   <li>Save entity sau khi gọi method này.</li>
+     * </ul>
+     *
+     * @param entities   list entity ACTIVE theo thứ tự HIỆN TẠI (sẽ bị mutate)
+     * @param orderedIds list ID theo thứ tự MỚI (do client gửi)
+     * @param idGetter   function lấy ID từ entity
+     * @param idxGetter  function lấy orderIndex hiện tại từ entity
+     * @param idxSetter  function set orderIndex cho entity
+     * @param <T>        loại entity (Lesson / Section / Item / Question / ...)
+     * @param <ID>       loại ID (Long cho hầu hết, có thể là String cho mã khác)
+     * @return entity đã được reorder (cùng reference, dùng cho caller saveAll)
+     * @throws AppException nếu list rỗng / null / không khớp với current entities
+     */
+    public static <T, ID> List<T> bulkReorder(
+            List<T> entities,
+            List<ID> orderedIds,
+            java.util.function.Function<T, ID> idGetter,
+            java.util.function.ToIntFunction<? super T> idxGetter,
+            java.util.function.BiConsumer<T, Integer> idxSetter
+    ) {
+        if (orderedIds == null || orderedIds.isEmpty()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
+        }
+        if (entities == null || entities.isEmpty()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
+        }
+
+        java.util.Map<ID, T> byId = new java.util.HashMap<>();
+        for (T e : entities) {
+            byId.put(idGetter.apply(e), e);
+        }
+
+        // Validate: tất cả ID trong orderedIds phải tồn tại trong entities hiện tại
+        for (ID id : orderedIds) {
+            if (!byId.containsKey(id)) {
+                log.warn("[ORDER] Bulk reorder: ID {} không tồn tại trong entities hiện tại", id);
+                throw new AppException(ErrorCode.LESSON_NOT_FOUND);
+            }
+        }
+
+        // Phase 1: set marker tạm âm (dùng -|oldIndex| để tránh xung đột với index dương)
+        for (T e : entities) {
+            int old = idxGetter.applyAsInt(e);
+            int safeOld = (old == Integer.MIN_VALUE) ? 1 : Math.abs(old);
+            if (safeOld == 0) safeOld = 1; // tránh marker = 0
+            idxSetter.accept(e, -safeOld);
+        }
+
+        // Phase 2: gán orderIndex mới 1..N theo thứ tự client gửi
+        int newIdx = 1;
+        for (ID id : orderedIds) {
+            T e = byId.get(id);
+            idxSetter.accept(e, newIdx++);
+        }
+
+        log.info("[ORDER] Bulk reordered {} entity(s) via marker-temp strategy", entities.size());
+        return entities;
+    }
+
+    // ============================================================
+    // ADJACENT SWAP (thuật toán sắp xếp theo swap liền kề)
+    // ============================================================
+
+    /**
+     * Swap orderIndex của 2 entity (đã load) trong cùng parent. Hàm này mutate
+     * cả 2 entity — caller phải save lại.
+     *
+     * <p>Ví dụ: items = [A(1), B(2), C(3), D(4)], muốn move D từ 4 → 2:</p>
+     * <ul>
+     *   <li>Bước 1: swap D ↔ C → DB = [A(1), B(2), D(3), C(4)]</li>
+     *   <li>Bước 2: swap D ↔ B → DB = [A(1), D(2), B(3), C(4)] ✓</li>
+     * </ul>
+     *
+     * @return true nếu swap thành công, false nếu không tìm thấy item kề
+     */
+    public static <T> boolean swapAdjacent(
+            List<T> entities,
+            T movingItem,
+            int movingTargetIndex,
+            java.util.function.ToIntFunction<? super T> idxGetter,
+            java.util.function.BiConsumer<T, Integer> idxSetter
+    ) {
+        int currentIndex = idxGetter.applyAsInt(movingItem);
+        if (currentIndex == movingTargetIndex) {
+            return false; // đã ở đúng vị trí
+        }
+
+        // Tìm item ở movingTargetIndex trong collection
+        T neighborItem = entities.stream()
+                .filter(e -> idxGetter.applyAsInt(e) == movingTargetIndex)
+                .findFirst()
+                .orElse(null);
+        if (neighborItem == null) {
+            log.warn("[ORDER] swapAdjacent: không tìm thấy item ở index={}", movingTargetIndex);
+            return false;
+        }
+
+        // Swap 2 chiều: movingItem ← neighborIndex, neighborItem ← movingIndex
+        idxSetter.accept(movingItem, movingTargetIndex);
+        idxSetter.accept(neighborItem, currentIndex);
+        return true;
+    }
 }

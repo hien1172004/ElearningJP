@@ -19,6 +19,20 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
     List<LessonSection> findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(Long lessonId);
 
     /**
+     * Tìm ID của section ACTIVE trong lesson tại orderIndex cụ thể.
+     */
+    @Query("""
+            SELECT s.id
+              FROM LessonSection s
+             WHERE s.lesson.id = :lessonId
+               AND s.orderIndex = :orderIndex
+               AND s.deleted = false
+            """)
+    Long findIdByLessonIdAndOrderIndex(
+            @Param("lessonId") Long lessonId,
+            @Param("orderIndex") Integer orderIndex);
+
+    /**
      * Lấy section theo lesson + loại section (KANJI / VOCABULARY / GRAMMAR).
      */
     List<LessonSection> findByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(
@@ -104,4 +118,59 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
             @Param("lowerExclusive") Integer lowerExclusive,
             @Param("upperInclusive") Integer upperInclusive,
             @Param("excludeId") Long excludeId);
+
+    /**
+     * Set orderIndex của section hiện tại về marker tạm (-|oldIndex|) bằng native SQL
+     * để bypass JPA dirty checking. Bắt buộc gọi TRƯỚC khi shift.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE lesson_sections
+               SET order_index = -ABS(order_index)
+             WHERE id = :sectionId
+            """, nativeQuery = true)
+    int setOrderIndexToNegativeMarker(@Param("sectionId") Long sectionId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            UPDATE lesson_sections
+               SET order_index = CASE id
+                   WHEN :idA THEN -99999
+                   WHEN :idB THEN -99998
+                   ELSE order_index
+               END
+             WHERE id IN (:idA, :idB)
+               AND deleted = false
+            """, nativeQuery = true)
+    int setSwapMarkers(
+            @Param("idA") Long idA,
+            @Param("idB") Long idB);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            UPDATE lesson_sections
+               SET order_index = CASE id
+                   WHEN :idA THEN :orderIndexA
+                   WHEN :idB THEN :orderIndexB
+                   ELSE order_index
+               END
+             WHERE id IN (:idA, :idB)
+               AND deleted = false
+            """, nativeQuery = true)
+    int setNewOrderIndexesAfterMarker(
+            @Param("idA") Long idA,
+            @Param("orderIndexA") Integer orderIndexA,
+            @Param("idB") Long idB,
+            @Param("orderIndexB") Integer orderIndexB);
+
+    /**
+     * Convenience: swap 2-STEP với marker tạm âm, an toàn với UNIQUE constraint.
+     * Xem comment chi tiết trong {@link LessonKanjiItemRepository#swapOrderIndexes}.
+     */
+    default int swapOrderIndexes(
+            Long idA, Integer orderIndexA,
+            Long idB, Integer orderIndexB) {
+        setSwapMarkers(idA, idB);
+        return setNewOrderIndexesAfterMarker(idA, orderIndexA, idB, orderIndexB);
+    }
 }

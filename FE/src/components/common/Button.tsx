@@ -1,32 +1,97 @@
 import React from 'react'
+import { Button as AntdButton } from 'antd'
+import type { ButtonProps as AntdButtonProps } from 'antd'
+import { clsx } from 'clsx'
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline'
-  isLoading?: boolean
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
+type ButtonSize = 'sm' | 'md' | 'lg'
+
+/**
+ * Mapping variant của dự án -> antd.
+ * - primary   -> type="primary"
+ * - secondary -> type="default"
+ * - outline   -> type="default" variant="outlined"
+ * - ghost     -> type="text"
+ * - danger    -> type="primary" danger
+ */
+const variantToAntd: Record<
+  ButtonVariant,
+  Pick<AntdButtonProps, 'type' | 'variant' | 'danger'>
+> = {
+  primary: { type: 'primary', variant: 'solid' },
+  secondary: { type: 'default', variant: 'solid' },
+  outline: { type: 'default', variant: 'outlined' },
+  ghost: { type: 'text', variant: 'text' },
+  danger: { type: 'primary', variant: 'solid', danger: true },
 }
 
+const sizeToAntd: Record<ButtonSize, AntdButtonProps['size']> = {
+  sm: 'small',
+  md: 'middle',
+  lg: 'large',
+}
+
+export interface ButtonProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  isLoading?: boolean
+  leftIcon?: React.ReactNode
+  rightIcon?: React.ReactNode
+  fullWidth?: boolean
+  block?: boolean
+  /** Mirror với htmlType của antd */
+  type?: 'button' | 'submit' | 'reset'
+}
+
+/**
+ * Button dự án — wrap antd Button.
+ * Giữ nguyên API cũ: variant / size / isLoading / leftIcon / rightIcon / fullWidth
+ * để không phải sửa nơi gọi. Vẫn truyền `className` Tailwind để tinh chỉnh.
+ */
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'primary',
+  size = 'md',
   isLoading = false,
-  className = '',
+  leftIcon,
+  rightIcon,
+  fullWidth = false,
+  block,
+  className,
   disabled,
-  ...props
+  type = 'button',
+  ...rest
 }) => {
-  const baseStyles = 'px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
-  const variantStyles = {
-    primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
-    secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-    outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50',
-  }
+  // Bỏ `type` ra khỏi rest để không truyền nhầm xuống antd (antd dùng `type` cho semantic type)
+  const { type: _ignoredType, ...restWithoutType } = rest as Record<
+    string,
+    unknown
+  >
 
   return (
-    <button
-      className={`${baseStyles} ${variantStyles[variant]} ${className}`}
+    <AntdButton
+      htmlType={type}
+      loading={isLoading}
       disabled={disabled || isLoading}
-      {...props}
+      icon={leftIcon}
+      block={block ?? fullWidth}
+      {...variantToAntd[variant]}
+      size={sizeToAntd[size]}
+      className={clsx(
+        'font-semibold! inline-flex items-center justify-center',
+        className,
+      )}
+      {...(restWithoutType as unknown as AntdButtonProps)}
     >
-      {isLoading ? 'Đang xử lý...' : children}
-    </button>
+      {rightIcon ? (
+        <span className="inline-flex items-center gap-2">
+          <span>{children}</span>
+          <span className="shrink-0 inline-flex">{rightIcon}</span>
+        </span>
+      ) : (
+        children
+      )}
+    </AntdButton>
   )
 }

@@ -6,6 +6,8 @@
 
 let currentAudio: HTMLAudioElement | null = null
 let currentUtterance: SpeechSynthesisUtterance | null = null
+// Tham chiếu để giữ biến không bị noUnusedLocals cảnh báo (được đọc trong cancel()).
+void currentUtterance
 
 export interface PlayAudioOptions {
   text?: string          // Chữ tiếng Nhật để đọc (dùng khi fallback Web Speech)

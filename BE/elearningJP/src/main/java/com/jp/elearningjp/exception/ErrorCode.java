@@ -54,6 +54,9 @@ public enum ErrorCode {
     LESSON_VOCAB_EXAMPLE_NOT_FOUND(1215, "Ví dụ từ vựng không tồn tại", HttpStatus.NOT_FOUND),
     LESSON_GRAMMAR_EXAMPLE_DUPLICATED(1216, "Ví dụ trùng lặp trong cùng request", HttpStatus.CONFLICT),
     LESSON_GRAMMAR_EXAMPLE_NOT_FOUND(1217, "Ví dụ ngữ pháp không tồn tại", HttpStatus.NOT_FOUND),
+    LESSON_REORDER_LIST_EMPTY(1218, "Danh sách lesson cần reorder không được rỗng", HttpStatus.BAD_REQUEST),
+    LESSON_REORDER_LIST_INVALID(1219, "Danh sách lesson cần reorder chứa ID trùng lặp hoặc không hợp lệ", HttpStatus.BAD_REQUEST),
+    LESSON_REORDER_LIST_MISMATCH(1220, "Danh sách lesson cần reorder phải khớp 100% với tất cả lesson hiện có trong khóa học", HttpStatus.CONFLICT),
 
     // CURRICULUM MODULE — Enrollment (1300-1399)
     ENROLLMENT_NOT_FOUND(1300, "Enrollment not found", HttpStatus.NOT_FOUND),
