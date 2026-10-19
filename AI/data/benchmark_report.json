@@ -1,0 +1,8 @@
+{
+  "model": "D:/DATN/ElearningJP/AI/models/kanji_3036_best_e4.h5",
+  "total_samples": 2888,
+  "top1_accuracy": 0.0,
+  "top3_accuracy": 0.0,
+  "top5_accuracy": 0.03,
+  "avg_latency_ms": 16.34
+}
