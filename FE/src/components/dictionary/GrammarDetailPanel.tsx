@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Volume2, BookmarkPlus, Check, BookOpen } from 'lucide-react'
 import type { GrammarDetail } from '@/types'
 import { dictionaryService } from '@/services'
@@ -37,7 +37,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-3xl p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
+      <div className="bg-white rounded-md p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
         <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm font-medium">Đang tải giải thích cấu trúc ngữ pháp...</p>
       </div>
@@ -46,7 +46,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
 
   if (!detail) {
     return (
-      <div className="bg-white rounded-3xl p-10 border border-gray-200 text-center text-gray-500">
+      <div className="bg-white rounded-md p-10 border border-gray-200 text-center text-gray-500">
         Không tìm thấy thông tin điểm ngữ pháp.
       </div>
     )
@@ -76,13 +76,13 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
   })()
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
+    <div className="bg-white rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
       {/* 1. Header điểm ngữ pháp */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-gray-100 pb-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             {detail.jlptLevel && (
-              <span className="px-3 py-1 text-xs font-bold rounded-lg bg-purple-50 text-purple-700 border border-purple-200/80">
+              <span className="px-3 py-1 text-xs font-bold rounded bg-purple-50 text-purple-700 border border-purple-200/80">
                 JLPT {detail.jlptLevel}
               </span>
             )}
@@ -104,7 +104,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
           type="button"
           onClick={handleAddToSrs}
           disabled={isAddedToSrs}
-          className={`px-4 py-3.5 rounded-2xl text-sm font-semibold flex items-center gap-2 transition shrink-0 self-start ${
+          className={`px-4 py-3.5 rounded-md text-sm font-semibold flex items-center gap-2 transition shrink-0 self-start ${
             isAddedToSrs
               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
               : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
@@ -116,11 +116,11 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
       </div>
 
       {/* 2. Cấu trúc ngữ pháp */}
-      <div className="bg-slate-50/80 rounded-2xl p-4 border border-gray-200/80 space-y-2">
+      <div className="bg-slate-50/80 rounded-md p-4 border border-gray-200/80 space-y-2">
         <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
           Cấu trúc liên kết
         </h4>
-        <div className="bg-white p-3.5 rounded-xl border border-gray-200 text-base font-mono font-bold text-indigo-700">
+        <div className="bg-white p-3.5 rounded-md border border-gray-200 text-base font-mono font-bold text-indigo-700">
           {detail.structure}
         </div>
       </div>
@@ -131,7 +131,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
           <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
             Giải thích chi tiết & Hướng dẫn sử dụng
           </h4>
-          <div className="bg-white p-4 rounded-2xl border border-gray-200/80 text-sm text-gray-800 leading-relaxed whitespace-pre-line shadow-2xs">
+          <div className="bg-white p-4 rounded-md border border-gray-200/80 text-sm text-gray-800 leading-relaxed whitespace-pre-line shadow-2xs">
             {detail.usageNotes}
           </div>
         </div>
@@ -148,7 +148,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
             {parsedExamples.map((ex, idx) => (
               <div
                 key={idx}
-                className="bg-slate-50/60 p-4 rounded-2xl border border-gray-200/70 flex items-start justify-between gap-3 hover:bg-purple-50/30 transition group"
+                className="bg-slate-50/60 p-4 rounded-md border border-gray-200/70 flex items-start justify-between gap-3 hover:bg-purple-50/30 transition group"
               >
                 <div className="space-y-1">
                   <p className="text-base font-bold text-gray-900 group-hover:text-purple-700 transition">
@@ -161,7 +161,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
                   <button
                     type="button"
                     onClick={() => playSmartAudio({ text: ex.jp || '' })}
-                    className="p-2 text-gray-400 hover:text-purple-600 hover:bg-white rounded-xl transition shrink-0"
+                    className="p-2 text-gray-400 hover:text-purple-600 hover:bg-white rounded-md transition shrink-0"
                     title="Nghe phát âm"
                   >
                     <Volume2 className="w-5 h-5" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, PenTool } from 'lucide-react'
 import type { CharacterStroke } from '@/types'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
@@ -125,7 +125,8 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
     <div className="flex flex-col items-center select-none">
       {/* Khung vẽ chữ với ô lưới chữ Mễ (quadrant grid) */}
       <div
-        className="relative bg-white rounded-3xl border-2 border-indigo-100 shadow-sm overflow-hidden flex items-center justify-center transition-all duration-200"
+        className="relative bg-white rounded-md border-2 border-indigo-100 shadow-sm overflow-hidden flex items-center justify-center transition-all duration-200"
+
         style={{ width: size, height: size }}
       >
         {/* Nút reset/vẽ lại góc trên bên phải giống hình mẫu tham chiếu */}
@@ -173,8 +174,8 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
               const strokeColor = useMultiColors
                 ? STROKE_COLORS[index % STROKE_COLORS.length]
                 : index === currentStrokeIndex - 1
-                ? '#dc2626'
-                : '#1e293b'
+                  ? '#dc2626'
+                  : '#1e293b'
 
               const isLatestStroke = index === currentStrokeIndex - 1
 
@@ -254,11 +255,10 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
             <button
               type="button"
               onClick={() => setShowNumbers((prev) => !prev)}
-              className={`px-2 py-0.5 rounded-md font-bold transition text-[11px] cursor-pointer ${
-                showNumbers
+              className={`px-2 py-0.5 rounded-md font-bold transition text-[11px] cursor-pointer ${showNumbers
                   ? 'bg-indigo-100 text-indigo-700'
                   : 'bg-gray-100 text-gray-400 hover:text-gray-600'
-              }`}
+                }`}
               title="Bật/Tắt hiển thị số thứ tự nét"
             >
               Số STT
@@ -266,11 +266,10 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
             <button
               type="button"
               onClick={() => setUseMultiColors((prev) => !prev)}
-              className={`px-2 py-0.5 rounded-md font-bold transition text-[11px] cursor-pointer ${
-                useMultiColors
+              className={`px-2 py-0.5 rounded-md font-bold transition text-[11px] cursor-pointer ${useMultiColors
                   ? 'bg-amber-100 text-amber-700'
                   : 'bg-gray-100 text-gray-400 hover:text-gray-600'
-              }`}
+                }`}
               title="Bật/Tắt chế độ đa sắc màu phân biệt nét"
             >
               Đa sắc
@@ -279,12 +278,12 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
         </div>
 
         {strokes && strokes.length > 0 && (
-          <div className="flex items-center gap-1.5 bg-gray-100 p-1.5 rounded-xl border border-gray-200">
+          <div className="flex items-center gap-1.5 bg-gray-100 p-1.5 rounded-md border border-gray-200">
             <button
               type="button"
               onClick={handleReset}
               title="Về nét đầu"
-              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-white rounded-lg transition"
+              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-white rounded transition"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -293,7 +292,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
               onClick={handlePrev}
               disabled={currentStrokeIndex <= 0}
               title="Nét trước"
-              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-white rounded-lg transition disabled:opacity-30"
+              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-white rounded transition disabled:opacity-30"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -302,7 +301,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
                 type="button"
                 onClick={handlePause}
                 title="Tạm dừng"
-                className="p-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition shadow-sm"
+                className="p-1.5 bg-amber-500 text-white rounded hover:bg-amber-600 transition shadow-sm"
               >
                 <Pause className="w-4 h-4" />
               </button>
@@ -311,7 +310,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
                 type="button"
                 onClick={handlePlay}
                 title="Tự động vẽ"
-                className="p-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-sm"
+                className="p-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition shadow-sm"
               >
                 <Play className="w-4 h-4" />
               </button>
@@ -321,7 +320,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
               onClick={handleNext}
               disabled={currentStrokeIndex >= strokes.length}
               title="Nét tiếp"
-              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-white rounded-lg transition disabled:opacity-30"
+              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-white rounded transition disabled:opacity-30"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -329,7 +328,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
               type="button"
               onClick={handleShowAll}
               title="Hiện đầy đủ"
-              className="px-2 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
+              className="px-2 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded transition"
             >
               Đầy đủ
             </button>
@@ -340,7 +339,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
           <button
             type="button"
             onClick={() => setIsPracticeOpen(true)}
-            className="mt-2 w-full py-2 px-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
+            className="mt-2 w-full py-2 px-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-md text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
           >
             <PenTool className="w-3.5 h-3.5 text-amber-300" />
             <span>Thực hành viết & Chấm điểm AI</span>

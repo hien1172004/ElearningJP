@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import { Volume2, BookmarkPlus, Check, ChevronDown, ChevronUp, BookOpen } from 'lucide-react'
 import type { VocabularySummary, VocabularyDetail } from '@/types'
 import { playSmartAudio } from '@/utils'
@@ -61,7 +61,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div className="bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden">
       {/* Phần tóm tắt đầu thẻ */}
       <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex-1">
@@ -110,7 +110,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
           <button
             type="button"
             onClick={handlePlayAudio}
-            className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:scale-105 active:scale-95 transition"
+            className="p-2.5 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:scale-105 active:scale-95 transition"
             title="Nghe phát âm"
           >
             <Volume2 className="w-5 h-5" />
@@ -120,7 +120,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
             type="button"
             onClick={handleAddToSrs}
             disabled={isAddedToSrs || isAddingSrs}
-            className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
+            className={`px-3 py-2 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
               isAddedToSrs
                 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                 : 'bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700'
@@ -141,7 +141,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
           <button
             type="button"
             onClick={handleToggleExpand}
-            className="p-2.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            className="p-2.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
             title={isExpanded ? 'Thu gọn' : 'Xem thêm chi tiết & ví dụ'}
           >
             {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -170,7 +170,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                         key={k.id}
                         type="button"
                         onClick={() => onSelectKanji?.(k.character)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50 shadow-sm transition group"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-md border border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50 shadow-sm transition group"
                       >
                         <span className="text-lg font-bold text-gray-900 group-hover:text-indigo-600">
                           {k.character}
@@ -197,7 +197,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                   </h4>
                   <div className="space-y-2">
                     {detail.senses.map((sense, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-xl border border-gray-200/80 text-sm">
+                      <div key={idx} className="bg-white p-3 rounded-md border border-gray-200/80 text-sm">
                         <div className="flex items-baseline gap-2">
                           <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center">
                             {sense.senseNo || idx + 1}
@@ -217,7 +217,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
               )}
 
               {/* Câu ví dụ song ngữ (Examples) */}
-              {((detail?.examples && detail.examples.length > 0) || vocab.exampleJp) && (
+              {((detail?.examples && detail.examples.length > 0) || ('exampleJp' in vocab && vocab.exampleJp)) && (
                 <div>
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <BookOpen className="w-4 h-4 text-indigo-500" /> Câu ví dụ minh họa
@@ -227,7 +227,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                       detail.examples.map((ex, idx) => (
                         <div
                           key={idx}
-                          className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-xs flex items-start justify-between gap-3 group"
+                          className="bg-white p-3.5 rounded-md border border-gray-200/80 shadow-xs flex items-start justify-between gap-3 group"
                         >
                           <div>
                             <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition">
@@ -243,7 +243,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                                 audioUrl: ex.audioUrl,
                               })
                             }
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-100 transition shrink-0"
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-gray-100 transition shrink-0"
                             title="Nghe câu ví dụ"
                           >
                             <Volume2 className="w-4 h-4" />
@@ -251,19 +251,26 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                         </div>
                       ))
                     ) : (
-                      <div className="bg-white p-3.5 rounded-xl border border-gray-200/80 shadow-xs flex items-start justify-between gap-3">
+                      <div className="bg-white p-3.5 rounded-md border border-gray-200/80 shadow-xs flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{vocab.exampleJp}</p>
-                          <p className="text-xs text-gray-600 mt-1">{vocab.exampleVi}</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {'exampleJp' in vocab ? (vocab.exampleJp as string) : ''}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {'exampleVi' in vocab ? (vocab.exampleVi as string) : ''}
+                          </p>
                         </div>
                         <button
                           type="button"
                           onClick={() =>
                             playSmartAudio({
-                              text: vocab.exampleJp || '',
+                              text:
+                                'exampleJp' in vocab
+                                  ? (vocab.exampleJp as string) || ''
+                                  : '',
                             })
                           }
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-lg hover:bg-gray-100 transition shrink-0"
+                          className="p-1.5 text-gray-400 hover:text-indigo-600 rounded hover:bg-gray-100 transition shrink-0"
                           title="Nghe câu ví dụ"
                         >
                           <Volume2 className="w-4 h-4" />

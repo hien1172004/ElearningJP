@@ -1,5 +1,6 @@
 package com.jp.elearningjp.controller.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonKanjiItemResponse;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "Lesson Kanji Items", description = "Quản lý chữ Hán trong section KANJI. "
         + "Related vocab do giáo viên chọn được nhúng trong payload create/update của kanji item "
@@ -85,6 +88,21 @@ public class LessonKanjiItemController {
         return ApiResponse.<Void>builder()
                 .success(true)
                 .message("Đã xoá chữ Hán (kèm related vocab)")
+                .build();
+    }
+
+    @Operation(summary = "[GV/Admin] Sắp xếp lại thứ tự hàng loạt các kanji item trong section (drag-drop)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.KANJI_ITEMS_REORDER)
+    public ApiResponse<List<LessonKanjiItemResponse>> reorderKanjiItems(
+            @PathVariable Long sectionId,
+            @Valid @RequestBody ItemBulkReorderRequest request
+    ) {
+        return ApiResponse.<List<LessonKanjiItemResponse>>builder()
+                .success(true)
+                .message("Sắp xếp lại thứ tự kanji item thành công")
+                .data(kanjiSectionItemService.reorderKanjiItems(sectionId, request))
                 .build();
     }
 }

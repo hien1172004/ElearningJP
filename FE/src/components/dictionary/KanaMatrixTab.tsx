@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { Volume2, Sparkles, X } from 'lucide-react'
 import type { KanaMatrix, KanaCharacter, CharacterType } from '@/types'
 import { dictionaryService } from '@/services'
@@ -101,13 +101,13 @@ export const KanaMatrixTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Thanh công cụ chọn loại chữ và nhóm âm */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-md border border-gray-200 shadow-xs">
         {/* Chuyển đổi Hiragana / Katakana */}
-        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl">
+        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-md">
           <button
             type="button"
             onClick={() => setCharType('HIRAGANA')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
+            className={`px-4 py-2 rounded text-sm font-bold transition ${
               charType === 'HIRAGANA'
                 ? 'bg-white text-indigo-600 shadow-xs'
                 : 'text-gray-600 hover:text-gray-900'
@@ -118,7 +118,7 @@ export const KanaMatrixTab: React.FC = () => {
           <button
             type="button"
             onClick={() => setCharType('KATAKANA')}
-            className={`px-4 py-2 rounded-lg text-sm font-bold transition ${
+            className={`px-4 py-2 rounded text-sm font-bold transition ${
               charType === 'KATAKANA'
                 ? 'bg-white text-indigo-600 shadow-xs'
                 : 'text-gray-600 hover:text-gray-900'
@@ -133,7 +133,7 @@ export const KanaMatrixTab: React.FC = () => {
           <button
             type="button"
             onClick={() => setSection('seion')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
               section === 'seion'
                 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -144,7 +144,7 @@ export const KanaMatrixTab: React.FC = () => {
           <button
             type="button"
             onClick={() => setSection('dakuon')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
               section === 'dakuon'
                 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -155,7 +155,7 @@ export const KanaMatrixTab: React.FC = () => {
           <button
             type="button"
             onClick={() => setSection('yoon')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
               section === 'yoon'
                 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                 : 'text-gray-600 hover:bg-gray-100'
@@ -168,7 +168,7 @@ export const KanaMatrixTab: React.FC = () => {
 
       {/* Lưới Ma trận bảng chữ cái */}
       {isLoading ? (
-        <div className="bg-white rounded-3xl p-12 text-center text-gray-500 animate-pulse border border-gray-200">
+        <div className="bg-white rounded-md p-12 text-center text-gray-500 animate-pulse border border-gray-200">
           Đang tải ma trận bảng chữ cái...
         </div>
       ) : (
@@ -176,7 +176,7 @@ export const KanaMatrixTab: React.FC = () => {
           {currentRows.map((row, rIdx) => (
             <div
               key={rIdx}
-              className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-xs flex flex-col md:flex-row md:items-center gap-4 hover:border-indigo-200 transition"
+              className="bg-white rounded-md p-4 border border-gray-200/80 shadow-xs flex flex-col md:flex-row md:items-center gap-4 hover:border-indigo-200 transition"
             >
               {/* Tên hàng & Nút đọc cả hàng */}
               <div className="md:w-52 shrink-0 flex items-center justify-between md:justify-start gap-3 border-b md:border-b-0 pb-2 md:pb-0 border-gray-100">
@@ -188,7 +188,7 @@ export const KanaMatrixTab: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleReadRow(row.rowRomaji, row.characters)}
-                  className="px-2.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition flex items-center gap-1.5 text-xs font-semibold shrink-0 group"
+                  className="px-2.5 py-1.5 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition flex items-center gap-1.5 text-xs font-semibold shrink-0 group"
                   title="Đọc phát âm cả hàng này"
                 >
                   <Volume2 className="w-4 h-4 group-hover:scale-110 transition" />
@@ -204,7 +204,7 @@ export const KanaMatrixTab: React.FC = () => {
                     <div
                       key={char.id}
                       onClick={() => handleCharClick(char)}
-                      className={`relative aspect-square sm:aspect-4/3 rounded-2xl border p-2 sm:p-3 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 select-none ${
+                      className={`relative aspect-square sm:aspect-4/3 rounded-md border p-2 sm:p-3 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 select-none ${
                         isActive
                           ? 'bg-indigo-100/90 border-indigo-600 ring-4 ring-indigo-400/40 scale-105 shadow-md'
                           : 'bg-slate-50/70 border-gray-200/70 hover:bg-white hover:border-indigo-400 hover:shadow-sm hover:scale-[1.02]'
@@ -233,11 +233,11 @@ export const KanaMatrixTab: React.FC = () => {
       {/* Modal xem chi tiết và thứ tự nét viết khi bấm vào 1 chữ cái */}
       {selectedKana && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150 relative">
+          <div className="bg-white rounded-md shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150 relative">
             <button
               type="button"
               onClick={() => setSelectedKana(null)}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition"
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -273,7 +273,7 @@ export const KanaMatrixTab: React.FC = () => {
                     audioUrl: selectedKana.audioUrl,
                   })
                 }
-                className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-98 transition shadow-sm"
+                className="flex-1 py-3 rounded-md bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-98 transition shadow-sm"
               >
                 <Volume2 className="w-5 h-5" /> Nghe phát âm
               </button>

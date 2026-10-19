@@ -1,5 +1,6 @@
 package com.jp.elearningjp.controller.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonSectionCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonSectionUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonSectionResponse;
@@ -106,7 +107,7 @@ public class LessonSectionController {
         return ApiResponse.<LessonSectionResponse>builder()
                 .success(true)
                 .message("Tạo section thành công")
-                .data(sectionService.createSection(lessonId, request.getSectionType(), request.getTitle()))
+                .data(sectionService.createSection(lessonId, request.getSectionType(), request.getTitle(), request.getOrderIndex()))
                 .build();
     }
 
@@ -156,6 +157,26 @@ public class LessonSectionController {
         return ApiResponse.<Void>builder()
                 .success(true)
                 .message("Đã xoá section thành công")
+                .build();
+    }
+
+    @Operation(
+            summary = "[Giáo viên / Admin] Sắp xếp lại thứ tự hàng loạt các section",
+            description = "Reorder nhiều section cùng lúc (drag-drop). Body chứa danh sách sectionId theo thứ tự MỚI. " +
+                    "Danh sách phải chứa đúng tất cả section active của lesson. (Teacher chỉ reorder trong course do mình tạo)"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Lesson.SECTIONS_REORDER)
+    public ApiResponse<List<LessonSectionResponse>> reorderSections(
+            @Parameter(description = "ID của bài học", example = "1", required = true)
+            @PathVariable("id") Long lessonId,
+            @Valid @RequestBody ItemBulkReorderRequest request
+    ) {
+        return ApiResponse.<List<LessonSectionResponse>>builder()
+                .success(true)
+                .message("Sắp xếp lại thứ tự section thành công")
+                .data(sectionService.reorderSections(lessonId, request))
                 .build();
     }
 }
