@@ -55,4 +55,12 @@ AI/**/venv/
 AI/**/.venv/
 AI/**/.env
 AI/**/.pytest_cache/
-AI/**/test/
+AI/**/test/
+AI/data/ETL9G_IMG/
+AI/data/ETL9G_IMG/**
+AI/data/cache/
+AI/data/cache/**
+AI/data/*.zip
+AI/data/*.tar*
+AI/checkpoints/
+

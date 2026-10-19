@@ -16,9 +16,63 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 CURRENT_DIR = Path(__file__).resolve().parent
 MODELS_DIR = CURRENT_DIR.parent / "models"
 
-# Sử dụng mô hình nhận diện Kanji/Kana chuẩn 3.036 lớp đạt độ chính xác cao từ cnn-kanji
-MODEL_PATH = MODELS_DIR / "kanji_3036_best_e4.h5"
-LABEL_PATH = MODELS_DIR / "label_3036_raw.json"
+# Sử dụng mô hình nhận diện Kanji/Kana/Latin/Digit chuẩn 3.170 lớp huấn luyện từ Kaggle
+MODEL_PATH = MODELS_DIR / "kanji_model_best.h5"
+LABEL_PATH = MODELS_DIR / "label_3169.json"
+
+def _build_kanji_residual_model(num_classes: int, input_shape=(128, 128, 1)):
+    """Xây dựng kiến trúc Deep Residual CNN tương thích với checkpoint huấn luyện"""
+    from tensorflow.keras import layers, models
+    inputs = layers.Input(shape=input_shape)
+
+    # Block 1
+    x = layers.Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal')(inputs)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.Conv2D(64, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+
+    # Block 2
+    x = layers.Conv2D(128, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.Conv2D(128, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+
+    # Block 3: Residual 256
+    x_res = layers.Conv2D(256, (1, 1), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.Conv2D(256, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.Conv2D(256, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Add()([x, x_res])
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+
+    # Block 4: Residual 384
+    x_res = layers.Conv2D(384, (1, 1), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.Conv2D(384, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.Conv2D(384, (3, 3), padding='same', kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Add()([x, x_res])
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.MaxPooling2D((2, 2))(x)
+
+    # Classification Head
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dense(512, kernel_initializer='he_normal')(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(0.1)(x)
+    x = layers.Dropout(0.3)(x)
+    outputs = layers.Dense(num_classes, activation='softmax')(x)
+    return models.Model(inputs=inputs, outputs=outputs, name='Kanji_Residual_CNN')
 
 class KanjiRecognitionService:
     _instance: Optional["KanjiRecognitionService"] = None
@@ -36,12 +90,19 @@ class KanjiRecognitionService:
         # 1. Nạp danh sách nhãn
         with open(LABEL_PATH, "r", encoding="utf-8") as f:
             self.labels: List[str] = json.load(f)
-        logger.info(f"✅ Đã nạp thành công {len(self.labels)} nhãn chữ Kanji/Kana.")
+        logger.info(f"✅ Đã nạp thành công {len(self.labels)} nhãn chữ Kanji/Kana/Latin/Digit.")
 
-        # 2. Nạp mô hình TensorFlow / Keras
-        self.model = tf.keras.models.load_model(str(MODEL_PATH))
-        self.input_shape = self.model.input_shape  # (None, 96, 96, 1) hoặc (None, 128, 128, 1)
-        self.target_size = (self.input_shape[1], self.input_shape[2]) if len(self.input_shape) >= 3 else (96, 96)
+        # 2. Nạp mô hình TensorFlow / Keras tương thích đa phiên bản
+        try:
+            self.model = _build_kanji_residual_model(num_classes=len(self.labels), input_shape=(128, 128, 1))
+            self.model.load_weights(str(MODEL_PATH))
+            logger.info("✅ Nạp trọng số mô hình qua load_weights thành công!")
+        except Exception as e:
+            logger.warning(f"Thử nạp trực tiếp bằng load_model do: {e}")
+            self.model = tf.keras.models.load_model(str(MODEL_PATH), compile=False)
+
+        self.input_shape = self.model.input_shape
+        self.target_size = (self.input_shape[1], self.input_shape[2]) if len(self.input_shape) >= 3 else (128, 128)
         logger.info(f"✅ Nạp mô hình thành công! Kích thước ảnh đầu vào: {self.target_size}")
 
     @classmethod
@@ -52,11 +113,14 @@ class KanjiRecognitionService:
 
     def preprocess_image(self, image_bytes: bytes) -> Optional[np.ndarray]:
         """
-        Tiền xử lý ảnh chuyên sâu cho nét vẽ Canvas:
-        1. Nhận diện nền sáng/tối -> chuẩn hóa về NỀN ĐEN NÉT TRẮNG.
+        Tiền xử lý ảnh chuyên sâu cho nét vẽ Canvas tương thích 100% với miền dữ liệu ETL9G:
+        1. Nhận diện nền sáng/tối -> tách nét vẽ thành Mask nhị phân.
         2. Tự động cắt sát nét vẽ (Bounding Box Auto-crop).
-        3. Căn giữa vào khung vuông giữ nguyên tỉ lệ (Aspect Ratio Preserving).
-        4. Resize về đúng kích thước model đã train (96x96) và chuẩn hóa pixel [0, 1].
+        3. Căn giữa vào khung giấy chuẩn ETL9G (giữ nguyên tỉ lệ hình học):
+           - Kích thước ảnh: 128x128 với viền đen bao quanh.
+           - Khung giấy trắng: 104x104 (pixel = 255).
+           - Nét vẽ mực đen (pixel = 0) nằm gọn ở trung tâm (~46px).
+        4. Chuẩn hóa pixel về [0.0, 1.0] tương ứng với pipeline train mô hình.
         """
         try:
             pil_img = Image.open(io.BytesIO(image_bytes))
@@ -71,51 +135,54 @@ class KanjiRecognitionService:
             gray_img = pil_img.convert("L")
             arr = np.array(gray_img)
 
-            # Kiểm tra màu nền: nếu 4 góc ảnh có màu sáng (> 128) -> người dùng vẽ nét đen trên nền trắng
-            # Cần đảo ngược lại để thành NỀN ĐEN NÉT TRẮNG chuẩn theo bộ dữ liệu train
+            # Kiểm tra màu nền: nếu 4 góc ảnh có màu sáng (> 128) -> vẽ nét đen trên nền trắng
+            # Cần đảo ngược để chuẩn hóa nét vẽ thành nét trắng (255) trên nền đen (0) phục vụ crop mask
             corners = [arr[0, 0], arr[0, -1], arr[-1, 0], arr[-1, -1]]
             if np.mean(corners) > 128:
                 gray_img = ImageOps.invert(gray_img)
 
             # 2. Bounding Box Auto-crop: Tìm khung bao quanh các nét vẽ
-            # Đặt ngưỡng để phân biệt nét vẽ với nền đen
             threshold = 30
             binary = gray_img.point(lambda p: 255 if p > threshold else 0)
             bbox = binary.getbbox()
 
             if bbox is None:
-                # Canvas hoàn toàn trống (không có nét vẽ nào)
                 logger.warning("Canvas trống, không tìm thấy nét vẽ nào.")
                 return None
 
-            # Cắt lấy vùng chứa chữ
+            # Cắt lấy vùng chứa chữ (nét trắng trên nền đen)
             cropped = gray_img.crop(bbox)
             crop_w, crop_h = cropped.size
 
-            # 3. Tạo khung vuông với padding 15% để nét vẽ không bị chạm viền
-            max_side = max(crop_w, crop_h)
-            padding = int(max_side * 0.15)
-            square_size = max_side + (padding * 2)
+            # 3. Chuẩn hóa kích thước nét vẽ vào khung giấy trắng ETL9G
+            # Kích thước chữ chuẩn trong ảnh ETL9G chiếm ~44 - 48 pixel trên khung 128x128
+            target_char_size = 46.0
+            scale = target_char_size / max(crop_w, crop_h)
+            new_w = max(1, int(round(crop_w * scale)))
+            new_h = max(1, int(round(crop_h * scale)))
+            resized_char = cropped.resize((new_w, new_h), Image.Resampling.BILINEAR)
 
-            square_img = Image.new("L", (square_size, square_size), color=0)
-            # Dán vùng chữ vào chính giữa khung vuông
-            paste_x = padding + (max_side - crop_w) // 2
-            paste_y = padding + (max_side - crop_h) // 2
-            square_img.paste(cropped, (paste_x, paste_y))
+            # 4. Tạo ảnh chuẩn ETL9G:
+            # - Kích thước tổng thể 128x128, viền ngoài màu đen (0)
+            # - Khung giấy bên trong 104x104 màu trắng (255)
+            # - Nét chữ mực đen (0) dán vào trung tâm giấy
+            final_img = Image.new("L", self.target_size, color=0)
+            paper = Image.new("L", (104, 104), color=255)
 
-            # 4. Resize về kích thước chuẩn của model (96x96)
-            final_img = square_img.resize(self.target_size, Image.Resampling.BILINEAR)
+            paste_x = (104 - new_w) // 2
+            paste_y = (104 - new_h) // 2
 
-            # 5. Chuyển sang mảng numpy float32 và chuẩn hóa độ tương phản sắc nét [0, 1]
-            arr = np.array(final_img, dtype=np.float32)
-            max_val = float(np.max(arr))
-            if max_val > 50.0:
-                arr = arr / max_val
-            else:
-                arr = arr / 255.0
+            # Dán nét chữ đen lên giấy trắng thông qua mask
+            char_ink = Image.new("L", (new_w, new_h), color=0)
+            paper.paste(char_ink, (paste_x, paste_y), mask=resized_char)
 
-            img_array = np.expand_dims(arr, axis=-1)  # (H, W, 1)
-            img_array = np.expand_dims(img_array, axis=0)   # (1, H, W, 1)
+            # Dán tờ giấy trắng vào chính giữa khung 128x128 (offset viền 12px)
+            final_img.paste(paper, (12, 12))
+
+            # 5. Chuyển sang mảng numpy float32 và chuẩn hóa [0.0, 1.0]
+            arr = np.array(final_img, dtype=np.float32) / 255.0
+            img_array = np.expand_dims(arr, axis=-1)  # (128, 128, 1)
+            img_array = np.expand_dims(img_array, axis=0)   # (1, 128, 128, 1)
 
             return img_array
 
@@ -156,6 +223,11 @@ class KanjiRecognitionService:
                     hex_code = raw_label.lower()
                 except Exception:
                     actual_char = raw_label
+            else:
+                try:
+                    hex_code = f"0x{ord(actual_char):04x}"
+                except Exception:
+                    hex_code = None
 
             results.append(PredictionItem(
                 char=actual_char,
