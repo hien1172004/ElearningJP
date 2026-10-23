@@ -1,6 +1,5 @@
 export * from './home/HomePage'
-export * from './auth/LoginPage'
-export * from './auth/RegisterPage'
+export * from './auth/GoogleCallbackPage'
 export * from './auth/ForgotPasswordPage'
 export * from './auth/ResetPasswordPage'
 export * from './dictionary/DictionaryPage'
@@ -11,3 +10,6 @@ export * from './courses/CourseDetailPage'
 export * from './courses/teacher/TeacherCoursesPage'
 export * from './courses/teacher/TeacherCourseEditorPage'
 export * from './courses/learn/LessonViewerPage'
+
+// Progress page
+export * from './progress/ProgressPage'

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -86,4 +87,19 @@ public interface VocabularyRepository extends JpaRepository<Vocabulary, Long> {
     @Query("SELECT v FROM Vocabulary v WHERE v.deleted = false AND v.active = true AND (" +
            "v.word = :text OR v.hiragana = :text)")
     List<Vocabulary> findExactMatches(@Param("text") String text);
+
+    /**
+     * Batch fetch thông tin hiển thị của nhiều từ vựng theo ID — dùng cho
+     * bảng "Top từ đã tra" (Khoi 4).
+     *
+     * <p><b>Vì sao cần hàm riêng?</b> Bảng top cần 6 cột hiển thị. Gọi
+     * {@code findAllById} rồi đọc field sẽ kéo theo {@code @ElementCollection}
+     * (senses/readings/examples) và sinh N+1 — nên đọc thẳng projection
+     * chỉ lấy đúng cột cần.</p>
+     *
+     * @return list {@code [id, word, hiragana, hanViet, meaningVi, jlptLevel]}
+     */
+    @Query("SELECT v.id, v.word, v.hiragana, v.hanViet, v.meaningVi, v.jlptLevel " +
+           "FROM Vocabulary v WHERE v.id IN :ids AND v.deleted = false")
+    List<Object[]> findDisplayInfoByIds(@Param("ids") Collection<Long> ids);
 }

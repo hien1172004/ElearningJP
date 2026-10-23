@@ -203,7 +203,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
      */
     @Transactional
     public LessonVocabularyItemResponse updateVocabularyItem(Long itemId, LessonVocabularyItemUpdateRequest request) {
-        LessonVocabularyItem item = vocabItemRepository.findById(itemId)
+        LessonVocabularyItem item = vocabItemRepository.findByIdWithExamples(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);

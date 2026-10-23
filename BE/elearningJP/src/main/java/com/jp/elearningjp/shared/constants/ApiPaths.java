@@ -125,6 +125,42 @@ public final class ApiPaths {
         public static final String KANA = "/kana";
         public static final String KANA_DETAIL = "/kana/{character}";
         public static final String QUICK_LOOKUP = "/quick-lookup";
+
+        /** Ghi nhận 1 lần tra từ điển (instrumented lookup — cho Progress page). */
+        public static final String LOOKUP = "/lookup";
+    }
+
+    public static final class Study {
+        public static final String BASE = "/study";
+        /** Heartbeat thời gian học từ FE. */
+        public static final String HEARTBEAT = "/heartbeat";
+    }
+
+    /** Trang "Tiến độ học tập" — 5 khối (Mazii-style). */
+    public static final class LearningProgress {
+        public static final String BASE = "/progress";
+        /** Khoi 1 — tong hop theo ky. */
+        public static final String SUMMARY = "/summary";
+        /** Khoi 2 — lich + streak. */
+        public static final String CALENDAR = "/calendar";
+        /** Khoi 3 — bieu do time-series (Buc 6). */
+        public static final String CHART = "/chart";
+        /** Khoi 4 — top 30 tu tra nhieu nhat (Buc 7). */
+        public static final String TOP_LOOKUPS = "/top-lookups";
+        /** Khoi 5 — bang xep hang (Buc 8). */
+        public static final String LEADERBOARD = "/leaderboard";
+        /** Hang ca nhan cua user hien tai. */
+        public static final String LEADERBOARD_ME = "/leaderboard/me";
+        /** Force refresh leaderboard — doc DB roi ghi lai Redis Sorted Set. */
+        public static final String LEADERBOARD_REFRESH = "/leaderboard/refresh";
+        /**
+         * Hard refresh leaderboard — XOA key Redis roi dung lai tu dau.
+         *
+         * <p>Tach rieng endpoint (khong phai query param {@code ?hard=true}) de
+         * {@code @PreAuthorize} cap quyen theo method — khong de quyen bi dieu
+         * khien bang query string.</p>
+         */
+        public static final String LEADERBOARD_REFRESH_HARD = "/leaderboard/refresh/hard";
     }
 
     /**

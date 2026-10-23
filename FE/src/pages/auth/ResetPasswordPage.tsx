@@ -191,10 +191,10 @@ export const ResetPasswordPage: React.FC = () => {
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Quay lại{' '}
                     <Link
-                      to="/login"
+                      to="/"
                       className="font-semibold text-indigo-600 hover:underline"
                     >
-                      trang đăng nhập
+                      trang chủ
                     </Link>
                   </p>
                 </AuthFooter>

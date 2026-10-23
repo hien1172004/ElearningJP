@@ -45,6 +45,8 @@ AGENTS.md
 
 #HTTP-TEST
 BE/elearningJP/http-tests/
+BE/elearningJP/scripts/
+BE/elearningJP/docs/
 
 # ------------------------------------------
 # AI Service (FastAPI / Python)
@@ -63,4 +65,4 @@ AI/data/cache/**
 AI/data/*.zip
 AI/data/*.tar*
 AI/checkpoints/
-
+

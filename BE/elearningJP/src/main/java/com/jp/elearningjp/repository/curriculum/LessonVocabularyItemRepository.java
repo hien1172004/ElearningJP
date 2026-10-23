@@ -13,6 +13,12 @@ import java.util.List;
 public interface LessonVocabularyItemRepository extends JpaRepository<LessonVocabularyItem, Long> {
     List<LessonVocabularyItem> findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(Long sectionId);
 
+    /**
+     * Fetch vocab item kèm examples (1-N lazy) — dùng trong update/edit để tránh LazyInitializationException.
+     */
+    @Query("SELECT vi FROM LessonVocabularyItem vi LEFT JOIN FETCH vi.examples WHERE vi.id = :id AND vi.deleted = false")
+    java.util.Optional<LessonVocabularyItem> findByIdWithExamples(@Param("id") Long id);
+
     @Query("""
             SELECT vi.id
               FROM LessonVocabularyItem vi

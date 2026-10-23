@@ -13,6 +13,12 @@ import java.util.List;
 public interface LessonGrammarItemRepository extends JpaRepository<LessonGrammarItem, Long> {
     List<LessonGrammarItem> findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(Long sectionId);
 
+    /**
+     * Fetch grammar item kèm examples (1-N lazy) — dùng trong update/edit để tránh LazyInitializationException.
+     */
+    @Query("SELECT gi FROM LessonGrammarItem gi LEFT JOIN FETCH gi.examples WHERE gi.id = :id AND gi.deleted = false")
+    java.util.Optional<LessonGrammarItem> findByIdWithExamples(@Param("id") Long id);
+
     @Query("""
             SELECT gi.id
               FROM LessonGrammarItem gi

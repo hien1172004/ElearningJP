@@ -386,7 +386,7 @@ class GrammarSectionItemServiceTest {
                 // KHÔNG gửi examples
                 .build();
 
-        when(grammarItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(grammarItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(grammarItemRepository.save(any(LessonGrammarItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toGrammarItemResponse(any(LessonGrammarItem.class)))
                 .thenReturn(LessonGrammarItemResponse.builder().id(50L).build());
@@ -420,7 +420,7 @@ class GrammarSectionItemServiceTest {
                 .examples(List.of()) // empty → RESET về vocab
                 .build();
 
-        when(grammarItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(grammarItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         // grammar đã load sẵn qua item.getGrammar()
         when(grammarItemRepository.save(any(LessonGrammarItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toGrammarItemResponse(any(LessonGrammarItem.class)))
@@ -465,7 +465,7 @@ class GrammarSectionItemServiceTest {
                 .examples(List.of(updateEx1, newEx))
                 .build();
 
-        when(grammarItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(grammarItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(grammarItemRepository.save(any(LessonGrammarItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toGrammarItemResponse(any(LessonGrammarItem.class)))
                 .thenReturn(LessonGrammarItemResponse.builder().id(50L).build());
@@ -494,7 +494,7 @@ class GrammarSectionItemServiceTest {
                 .examples(List.of(badReq))
                 .build();
 
-        when(grammarItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(grammarItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
 
         assertThatThrownBy(() -> service.updateGrammarItem(50L, request))
                 .isInstanceOf(AppException.class)
@@ -521,7 +521,7 @@ class GrammarSectionItemServiceTest {
                 .examples(List.of(dupEx, newDup))
                 .build();
 
-        when(grammarItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(grammarItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
 
         assertThatThrownBy(() -> service.updateGrammarItem(50L, request))
                 .isInstanceOf(AppException.class)
@@ -540,7 +540,7 @@ class GrammarSectionItemServiceTest {
                 .customMeaning("")
                 .build();
 
-        when(grammarItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(grammarItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(grammarItemRepository.save(any(LessonGrammarItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toGrammarItemResponse(any(LessonGrammarItem.class)))
                 .thenReturn(LessonGrammarItemResponse.builder().id(50L).build());

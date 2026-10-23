@@ -138,9 +138,9 @@ export const TeacherCourseEditorPage: React.FC = () => {
                     </div>
                     <div className="p-4 rounded-md bg-gray-50/50 border border-gray-200">
                       <p className="text-2xl font-black text-gray-600">
-                        {course.updatedAt ? new Date(course.updatedAt).toLocaleDateString('vi-VN') : '—'}
+                        {course.createdAt ? new Date(course.createdAt).toLocaleDateString('vi-VN') : '—'}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">Cập nhật lần cuối</p>
+                      <p className="text-xs text-gray-500 mt-1">Ngày tạo</p>
                     </div>
                   </div>
                   <div className="pt-2 border-t border-gray-100">

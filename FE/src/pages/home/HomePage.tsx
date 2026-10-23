@@ -1,10 +1,12 @@
 ﻿import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { BookOpen, Sparkles, Trophy, Search } from 'lucide-react'
 import { Card } from 'antd'
 import { Button as AntdButton } from 'antd'
 
 export const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="py-12 flex flex-col items-center text-center">
       <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-semibold mb-4 border border-indigo-200/60 shadow-2xs">
@@ -25,16 +27,17 @@ export const HomePage: React.FC = () => {
           size="large"
           icon={<Search className="w-5 h-5" />}
           className="!h-12 !px-7 !rounded-md !font-bold"
-          onClick={() => (window.location.href = '/dictionary')}
+          onClick={() => navigate('/dictionary')}
         >
           Tra từ điển &amp; Chữ cái
         </AntdButton>
-        <Link
-          to="/login"
+        <button
+          type="button"
+          onClick={() => navigate('/courses')}
           className="px-6 py-3.5 rounded-md bg-white text-gray-800 font-bold border border-gray-200 hover:bg-gray-50 active:scale-98 transition shadow-2xs"
         >
           Bắt đầu học ngay
-        </Link>
+        </button>
       </div>
 
       <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full text-left">

@@ -14,7 +14,7 @@ import {
   EditOutlined,
   FileTextOutlined,
 } from '@ant-design/icons'
-import { PageHeader, LoadingState } from '@/components/common'
+import { PageHeader, LoadingState, StudyTimerTracker } from '@/components/common'
 import {
   LessonNavSidebar,
   KanjiStudyView,
@@ -28,7 +28,7 @@ import {
   useStartLesson,
   useCompleteLesson,
 } from '@/hooks'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useAuthModalStore } from '@/stores'
 import { toSlug } from '@/utils'
 import type {
   LessonSectionType,
@@ -74,6 +74,7 @@ export const LessonViewerPage: React.FC = () => {
 
   const navigate = useNavigate()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLogin = useAuthModalStore((s) => s.openLogin)
 
   const { data: course } = useCourseDetail(cId)
   const {
@@ -251,11 +252,13 @@ export const LessonViewerPage: React.FC = () => {
       title = 'Phiên đăng nhập hết hạn'
       description = 'Vui lòng đăng nhập lại để tiếp tục.'
       action = (
-        <Link to={`/login?redirect=/learn/${cId}/${lId}`}>
-          <AntdButton type="primary" className="!rounded-md !font-semibold">
-            Đăng nhập lại
-          </AntdButton>
-        </Link>
+        <AntdButton
+          type="primary"
+          className="!rounded-md !font-semibold"
+          onClick={() => openLogin(`/learn/${cId}/${lId}`)}
+        >
+          Đăng nhập lại
+        </AntdButton>
       )
     } else if (status === 403 || code === 2002) {
       title = 'Bạn chưa đăng ký khóa học này'
@@ -419,6 +422,8 @@ export const LessonViewerPage: React.FC = () => {
 
   return (
     <div className="pb-12">
+      {/* Đếm thời gian học khi đang xem bài (Bước 3) — component ẩn */}
+      <StudyTimerTracker />
       {/* Header */}
       <PageHeader
         title={

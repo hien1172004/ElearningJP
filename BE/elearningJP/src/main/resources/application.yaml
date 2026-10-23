@@ -19,6 +19,15 @@ spring:
         enabled: false
   config:
     import: optional:file:.env[.properties]
+  jpa:
+    properties:
+      hibernate:
+        # Múi giờ nghiệp vụ — khớp Clock bean (Asia/Ho_Chi_Minh).
+        # Timestamp trong DB là TIMESTAMPTZ (lưu UTC, hiển thị theo múi giờ session).
+        # Set múi giờ ở đây để timestamp đọc ra/hiển thị nhất quán ở mọi môi trường.
+        # KHÔNG ảnh hưởng cột DATE (stat_date, last_activity_date) — DATE không lưu timezone.
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
 
 
 

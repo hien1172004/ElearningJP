@@ -14,6 +14,19 @@ import { useGrammarItemMutations, useGrammarItemDetail } from '@/hooks'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
 
+/**
+ * Convert chuỗi rỗng/whitespace thành `undefined` để JSON.stringify loại bỏ key.
+ *
+ * Semantics của BE update request (3-state cho các trường override):
+ *   - KHÔNG gửi key (undefined) → giữ nguyên giá trị override hiện tại
+ *   - Gửi `""`                 → xoá override (set null)
+ *   - Gửi giá trị             → cập nhật override
+ */
+const blankToUndef = (v: string | null | undefined): string | undefined => {
+  if (v == null) return undefined
+  return v.trim() === '' ? undefined : v
+}
+
 // ============================================================================
 // Form schema
 // ============================================================================
@@ -580,15 +593,20 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
       if (editing) {
         const payload: LessonGrammarItemUpdateRequest = {
           orderIndex: data.orderIndex,
-          customStructure: data.customStructure,
-          customMeaning: data.customMeaning,
-          note: data.note,
-          examples: cleanedExamples.map<LessonGrammarExampleUpsertRequest>((e) => ({
-            id: e.id,
-            exampleJp: e.exampleJp,
-            exampleVi: e.exampleVi,
-            orderIndex: e.orderIndex,
-          })),
+          customStructure: blankToUndef(data.customStructure),
+          customMeaning: blankToUndef(data.customMeaning),
+          note: blankToUndef(data.note),
+          // Chỉ gửi examples khi có nội dung; rỗng → không gửi (giữ nguyên)
+          ...(cleanedExamples.length > 0
+            ? {
+                examples: cleanedExamples.map<LessonGrammarExampleUpsertRequest>((e) => ({
+                  id: e.id,
+                  exampleJp: e.exampleJp,
+                  exampleVi: e.exampleVi,
+                  orderIndex: e.orderIndex,
+                })),
+              }
+            : {}),
         }
         await updateGrammarItem.mutateAsync({ id: editing.id, payload })
       } else {

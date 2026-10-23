@@ -22,6 +22,20 @@ export const authService = {
   },
 
   // ----------------------------------------------------------------
+  // GOOGLE LOGIN
+  // - Tạo URL redirect tới BE để bắt đầu OAuth flow.
+  // - BE sẽ redirect user sang Google, sau khi user đồng ý sẽ
+  //   callback về /auth/google/callback?token=... và FE xử lý token.
+  // ----------------------------------------------------------------
+  getGoogleLoginUrl: (): string => {
+    const baseUrl =
+      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
+    // Bỏ "/api/v1" để lấy root BE, vì OAuth endpoint thường mount ở root.
+    const root = baseUrl.replace(/\/api\/v\d+\/?$/, '')
+    return `${root}/auth/google`
+  },
+
+  // ----------------------------------------------------------------
   // REGISTER
   // ----------------------------------------------------------------
   register: async (

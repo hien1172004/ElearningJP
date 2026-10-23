@@ -190,7 +190,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
      */
     @Transactional
     public LessonGrammarItemResponse updateGrammarItem(Long itemId, LessonGrammarItemUpdateRequest request) {
-        LessonGrammarItem item = grammarItemRepository.findById(itemId)
+        LessonGrammarItem item = grammarItemRepository.findByIdWithExamples(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);

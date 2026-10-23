@@ -1099,14 +1099,14 @@ const QuizResultView: React.FC<QuizResultViewProps> = ({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
         {!passed && (
           <>
-            {onContinue && (
+            {/* {onContinue && (
               <AntdButton
                 onClick={onContinue}
                 className="!rounded-md !font-semibold"
               >
                 Tiếp tục học
               </AntdButton>
-            )}
+            )} */}
             <AntdButton
               icon={<RotateCcw className="w-4 h-4" />}
               onClick={onRetake}

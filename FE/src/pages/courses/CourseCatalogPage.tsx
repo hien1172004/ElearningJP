@@ -1,15 +1,15 @@
 ﻿import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { BookOpen } from 'lucide-react'
 import { Button as AntdButton } from 'antd'
 import { PageHeader, LoadingState } from '@/components/common'
 import { CourseCard, CourseFilterBar } from '@/components/course'
 import { useCourses } from '@/hooks'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useAuthModalStore } from '@/stores'
 import type { JlptLevel } from '@/types'
 
 export const CourseCatalogPage: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLogin = useAuthModalStore((s) => s.openLogin)
   const [keyword, setKeyword] = useState('')
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | undefined>(undefined)
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
@@ -46,15 +46,14 @@ export const CourseCatalogPage: React.FC = () => {
         subtitle="Chọn khóa học phù hợp với trình độ của bạn và bắt đầu hành trình chinh phục tiếng Nhật."
         actions={
           !isAuthenticated && (
-            <Link to="/login">
-              <AntdButton
-                type="primary"
-                size="large"
-                className="!rounded-md !font-bold"
-              >
-                Đăng nhập để đăng ký học
-              </AntdButton>
-            </Link>
+            <AntdButton
+              type="primary"
+              size="large"
+              className="!rounded-md !font-bold"
+              onClick={() => openLogin()}
+            >
+              Đăng nhập để đăng ký học
+            </AntdButton>
           )
         }
       />

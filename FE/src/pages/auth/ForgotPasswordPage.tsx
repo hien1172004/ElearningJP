@@ -85,7 +85,7 @@ export const ForgotPasswordPage: React.FC = () => {
               <ArrowLeft className="w-3.5 h-3.5" />
               Nhớ mật khẩu rồi?{' '}
               <Link
-                to="/login"
+                to="/"
                 className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
               >
                 Đăng nhập ngay
