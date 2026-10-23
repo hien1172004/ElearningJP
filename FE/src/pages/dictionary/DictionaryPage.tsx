@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Search,
   X,
@@ -12,6 +12,7 @@ import {
   Flame,
   Award,
   PenTool,
+  Camera,
 } from 'lucide-react'
 import type {
   JlptLevel,
@@ -28,6 +29,7 @@ import {
   GrammarDetailPanel,
   KanaMatrixTab,
   KanjiHandwritingModal,
+  KanjiAirWritingModal,
   KanjiPracticeModal,
 } from '@/components/dictionary'
 
@@ -52,6 +54,7 @@ export const DictionaryPage: React.FC = () => {
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | undefined>(undefined)
   const [isHandwritingOpen, setIsHandwritingOpen] = useState<boolean>(false)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
+  const [isAirWritingOpen, setIsAirWritingOpen] = useState<boolean>(false)
 
   // Autocomplete Suggestions Dropdown
   const [suggestions, setSuggestions] = useState<DictionaryUnifiedSearch | null>(null)
@@ -419,6 +422,17 @@ export const DictionaryPage: React.FC = () => {
                 >
                   <PenTool className="w-4 h-4" />
                   <span className="hidden sm:inline text-xs font-bold">Vẽ Kanji</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAirWritingOpen(true)}
+                  className="p-2 mr-1 text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200/80 rounded-md transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer shadow-2xs group"
+                  title="Viết chữ Hán trên không qua Camera & AI (Zero-Contact Gesture Control)"
+                >
+                  <Camera className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline text-xs font-bold bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">
+                    Vẽ trên không AI
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -1140,6 +1154,21 @@ export const DictionaryPage: React.FC = () => {
       )}
 
       {/* Modal nhận dạng chữ viết tay Kanji bằng AI */}
+            {/* Modal Viết chữ Hán trên không qua Camera */}
+      <KanjiAirWritingModal
+        isOpen={isAirWritingOpen}
+        onClose={() => setIsAirWritingOpen(false)}
+        onSelectCharacter={(char) => {
+          setKeyword(char)
+          if (char.length > 1) {
+            setActiveTab('vocab')
+          } else {
+            setActiveTab('kanji')
+          }
+          setIsDropdownOpen(false)
+        }}
+      />
+
       <KanjiHandwritingModal
         isOpen={isHandwritingOpen}
         onClose={() => setIsHandwritingOpen(false)}
