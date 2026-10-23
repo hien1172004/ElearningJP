@@ -1,6 +1,6 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Outlet, Navigate, useLocation } from 'react-router-dom'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useAuthModalStore } from '@/stores'
 
 interface ProtectedRouteProps {
   /**
@@ -31,8 +31,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles, children 
   }
 
   if (!isAuthenticated) {
-    const redirect = encodeURIComponent(location.pathname + location.search)
-    return <Navigate to={`/login?redirect=${redirect}`} replace />
+    // Mở modal đăng nhập với redirectTo là trang user đang muốn vào.
+    // Mở qua effect để tránh gọi state update trong render.
+    // Dùng Navigate tới "/" để user không kẹt ở URL protected.
+    return <RedirectWithLoginModal redirectTo={location.pathname + location.search} />
   }
 
   if (roles && roles.length > 0) {
@@ -48,4 +50,20 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles, children 
   }
 
   return children ? <>{children}</> : <Outlet />
+}
+
+/**
+ * Component phụ: redirect về "/" đồng thời mở modal đăng nhập.
+ * Tách riêng để useEffect có thể chạy an toàn.
+ */
+const RedirectWithLoginModal: React.FC<{ redirectTo: string }> = ({
+  redirectTo,
+}) => {
+  const openLogin = useAuthModalStore((s) => s.openLogin)
+
+  useEffect(() => {
+    openLogin(redirectTo)
+  }, [openLogin, redirectTo])
+
+  return <Navigate to="/" replace />
 }

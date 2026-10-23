@@ -5,6 +5,5 @@ public enum DailyTaskType {
     NEW_VOCAB,
     NEW_KANJI,
     NEW_GRAMMAR,
-    SRS_REVIEW,
     PRACTICE_TEST
 }

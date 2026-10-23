@@ -184,7 +184,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
 
         <Form.Item
           name="jlptLevel"
-          label="Cấp độ JLPT"
+          label="Cấp độ"
           rules={[{ required: true, message: 'Vui lòng chọn cấp độ' }]}
         >
           <Select size="large" placeholder="Chọn cấp độ JLPT">

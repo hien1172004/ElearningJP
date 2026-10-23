@@ -14,6 +14,23 @@ import { useVocabItemMutations, useVocabItemDetail } from '@/hooks'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
 
+/**
+ * Convert chuỗi rỗng/whitespace thành `undefined` để JSON.stringify loại bỏ key.
+ *
+ * Semantics của BE update request (3-state cho các trường override):
+ *   - KHÔNG gửi key (undefined) → giữ nguyên giá trị override hiện tại
+ *   - Gửi `""`                 → xoá override (set null)
+ *   - Gửi giá trị             → cập nhật override
+ *
+ * Vì form Ant Design luôn set field = '' khi user để trống, nếu cứ truyền thẳng
+ * xuống thì BE sẽ hiểu nhầm là "user muốn xoá override" mỗi lần edit.
+ * → Dùng helper này để convert '' → undefined trước khi build payload.
+ */
+const blankToUndef = (v: string | null | undefined): string | undefined => {
+  if (v == null) return undefined
+  return v.trim() === '' ? undefined : v
+}
+
 // ============================================================================
 // Form schema (client-side validation trước khi gửi BE)
 // ============================================================================
@@ -660,25 +677,30 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
       }
 
       if (editing) {
-        // Update
+        // Upsert examples: gửi danh sách hiện tại
+        // Nếu cleanedExamples rỗng → KHÔNG gửi field examples → giữ nguyên examples hiện tại
         const payload: LessonVocabularyItemUpdateRequest = {
           orderIndex: data.orderIndex,
-          customHiragana: data.customHiragana,
-          customRomaji: data.customRomaji,
-          customAudioUrl: data.customAudioUrl,
-          customMeaning: data.customMeaning,
-          imageUrl: data.imageUrl,
-          note: data.note,
-          // Map example rows → upsert request (giữ id cũ nếu có)
-          examples: cleanedExamples.map<LessonVocabularyExampleUpsertRequest>((e) => ({
-            id: e.id,
-            exampleJp: e.exampleJp,
-            exampleVi: e.exampleVi,
-            exampleRomaji: e.exampleRomaji,
-            audioUrl: e.audioUrl,
-            orderIndex: e.orderIndex,
-            isPrimary: e.isPrimary,
-          })),
+          customHiragana: blankToUndef(data.customHiragana),
+          customRomaji: blankToUndef(data.customRomaji),
+          customAudioUrl: blankToUndef(data.customAudioUrl),
+          customMeaning: blankToUndef(data.customMeaning),
+          imageUrl: blankToUndef(data.imageUrl),
+          note: blankToUndef(data.note),
+          // Chỉ gửi examples khi có nội dung; rỗng → không gửi (giữ nguyên)
+          ...(cleanedExamples.length > 0
+            ? {
+                examples: cleanedExamples.map<LessonVocabularyExampleUpsertRequest>((e) => ({
+                  id: e.id,
+                  exampleJp: e.exampleJp,
+                  exampleVi: e.exampleVi,
+                  exampleRomaji: blankToUndef(e.exampleRomaji),
+                  audioUrl: blankToUndef(e.audioUrl),
+                  orderIndex: e.orderIndex,
+                  isPrimary: e.isPrimary,
+                })),
+              }
+            : {}),
         }
         await updateVocabItem.mutateAsync({ id: editing.id, payload })
       } else {

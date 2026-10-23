@@ -119,3 +119,61 @@ code {
 .ant-input-affix-wrapper-focused {
   border-color: #6366f1 !important;
 }
+
+/* ===========================================================================
+   AuthModal — custom styling để modal đẹp hơn antd default
+   =========================================================================== */
+.auth-modal .ant-modal-content {
+  padding: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow:
+    0 20px 50px -12px rgba(0, 0, 0, 0.25),
+    0 8px 20px -4px rgba(79, 70, 229, 0.15) !important;
+}
+
+.auth-modal .ant-modal-close {
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4b5563;
+  transition: all 0.2s;
+}
+
+.auth-modal .ant-modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.auth-modal .ant-tabs .ant-tabs-nav {
+  margin-bottom: 0 !important;
+}
+
+.auth-modal .ant-tabs .ant-tabs-tab {
+  padding: 10px 16px !important;
+}
+
+.auth-modal .ant-tabs .ant-tabs-ink-bar {
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.auth-modal .ant-divider {
+  margin: 16px 0 !important;
+}
+
+.auth-modal .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.auth-modal .ant-form-item:last-child {
+  margin-bottom: 0;
+}

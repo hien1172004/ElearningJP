@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Search,
   X,
@@ -22,6 +23,8 @@ import type {
   DictionaryUnifiedSearch,
 } from '@/types'
 import { dictionaryService } from '@/services'
+import { useRecordLookup } from '@/hooks/useRecordLookup'
+import { StudyTimerTracker } from '@/components/common'
 import {
   VocabDetailPanel,
   KanjiDetailPanel,
@@ -45,10 +48,28 @@ interface SearchHistoryItem {
 
 const STORAGE_KEY_HISTORY = 'elearning_dictionary_history'
 
+/** Query param mà các trang khác dùng để mở sẵn từ khóa (VD: từ đã tra ở trang Tiến độ). */
+const QP_KEYWORD = 'q'
+const QP_TAB = 'tab'
+
+const TAB_FROM_PARAM: Record<string, TabType> = {
+  vocab: 'vocab',
+  VOCAB: 'vocab',
+  kanji: 'kanji',
+  KANJI: 'kanji',
+  grammar: 'grammar',
+  GRAMMAR: 'grammar',
+}
+
 export const DictionaryPage: React.FC = () => {
-  const [keyword, setKeyword] = useState<string>('')
+  const [searchParams] = useSearchParams()
+  // Từ khóa mở sẵn từ URL (được set một lần khi vào trang).
+  const initialKeyword = searchParams.get(QP_KEYWORD) ?? ''
+  const initialTab = TAB_FROM_PARAM[searchParams.get(QP_TAB) ?? ''] ?? 'vocab'
+
+  const [keyword, setKeyword] = useState<string>(initialKeyword)
   const [debouncedKeyword, setDebouncedKeyword] = useState<string>('')
-  const [activeTab, setActiveTab] = useState<TabType>('vocab')
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | undefined>(undefined)
   const [isHandwritingOpen, setIsHandwritingOpen] = useState<boolean>(false)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
@@ -57,6 +78,8 @@ export const DictionaryPage: React.FC = () => {
   const [suggestions, setSuggestions] = useState<DictionaryUnifiedSearch | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
+  /** true khi từ khóa đến từ URL → không tự mở dropdown gợi ý. */
+  const suppressDropdownRef = useRef(true)
 
   // Lịch sử tra cứu gần đây từ localStorage
   const [history, setHistory] = useState<SearchHistoryItem[]>([])
@@ -92,6 +115,20 @@ export const DictionaryPage: React.FC = () => {
       // Bỏ qua lỗi parse
     }
   }, [])
+
+  // Đồng bộ lại khi URL có từ khóa mới (điều hướng từ trang khác sang).
+  useEffect(() => {
+    const q = searchParams.get(QP_KEYWORD)
+    if (q) {
+      // Đến từ URL (VD: bấm 1 từ ở trang Tiến độ) → không tự mở dropdown.
+      suppressDropdownRef.current = true
+      setIsDropdownOpen(false)
+      if (q !== keyword) setKeyword(q)
+    }
+    const t = TAB_FROM_PARAM[searchParams.get(QP_TAB) ?? '']
+    if (t) setActiveTab(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Đóng dropdown khi click ra ngoài ô tìm kiếm
   useEffect(() => {
@@ -153,14 +190,17 @@ export const DictionaryPage: React.FC = () => {
       const trimmed = keyword.trim()
       setDebouncedKeyword(trimmed)
 
-      // Nếu có từ khóa, gọi gợi ý tìm kiếm tức thì (Unified Search) cho Dropdown
+      // Dropdown gợi ý chỉ mở khi user TỰ gõ tay trong ô tìm kiếm.
+      // Khi mở sẵn từ URL (mọi từ khác điều hướng tới) thì để kết quả hiện thẳng.
       if (trimmed.length > 0) {
         dictionaryService
           .searchUnified(trimmed, selectedLevel)
           .then((res) => {
             if (res.data) {
               setSuggestions(res.data)
-              setIsDropdownOpen(true)
+              if (!suppressDropdownRef.current) {
+                setIsDropdownOpen(true)
+              }
             }
           })
           .catch(() => {})
@@ -362,8 +402,37 @@ export const DictionaryPage: React.FC = () => {
     setKeyword(item.keyword)
   }
 
+  // =========================================================================
+  // Ghi nhận hoạt động học tập (Bước 2 & 3)
+  // =========================================================================
+
+  // Đếm thời gian học khi user đang ở trang tra từ điển.
+  // <StudyTimerTracker /> render null — chỉ bật hook.
+  const recordLookup = useRecordLookup()
+
+  // Mỗi lần mở chi tiết 1 từ vựng / chữ Hán / ngữ pháp → ghi 1 "từ đã học".
+  useEffect(() => {
+    if (selectedVocabId) {
+      recordLookup({ targetType: 'VOCAB', targetId: selectedVocabId })
+    }
+  }, [selectedVocabId, recordLookup])
+
+  useEffect(() => {
+    if (selectedKanjiChar) {
+      recordLookup({ targetType: 'KANJI', sourceRef: selectedKanjiChar })
+    }
+  }, [selectedKanjiChar, recordLookup])
+
+  useEffect(() => {
+    if (selectedGrammarId) {
+      recordLookup({ targetType: 'GRAMMAR', targetId: selectedGrammarId })
+    }
+  }, [selectedGrammarId, recordLookup])
+
   return (
     <div className="space-y-6 pb-16">
+      {/* Đếm thời gian học — component ẩn, không ảnh hưởng layout */}
+      <StudyTimerTracker />
       {/* =========================================================================
           1. HEADER TRA CỨU MAZII: Ô TÌM KIẾM TẬP TRUNG + DROPDOWN GỢI Ý TỨC THÌ
          ========================================================================= */}
@@ -374,9 +443,9 @@ export const DictionaryPage: React.FC = () => {
             Tra từ điển thông minh chuẩn Mazii: <span className="text-white font-bold">{tabConfig.badge}</span>
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-extrabold text-color-brand tracking-tight">
+          <div className="text-2xl md:text-3xl font-extrabold text-color-brand tracking-tight">
             Tra cứu Từ điển Tiếng Nhật
-          </h1>
+          </div>
 
           {/* Ô tìm kiếm lớn & Dropdown Autocomplete */}
           {activeTab !== 'kana' && (
@@ -386,9 +455,16 @@ export const DictionaryPage: React.FC = () => {
                 <input
                   type="text"
                   value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
+                  onChange={(e) => {
+                      // Gõ tay → cho phép dropdown gợi ý hoạt động trở lại.
+                      suppressDropdownRef.current = false
+                      setKeyword(e.target.value)
+                    }}
                   onFocus={() => {
-                    if (suggestions && keyword.trim().length > 0) setIsDropdownOpen(true)
+                    if (suggestions && keyword.trim().length > 0) {
+                      suppressDropdownRef.current = false
+                      setIsDropdownOpen(true)
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -417,8 +493,8 @@ export const DictionaryPage: React.FC = () => {
                   className="p-2 mr-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-md transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer"
                   title="Nhận dạng chữ viết tay Kanji (AI)"
                 >
-                  <PenTool className="w-4 h-4" />
-                  <span className="hidden sm:inline text-xs font-bold">Vẽ Kanji</span>
+                  <PenTool className="w-5 h-5" />
+                  {/* <span className="hidden sm:inline text-xs font-bold">Vẽ Kanji</span> */}
                 </button>
                 <button
                   type="button"

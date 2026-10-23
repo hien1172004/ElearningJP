@@ -871,9 +871,11 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
 
     try {
       if (editing) {
+        // Chỉ gửi payload (kèm orderIndex mới từ form). Không truyền
+        // orderIndex tham số ngoài — pattern này đúng giống Kanji/Vocab/Grammar,
+        // và tránh hook nhầm lẫn giữa editing.orderIndex (cũ) vs payload.orderIndex (mới).
         await updateQuizItem.mutateAsync({
           id: editing.id,
-          orderIndex: editing.orderIndex,
           payload,
         })
       } else {

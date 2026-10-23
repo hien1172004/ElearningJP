@@ -130,7 +130,7 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <InfoRow
-            label="Cấp độ JLPT"
+            label="Cấp độ"
             value={item.jlptLevel ? `${item.jlptLevel}` : '—'}
           />
           <InfoRow

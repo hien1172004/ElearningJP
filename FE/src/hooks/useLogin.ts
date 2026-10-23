@@ -55,7 +55,14 @@ export function useLogin(options: UseLoginOptions = {}) {
         description: 'Chào mừng bạn quay lại với ElearningJP!',
       })
 
-      const redirectTo = options.redirectTo || '/'
+      // Ưu tiên override `redirectTo` từ mutate() (nếu có) để AuthModal
+      // có thể mở với redirect khác nhau mà không cần remount hook.
+      // Fallback về options hoặc '/'.
+      const overrideRedirect = (
+        variables as LoginRequest & { __redirectTo?: string }
+      ).__redirectTo
+      const redirectTo =
+        overrideRedirect || options.redirectTo || '/'
       navigate(redirectTo, { replace: true })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {

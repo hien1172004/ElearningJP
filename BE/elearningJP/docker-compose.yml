@@ -10,6 +10,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-elearning_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+      # Múi giờ nghiệp vụ — khớp với Clock bean phía app (Asia/Ho_Chi_Minh).
+      # Postgres mặc định là UTC → CURRENT_DATE lệch 7 giờ so với "hôm nay" của app.
+      TZ: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
+      PGTZ: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -26,6 +30,8 @@ services:
   # 2. Redis Cache & Blacklist Service
   # -------------------------------------------------------------
   redis:
+    # YEU CAU >= 6.2: leaderboard dung ZCOUNT "(score" "+inf" (canh goc exclusive)
+    # de tinh hang dung cho user cung diem. Redis < 6.2 se parse loi -> mat hang.
     image: redis:7-alpine
     container_name: elearning_redis
     restart: always
@@ -59,6 +65,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-root}
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+      # Múi giờ nghiệp vụ — khớp Clock bean (Asia/Ho_Chi_Minh).
+      # Không set TZ thì JVM chạy UTC → stat_date lệch so với máy dev.
+      TZ: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
       EMAIL_USERNAME: ${EMAIL_USERNAME}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD}

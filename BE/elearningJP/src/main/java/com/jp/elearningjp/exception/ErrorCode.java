@@ -98,6 +98,11 @@ public enum ErrorCode {
     COMMENT_REPLY_NOT_FOUND(4004, "Comment reply not found", HttpStatus.NOT_FOUND),
     COMMENT_REPLY_FORBIDDEN(4005, "You don't have permission to modify this reply", HttpStatus.FORBIDDEN),
     COMMENT_REPLY_INVALID_PARENT(4006, "Parent reply must belong to the same comment", HttpStatus.BAD_REQUEST),
+
+    // LEADERBOARD MODULE (5000 - 5099)
+    LEADERBOARD_INVALID_WEEK(5001, "Invalid week key. Expected format YYYY-Www (e.g. 2026-W42)", HttpStatus.BAD_REQUEST),
+    LEADERBOARD_WEEK_IN_FUTURE(5002, "The requested week is in the future", HttpStatus.BAD_REQUEST),
+    LEADERBOARD_REFRESH_TOO_FREQUENT(5003, "Too many refresh requests. Please try again in a few seconds", HttpStatus.TOO_MANY_REQUESTS),
     ;
 
 

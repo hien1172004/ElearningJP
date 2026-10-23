@@ -18,7 +18,8 @@ export function useResetPassword() {
           res?.message ??
           'Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập lại.',
       })
-      setTimeout(() => navigate('/login'), 1200)
+      // Quay về trang chủ — user mở modal đăng nhập từ header.
+      setTimeout(() => navigate('/'), 1200)
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const code = error.response?.data?.code

@@ -140,12 +140,11 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <InfoRow
-            label="Cấp độ JLPT"
-            value={item.jlptLevel ? `JLPT ${item.jlptLevel}` : '—'}
+            label="Cấp độ"
+            value={item.jlptLevel ? `${item.jlptLevel}` : '—'}
           />
           <InfoRow label="Hán Việt" value={item.hanViet || '—'} />
           <InfoRow label="Loại từ" value={item.partOfSpeech || '—'} />
-          <InfoRow label="Nghĩa (EN)" value={item.meaningEn || '—'} />
           <InfoRow label="Ghi chú" value={item.note || '—'} />
 
         </div>

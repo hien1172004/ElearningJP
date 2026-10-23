@@ -18,7 +18,8 @@ export function useForgotPassword() {
           res?.message ??
           'Nếu email tồn tại, link đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư.',
       })
-      setTimeout(() => navigate('/login'), 1200)
+      // Quay về trang chủ — user mở modal đăng nhập từ header.
+      setTimeout(() => navigate('/'), 1200)
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       toast.error('Gửi yêu cầu thất bại', {

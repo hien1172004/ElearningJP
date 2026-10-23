@@ -11,7 +11,11 @@ import type {
   User,
 } from '@/types'
 
-export function useRegister() {
+interface UseRegisterOptions {
+  redirectTo?: string
+}
+
+export function useRegister(options: UseRegisterOptions = {}) {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
 
@@ -50,7 +54,12 @@ export function useRegister() {
         description: 'Tài khoản của bạn đã sẵn sàng. Chúc bạn học vui!',
       })
 
-      navigate('/', { replace: true })
+      // Ưu tiên override `redirectTo` từ mutate variables
+      const overrideRedirect = (
+        variables as RegisterRequest & { __redirectTo?: string }
+      ).__redirectTo
+      const redirectTo = overrideRedirect || options.redirectTo || '/'
+      navigate(redirectTo, { replace: true })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const code = error.response?.data?.code

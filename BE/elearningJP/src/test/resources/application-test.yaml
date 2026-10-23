@@ -1,0 +1,60 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/elearningjp_test}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      timeout: 2000
+      repositories:
+        enabled: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  mail:
+    host: localhost
+    port: 25
+    username: test@example.com
+    password: testpassword
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+jwt:
+  signerKey: test-signing-key-for-unit-tests-only-min-256-bits-required-here
+  valid-duration: 3600
+  refreshable-duration: 86400
+
+server:
+  port: 8080
+
+app:
+  frontend-url: http://localhost:3000
+
+app-config:
+  lookup-ceiling: 20
+  lookup-xp: 2
+  lookup-points: 1
+  lesson-points: 1
+  goal-words: 5

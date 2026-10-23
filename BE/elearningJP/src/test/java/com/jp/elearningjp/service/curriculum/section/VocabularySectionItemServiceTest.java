@@ -101,7 +101,7 @@ class VocabularySectionItemServiceTest {
                 .note("")
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
                 .thenReturn(LessonVocabularyItemResponse.builder().id(50L).build());
@@ -120,7 +120,7 @@ class VocabularySectionItemServiceTest {
                 .customHiragana("")
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
                 .thenReturn(LessonVocabularyItemResponse.builder().id(50L).build());
@@ -269,7 +269,7 @@ class VocabularySectionItemServiceTest {
                 .customRomaji("gakusei alt")
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
                 .thenReturn(LessonVocabularyItemResponse.builder().id(50L).build());
@@ -288,7 +288,7 @@ class VocabularySectionItemServiceTest {
                 .customRomaji("")
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
                 .thenReturn(LessonVocabularyItemResponse.builder().id(50L).build());
@@ -307,7 +307,7 @@ class VocabularySectionItemServiceTest {
                 .customAudioUrl("")
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
                 .thenReturn(LessonVocabularyItemResponse.builder().id(50L).build());
@@ -627,7 +627,7 @@ class VocabularySectionItemServiceTest {
                 // KHÔNG gửi examples
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
                 .thenReturn(LessonVocabularyItemResponse.builder().id(50L).build());
@@ -664,7 +664,7 @@ class VocabularySectionItemServiceTest {
                 .examples(List.of()) // empty → RESET về vocab
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabularyRepository.findByIdWithActiveExamples(100L)).thenReturn(Optional.of(vocabWithEx));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
@@ -711,7 +711,7 @@ class VocabularySectionItemServiceTest {
                 .examples(List.of(updateEx1, newEx))
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
         when(vocabItemRepository.save(any(LessonVocabularyItem.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toVocabularyItemResponse(any(LessonVocabularyItem.class)))
                 .thenReturn(LessonVocabularyItemResponse.builder().id(50L).build());
@@ -741,7 +741,7 @@ class VocabularySectionItemServiceTest {
                 .examples(List.of(badReq))
                 .build();
 
-        when(vocabItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(vocabItemRepository.findByIdWithExamples(50L)).thenReturn(Optional.of(existingItem));
 
         assertThatThrownBy(() -> service.updateVocabularyItem(50L, request))
                 .isInstanceOf(AppException.class)

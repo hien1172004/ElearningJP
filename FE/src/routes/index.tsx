@@ -3,16 +3,16 @@ import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { MainLayout } from '@/layouts'
 import {
   HomePage,
-  LoginPage,
-  RegisterPage,
   ForgotPasswordPage,
   ResetPasswordPage,
+  GoogleCallbackPage,
   DictionaryPage,
   CourseCatalogPage,
   CourseDetailPage,
   TeacherCoursesPage,
   TeacherCourseEditorPage,
   LessonViewerPage,
+  ProgressPage,
 } from '@/pages'
 import { ProtectedRoute } from './ProtectedRoute'
 
@@ -38,11 +38,15 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Auth pages — không dùng MainLayout
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  // ====================================================================
+  // Auth — Đăng nhập / Đăng ký giờ dùng MODAL (AuthModal) trong MainLayout.
+  // Riêng forgot/reset password vẫn là trang riêng vì cần URL riêng cho email.
+  // ====================================================================
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
+
+  // Callback Google OAuth: BE redirect về đây với ?token=...
+  { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
 
   // ====================================================================
   // Protected: Teacher / Admin pages (with MainLayout)
@@ -59,6 +63,23 @@ export const router = createBrowserRouter([
     children: [
       { path: 'courses', element: <TeacherCoursesPage /> },
       { path: 'courses/:courseId', element: <TeacherCourseEditorPage /> },
+    ],
+  },
+
+  // ====================================================================
+  // Protected: Progress page (tiến độ học tập — with MainLayout)
+  // ====================================================================
+  {
+    path: '/progress',
+    element: (
+      <ProtectedRoute>
+        <WithMainLayout>
+          <ProtectedOutlet />
+        </WithMainLayout>
+      </ProtectedRoute>
+    ),
+    children: [
+      {index: true, element: <ProgressPage />},
     ],
   },
 

@@ -6,13 +6,14 @@ import { PageHeader, LoadingState } from '@/components/common'
 import { LessonOutlineList } from '@/components/course'
 import { CourseProgressBar } from '@/components/common'
 import { useCourseDetail, useEnrollCourse, useMyEnrollments } from '@/hooks'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useAuthModalStore } from '@/stores'
 import { toSlug } from '@/utils'
 
 export const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const courseId = Number(id)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLogin = useAuthModalStore((s) => s.openLogin)
   const { data: course, isLoading, isError } = useCourseDetail(courseId)
   const { data: enrollments = [] } = useMyEnrollments(true)
   const enroll = useEnrollCourse()
@@ -151,11 +152,13 @@ export const CourseDetailPage: React.FC = () => {
             <div className="mt-4 p-4 bg-gray-50 rounded-md text-center text-sm text-gray-600">
               <p>Vui lòng đăng ký khóa học để xem chi tiết bài học.</p>
               {!isAuthenticated && (
-                <Link to="/login">
-                  <AntdButton type="primary" className="!rounded-md !font-semibold mt-3">
-                    Đăng nhập và đăng ký
-                  </AntdButton>
-                </Link>
+                <AntdButton
+                  type="primary"
+                  className="!rounded-md !font-semibold mt-3"
+                  onClick={() => openLogin()}
+                >
+                  Đăng nhập và đăng ký
+                </AntdButton>
               )}
             </div>
           )}

@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +26,19 @@ public interface GrammarPointRepository extends JpaRepository<GrammarPoint, Long
            "LOWER(g.structure) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(g.meaningVi) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     List<GrammarPoint> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * Batch fetch thông tin hiển thị của nhiều điểm ngữ pháp theo ID — dùng cho
+     * bảng "Top từ đã tra" (Khoi 4).
+     *
+     * <p>Projection thay vì {@code findAllById} để không kéo {@code examplesJson}
+     * (jsonb) — bảng top không hiển thị ví dụ.</p>
+     *
+     * @return list {@code [id, title, structure, meaningVi, jlptLevel]}
+     */
+    @Query("SELECT g.id, g.title, g.structure, g.meaningVi, g.jlptLevel " +
+           "FROM GrammarPoint g WHERE g.id IN :ids AND g.deleted = false")
+    List<Object[]> findDisplayInfoByIds(@Param("ids") Collection<Long> ids);
 
     /**
      * Tra cứu điểm ngữ pháp phân trang kèm bộ lọc JLPT và sắp xếp ưu tiên chính xác:

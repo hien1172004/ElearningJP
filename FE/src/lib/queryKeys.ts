@@ -20,6 +20,18 @@ export const QUERY_KEYS = {
     due: (params: Record<string, unknown>) => ['srs', 'due', params] as const,
     stats: ['srs', 'stats'] as const,
   },
+  progress: {
+    summary: (params: Record<string, unknown>) =>
+      ['progress', 'summary', params] as const,
+    calendar: (month?: string) =>
+      ['progress', 'calendar', month ?? 'current'] as const,
+    topLookups: (params: Record<string, unknown>) =>
+      ['progress', 'top-lookups', params] as const,
+    leaderboard: (week?: string) =>
+      ['progress', 'leaderboard', week ?? 'current'] as const,
+    myRank: (week?: string) =>
+      ['progress', 'my-rank', week ?? 'current'] as const,
+  },
   dictionary: {
     unified: (params: Record<string, unknown>) =>
       ['dictionary', 'unified', params] as const,
