@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import com.jp.elearningjp.shared.constants.ApiPaths;
 
 @Configuration
 @EnableWebSecurity
@@ -40,11 +41,17 @@ public class SecurityConfig {
             "/api/v1/exam-attempts/*/submit",
             // Upload media (ảnh, audio)
             "/api/v1/media/upload",
+            // AI Speaking tools & scenarios
+            ApiPaths.API_V1 + "/ai/**",
     };
 
     private static final String[] PUBLIC_PUT_ENDPOINTS = {
             // Tự động lưu đáp án câu hỏi thi thử
             "/api/v1/exam-attempts/*/answers",
+    };
+
+    private static final String[] PUBLIC_DELETE_ENDPOINTS = {
+            ApiPaths.API_V1 + "/ai/**",
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
@@ -73,7 +80,9 @@ public class SecurityConfig {
             "/api/v1/KANJI/*/comments",
             "/api/v1/GRAMMAR/*/comments",
             "/api/v1/comments/*",
-            "/api/v1/comments/*/replies"
+            "/api/v1/comments/*/replies",
+            // AI Speaking & Scenarios công khai
+            ApiPaths.API_V1 + "/ai/**"
             // POST /api/v1/courses/*/lessons/reorder cần auth (owner/admin) - để mặc định
     };
 
@@ -99,6 +108,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS).permitAll()
                         .requestMatchers(HttpMethod.PUT, PUBLIC_PUT_ENDPOINTS).permitAll()
+                        .requestMatchers(HttpMethod.DELETE, PUBLIC_DELETE_ENDPOINTS).permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
                         .anyRequest().authenticated())
 

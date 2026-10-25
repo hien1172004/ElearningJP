@@ -109,6 +109,12 @@ public enum ErrorCode {
     EXAM_QUESTION_NOT_FOUND(5006, "Exam question not found", HttpStatus.NOT_FOUND),
     EXAM_OPTION_NOT_FOUND(5007, "Question option not found", HttpStatus.NOT_FOUND),
     EXAM_HAS_IN_PROGRESS_ATTEMPTS(5008, "Không thể xóa câu hỏi hoặc đề thi khi đang có thí sinh làm bài trực tiếp", HttpStatus.CONFLICT),
+
+    // AI Speaking Practice (6000 - 6099)
+    AI_SESSION_NOT_FOUND(6000, "Speaking session not found", HttpStatus.NOT_FOUND),
+    AI_SCENARIO_NOT_FOUND(6001, "Speaking scenario not found", HttpStatus.NOT_FOUND),
+    AI_QUOTA_EXCEEDED(6002, "Daily speaking quota exceeded", HttpStatus.TOO_MANY_REQUESTS),
+    AI_SESSION_FORBIDDEN(6003, "You do not have access to this session", HttpStatus.FORBIDDEN),
     ;
 
 

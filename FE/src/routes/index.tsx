@@ -21,6 +21,10 @@ import {
   AdminExamPreviewPage,
   AdminExamCreatePage,
   AdminDashboardPage,
+  SpeakingLobbyPage,
+  SpeakingPracticePage,
+  ScenarioDetailPage,
+  SpeakingFreeTalkPage,
 } from '@/pages'
 import { ProtectedRoute } from './ProtectedRoute'
 
@@ -48,6 +52,10 @@ export const router = createBrowserRouter([
       { path: 'exams/leaderboard', element: <Navigate to="/exams" replace /> },
       { path: 'exam-history', element: <ExamHistoryPage /> },
       { path: 'exams/result/:attemptId', element: <ExamResultPage /> },
+      { path: 'speaking', element: <SpeakingLobbyPage /> },
+      { path: 'speaking/free', element: <SpeakingFreeTalkPage /> },
+      { path: 'speaking/scenario/:scenarioId', element: <ScenarioDetailPage /> },
+      { path: 'speaking/session/:sessionId', element: <SpeakingPracticePage /> },
     ],
   },
 
@@ -58,7 +66,7 @@ export const router = createBrowserRouter([
   { path: '/reset-password', element: <ResetPasswordPage /> },
 
   // ====================================================================
-  // Dedicated fullscreen exam routes (No header/footer distractions)
+  // Dedicated fullscreen routes (No header/footer distractions)
   // ====================================================================
   {
     path: '/exams/:examId/taking/:attemptId',

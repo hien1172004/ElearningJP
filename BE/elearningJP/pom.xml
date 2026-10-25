@@ -132,6 +132,12 @@
             <artifactId>jsoup</artifactId>
             <version>1.18.3</version>
         </dependency>
+        <!-- Kuromoji Japanese Morphological Analyzer for Furigana & Romaji -->
+        <dependency>
+            <groupId>com.atilika.kuromoji</groupId>
+            <artifactId>kuromoji-ipadic</artifactId>
+            <version>0.9.0</version>
+        </dependency>
     </dependencies>
 
     <build>

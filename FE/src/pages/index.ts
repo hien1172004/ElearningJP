@@ -22,3 +22,9 @@ export * from './exam/AdminExamPreviewPage'
 export * from './exam/AdminExamCreatePage'
 export * from './exam/LeaderboardPage'
 export * from './admin/AdminDashboardPage'
+
+// Speaking AI practice pages
+export * from './speaking/SpeakingLobbyPage'
+export * from './speaking/SpeakingPracticePage'
+export * from './speaking/ScenarioDetailPage'
+export * from './speaking/SpeakingFreeTalkPage'
