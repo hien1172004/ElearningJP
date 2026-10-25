@@ -645,33 +645,27 @@ async def extract_section_endpoint(
             )
             logger.info(f"🎨 [CROP_JLPT] Đã tự động gán ảnh đáp án (choices) và ảnh đề bài (single) vào {len(final_questions)} câu hỏi nghe!")
 
-        # Tự động điền text in trên đề (booklet options) cho các câu hỏi thuần chữ của Mondai 1 và Mondai 2
-        # Giúp đề thi hiển thị chữ Nhật chuẩn xác thay vì "選択肢 1, 2, 3, 4"
-        N4_BOOKLET_TEXT = {
-            ("TASK_BASED", 3): ["2まい", "4まい", "5まい", "6まい"],
-            ("TASK_BASED", 4): ["ア・イ", "ア・エ", "イ・ウ", "イ・エ"],
-            ("TASK_BASED", 7): ["8時半に きょうしつ", "8時半に たいいくかんの 前", "9時に きょうしつ", "9時に たいいくかんの 前"],
-            ("TASK_BASED", 8): ["あかと きいろ", "あかと しろ", "あおと きいろ", "あおと しろ"],
-            ("KEY_POINT", 1): ["りょうしん", "あね", "いもうと", "おとうと"],
-            ("KEY_POINT", 2): ["今すぐ", "今日の 4時", "今日の 6時", "あしたの ひる"],
-            ("KEY_POINT", 3): ["りょこうに 行きたいから", "デパートで かいものが したいから", "日本人の はたらきかたが しりたいから", "日本語の べんきょうが したいから"],
-            ("KEY_POINT", 4): ["かようび", "すいようび", "もくようび", "きんようび"],
-            ("KEY_POINT", 5): ["ぜんぜん 読まない", "月に 1さつ 読む", "月に 3さつ 読む", "月に 10さついじょう 読む"],
-            ("KEY_POINT", 6): ["小学校の 先生", "ピアニスト", "けいさつかん", "かんごし"],
-            ("KEY_POINT", 7): ["10時", "10時10分", "10時20分", "10時30分"],
-        }
-        for q in final_questions:
-            m_code = q.get("mondai_code")
-            raw_q = q.get("raw_question_number")
-            key = (m_code, raw_q)
-            if key in N4_BOOKLET_TEXT:
-                texts = N4_BOOKLET_TEXT[key]
-                if not q.get("options"):
-                    q["options"] = [{"option_key": i + 1, "option_text": t, "is_correct": False} for i, t in enumerate(texts)]
-                else:
-                    for i, t in enumerate(texts):
-                        if i < len(q["options"]):
-                            q["options"][i]["option_text"] = t
+        # Trích xuất linh động các text options in trên đề nghe bằng AI/OCR từ file PDF được tải lên (nếu có)
+        if target_pdf_files and use_gemini and final_questions:
+            try:
+                parser = get_gemini_parser()
+                for p_file in target_pdf_files:
+                    p_file.file.seek(0)
+                    p_bytes = await p_file.read()
+                    if p_bytes:
+                        dynamic_opts = parser.extract_listening_booklet_text(p_bytes, jlpt_level=jlpt_level)
+                        if dynamic_opts:
+                            for q in final_questions:
+                                m_code = q.get("mondai_code")
+                                raw_q = q.get("raw_question_number")
+                                key = (m_code, raw_q)
+                                if key in dynamic_opts:
+                                    texts = dynamic_opts[key]
+                                    for i, t in enumerate(texts):
+                                        if i < len(q.get("options") or []):
+                                            q["options"][i]["option_text"] = t
+            except Exception as e:
+                logger.debug(f"Trích xuất booklet text options linh động từ PDF: {e}")
 
         # Đảm bảo các câu hỏi thuộc mondai thuần chữ (KEY_POINT, QUICK_RESPONSE) không gán nhầm ảnh
         for q in final_questions:

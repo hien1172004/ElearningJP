@@ -513,6 +513,77 @@ class GeminiExamParser:
 
         return None
 
+    def extract_listening_booklet_text(
+        self,
+        pdf_bytes: bytes,
+        jlpt_level: str = "N4",
+    ) -> Dict[Tuple[str, int], List[str]]:
+        """
+        Bóc tách tự động và linh hoạt các lựa chọn bằng chữ (text options) từ tờ đề thi nghe PDF (聴解問題用紙).
+        Chỉ trích xuất các câu có lựa chọn in chữ (ví dụ Mondai 1 các câu chữ, Mondai 2), không tạo câu hỏi mới.
+        """
+        results: Dict[Tuple[str, int], List[str]] = {}
+        try:
+            import fitz
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            if len(doc) == 0:
+                return results
+
+            # Render các trang đề thi có thể chứa lựa chọn in (thường từ trang 3 đến trang 13)
+            page_parts = []
+            scan_pages = range(min(2, len(doc)), min(13, len(doc)))
+            for p_no in scan_pages:
+                pix = doc[p_no].get_pixmap(dpi=150)
+                img_data = pix.tobytes("png")
+                page_parts.append(
+                    self._genai.types.Part.from_bytes(data=img_data, mime_type="image/png")
+                )
+
+            if not page_parts:
+                return results
+
+            prompt = f"""Bạn là chuyên gia phân tích đề thi tiếng Nhật JLPT cấp {jlpt_level}.
+Đây là các trang trong tờ đề thi nghe (聴解問題用紙).
+Hãy tìm tất cả các câu hỏi có các lựa chọn in sẵn bằng CHỮ (text choices, 1 2 3 4 là chữ).
+Trích xuất:
+- mondai_code: 'TASK_BASED' (cho 問題1) hoặc 'KEY_POINT' (cho 問題2)
+- raw_question_number: số thứ tự câu trong Mondai (1, 2, 3...)
+- options: mảng 4 chuỗi text tiếng Nhật của 4 lựa chọn in trên đề.
+
+Tuyệt đối bỏ qua các câu có 4 hình ảnh đáp án hoặc tranh tình huống. Chỉ lấy các câu có lựa chọn là chữ.
+Trả về JSON duy nhất:
+{{
+  "booklet_options": [
+    {{
+      "mondai_code": "TASK_BASED",
+      "raw_question_number": 3,
+      "options": ["...", "...", "...", "..."]
+    }}
+  ]
+}}"""
+
+            config = self._genai.types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+            response = self._generate_with_fallback(
+                contents=[prompt] + page_parts,
+                config=config,
+            )
+            if response and response.text:
+                data = json.loads(response.text)
+                items = data.get("booklet_options", [])
+                for it in items:
+                    m = it.get("mondai_code")
+                    rn = it.get("raw_question_number")
+                    opts = it.get("options")
+                    if m and rn and isinstance(opts, list) and len(opts) == 4:
+                        results[(m, int(rn))] = [str(o).strip() for o in opts]
+                logger.info(f"✅ [GEMINI_BOOKLET] Đã bóc tách tự động {len(results)} câu hỏi có text options từ PDF nghe!")
+        except Exception as e:
+            logger.warning(f"⚠️ [GEMINI_BOOKLET] Không thể trích xuất tự động text options từ PDF ({e}). Giữ options mặc định.")
+
+        return results
+
     # ================================================================
     # PUBLIC API: PARSE PDF
     # ================================================================
