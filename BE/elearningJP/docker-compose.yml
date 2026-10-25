@@ -66,6 +66,8 @@ services:
       CLOUD_NAME: ${CLOUD_NAME}
       CLOUD_API_KEY: ${CLOUD_API_KEY}
       CLOUD_API_SECRET: ${CLOUD_API_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
     depends_on:
       postgres:
         condition: service_healthy

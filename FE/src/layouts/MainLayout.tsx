@@ -1,6 +1,6 @@
 import React from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Search, LogIn, LogOut, User as UserIcon, GraduationCap, BookOpen, Award, ShieldCheck } from 'lucide-react'
+import { Search, LogIn, LogOut, User as UserIcon, GraduationCap, BookOpen, Award, ShieldCheck, Mic } from 'lucide-react'
 import { useAuthStore } from '@/stores'
 import { useLogout } from '@/hooks'
 
@@ -74,6 +74,22 @@ export const MainLayout: React.FC = () => {
               >
                 <Award className="w-4 h-4" />
                 <span>Thi thử JLPT</span>
+              </Link>
+              <Link
+                to="/speaking"
+                className={`px-3 py-2 rounded-md transition flex items-center gap-1.5 ${
+                  location.pathname.startsWith('/speaking')
+                    ? 'text-indigo-600 bg-indigo-50/80 font-bold'
+                    : 'hover:text-indigo-600 hover:bg-gray-50'
+                }`}
+              >
+                <Mic className="w-4 h-4 text-purple-600" />
+                <span className="flex items-center gap-1">
+                  Luyện nói AI
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-linear-to-r from-purple-600 to-indigo-600 text-white leading-none">
+                    AI
+                  </span>
+                </span>
               </Link>
               {isAuthenticated && (
                 <Link
