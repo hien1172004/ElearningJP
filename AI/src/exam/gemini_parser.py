@@ -21,6 +21,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from dotenv import load_dotenv
+from PIL import Image
 
 load_dotenv()
 
