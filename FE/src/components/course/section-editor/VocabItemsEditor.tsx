@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, BookOpen, Eye, Search, Link2, X as XIcon, Volume2, Star } from 'lucide-react'
-import { Modal, Form, Input, InputNumber, App, Select, Switch, Spin, Empty, Tag } from 'antd'
+import { Modal, Form, Input, InputNumber, App, Select, Spin, Empty, Tag } from 'antd'
 import { z } from 'zod'
 import {
   type LessonVocabularyItem,

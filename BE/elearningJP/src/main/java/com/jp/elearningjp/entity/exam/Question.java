@@ -4,7 +4,6 @@ package com.jp.elearningjp.entity.exam;
 import com.jp.elearningjp.entity.content.ReadingPassage;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.shared.enums.JlptLevel;
-import com.jp.elearningjp.shared.enums.ReviewStatus;
 import com.jp.elearningjp.shared.enums.SkillType;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
 import jakarta.persistence.CascadeType;
@@ -24,8 +23,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "questions")
@@ -63,25 +60,26 @@ public class Question extends SoftDeletableEntity {
     @Column(name = "audio_play_limit", nullable = false)
     private Integer audioPlayLimit = 1;
 
+    @Column(name = "audio_start_time")
+    private Integer audioStartTime;
+
+    @Column(name = "audio_end_time")
+    private Integer audioEndTime;
+
     @Column(name = "transcript_jp", columnDefinition = "text")
     private String transcriptJp;
 
-    @Column(name = "explanation", columnDefinition = "text")
-    private String explanation;
+    @Column(name = "transcript_vi", columnDefinition = "text")
+    private String transcriptVi;
 
-    @Column(name = "ai_solved", nullable = false)
-    private boolean aiSolved = false;
+    @Column(name = "star_position")
+    private Short starPosition;
 
-    @Column(name = "difficulty")
-    private Short difficulty;
+    @Column(name = "has_visual_options", nullable = false)
+    private boolean hasVisualOptions = false;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "review_status", nullable = false, length = 20)
-    private ReviewStatus reviewStatus = ReviewStatus.DRAFT;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "tags", columnDefinition = "jsonb", nullable = false)
-    private List<String> tags = new ArrayList<>();
+    @Column(name = "explanation_vi", columnDefinition = "text")
+    private String explanationVi;
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true;

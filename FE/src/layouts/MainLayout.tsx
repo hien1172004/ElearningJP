@@ -1,6 +1,6 @@
-﻿import React from 'react'
+import React from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Search, LogIn, LogOut, User as UserIcon, GraduationCap, BookOpen } from 'lucide-react'
+import { Search, LogIn, LogOut, User as UserIcon, GraduationCap, BookOpen, Award, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/stores'
 import { useLogout } from '@/hooks'
 
@@ -64,18 +64,54 @@ export const MainLayout: React.FC = () => {
                 <BookOpen className="w-4 h-4" />
                 <span>Khóa học</span>
               </Link>
-              {isTeacherOrAdmin && (
+              <Link
+                to="/exams"
+                className={`px-3 py-2 rounded-md transition flex items-center gap-1.5 ${
+                  location.pathname === '/exams'
+                    ? 'text-indigo-600 bg-indigo-50/80 font-bold'
+                    : 'hover:text-indigo-600 hover:bg-gray-50'
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                <span>Thi thử JLPT</span>
+              </Link>
+              {isAuthenticated && (
                 <Link
-                  to="/teacher/courses"
+                  to="/exam-history"
                   className={`px-3 py-2 rounded-md transition flex items-center gap-1.5 ${
-                    location.pathname.startsWith('/teacher')
+                    location.pathname.startsWith('/exam-history')
                       ? 'text-indigo-600 bg-indigo-50/80 font-bold'
                       : 'hover:text-indigo-600 hover:bg-gray-50'
                   }`}
                 >
-                  <GraduationCap className="w-4 h-4" />
-                  <span>Quản lý</span>
+                  <span>Lịch sử thi</span>
                 </Link>
+              )}
+              {isTeacherOrAdmin && (
+                <>
+                  <Link
+                    to="/admin/dashboard"
+                    className={`px-3 py-2 rounded-md transition flex items-center gap-1.5 ${
+                      location.pathname.startsWith('/admin')
+                        ? 'text-indigo-600 bg-indigo-50/80 font-bold'
+                        : 'hover:text-indigo-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Quản lý đề thi</span>
+                  </Link>
+                  <Link
+                    to="/teacher/courses"
+                    className={`px-3 py-2 rounded-md transition flex items-center gap-1.5 ${
+                      location.pathname.startsWith('/teacher')
+                        ? 'text-indigo-600 bg-indigo-50/80 font-bold'
+                        : 'hover:text-indigo-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <GraduationCap className="w-4 h-4" />
+                    <span>Khóa học</span>
+                  </Link>
+                </>
               )}
             </nav>
           </div>
@@ -104,7 +140,7 @@ export const MainLayout: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => logout()}
-                  className="text-sm font-semibold px-3 py-2 bg-rose-50 text-rose-700 rounded-md hover:bg-rose-100 transition flex items-center gap-1.5"
+                  className="text-sm font-semibold px-3 py-2 bg-rose-50 text-rose-700 rounded-md hover:bg-rose-100 transition flex items-center gap-1.5 cursor-pointer"
                   title="Đăng xuất"
                 >
                   <LogOut className="w-4 h-4" />
@@ -115,7 +151,7 @@ export const MainLayout: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-sm font-semibold px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 shadow-xs hover:shadow-sm active:scale-98 transition flex items-center gap-1.5"
+                className="text-sm font-semibold px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 shadow-xs hover:shadow-sm active:scale-98 transition flex items-center gap-1.5 cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Đăng nhập</span>

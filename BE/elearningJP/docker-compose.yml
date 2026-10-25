@@ -45,6 +45,7 @@ services:
   # 3. Spring Boot Backend Application
   # -------------------------------------------------------------
   backend:
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile

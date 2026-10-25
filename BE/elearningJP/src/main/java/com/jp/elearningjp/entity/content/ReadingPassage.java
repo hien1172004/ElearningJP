@@ -1,6 +1,5 @@
 package com.jp.elearningjp.entity.content;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
 import jakarta.persistence.Column;
@@ -10,8 +9,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 
 @Entity
@@ -37,9 +34,13 @@ public class ReadingPassage extends SoftDeletableEntity {
     @Column(name = "translation_vi", columnDefinition = "text")
     private String translationVi;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "vocab_notes_json", columnDefinition = "jsonb")
-    private JsonNode vocabNotesJson;
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "passage_type", nullable = false, length = 30)
+    private com.jp.elearningjp.shared.enums.PassageType passageType = com.jp.elearningjp.shared.enums.PassageType.TEXT;
+
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)

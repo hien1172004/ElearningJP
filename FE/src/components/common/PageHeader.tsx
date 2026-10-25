@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Sparkles } from 'lucide-react'
 
 interface PageHeaderProps {
@@ -57,9 +57,17 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       }`}
     >
       <div className="px-4 py-2.5">
+        {badge && (
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold ${badgeBgMap[variant]}`}>
+              {withSparkle && <Sparkles className="w-3 h-3" />}
+              {badge}
+            </span>
+          </div>
+        )}
         {/* Top row: title + actions */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">{title}</div>
+          <div className={`flex-1 min-w-0 ${titleMap[variant]}`}>{title}</div>
           {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
         </div>
 

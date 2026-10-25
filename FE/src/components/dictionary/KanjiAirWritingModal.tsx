@@ -10,7 +10,6 @@ import {
   Trash2,
   PenTool,
   Brain,
-  Check,
   Loader2,
   Layers,
   ArrowRight,

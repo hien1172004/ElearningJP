@@ -32,10 +32,11 @@ export function useReorderQuizQuestions(lessonId: number) {
     number[]
   >({
     mutationFn: async (questionIds: number[]) => {
-      return axiosClient.post<ApiResponse<LessonQuizItem[]>>(
+      const res = await axiosClient.post<ApiResponse<LessonQuizItem[]>>(
         `/lessons/${lessonId}/quiz/questions/reorder`,
         { itemIds: questionIds },
       )
+      return res.data
     },
     onSuccess: () => {
       toast.success('Đã cập nhật thứ tự câu hỏi')
