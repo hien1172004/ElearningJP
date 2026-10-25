@@ -127,8 +127,8 @@ Hãy nhìn vào hình ảnh trang đề thi này và trích xuất TẤT CẢ c�
 
    - DẠNG ĐỤC LỖ / NGỮ PHÁP ĐOẠN VĂN (TEXT_GRAMMAR - Mondai 3 Ngữ pháp):
      + Đề thi chứa một bài văn có các chỗ trống đánh số trong khung ô vuông ví dụ [ 21 ], [ 22 ], [ 23 ], [ 24 ], [ 25 ]...
-     + BẮT BUỘC TRÍCH XUẤT ĐỦ 100% CÁC CHỖ TRỐNG ĐÁNH SỐ TRÊN ĐỀ VÀO TRONG `passage.content_jp`: các chỗ trống này PHẢI ĐƯỢC ĐẶT TRONG NGOẶC VUÔNG RÕ RÀNG: `【 21 】`, `【 22 】`, `【 23 】`, `【 24 】`, `【 25 】`... TUYỆT ĐỐI KHÔNG để số trần không ngoặc (như "21。", "22 から", "23。", "24、", "ポチ 25")!
-     + TUYỆT ĐỐI KHÔNG TỰ ĐIỀN TỪ, TRỢ TỪ (như は, が, を, に, で...) HOẶC SỬA VĂN LÀM MẤT BẤT KỲ CHỖ TRỐNG NÀO (ĐẶC BIỆT CHỖ TRỐNG CUỐI CÙNG NHƯ 【 25 】)! Ví dụ trên đề là "ポチ [ 25 ] わたしたちの" thì PHẢI giữ nguyên là "ポチ 【 25 】 わたしたちの", TUYỆT ĐỐI KHÔNG được tự ý viết thành "ポチは わたしたちの".
+     + BẮT BUỘC TRÍCH XUẤT ĐỦ 100% CÁC CHỖ TRỐNG ĐÁNH SỐ TRÊN ĐỀ VÀO TRONG `passage.content_jp`: các chỗ trống này PHẢI ĐƯỢC ĐẶT TRONG NGOẶC VUÔNG RÕ RÀNG: `【 21 】`, `【 22 】`, `【 23 】`, `【 24 】`, `【 25 】`... TUYỆT ĐỐI KHÔNG để số trần không ngoặc (như "21。", "22 から", "23。", "24、", "名詞 25")!
+     + TUYỆT ĐỐI KHÔNG TỰ ĐIỀN TỪ, TRỢ TỪ (như は, が, を, に, で...) HOẶC SỬA VĂN LÀM MẤT BẤT KỲ CHỖ TRỐNG NÀO (ĐẶC BIỆT CHỖ TRỐNG CUỐI CÙNG NHƯ 【 25 】)! Ví dụ trên đề là "名詞 [ 25 ] わたしたちの" thì PHẢI giữ nguyên là "名詞 【 25 】 わたしたちの", TUYỆT ĐỐI KHÔNG được tự ý điền trợ từ (ví dụ "名詞は わたしたちの").
      + Vì dạng bài đục lỗ trên đề thi KHÔNG CÓ CÂU HỎI RIÊNG cho từng số, TUYỆT ĐỐI KHÔNG đưa câu chỉ dẫn đề bài ("もんだい３... 何を入れますか...") hay "( )" vào question_text!
      + `question_text` của từng câu đục lỗ BẮT BUỘC chỉ ghi số chỗ trống: "【 21 】", "【 22 】", "【 23 】", "【 24 】", "【 25 】"...
      + Toàn bộ bài văn này đưa vào trường `passage` của tất cả các câu hỏi đục lỗ trong bài.
@@ -240,9 +240,9 @@ Hãy nhìn vào hình ảnh trang đề thi này và trích xuất TẤT CẢ c�
       "image_box": null,
       "explanation_vi": "Giải thích",
       "passage": {{
-        "title": "「ポチ」 林 明",
+        "title": "文章の文法",
         "passage_type": "TEXT",
-        "content_jp": "わたしの 家には 「ポチ」 という 名前の 犬が います。... わたしたちは ポチを 家の 中で 【 21 】 。... ポチが 父の けいたいでんわを 【 22 】 からです。...",
+        "content_jp": "わたしの 家には 犬が います。... わたしたちは 犬を 家の 中で 【 21 】 。... 父の けいたいでんわを 【 22 】 からです。...",
         "translation_vi": ""
       }},
       "options": [
@@ -320,7 +320,7 @@ def _build_audio_extraction_prompt(jlpt_level: str) -> str:
      - Bắt đầu khi nghe xướng "問題2" (もんだいに).
      - Bỏ qua lời dẫn và câu ví dụ "例" (Rei).
      - BẮT BUỘC trích xuất ĐẦY ĐỦ 7 câu hỏi riêng biệt:
-       + Câu 1 (1番): bắt đầu bằng câu hỏi (ví dụ: "女の学生は誰と住んでいますか..."), sau đó có khoảng 15-20 GIÂY YÊN LẶNG để thí sinh đọc đề trên giấy, rồi đến đoạn hội thoại. ĐÂY LÀ 1 CÂU RIÊNG BIỆT!
+       + Câu 1 (1番): bắt đầu bằng câu hỏi (ví dụ câu hỏi đọc trước: "男の人と女の人が話しています..."), sau đó có khoảng 15-20 GIÂY YÊN LẶNG để thí sinh đọc đề trên giấy, rồi đến đoạn hội thoại. ĐÂY LÀ 1 CÂU RIÊNG BIỆT!
        + Câu 2 (2番)
        + Câu 3 (3番)
        + Câu 4 (4番)
@@ -377,8 +377,17 @@ Hãy nghe file audio bài nghe JLPT này và trích xuất thông tin cho TỪNG
 3. Viết lại transcript tiếng Nhật đầy đủ cho từng câu nghe.
 {mondai_rules}
 4. Phân biệt rõ từng Mondai dựa trên lời hướng dẫn (指示文) trong audio.
-5. Ghi nhận đầy đủ nội dung câu hỏi nghe (質問) và đáp án nếu được đọc trong audio.
-6. Mỗi câu hỏi nghe CHỈ CÓ DUY NHẤT 1 ĐÁP ÁN ĐÚNG (`is_correct: true`). Tuyệt đối không đánh dấu 2 đáp án đúng.
+5. QUY TẮC BẮT BUỘC VỀ PHƯƠNG ÁN LỰA CHỌN (OPTIONS):
+   - ĐẶC THÙ JLPT: Trong Mondai 1 (TASK_BASED) và Mondai 2 (KEY_POINT), các phương án lựa chọn ĐƯỢC IN TRÊN GIẤY (BOOKLET), HOÀN TOÀN KHÔNG ĐƯỢC ĐỌC TRONG AUDIO!
+   - Do đó, với Mondai 1 và Mondai 2: BẮT BUỘC để options là:
+     [
+       {"option_key": 1, "option_text": "選択肢 1", "is_correct": false},
+       {"option_key": 2, "option_text": "選択肢 2", "is_correct": false},
+       {"option_key": 3, "option_text": "選択肢 3", "is_correct": false},
+       {"option_key": 4, "option_text": "選択肢 4", "is_correct": false}
+     ]
+     TUYỆT ĐỐI KHÔNG TỰ BỊA RA PHƯƠNG ÁN CHỮ HÁN từ ngữ cảnh audio! Các phương án in trên giấy sẽ được lấy từ file PDF.
+   - Với Mondai 3 và Mondai 4: Người đọc có đọc 3 phương án 1, 2, 3 bằng lời trong audio, hãy ghi lại transcript của 3 phương án này (hoặc "選択肢 1", "選択肢 2", "選択肢 3").
 
 ## Trả về CHÍNH XÁC JSON theo format sau (không kèm markdown fences):
 {{
@@ -392,10 +401,10 @@ Hãy nghe file audio bài nghe JLPT này và trích xuất thông tin cho TỪNG
       "transcript_jp": "男：すみません、図書館はどこですか。\\n女：あそこの白い建物の2階ですよ。\\n男：ありがとうございます。",
       "explanation_vi": "Giải thích ngắn gọn bằng tiếng Việt",
       "options": [
-        {{"option_key": 1, "option_text": "白い建物の2階に行く", "is_correct": true}},
-        {{"option_key": 2, "option_text": "駅の前に行く", "is_correct": false}},
-        {{"option_key": 3, "option_text": "公園の隣に行く", "is_correct": false}},
-        {{"option_key": 4, "option_text": "スーパーに行く", "is_correct": false}}
+        {{"option_key": 1, "option_text": "選択肢 1", "is_correct": false}},
+        {{"option_key": 2, "option_text": "選択肢 2", "is_correct": false}},
+        {{"option_key": 3, "option_text": "選択肢 3", "is_correct": false}},
+        {{"option_key": 4, "option_text": "選択肢 4", "is_correct": false}}
       ]
     }}
   ]
@@ -545,20 +554,23 @@ class GeminiExamParser:
 
             prompt = f"""Bạn là chuyên gia phân tích đề thi tiếng Nhật JLPT cấp {jlpt_level}.
 Đây là các trang trong tờ đề thi nghe (聴解問題用紙).
-Hãy tìm tất cả các câu hỏi có các lựa chọn in sẵn bằng CHỮ (text choices, 1 2 3 4 là chữ).
-Trích xuất:
-- mondai_code: 'TASK_BASED' (cho 問題1) hoặc 'KEY_POINT' (cho 問題2)
-- raw_question_number: số thứ tự câu trong Mondai (1, 2, 3...)
-- options: mảng 4 chuỗi text tiếng Nhật của 4 lựa chọn in trên đề.
+Hãy tìm tất cả các câu hỏi có các lựa chọn in sẵn trên giấy (1, 2, 3, 4).
 
-Tuyệt đối bỏ qua các câu có 4 hình ảnh đáp án hoặc tranh tình huống. Chỉ lấy các câu có lựa chọn là chữ.
-Trả về JSON duy nhất:
+LƯU Ý CỰC KỲ QUAN TRỌNG:
+1. Đọc CHÍNH XÁC NGUYÊN VĂN từng chữ được in trên đề giấy:
+   - Nếu câu có tranh nhưng 4 phương án bên dưới in bằng ký hiệu Katakana hoặc chữ cái (ví dụ 'ア　イ', '1', 'A'...) thì BẮT BUỘC giữ nguyên ký hiệu in trên giấy, TUYỆT ĐỐI KHÔNG bỏ qua và TUYỆT ĐỐI KHÔNG tự ý mô tả tranh vẽ hay thay bằng chữ khác!
+   - Nếu đề in bằng Hiragana thì BẮT BUỘC giữ nguyên Hiragana nguyên bản theo đúng trình độ đề thi, TUYỆT ĐỐI KHÔNG tự ý chuyển đổi thành chữ Hán (Kanji)!
+   - Nếu chữ Hán có Furigana nhỏ ở trên, giữ nguyên hoặc dùng thẻ `<ruby>漢字<rt>furigana</rt></ruby>`.
+2. Bỏ qua các câu mà 4 phương án hoàn toàn là 4 hình vẽ (không có chữ in đáp án). Chỉ lấy các câu có phương án bằng chữ hoặc ký hiệu in sẵn.
+3. Xác định đúng mondai_code ('TASK_BASED' cho 問題1, 'KEY_POINT' cho 問題2) và raw_question_number (số thứ tự câu 1, 2, 3... trong Mondai đó).
+
+Trả về JSON duy nhất theo format schema mẫu:
 {{
   "booklet_options": [
     {{
       "mondai_code": "TASK_BASED",
-      "raw_question_number": 3,
-      "options": ["...", "...", "...", "..."]
+      "raw_question_number": 1,
+      "options": ["選択肢 1", "選択肢 2", "選択肢 3", "選択肢 4"]
     }}
   ]
 }}"""
@@ -2027,7 +2039,7 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
                 f'【 {num_str} 】',
                 result
             )
-            # 2. Nếu là số trần không ngoặc (e.g. " 21。", "22 から", "24、", "ポチ 25")
+            # 2. Nếu là số trần không ngoặc (e.g. " 21。", "22 から", "24、", "名詞 25")
             if f'【 {num_str} 】' not in result:
                 result = re.sub(
                     r'(?<![\d【])' + num_str + r'(?![\d】])',
@@ -2035,19 +2047,15 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
                     result
                 )
 
-            # 3. Nếu AI tự điền trợ từ làm mất chỗ trống (như câu 25 bị biến thành "ポチは わたしたち" hoặc "ポチ わたしたち")
-            if f'【 {num_str} 】' not in result:
-                if "ポチ" in result and "わたしたち" in result:
-                    result = re.sub(r'(ポチ)\s*(?:[はがにとで])?\s*(?=わたしたち)', rf' 【 {num_str} 】 ', result, count=1)
-
-                if f'【 {num_str} 】' not in result and q_opts:
-                    opt_words = [opt.get("option_text", "").strip() for opt in q_opts if opt.get("option_text")]
-                    for word in opt_words:
-                        if word and len(word) <= 3 and word in result:
-                            last_pos = result.rfind(word)
-                            if last_pos != -1:
-                                result = result[:last_pos] + f'【 {num_str} 】' + result[last_pos + len(word):]
-                                break
+            # 3. Nếu AI tự điền đáp án làm mất chỗ trống: tìm vị trí từ trùng với options để khôi phục chỗ trống
+            if f'【 {num_str} 】' not in result and q_opts:
+                opt_words = [opt.get("option_text", "").strip() for opt in q_opts if opt.get("option_text")]
+                for word in opt_words:
+                    if word and len(word) <= 3 and word in result:
+                        last_pos = result.rfind(word)
+                        if last_pos != -1:
+                            result = result[:last_pos] + f'【 {num_str} 】' + result[last_pos + len(word):]
+                            break
 
         return result
 

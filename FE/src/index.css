@@ -92,3 +92,8 @@ rt {
   user-select: none;
 }
 
+/* Chế độ ẩn Furigana khi học viên tự thử thách đọc chữ Hán */
+.hide-furigana rt {
+  display: none !important;
+}
+

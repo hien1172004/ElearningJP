@@ -23,6 +23,8 @@ import { VocabGrammarStandardForm } from '@/components/exam/forms/VocabGrammarSt
 import { PassageQuestionGroupForm } from '@/components/exam/forms/PassageQuestionGroupForm'
 import { ListeningQuestionForm } from '@/components/exam/forms/ListeningQuestionForm'
 import { FileUploadButton } from '@/components/exam/FileUploadButton'
+import { JapaneseTextEditor } from '@/components/common/JapaneseTextEditor'
+import { RichTextField } from '@/components/editor/RichTextField'
 import {
   FileText,
   Sparkles,
@@ -1685,15 +1687,13 @@ export const AdminExamPreviewPage: React.FC = () => {
                                         </div>
 
                                         <div>
-                                          <label className="block text-xs font-bold text-slate-700 mb-1">
-                                            Nội dung văn bản tiếng Nhật / Bảng biểu HTML:
-                                          </label>
-                                          <textarea
-                                            rows={6}
+                                          <RichTextField
+                                            label="Nội dung văn bản tiếng Nhật / Bảng biểu HTML:"
+                                            minRows={6}
                                             value={passageEditForm.contentJp}
-                                            onChange={(e) => setPassageEditForm({ ...passageEditForm, contentJp: e.target.value })}
+                                            onChange={(val) => setPassageEditForm({ ...passageEditForm, contentJp: val })}
                                             placeholder="Nội dung bài đọc tiếng Nhật..."
-                                            className="w-full p-2 text-xs border border-slate-300 rounded-xl font-serif bg-white leading-relaxed"
+                                            showClozeButton={true}
                                           />
                                         </div>
 
@@ -2713,179 +2713,83 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
           )}
 
           {/* Nếu là Nghe hiểu: Chỉnh sửa Audio riêng, mốc giây, ảnh câu hỏi */}
+          {/* Nếu là Nghe hiểu: Chỉnh sửa Audio trên 1 THANH DUY NHẤT & Tranh đề bài */}
           {isCurrentSectionListening && (
-            <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2.5">
-              <span className="text-xs font-bold text-indigo-900 flex items-center gap-1">
-                <Headphones className="w-3.5 h-3.5 text-indigo-600" />
-                Cấu hình âm thanh & Tranh vẽ cho câu {q.questionNumber}:
-              </span>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    <Music className="w-3.5 h-3.5 text-indigo-600" />
-                    File Audio riêng cho câu này (URL MP3 - Tùy chọn):
-                  </span>
+            <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-3 shadow-2xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Headphones className="w-4 h-4 text-indigo-600" />
+                  Cấu hình âm thanh cho câu {q.questionNumber}:
+                </span>
+                <div className="flex items-center gap-2">
                   <FileUploadButton
                     accept="audio"
                     folder="jlpt_exam/audios"
-                    buttonText="Tải MP3 riêng cho câu này"
+                    buttonText="Tải MP3 riêng"
                     onUploadSuccess={(url: string) => setEditForm({ ...editForm, audioUrl: url })}
                   />
-                </label>
-                <input
-                  type="text"
-                  value={editForm.audioUrl || ''}
-                  onChange={(e) => setEditForm({ ...editForm, audioUrl: e.target.value })}
-                  placeholder="https://.../cau_so.mp3 hoặc tải từ máy tính"
-                  className="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                />
-              </div>
-
-              {/* Thanh kéo chọn mốc âm thanh trực quan kèm nút gắn mốc */}
-              {(editForm.audioUrl || activeSectionAudioUrl || q.audioUrl) ? (
-                <div className="pt-1">
-                  <AudioSegmentTrimmer
-                    audioUrl={editForm.audioUrl}
-                    masterAudioUrl={activeSectionAudioUrl || q.audioUrl}
-                    startTime={editForm.audioStartTime ?? 0}
-                    endTime={editForm.audioEndTime ?? 30}
-                    onChangeStartTime={(val) =>
-                      setEditForm({
-                        ...editForm,
-                        audioStartTime: val,
-                      })
-                    }
-                    onChangeEndTime={(val) =>
-                      setEditForm({
-                        ...editForm,
-                        audioEndTime: val,
-                      })
-                    }
-                    title={`Kéo chỉnh đoạn âm thanh (Câu ${q.questionNumber})`}
-                  />
-
-                  {/* Nhập số chính xác thủ công nếu cần */}
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Bắt đầu (giây - nhập số):
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={editForm.audioStartTime ?? 0}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            audioStartTime: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Kết thúc (giây - nhập số):
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={editForm.audioEndTime ?? 0}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            audioEndTime: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Bắt đầu (giây):
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={editForm.audioStartTime ?? 0}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          audioStartTime: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Kết thúc (giây):
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={editForm.audioEndTime ?? 0}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          audioEndTime: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Tranh vẽ tình huống câu hỏi */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
-                    Hình ảnh tình huống câu hỏi (Tranh đề bài - Tùy chọn):
-                  </span>
                   <FileUploadButton
                     accept="image"
                     folder="jlpt_exam/images"
                     buttonText="Tải tranh đề bài"
                     onUploadSuccess={(url: string) => setEditForm({ ...editForm, imageUrl: url })}
                   />
-                </label>
-                <input
-                  type="text"
-                  value={editForm.imageUrl || ''}
-                  onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
-                  placeholder="https://.../tranh_de_bai.png hoặc tải từ máy tính"
-                  className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                />
-                {editForm.imageUrl && (
-                  <div className="mt-2 p-1.5 border border-indigo-200 rounded-lg bg-white inline-flex items-center gap-2">
-                    <img src={editForm.imageUrl} alt="Preview" className="h-16 rounded object-contain" />
-                    <button
-                      type="button"
-                      onClick={() => setEditForm({ ...editForm, imageUrl: '' })}
-                      className="text-[10px] text-rose-600 font-bold hover:underline"
-                    >
-                      Xóa ảnh
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
 
+              {/* THANH KÉO AUDIO DUY NHẤT VỚI DUAL-HANDLES */}
+              {(editForm.audioUrl || activeSectionAudioUrl || q.audioUrl) ? (
+                <AudioSegmentTrimmer
+                  audioUrl={editForm.audioUrl}
+                  masterAudioUrl={activeSectionAudioUrl || q.audioUrl}
+                  startTime={editForm.audioStartTime ?? 0}
+                  endTime={editForm.audioEndTime ?? 30}
+                  onChangeStartTime={(val) =>
+                    setEditForm({
+                      ...editForm,
+                      audioStartTime: val,
+                    })
+                  }
+                  onChangeEndTime={(val) =>
+                    setEditForm({
+                      ...editForm,
+                      audioEndTime: val,
+                    })
+                  }
+                  title={`Cắt mốc âm thanh (Câu ${q.questionNumber})`}
+                />
+              ) : null}
+
+              {/* Tranh vẽ tình huống nếu có */}
+              {editForm.imageUrl && (
+                <div className="flex items-center gap-3 p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <img
+                    src={editForm.imageUrl}
+                    alt="Tranh đề bài"
+                    className="w-16 h-16 object-contain rounded-lg border border-slate-100 bg-slate-50"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-slate-700 block">Tranh vẽ tình huống đề bài</span>
+                    <span className="text-[10px] text-slate-400 font-mono truncate block">{editForm.imageUrl}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, imageUrl: '' })}
+                    className="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Xóa</span>
+                  </button>
+                </div>
+              )}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Kịch bản thoại tiếng Nhật (Scripts):
-                </label>
-                <textarea
-                  rows={2}
+                <RichTextField
+                  label="Kịch bản thoại tiếng Nhật (Scripts):"
+                  minRows={2}
                   value={editForm.transcriptJp || ''}
-                  onChange={(e) => setEditForm({ ...editForm, transcriptJp: e.target.value })}
-                  className="w-full p-1.5 border border-slate-300 rounded-lg text-xs font-serif bg-white"
+                  onChange={(html) => setEditForm({ ...editForm, transcriptJp: html })}
+                  placeholder="Nhập kịch bản lời thoại tiếng Nhật..."
+                  enableSpeakerLabel={true}
                 />
               </div>
             </div>
@@ -2917,29 +2821,18 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
             </div>
           )}
 
-          {/* Nội dung câu hỏi */}
+          {/* Nội dung câu hỏi WYSIWYG */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700">
-                Câu hỏi:
-              </label>
-              {hasSubmissions && (
-                <span className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-amber-600" />
-                  Đã khóa sửa chữ (Đã có bài nộp)
-                </span>
-              )}
-            </div>
-            <textarea
-              rows={2}
+            <RichTextField
+              label="Câu hỏi:"
+              minRows={2}
               value={editForm.questionText}
               disabled={hasSubmissions}
-              onChange={(e) => setEditForm({ ...editForm, questionText: e.target.value })}
-              className={`w-full p-2 border rounded-xl text-xs font-serif ${
-                hasSubmissions
-                  ? 'bg-slate-100/90 border-slate-200 text-slate-500 cursor-not-allowed select-none'
-                  : 'bg-white border-slate-300'
-              }`}
+              onChange={(val) => setEditForm({ ...editForm, questionText: val })}
+              placeholder="Nhập nội dung câu hỏi tiếng Nhật..."
+              showStarButton={isStarQuestion}
+              showClozeButton={true}
+              helperText={hasSubmissions ? "Đề thi đã có bài nộp - Nội dung câu hỏi đã khóa" : undefined}
             />
           </div>
 
@@ -3080,22 +2973,19 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
                     <span className="w-5 h-5 rounded-md bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-700">
                       {opt.optionKey}
                     </span>
-                    <input
-                      type="text"
-                      value={opt.optionText}
-                      disabled={hasSubmissions}
-                      onChange={(e) => {
-                        const updated = [...(editForm.options || [])]
-                        updated[idx].optionText = e.target.value
-                        setEditForm({ ...editForm, options: updated })
-                      }}
-                      placeholder={`Lựa chọn ${opt.optionKey}`}
-                      className={`flex-1 p-1.5 border rounded-lg text-xs font-serif ${
-                        hasSubmissions
-                          ? 'bg-slate-100/90 border-slate-200 text-slate-500 cursor-not-allowed select-none'
-                          : 'bg-white border-slate-300'
-                      }`}
-                    />
+                    <div className="flex-1">
+                      <RichTextField
+                        variant="singleline"
+                        value={opt.optionText}
+                        disabled={hasSubmissions}
+                        onChange={(val) => {
+                          const updated = [...(editForm.options || [])]
+                          updated[idx].optionText = val
+                          setEditForm({ ...editForm, options: updated })
+                        }}
+                        placeholder={`Nhập phương án ${opt.optionKey}...`}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
