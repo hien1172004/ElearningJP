@@ -98,7 +98,8 @@ async def startup_event():
     try:
         KanjiRecognitionService.get_instance()
         KanjiVGService.get_instance()
-        logger.info("✅ Dịch vụ AI & KanjiVG sẵn sàng phục vụ!")
+        get_kakasi()
+        logger.info("✅ Dịch vụ AI, KanjiVG & PyKakasi sẵn sàng phục vụ!")
     except Exception as e:
         logger.error(f"❌ Không thể nạp mô hình hoặc dữ liệu KanjiVG: {e}", exc_info=True)
 
@@ -117,6 +118,33 @@ async def health_check():
         service="ElearningJP AI Kanji Recognition",
         classes_count=len(service.labels)
     )
+
+
+# ==============================================================================
+# FURIGANA AUTO-SUGGESTION (PYKAKASI LOCAL ALGORITHM - 0% GEMINI, 0 TOKEN)
+# ==============================================================================
+
+_kakasi_instance = None
+
+def get_kakasi():
+    global _kakasi_instance
+    if _kakasi_instance is None:
+        import pykakasi
+        _kakasi_instance = pykakasi.kakasi()
+    return _kakasi_instance
+
+
+@app.get("/api/v1/furigana/suggest", tags=["Furigana"])
+def suggest_furigana(text: str = Query(..., min_length=1, description="Từ Hán tự cần tra cách đọc")):
+    """Tự động phân tích từ Hán tự và trả về cách đọc Hiragana tương ứng bằng thuật toán Kakasi offline (chạy < 5ms)."""
+    try:
+        k = get_kakasi()
+        result = k.convert(text)
+        reading = "".join([item["hira"] for item in result])
+        return {"text": text, "reading": reading, "success": True}
+    except Exception as e:
+        logger.warning(f"Lỗi gợi ý Furigana cho '{text}': {e}")
+        return {"text": text, "reading": "", "success": False}
 
 
 # ==============================================================================
@@ -345,10 +373,12 @@ async def extract_section_endpoint(
             except ImportError:
                 from exam.crop_jlpt import extract_images_from_pdf
 
+            cached_pdf_bytes: list[bytes] = []
             for p_file in target_pdf_files:
                 p_bytes = await p_file.read()
                 if not p_bytes:
                     continue
+                cached_pdf_bytes.append(p_bytes)
 
                 # 1.1. Tự động crop toàn bộ tranh ảnh (choices 2x2 & tranh minh hoạ single) bằng OpenCV layout
                 try:
@@ -366,7 +396,11 @@ async def extract_section_endpoint(
                     logger.warning(f"Lỗi khi trích xuất tranh ảnh bằng crop_jlpt: {crop_err}")
 
                 # 1.2. Bóc tách câu hỏi và nội dung đề qua Gemini nếu use_gemini bật
-                if use_gemini:
+                # LƯU Ý ĐẶC THÙ JLPT: Với đề thi nghe (LISTENING), tờ đề PDF là tập tranh và lựa chọn in (聴解問題用紙).
+                # Toàn bộ câu hỏi, lời thoại và mốc thời gian NẰM Ở FILE AUDIO.
+                # Do đó: Khi có audio_file, KHÔNG cho Gemini parse PDF thành các câu hỏi độc lập (sẽ bị ảo giác ra các câu hỏi giả).
+                # Chỉ parse PDF khi người dùng CHỈ TẢI PDF MÀ KHÔNG CÓ AUDIO.
+                if use_gemini and not audio_file:
                     try:
                         parser = get_gemini_parser()
                         logger.info(f"📄 Trích xuất câu hỏi từ PDF đề thi nghe: {p_file.filename}...")
@@ -481,9 +515,8 @@ async def extract_section_endpoint(
             tb_audio = audio_by_mondai.get("TASK_BASED", [])
             if tb_audio:
                 last_tb = tb_audio[-1]
-                t = last_tb.get("transcript_jp", "")
-                m2_pattern = r'(?:そのあと|その後)\s*問題用紙|問題\s*[2２二]|もんだい\s*[2２二に]|女の学生は誰と住んでいますか'
-                m = re.search(m2_pattern, t)
+                # Phát hiện ranh giới chuyển sang Mondai 2 dựa trên cấu trúc chuẩn JLPT (chữ 問題2 / もんだい2 / tín hiệu đọc đề giấy)
+                m2_pattern = r'(?:そのあと|その後)\s*問題用紙|問題\s*[2２二]|もんだい\s*[2２二に]|(?:それでは|では|つぎは|次は)\s*問題'
                 if m:
                     logger.info(f"🔍 [AUTO-HEAL] Phát hiện câu 8 Mondai 1 bị dính nội dung Mondai 2 tại vị trí {m.start()}! Đang phân tách...")
                     last_tb["transcript_jp"] = t[:m.start()].strip()
@@ -640,6 +673,25 @@ async def extract_section_endpoint(
                 jlpt_level=jlpt_level,
             )
             logger.info(f"🎨 [CROP_JLPT] Đã tự động gán ảnh đáp án (choices) và ảnh đề bài (single) vào {len(final_questions)} câu hỏi nghe!")
+
+        # Bóc tách 100% các lựa chọn in trên đề thi giấy (PDF Booklet) để đưa vào options
+        if target_pdf_files and use_gemini and final_questions and 'cached_pdf_bytes' in locals() and cached_pdf_bytes:
+            try:
+                parser = get_gemini_parser()
+                for p_bytes in cached_pdf_bytes:
+                    dynamic_opts = parser.extract_listening_booklet_text(p_bytes, jlpt_level=jlpt_level)
+                    if dynamic_opts:
+                        for q in final_questions:
+                            m_code = q.get("mondai_code")
+                            raw_q = q.get("raw_question_number")
+                            key = (m_code, raw_q)
+                            if key in dynamic_opts:
+                                texts = dynamic_opts[key]
+                                for i, t in enumerate(texts):
+                                    if i < len(q.get("options") or []):
+                                        q["options"][i]["option_text"] = t
+            except Exception as e:
+                logger.warning(f"Lỗi khi trích xuất booklet text options từ PDF: {e}")
 
         # Đảm bảo các câu hỏi thuộc mondai thuần chữ (KEY_POINT, QUICK_RESPONSE) không gán nhầm ảnh
         for q in final_questions:

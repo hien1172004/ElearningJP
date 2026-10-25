@@ -16,6 +16,7 @@ import com.jp.elearningjp.repository.exam.*;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.exam.AdminExamService;
 import com.jp.elearningjp.shared.enums.*;
+import com.jp.elearningjp.shared.util.HtmlSanitizerUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -331,7 +332,7 @@ public class AdminExamServiceImpl implements AdminExamService {
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_QUESTION_NOT_FOUND));
 
         if (request.getQuestionText() != null) {
-            question.setQuestionText(request.getQuestionText());
+            question.setQuestionText(HtmlSanitizerUtil.sanitize(request.getQuestionText()));
         }
         if (request.getImageUrl() != null) {
             question.setImageUrl(request.getImageUrl());
@@ -346,7 +347,7 @@ public class AdminExamServiceImpl implements AdminExamService {
             question.setAudioEndTime(request.getAudioEndTime());
         }
         if (request.getTranscriptJp() != null) {
-            question.setTranscriptJp(request.getTranscriptJp());
+            question.setTranscriptJp(HtmlSanitizerUtil.sanitize(request.getTranscriptJp()));
         }
         if (request.getTranscriptVi() != null) {
             question.setTranscriptVi(request.getTranscriptVi());
@@ -393,7 +394,7 @@ public class AdminExamServiceImpl implements AdminExamService {
                                     o.getOptionKey().shortValue() == optReq.getOptionKey().shortValue()))
                         .findFirst()
                         .ifPresent(o -> {
-                            if (optReq.getOptionText() != null) o.setOptionText(optReq.getOptionText());
+                            if (optReq.getOptionText() != null) o.setOptionText(HtmlSanitizerUtil.sanitize(optReq.getOptionText()));
                             if (optReq.getOptionImageUrl() != null) o.setOptionImageUrl(optReq.getOptionImageUrl());
                             if (finalCorrectKey != null && o.getOptionKey() != null) {
                                 o.setCorrect(o.getOptionKey().shortValue() == finalCorrectKey.shortValue());
@@ -413,7 +414,7 @@ public class AdminExamServiceImpl implements AdminExamService {
                 passage = ReadingPassage.builder()
                         .title(request.getPassageTitle() != null ? request.getPassageTitle() : "Bài đọc hiểu")
                         .jlptLevel(question.getJlptLevel())
-                        .contentJp(request.getPassageContentJp())
+                        .contentJp(HtmlSanitizerUtil.sanitize(request.getPassageContentJp()))
                         .translationVi(request.getPassageTranslationVi())
                         .imageUrl(request.getPassageImageUrl())
                         .active(true)
@@ -422,7 +423,7 @@ public class AdminExamServiceImpl implements AdminExamService {
                 question.setPassage(passage);
             } else {
                 if (request.getPassageTitle() != null) passage.setTitle(request.getPassageTitle());
-                if (request.getPassageContentJp() != null) passage.setContentJp(request.getPassageContentJp());
+                if (request.getPassageContentJp() != null) passage.setContentJp(HtmlSanitizerUtil.sanitize(request.getPassageContentJp()));
                 if (request.getPassageTranslationVi() != null) passage.setTranslationVi(request.getPassageTranslationVi());
                 if (request.getPassageImageUrl() != null) passage.setImageUrl(request.getPassageImageUrl());
                 readingPassageRepository.save(passage);

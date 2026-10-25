@@ -23,12 +23,13 @@ import { VocabGrammarStandardForm } from '@/components/exam/forms/VocabGrammarSt
 import { PassageQuestionGroupForm } from '@/components/exam/forms/PassageQuestionGroupForm'
 import { ListeningQuestionForm } from '@/components/exam/forms/ListeningQuestionForm'
 import { FileUploadButton } from '@/components/exam/FileUploadButton'
+import { JapaneseTextEditor } from '@/components/common/JapaneseTextEditor'
+import { RichTextField } from '@/components/editor/RichTextField'
 import {
   FileText,
   Sparkles,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
   PlusCircle,
   Edit3,
   Trash2,
@@ -53,6 +54,9 @@ import {
   Camera,
   Copy,
   Lock,
+  ChevronDown,
+  SlidersHorizontal,
+  ArrowRight,
 } from 'lucide-react'
 
 export const AdminExamPreviewPage: React.FC = () => {
@@ -128,6 +132,22 @@ export const AdminExamPreviewPage: React.FC = () => {
   const [isRollbackModalOpen, setIsRollbackModalOpen] = useState<boolean>(false)
   const [isRollingBack, setIsRollingBack] = useState<boolean>(false)
   const [isTakingSnapshot, setIsTakingSnapshot] = useState<boolean>(false)
+
+  // Dropdown công cụ nâng cao
+  const [isToolsDropdownOpen, setIsToolsDropdownOpen] = useState<boolean>(false)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('#tools-dropdown-container')) {
+        setIsToolsDropdownOpen(false)
+      }
+    }
+    if (isToolsDropdownOpen) {
+      document.addEventListener('click', handleClickOutside)
+    }
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [isToolsDropdownOpen])
 
   useEffect(() => {
     if (!examId) return
@@ -923,133 +943,182 @@ export const AdminExamPreviewPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50/50 pb-20">
       {/* Header Bar */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs px-4 sm:px-8 py-3.5">
+      <div className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-xs px-4 sm:px-8 py-3.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               title="Quay lại danh sách quản lý đề thi"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-700 uppercase">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800 uppercase">
                   {previewData.jlptLevel}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                <span className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                   {previewData.examType === 'JLPT_OFFICIAL_MOCK'
                     ? 'Đề thi thử JLPT'
                     : 'Bài thi khóa học'}
                 </span>
                 {previewData.published ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 border border-emerald-300">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Đã công khai / Phát hành
+                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Đã xuất bản
                   </span>
                 ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 flex items-center gap-1 border border-amber-300">
-                    <Edit3 className="w-3.5 h-3.5 text-amber-700" /> Bản nháp (Đã lưu tự động • Chưa công khai)
+                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400 flex items-center gap-1.5 border border-amber-200 dark:border-amber-800">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    Bản nháp (Đã lưu tự động)
                   </span>
                 )}
               </div>
-              <h1 className="text-base sm:text-lg font-extrabold text-slate-900 line-clamp-1">
+              <h1 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white line-clamp-1 mt-0.5">
                 {previewData.title}
               </h1>
             </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-2.5">
-            {/* Nút Lưu nháp & Thoát */}
+          <div className="flex items-center gap-2">
+            {/* Lưu nháp & Thoát */}
             <button
               type="button"
               onClick={() => navigate('/admin/dashboard')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition shadow-xs cursor-pointer border border-slate-300"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition border border-slate-200 dark:border-slate-700 cursor-pointer shadow-xs"
               title="Tất cả thay đổi đã được tự động lưu. Bấm để trở về danh sách đề thi."
             >
-              <Save className="w-4 h-4 text-slate-600" />
-              <span>Lưu nháp & Thoát</span>
+              <Save className="w-4 h-4 text-slate-500" />
+              <span className="hidden sm:inline">Lưu & Thoát</span>
             </button>
 
-            {/* Nút Tạo điểm lưu / Checkpoint thủ công */}
-            <button
-              type="button"
-              onClick={handleCreateManualSnapshot}
-              disabled={isTakingSnapshot}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs cursor-pointer border border-slate-300 disabled:opacity-50"
-              title="Ghi nhớ trạng thái hiện tại làm điểm phục hồi an toàn"
-            >
-              <Camera className="w-3.5 h-3.5 text-indigo-600" />
-              <span>{isTakingSnapshot ? 'Đang lưu...' : 'Tạo điểm lưu'}</span>
-            </button>
-
-            {/* Nút Hoàn tác về bản lưu ban đầu */}
-            {snapshotTimestamp && (
+            {/* Dropdown Công cụ nâng cao */}
+            <div id="tools-dropdown-container" className="relative">
               <button
                 type="button"
-                onClick={() => setIsRollbackModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold transition shadow-xs cursor-pointer"
-                title={`Hủy bỏ các sửa đổi và khôi phục lại đề thi về trạng thái lúc ${snapshotTimestamp}`}
+                onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition border border-slate-200 dark:border-slate-700 cursor-pointer shadow-xs"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
-                <span>Hoàn tác ({snapshotTimestamp})</span>
+                <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                <span>Công cụ</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isToolsDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
-            )}
 
-            {/* Nút Đánh số lại thứ tự câu hỏi toàn đề */}
-            <button
-              type="button"
-              onClick={handleReorderQuestions}
-              disabled={isReordering}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
-              title="Tự động sắp xếp các câu hỏi theo thứ tự chuẩn JLPT và đánh số mỗi phần bắt đầu từ câu 1"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-violet-600 ${isReordering ? 'animate-spin' : ''}`} />
-              <span>{isReordering ? 'Đang sắp xếp...' : 'Sắp xếp số câu (1➔N mỗi phần)'}</span>
-            </button>
+              {isToolsDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/80 dark:border-slate-800 p-2 z-50 space-y-1 animate-in fade-in-50 zoom-in-95 duration-150">
+                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Bản lưu & Phục hồi
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsToolsDropdownOpen(false)
+                      handleCreateManualSnapshot()
+                    }}
+                    disabled={isTakingSnapshot}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left cursor-pointer disabled:opacity-50"
+                  >
+                    <Camera className="w-4 h-4 text-indigo-600" />
+                    <span>{isTakingSnapshot ? 'Đang lưu...' : 'Tạo điểm lưu (Snapshot)'}</span>
+                  </button>
 
-            {/* Nút Nhân bản đề thi sang bản mới an toàn */}
-            <button
-              type="button"
-              onClick={handleCloneExam}
-              disabled={isCloning}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
-              title="Tạo một bản sao mới (Draft) độc lập để chỉnh sửa câu hỏi mà không làm hỏng bài làm đã nộp của thí sinh"
-            >
-              <Copy className={`w-3.5 h-3.5 text-teal-600 ${isCloning ? 'animate-spin' : ''}`} />
-              <span>{isCloning ? 'Đang nhân bản...' : 'Nhân bản đề (Bản mới)'}</span>
-            </button>
+                  {snapshotTimestamp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsDropdownOpen(false)
+                        setIsRollbackModalOpen(true)
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition text-left cursor-pointer"
+                    >
+                      <RotateCcw className="w-4 h-4 text-amber-600" />
+                      <span>Hoàn tác ({snapshotTimestamp})</span>
+                    </button>
+                  )}
 
-            {/* Nút Chấm lại toàn bộ bài thi khi đã sửa đáp án */}
-            {(previewData.totalAttempts ?? 0) > 0 && (
-              <button
-                type="button"
-                onClick={handleRegradeExam}
-                disabled={isRegrading}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-800 border border-orange-200 text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
-                title={`Đề đã có ${previewData.totalAttempts} bài thi. Bấm để chấm lại điểm theo đáp án mới.`}
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-orange-600 ${isRegrading ? 'animate-spin' : ''}`} />
-                <span>{isRegrading ? 'Đang chấm lại...' : `Chấm lại (${previewData.totalAttempts} bài)`}</span>
-              </button>
-            )}
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Quản lý câu hỏi & Phiên bản
+                  </div>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsToolsDropdownOpen(false)
+                      handleReorderQuestions()
+                    }}
+                    disabled={isReordering}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 text-violet-600 ${isReordering ? 'animate-spin' : ''}`} />
+                    <span>{isReordering ? 'Đang sắp xếp...' : 'Sắp xếp số câu (1➔N)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsToolsDropdownOpen(false)
+                      handleCloneExam()
+                    }}
+                    disabled={isCloning}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left cursor-pointer disabled:opacity-50"
+                  >
+                    <Copy className={`w-4 h-4 text-teal-600 ${isCloning ? 'animate-spin' : ''}`} />
+                    <span>{isCloning ? 'Đang nhân bản...' : 'Nhân bản đề (Bản mới)'}</span>
+                  </button>
+
+                  {(previewData.totalAttempts ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsDropdownOpen(false)
+                        handleRegradeExam()
+                      }}
+                      disabled={isRegrading}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition text-left cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-4 h-4 text-orange-600 ${isRegrading ? 'animate-spin' : ''}`} />
+                      <span>{isRegrading ? 'Đang chấm lại...' : `Chấm lại (${previewData.totalAttempts} bài)`}</span>
+                    </button>
+                  )}
+
+                  {previewData.published && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsToolsDropdownOpen(false)
+                        handleUnpublishExam()
+                      }}
+                      disabled={unpublishing}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition text-left cursor-pointer disabled:opacity-50"
+                    >
+                      <EyeOff className="w-4 h-4 text-rose-600" />
+                      <span>{unpublishing ? 'Đang thu hồi...' : 'Thu hồi về Bản Nháp'}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Thêm câu hỏi mới */}
             <button
               type="button"
               onClick={() => handleOpenAddModal()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 text-xs font-bold transition shadow-xs cursor-pointer"
             >
               <PlusCircle className="w-4 h-4 text-indigo-600" />
-              <span>Thêm câu hỏi mới</span>
+              <span>+ Thêm câu hỏi</span>
             </button>
 
+            {/* Phát hành đề thi */}
             {!previewData.published ? (
               <button
                 type="button"
                 onClick={handlePublishExam}
                 disabled={publishing || publishSuccess}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white text-xs font-bold transition shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
               >
                 <Share2 className="w-4 h-4" />
                 <span>{publishing ? 'Đang phát hành...' : publishSuccess ? 'Đã phát hành!' : 'Phát hành đề thi'}</span>
@@ -1131,33 +1200,52 @@ export const AdminExamPreviewPage: React.FC = () => {
         ) : null}
 
         {/* Navigation Tabs cho từng Section trong đề thi */}
-        <div className="bg-white rounded-3xl p-2 shadow-xs border border-slate-200 flex flex-wrap gap-1.5">
+        <div className="bg-slate-200/60 dark:bg-slate-800/60 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 grid grid-cols-1 sm:grid-cols-3 gap-2">
           {previewData.sections.map((sec: AdminTakingSection, idx: number) => {
             const isActive = idx === activeSectionIdx
+            const cleanTitle = sec.sectionTitle.replace(/\s*\(\d+\s*phút\)/i, '').trim()
+            const duration = sec.durationMinutes || (sec.sessionType === 'LISTENING' ? 35 : 30)
+
             return (
               <button
                 key={sec.id}
                 type="button"
                 onClick={() => setActiveSectionIdx(idx)}
-                className={`flex-1 min-w-[200px] flex items-center justify-between px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm transition cursor-pointer ${
+                className={`relative flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-400 shadow-sm border border-slate-200/80 dark:border-slate-700'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <div className="flex items-center gap-2 truncate">
-                  {sec.sessionType === 'LISTENING' ? (
-                    <Headphones className="w-4 h-4 shrink-0" />
-                  ) : sec.sessionType === 'GRAMMAR_READING' ? (
-                    <BookOpen className="w-4 h-4 shrink-0" />
-                  ) : (
-                    <FileText className="w-4 h-4 shrink-0" />
-                  )}
-                  <span className="truncate">{sec.sectionTitle}</span>
+                <div className="flex items-center gap-3 truncate">
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition ${
+                      isActive
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                    }`}
+                  >
+                    {sec.sessionType === 'LISTENING' ? (
+                      <Headphones className="w-4 h-4" />
+                    ) : sec.sessionType === 'GRAMMAR_READING' ? (
+                      <BookOpen className="w-4 h-4" />
+                    ) : (
+                      <FileText className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="text-left truncate">
+                    <p className="truncate leading-tight">{cleanTitle}</p>
+                    <p className={`text-[11px] font-normal mt-0.5 ${isActive ? 'text-indigo-500/80 dark:text-indigo-400/80' : 'text-slate-400'}`}>
+                      {duration} phút
+                    </p>
+                  </div>
                 </div>
+
                 <span
-                  className={`text-[11px] font-mono px-2 py-0.5 rounded-full ml-2 ${
-                    isActive ? 'bg-indigo-700/60 text-white' : 'bg-slate-200 text-slate-700'
+                  className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full shrink-0 ml-2 ${
+                    isActive
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-800/50'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                   }`}
                 >
                   {sec.questions.length} câu
@@ -1168,24 +1256,26 @@ export const AdminExamPreviewPage: React.FC = () => {
         </div>
 
         {/* Thanh công cụ quản lý Section hiện tại */}
-        <div className="bg-white rounded-3xl p-5 shadow-xs border border-slate-200 space-y-4">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800">
                   {activeSection?.sessionType}
                 </span>
-                <h2 className="text-lg font-black text-slate-900">{activeSection?.sectionTitle}</h2>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                  {activeSection?.sectionTitle.replace(/\s*\(\d+\s*phút\)/i, '').trim()}
+                </h2>
               </div>
-              <p className="text-xs text-slate-500">
-                Thời lượng phần này: <strong>{activeSection?.durationMinutes || 30} phút</strong> • Tổng số câu: <strong>{activeSection?.questions.length} câu hỏi</strong> • Gồm <strong>{availableMondais.length} Mondai chuẩn JLPT</strong>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Thời lượng phần này: <strong className="text-slate-700 dark:text-slate-300">{activeSection?.durationMinutes || 30} phút</strong> • Tổng số: <strong className="text-slate-700 dark:text-slate-300">{activeSection?.questions.length} câu hỏi</strong> • Gồm <strong className="text-slate-700 dark:text-slate-300">{availableMondais.length} Mondai chuẩn JLPT</strong>
               </p>
             </div>
 
             {/* Nút công cụ thêm câu & quét AI cho riêng Section này */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <label
-                className={`px-3.5 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 text-emerald-700 text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer ${
                   isBatchApplyingAnswerKey ? 'opacity-50 pointer-events-none' : ''
                 }`}
                 title="Tải ảnh hoặc PDF bảng đáp án chuẩn (正答表) để tự động khớp đáp án cho các câu hỏi hiện tại"
@@ -1208,7 +1298,7 @@ export const AdminExamPreviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleOpenAddModal()}
-                className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <PlusCircle className="w-4 h-4 text-indigo-600" />
                 <span>+ Thêm câu hỏi</span>
@@ -1222,7 +1312,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   setAiSaveMode((activeSection?.questions?.length || 0) > 0 ? 'OVERWRITE' : 'APPEND')
                   setIsAiSectionModalOpen(true)
                 }}
-                className="px-3.5 py-2 rounded-xl bg-linear-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-linear-to-r from-amber-500 via-orange-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition shadow-sm shadow-orange-500/10 flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <Sparkles className="w-4 h-4 text-amber-200" />
                 <span>🤖 Quét & Thêm phần này bằng AI</span>
@@ -1232,39 +1322,40 @@ export const AdminExamPreviewPage: React.FC = () => {
 
           {/* Dành riêng cho phần Nghe hiểu: Cập nhật Audio tổng ca nghe */}
           {isCurrentSectionListening && (
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              <label className="block text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Volume2 className="w-4 h-4 text-indigo-600" />
-                  <span>Audio tổng của cả phần nghe (Dùng chung khi các câu cắt mốc start/end từ 1 file dài):</span>
-                </span>
+                  <span>Audio tổng hợp của toàn bộ phần nghe:</span>
+                </label>
                 <FileUploadButton
                   accept="audio"
                   folder="jlpt_exam/audios"
                   buttonText="Tải file MP3 tổng từ máy"
                   onUploadSuccess={(url: string) => setSectionAudioUrlInput(url)}
                 />
-              </label>
+              </div>
+
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={sectionAudioUrlInput}
                   onChange={(e) => setSectionAudioUrlInput(e.target.value)}
                   placeholder="https://.../ca_nghe_tong_hop.mp3 hoặc bấm tải file từ máy tính"
-                  className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
+                  className="flex-1 px-3.5 py-2.5 text-xs border border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono transition"
                 />
                 <button
                   type="button"
                   onClick={handleSaveSectionAudio}
                   disabled={isUpdatingAudio || !sectionAudioUrlInput.trim()}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40"
+                  className="px-4 py-2 bg-slate-900 hover:bg-black dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40 shrink-0"
                 >
                   {isUpdatingAudio ? 'Đang lưu...' : 'Lưu Audio tổng'}
                 </button>
               </div>
 
               {activeSection?.audioUrl && (
-                <div className="mt-2">
+                <div className="mt-2.5">
                   <QuestionAudioPlayer
                     audioUrl={activeSection.audioUrl}
                     title="Audio tổng hợp toàn bộ phần nghe"
@@ -1279,14 +1370,114 @@ export const AdminExamPreviewPage: React.FC = () => {
         {/* DANH SÁCH CÂU HỎI THEO TỪNG MONDAI (CHUẨN HÓA JLPT ĐÍCH THỰC) */}
         {/* ========================================================= */}
         {activeSection?.questions.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-12 text-center space-y-3">
-            <HelpCircle className="w-10 h-10 text-slate-400 mx-auto" />
-            <p className="text-slate-600 text-sm font-semibold">
-              Chưa có câu hỏi nào trong phần này.
-            </p>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
-              Bấm <strong>"+ Thêm câu hỏi vào phần này"</strong> để chọn Mondai và soạn thảo câu hỏi.
-            </p>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 sm:p-12 shadow-sm space-y-8">
+            <div className="text-center max-w-md mx-auto space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto shadow-sm">
+                <Sparkles className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                Phần này chưa có câu hỏi nào
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Chọn cách bạn muốn soạn thảo: Sử dụng AI để tự động trích xuất từ đề thi có sẵn, hoặc tự tay soạn từng câu hỏi chuẩn theo format JLPT.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              {/* Card 1: AI Trích xuất */}
+              <button
+                type="button"
+                onClick={() => {
+                  setAiSectionError(null)
+                  setAiExtractedQuestions([])
+                  setAiSaveMode('OVERWRITE')
+                  setIsAiSectionModalOpen(true)
+                }}
+                className="group relative p-6 rounded-2xl border-2 border-indigo-200/80 dark:border-indigo-800/80 hover:border-indigo-500 bg-linear-to-b from-indigo-50/50 to-white dark:from-indigo-950/20 dark:to-slate-900 text-left transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition">
+                        Quét & Trích xuất bằng AI
+                      </h4>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-800">
+                        Khuyên dùng
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      Tải lên file PDF hoặc Audio, AI sẽ tự động đọc đề, cắt tranh và điền câu hỏi trong vài giây.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span>Mở công cụ quét AI</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </button>
+
+              {/* Card 2: Soạn thủ công */}
+              <button
+                type="button"
+                onClick={() => handleOpenAddModal()}
+                className="group p-6 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-slate-400 bg-white dark:bg-slate-900 text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                    <PlusCircle className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition">
+                      Soạn câu hỏi thủ công
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      Tự chọn dạng Mondai (Từ vựng, Ngữ pháp, Đọc hiểu, Nghe hiểu) và nhập câu hỏi, hình ảnh, đáp án đúng.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span>+ Thêm câu hỏi đầu tiên</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </button>
+
+              {/* Card 3: Nạp bảng đáp án */}
+              <label
+                className="group p-6 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 bg-white dark:bg-slate-900 text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600">
+                    <FileCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition">
+                      Nạp bảng đáp án 正答表
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                      Tải file ảnh hoặc PDF bảng đáp án chính thức để AI tự động khớp đáp án đúng 100% khi có câu hỏi.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                  <span>{isBatchApplyingAnswerKey ? 'Đang khớp...' : 'Tải file đáp án lên'}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+                <input
+                  type="file"
+                  accept=".pdf,image/*"
+                  disabled={isBatchApplyingAnswerKey}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) handleApplyAnswerKeyToExistingQuestions(f)
+                    e.target.value = ''
+                  }}
+                  className="hidden"
+                />
+              </label>
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
@@ -1496,15 +1687,13 @@ export const AdminExamPreviewPage: React.FC = () => {
                                         </div>
 
                                         <div>
-                                          <label className="block text-xs font-bold text-slate-700 mb-1">
-                                            Nội dung văn bản tiếng Nhật / Bảng biểu HTML:
-                                          </label>
-                                          <textarea
-                                            rows={6}
+                                          <RichTextField
+                                            label="Nội dung văn bản tiếng Nhật / Bảng biểu HTML:"
+                                            minRows={6}
                                             value={passageEditForm.contentJp}
-                                            onChange={(e) => setPassageEditForm({ ...passageEditForm, contentJp: e.target.value })}
+                                            onChange={(val) => setPassageEditForm({ ...passageEditForm, contentJp: val })}
                                             placeholder="Nội dung bài đọc tiếng Nhật..."
-                                            className="w-full p-2 text-xs border border-slate-300 rounded-xl font-serif bg-white leading-relaxed"
+                                            showClozeButton={true}
                                           />
                                         </div>
 
@@ -2524,179 +2713,83 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
           )}
 
           {/* Nếu là Nghe hiểu: Chỉnh sửa Audio riêng, mốc giây, ảnh câu hỏi */}
+          {/* Nếu là Nghe hiểu: Chỉnh sửa Audio trên 1 THANH DUY NHẤT & Tranh đề bài */}
           {isCurrentSectionListening && (
-            <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2.5">
-              <span className="text-xs font-bold text-indigo-900 flex items-center gap-1">
-                <Headphones className="w-3.5 h-3.5 text-indigo-600" />
-                Cấu hình âm thanh & Tranh vẽ cho câu {q.questionNumber}:
-              </span>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    <Music className="w-3.5 h-3.5 text-indigo-600" />
-                    File Audio riêng cho câu này (URL MP3 - Tùy chọn):
-                  </span>
+            <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-3 shadow-2xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Headphones className="w-4 h-4 text-indigo-600" />
+                  Cấu hình âm thanh cho câu {q.questionNumber}:
+                </span>
+                <div className="flex items-center gap-2">
                   <FileUploadButton
                     accept="audio"
                     folder="jlpt_exam/audios"
-                    buttonText="Tải MP3 riêng cho câu này"
+                    buttonText="Tải MP3 riêng"
                     onUploadSuccess={(url: string) => setEditForm({ ...editForm, audioUrl: url })}
                   />
-                </label>
-                <input
-                  type="text"
-                  value={editForm.audioUrl || ''}
-                  onChange={(e) => setEditForm({ ...editForm, audioUrl: e.target.value })}
-                  placeholder="https://.../cau_so.mp3 hoặc tải từ máy tính"
-                  className="w-full p-2 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                />
-              </div>
-
-              {/* Thanh kéo chọn mốc âm thanh trực quan kèm nút gắn mốc */}
-              {(editForm.audioUrl || activeSectionAudioUrl || q.audioUrl) ? (
-                <div className="pt-1">
-                  <AudioSegmentTrimmer
-                    audioUrl={editForm.audioUrl}
-                    masterAudioUrl={activeSectionAudioUrl || q.audioUrl}
-                    startTime={editForm.audioStartTime ?? 0}
-                    endTime={editForm.audioEndTime ?? 30}
-                    onChangeStartTime={(val) =>
-                      setEditForm({
-                        ...editForm,
-                        audioStartTime: val,
-                      })
-                    }
-                    onChangeEndTime={(val) =>
-                      setEditForm({
-                        ...editForm,
-                        audioEndTime: val,
-                      })
-                    }
-                    title={`Kéo chỉnh đoạn âm thanh (Câu ${q.questionNumber})`}
-                  />
-
-                  {/* Nhập số chính xác thủ công nếu cần */}
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Bắt đầu (giây - nhập số):
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={editForm.audioStartTime ?? 0}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            audioStartTime: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Kết thúc (giây - nhập số):
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={editForm.audioEndTime ?? 0}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            audioEndTime: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Bắt đầu (giây):
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={editForm.audioStartTime ?? 0}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          audioStartTime: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Kết thúc (giây):
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      value={editForm.audioEndTime ?? 0}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          audioEndTime: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Tranh vẽ tình huống câu hỏi */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1">
-                    <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
-                    Hình ảnh tình huống câu hỏi (Tranh đề bài - Tùy chọn):
-                  </span>
                   <FileUploadButton
                     accept="image"
                     folder="jlpt_exam/images"
                     buttonText="Tải tranh đề bài"
                     onUploadSuccess={(url: string) => setEditForm({ ...editForm, imageUrl: url })}
                   />
-                </label>
-                <input
-                  type="text"
-                  value={editForm.imageUrl || ''}
-                  onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
-                  placeholder="https://.../tranh_de_bai.png hoặc tải từ máy tính"
-                  className="w-full p-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono"
-                />
-                {editForm.imageUrl && (
-                  <div className="mt-2 p-1.5 border border-indigo-200 rounded-lg bg-white inline-flex items-center gap-2">
-                    <img src={editForm.imageUrl} alt="Preview" className="h-16 rounded object-contain" />
-                    <button
-                      type="button"
-                      onClick={() => setEditForm({ ...editForm, imageUrl: '' })}
-                      className="text-[10px] text-rose-600 font-bold hover:underline"
-                    >
-                      Xóa ảnh
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
 
+              {/* THANH KÉO AUDIO DUY NHẤT VỚI DUAL-HANDLES */}
+              {(editForm.audioUrl || activeSectionAudioUrl || q.audioUrl) ? (
+                <AudioSegmentTrimmer
+                  audioUrl={editForm.audioUrl}
+                  masterAudioUrl={activeSectionAudioUrl || q.audioUrl}
+                  startTime={editForm.audioStartTime ?? 0}
+                  endTime={editForm.audioEndTime ?? 30}
+                  onChangeStartTime={(val) =>
+                    setEditForm({
+                      ...editForm,
+                      audioStartTime: val,
+                    })
+                  }
+                  onChangeEndTime={(val) =>
+                    setEditForm({
+                      ...editForm,
+                      audioEndTime: val,
+                    })
+                  }
+                  title={`Cắt mốc âm thanh (Câu ${q.questionNumber})`}
+                />
+              ) : null}
+
+              {/* Tranh vẽ tình huống nếu có */}
+              {editForm.imageUrl && (
+                <div className="flex items-center gap-3 p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                  <img
+                    src={editForm.imageUrl}
+                    alt="Tranh đề bài"
+                    className="w-16 h-16 object-contain rounded-lg border border-slate-100 bg-slate-50"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-slate-700 block">Tranh vẽ tình huống đề bài</span>
+                    <span className="text-[10px] text-slate-400 font-mono truncate block">{editForm.imageUrl}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, imageUrl: '' })}
+                    className="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 text-[11px] font-bold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Xóa</span>
+                  </button>
+                </div>
+              )}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Kịch bản thoại tiếng Nhật (Scripts):
-                </label>
-                <textarea
-                  rows={2}
+                <RichTextField
+                  label="Kịch bản thoại tiếng Nhật (Scripts):"
+                  minRows={2}
                   value={editForm.transcriptJp || ''}
-                  onChange={(e) => setEditForm({ ...editForm, transcriptJp: e.target.value })}
-                  className="w-full p-1.5 border border-slate-300 rounded-lg text-xs font-serif bg-white"
+                  onChange={(html) => setEditForm({ ...editForm, transcriptJp: html })}
+                  placeholder="Nhập kịch bản lời thoại tiếng Nhật..."
+                  enableSpeakerLabel={true}
                 />
               </div>
             </div>
@@ -2728,29 +2821,18 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
             </div>
           )}
 
-          {/* Nội dung câu hỏi */}
+          {/* Nội dung câu hỏi WYSIWYG */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700">
-                Câu hỏi:
-              </label>
-              {hasSubmissions && (
-                <span className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-amber-600" />
-                  Đã khóa sửa chữ (Đã có bài nộp)
-                </span>
-              )}
-            </div>
-            <textarea
-              rows={2}
+            <RichTextField
+              label="Câu hỏi:"
+              minRows={2}
               value={editForm.questionText}
               disabled={hasSubmissions}
-              onChange={(e) => setEditForm({ ...editForm, questionText: e.target.value })}
-              className={`w-full p-2 border rounded-xl text-xs font-serif ${
-                hasSubmissions
-                  ? 'bg-slate-100/90 border-slate-200 text-slate-500 cursor-not-allowed select-none'
-                  : 'bg-white border-slate-300'
-              }`}
+              onChange={(val) => setEditForm({ ...editForm, questionText: val })}
+              placeholder="Nhập nội dung câu hỏi tiếng Nhật..."
+              showStarButton={isStarQuestion}
+              showClozeButton={true}
+              helperText={hasSubmissions ? "Đề thi đã có bài nộp - Nội dung câu hỏi đã khóa" : undefined}
             />
           </div>
 
@@ -2891,22 +2973,19 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
                     <span className="w-5 h-5 rounded-md bg-slate-100 flex items-center justify-center font-bold text-xs text-slate-700">
                       {opt.optionKey}
                     </span>
-                    <input
-                      type="text"
-                      value={opt.optionText}
-                      disabled={hasSubmissions}
-                      onChange={(e) => {
-                        const updated = [...(editForm.options || [])]
-                        updated[idx].optionText = e.target.value
-                        setEditForm({ ...editForm, options: updated })
-                      }}
-                      placeholder={`Lựa chọn ${opt.optionKey}`}
-                      className={`flex-1 p-1.5 border rounded-lg text-xs font-serif ${
-                        hasSubmissions
-                          ? 'bg-slate-100/90 border-slate-200 text-slate-500 cursor-not-allowed select-none'
-                          : 'bg-white border-slate-300'
-                      }`}
-                    />
+                    <div className="flex-1">
+                      <RichTextField
+                        variant="singleline"
+                        value={opt.optionText}
+                        disabled={hasSubmissions}
+                        onChange={(val) => {
+                          const updated = [...(editForm.options || [])]
+                          updated[idx].optionText = val
+                          setEditForm({ ...editForm, options: updated })
+                        }}
+                        placeholder={`Nhập phương án ${opt.optionKey}...`}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>

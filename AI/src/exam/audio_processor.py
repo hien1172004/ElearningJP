@@ -835,21 +835,6 @@ class AudioProcessor:
         return aligned_results
 
     def _fallback_vad_silence_slicer(self, audio_file_path: str) -> List[Dict[str, Any]]:
-        """Fallback lightweight slicer khi không có phương thức nào khả dụng."""
-        return [
-            {
-                "question_number": 1,
-                "mondai_code": "TASK_BASED",
-                "question_text": "男の人と女の人が話しています。男の人はこれからどこへ行きますか。",
-                "audio_start_time": 45,
-                "audio_end_time": 110,
-                "transcript_jp": "男の人と女の人が話しています。男の人はこれからどこへ行きますか。\n女：あそこの白い建物の2階ですよ。\n男：ありがとうございます。",
-                "explanation_vi": "Nghe chỉ dẫn địa điểm và xác định hành động của nhân vật nam.",
-                "options": [
-                    {"option_key": 1, "option_text": "白い建物の2階に行く", "is_correct": True},
-                    {"option_key": 2, "option_text": "駅の前に行く", "is_correct": False},
-                    {"option_key": 3, "option_text": "公園の隣に行く", "is_correct": False},
-                    {"option_key": 4, "option_text": "スーパーに行く", "is_correct": False},
-                ]
-            }
-        ]
+        """Fallback an toàn khi cả Whisper và Gemini đều không trích xuất được câu hỏi."""
+        logger.error(f"❌ Không thể trích xuất câu hỏi từ file audio: {audio_file_path}")
+        return []

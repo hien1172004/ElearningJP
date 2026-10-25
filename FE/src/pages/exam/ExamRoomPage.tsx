@@ -5,7 +5,7 @@ import type { ExamTakingData, TakingQuestion, TakingSection, TakingPassage } fro
 import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatJapanesePassageHtml } from '@/utils/format'
 import { 
   Clock, AlertCircle, Flag, Send, 
-  X, Loader2, Star, ChevronRight, CheckCircle2,
+  X, Loader2, Star, ChevronRight, CheckCircle2, Sparkles,
   Headphones, BookOpen, Check, ArrowRight
 } from 'lucide-react'
 
@@ -54,6 +54,8 @@ export const ExamRoomPage: React.FC = () => {
 
   // Câu hỏi đang được focus / kích hoạt khi tương tác với ô trống
   const [activeQuestionId, setActiveQuestionId] = useState<number | null>(null)
+  // Bật/tắt hiển thị phiên âm Furigana
+  const [showFurigana, setShowFurigana] = useState<boolean>(true)
 
   // Ref audio player
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -514,7 +516,7 @@ export const ExamRoomPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/70 pb-20 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
+    <div className={`min-h-screen bg-slate-50/70 pb-20 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 ${showFurigana ? '' : 'hide-furigana'}`}>
       {/* 1. ZEN TOPBAR (Thanh công cụ làm bài tinh tế, cố định trên cùng) */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-2.5 shadow-2xs">
         <div className="max-w-[1560px] mx-auto flex items-center justify-between gap-4">
@@ -558,7 +560,21 @@ export const ExamRoomPage: React.FC = () => {
           </div>
 
           {/* Cụm phải: Đồng hồ đếm ngược + Nút Nộp bài / Chuyển ca */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Nút bật/tắt hiển thị Furigana */}
+            <button
+              type="button"
+              onClick={() => setShowFurigana(!showFurigana)}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                showFurigana
+                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
+                  : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'
+              }`}
+              title={showFurigana ? 'Đang bật phiên âm Furigana (Bấm để ẩn)' : 'Đang ẩn Furigana (Bấm để hiện)'}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-current" />
+              <span>ルビ: {showFurigana ? 'Bật' : 'Tắt'}</span>
+            </button>
             {/* Bộ đếm thời gian (Zen Timer Widget) */}
             <div
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-mono text-sm sm:text-base font-black transition-all shadow-2xs ${
