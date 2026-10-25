@@ -581,9 +581,8 @@ async def extract_section_endpoint(
                                 if aq["options"][opt_idx].get("is_correct"):
                                     opt["is_correct"] = True
 
-                    has_correct = any(opt.get("is_correct") for opt in raw_options)
-                    if not has_correct and raw_options:
-                        raw_options[0]["is_correct"] = True
+                    # Giữ nguyên is_correct (chỉ có True khi được nạp từ bảng đáp án 正答表 hoặc được chỉ định)
+                    pass
 
                     q_start = aq.get("audio_start_time")
                     q_end = aq.get("audio_end_time")
