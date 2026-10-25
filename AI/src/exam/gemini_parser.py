@@ -20,6 +20,9 @@ import re
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from .jlpt_rules import audit_exam_section, infer_mondai_from_spec, get_expected_mondais
 
@@ -428,8 +431,8 @@ class GeminiExamParser:
                 "Cần cài thư viện google-genai: pip install google-genai"
             )
 
-        self._model_name = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-        self._fallback_models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"]
+        self._model_name = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+        self._fallback_models = ["gemini-flash-latest", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-3.8-flash", "gemini-2.5-pro"]
         logger.info(f"✅ GeminiExamParser khởi tạo thành công, model: {self._model_name} (fallbacks: {self._fallback_models})")
 
     def _generate_with_fallback(self, contents: Any, config: Any = None) -> Any:
