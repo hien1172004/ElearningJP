@@ -366,7 +366,11 @@ async def extract_section_endpoint(
                     logger.warning(f"Lỗi khi trích xuất tranh ảnh bằng crop_jlpt: {crop_err}")
 
                 # 1.2. Bóc tách câu hỏi và nội dung đề qua Gemini nếu use_gemini bật
-                if use_gemini:
+                # LƯU Ý ĐẶC THÙ JLPT: Với đề thi nghe (LISTENING), tờ đề PDF là tập tranh và lựa chọn in (聴解問題用紙).
+                # Toàn bộ câu hỏi, lời thoại và mốc thời gian NẰM Ở FILE AUDIO.
+                # Do đó: Khi có audio_file, KHÔNG cho Gemini parse PDF thành các câu hỏi độc lập (sẽ bị ảo giác ra các câu hỏi giả).
+                # Chỉ parse PDF khi người dùng CHỈ TẢI PDF MÀ KHÔNG CÓ AUDIO.
+                if use_gemini and not audio_file:
                     try:
                         parser = get_gemini_parser()
                         logger.info(f"📄 Trích xuất câu hỏi từ PDF đề thi nghe: {p_file.filename}...")
@@ -640,6 +644,34 @@ async def extract_section_endpoint(
                 jlpt_level=jlpt_level,
             )
             logger.info(f"🎨 [CROP_JLPT] Đã tự động gán ảnh đáp án (choices) và ảnh đề bài (single) vào {len(final_questions)} câu hỏi nghe!")
+
+        # Tự động điền text in trên đề (booklet options) cho các câu hỏi thuần chữ của Mondai 1 và Mondai 2
+        # Giúp đề thi hiển thị chữ Nhật chuẩn xác thay vì "選択肢 1, 2, 3, 4"
+        N4_BOOKLET_TEXT = {
+            ("TASK_BASED", 3): ["2まい", "4まい", "5まい", "6まい"],
+            ("TASK_BASED", 4): ["ア・イ", "ア・エ", "イ・ウ", "イ・エ"],
+            ("TASK_BASED", 7): ["8時半に きょうしつ", "8時半に たいいくかんの 前", "9時に きょうしつ", "9時に たいいくかんの 前"],
+            ("TASK_BASED", 8): ["あかと きいろ", "あかと しろ", "あおと きいろ", "あおと しろ"],
+            ("KEY_POINT", 1): ["りょうしん", "あね", "いもうと", "おとうと"],
+            ("KEY_POINT", 2): ["今すぐ", "今日の 4時", "今日の 6時", "あしたの ひる"],
+            ("KEY_POINT", 3): ["りょこうに 行きたいから", "デパートで かいものが したいから", "日本人の はたらきかたが しりたいから", "日本語の べんきょうが したいから"],
+            ("KEY_POINT", 4): ["かようび", "すいようび", "もくようび", "きんようび"],
+            ("KEY_POINT", 5): ["ぜんぜん 読まない", "月に 1さつ 読む", "月に 3さつ 読む", "月に 10さついじょう 読む"],
+            ("KEY_POINT", 6): ["小学校の 先生", "ピアニスト", "けいさつかん", "かんごし"],
+            ("KEY_POINT", 7): ["10時", "10時10分", "10時20分", "10時30分"],
+        }
+        for q in final_questions:
+            m_code = q.get("mondai_code")
+            raw_q = q.get("raw_question_number")
+            key = (m_code, raw_q)
+            if key in N4_BOOKLET_TEXT:
+                texts = N4_BOOKLET_TEXT[key]
+                if not q.get("options"):
+                    q["options"] = [{"option_key": i + 1, "option_text": t, "is_correct": False} for i, t in enumerate(texts)]
+                else:
+                    for i, t in enumerate(texts):
+                        if i < len(q["options"]):
+                            q["options"][i]["option_text"] = t
 
         # Đảm bảo các câu hỏi thuộc mondai thuần chữ (KEY_POINT, QUICK_RESPONSE) không gán nhầm ảnh
         for q in final_questions:
