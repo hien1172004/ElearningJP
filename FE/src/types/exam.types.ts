@@ -3,7 +3,7 @@ import type { JlptLevel } from './dictionary.types'
 export type { JlptLevel }
 export type ExamType = 'JLPT_OFFICIAL_MOCK' | 'MINI_TEST' | 'RANDOM_GENERATED'
 export type AttemptType = 'FULL_EXAM' | 'PRACTICE_SECTION'
-export type SessionType = 'VOCABULARY' | 'GRAMMAR_READING' | 'LISTENING'
+export type SessionType = 'VOCABULARY' | 'GRAMMAR_READING' | 'LISTENING' | 'KNOWLEDGE_READING'
 export type ScoreGroupCode = 'LANGUAGE_KNOWLEDGE' | 'READING' | 'LANGUAGE_KNOWLEDGE_READING' | 'LISTENING'
 export type PassageType = 'TEXT' | 'IMAGE_POSTER' | 'EMAIL' | 'NOTICE'
 export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'TIMED_OUT'
@@ -18,6 +18,9 @@ export interface ExamSummary {
   overallPassingScore: number
   totalQuestions: number
   published: boolean
+  courseId?: number
+  status?: string
+  passingScore?: number
 }
 
 export interface ExamScoreGroup {
@@ -48,6 +51,7 @@ export interface TakingPassage {
   passageType: PassageType
   contentJp?: string
   imageUrl?: string
+  translationVi?: string
 }
 
 export interface TakingOption {
@@ -192,6 +196,7 @@ export interface AdminTakingQuestion {
   instructionVi?: string
   questionText: string
   imageUrl?: string
+  audioUrl?: string
   audioStartTime?: number
   audioEndTime?: number
   transcriptJp?: string
@@ -221,17 +226,74 @@ export interface AdminExamPreview {
   totalDurationMinutes: number
   totalQuestions: number
   published: boolean
+  totalAttempts?: number
+  inProgressAttempts?: number
   sections: AdminTakingSection[]
 }
 
 export interface UpdateQuestionInlinePayload {
   questionText?: string
   imageUrl?: string
+  audioUrl?: string
   audioStartTime?: number
   audioEndTime?: number
   transcriptJp?: string
   transcriptVi?: string
   explanationVi?: string
   starPosition?: number
+  hasVisualOptions?: boolean
+  mondaiCode?: string
+  passageTitle?: string
+  passageContentJp?: string
+  passageTranslationVi?: string
+  passageImageUrl?: string
+  correctOptionKey?: number
   options?: AdminTakingOption[]
 }
+
+export interface CreateQuestionPayload {
+  mondaiCode?: string
+  questionText: string
+  points?: number
+  explanationVi?: string
+  starPosition?: number
+  hasVisualOptions?: boolean
+  imageUrl?: string
+  audioUrl?: string
+  audioStartTime?: number
+  audioEndTime?: number
+  transcriptJp?: string
+  transcriptVi?: string
+  passageId?: number
+  passageTitle?: string
+  passageContentJp?: string
+  passageTranslationVi?: string
+  passageImageUrl?: string
+  options: {
+    optionKey: number
+    optionText: string
+    optionImageUrl?: string
+    isCorrect: boolean
+  }[]
+}
+
+export interface LeaderboardItem {
+  rank: number
+  userId: number
+  fullName: string
+  avatarUrl?: string
+  score: number
+  maxScore: number
+  jlptLevel: JlptLevel
+  examTitle?: string
+  timeSpentSeconds?: number
+  submittedAt?: string
+  isCurrentUser: boolean
+}
+
+export interface LeaderboardData {
+  rankings: LeaderboardItem[]
+  myRank?: LeaderboardItem | null
+  totalParticipants: number
+}
+

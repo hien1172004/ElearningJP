@@ -14,6 +14,8 @@ import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.exam.ExamAttemptService;
 import com.jp.elearningjp.shared.enums.AttemptStatus;
 import com.jp.elearningjp.shared.enums.AttemptType;
+import com.jp.elearningjp.shared.enums.ScoreGroupCode;
+import com.jp.elearningjp.shared.enums.SkillType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -187,11 +189,37 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                     .findByExamIdWithQuestionDetails(exam.getId());
         }
 
+        ExamScoreGroup knowledgeGroup = exam.getScoreGroups().stream()
+                .filter(g -> ScoreGroupCode.LANGUAGE_KNOWLEDGE.equals(g.getGroupCode()))
+                .findFirst().orElse(null);
+        ExamScoreGroup readingGroup = exam.getScoreGroups().stream()
+                .filter(g -> ScoreGroupCode.READING.equals(g.getGroupCode()))
+                .findFirst().orElse(null);
+        ExamScoreGroup listeningGroup = exam.getScoreGroups().stream()
+                .filter(g -> ScoreGroupCode.LISTENING.equals(g.getGroupCode()))
+                .findFirst().orElse(null);
+        ExamScoreGroup combinedKnowledgeReadingGroup = exam.getScoreGroups().stream()
+                .filter(g -> ScoreGroupCode.LANGUAGE_KNOWLEDGE_READING.equals(g.getGroupCode()))
+                .findFirst().orElse(null);
+
         Map<Long, ExamScoreGroup> questionToScoreGroupMap = new HashMap<>();
         for (ExamSectionQuestion sq : allSectionQuestions) {
-            ExamScoreGroup sg = sq.getSection().getScoreGroup();
+            Question q = sq.getQuestion();
+            SkillType skill = q.getSkillType();
+            ExamScoreGroup sg = null;
+
+            if (skill == SkillType.LISTENING) {
+                sg = listeningGroup != null ? listeningGroup : sq.getSection().getScoreGroup();
+            } else if (skill == SkillType.READING) {
+                sg = readingGroup != null ? readingGroup : (combinedKnowledgeReadingGroup != null ? combinedKnowledgeReadingGroup : sq.getSection().getScoreGroup());
+            } else if (skill == SkillType.VOCABULARY || skill == SkillType.GRAMMAR) {
+                sg = knowledgeGroup != null ? knowledgeGroup : (combinedKnowledgeReadingGroup != null ? combinedKnowledgeReadingGroup : sq.getSection().getScoreGroup());
+            } else {
+                sg = sq.getSection().getScoreGroup();
+            }
+
             if (sg != null) {
-                questionToScoreGroupMap.put(sq.getQuestion().getId(), sg);
+                questionToScoreGroupMap.put(q.getId(), sg);
             }
         }
 
@@ -232,28 +260,70 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         int totalScaledScore = 0;
         boolean hasThresholdFailed = false;
 
+        boolean isPracticeSection = attempt.getAttemptType() == AttemptType.PRACTICE_SECTION;
+        ExamSection practiceSection = isPracticeSection ? attempt.getSection() : null;
+
         Collection<ExamScoreGroup> scoreGroupsToCalculate = exam.getScoreGroups();
-        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION && attempt.getSection() != null) {
-            if (attempt.getSection().getScoreGroup() != null) {
-                scoreGroupsToCalculate = List.of(attempt.getSection().getScoreGroup());
+        if (isPracticeSection && practiceSection != null) {
+            // Lấy tất cả nhóm điểm thực tế xuất hiện trong ca thi này
+            Set<ExamScoreGroup> groupsInSection = new LinkedHashSet<>();
+            for (ExamSectionQuestion sq : allSectionQuestions) {
+                ExamScoreGroup g = questionToScoreGroupMap.get(sq.getQuestion().getId());
+                if (g != null) {
+                    groupsInSection.add(g);
+                }
+            }
+            if (!groupsInSection.isEmpty()) {
+                scoreGroupsToCalculate = groupsInSection;
+            } else if (practiceSection.getScoreGroup() != null) {
+                scoreGroupsToCalculate = List.of(practiceSection.getScoreGroup());
             }
         }
+
+        int targetMaxScaledScore = 0;
+        int targetPassingScore = 0;
 
         for (ExamScoreGroup sg : scoreGroupsToCalculate) {
             int rawCorrect = groupRawCorrectMap.getOrDefault(sg.getId(), 0);
             int rawTotal = groupRawTotalMap.getOrDefault(sg.getId(), 0);
 
-            int scaledScore = 0;
-            if (rawTotal > 0) {
-                scaledScore = (int) Math.round(((double) rawCorrect / rawTotal) * sg.getMaxScaledScore());
+            int groupMaxScore = sg.getMaxScaledScore();
+            int groupMinRequired = sg.getMinRequiredScore();
+            boolean checkThreshold = true;
+
+            // Xử lý chuẩn cho ca thi luyện tập lẻ (PRACTICE_SECTION):
+            if (isPracticeSection && practiceSection != null) {
+                if (ScoreGroupCode.LANGUAGE_KNOWLEDGE_READING.equals(sg.getGroupCode())) {
+                    // Với N4 / N5 khi luyện riêng Ca 1 hoặc Ca 2:
+                    // Thang điểm của ca này là 60 điểm (50% của 120 điểm tổng).
+                    // Điểm liệt 38/120 của N4/N5 chỉ tính khi thi toàn bộ (gộp cả 2 ca).
+                    // Vì vậy khi luyện ca lẻ, không áp điểm liệt riêng để tránh đánh trượt oan!
+                    groupMaxScore = 60;
+                    groupMinRequired = 0;
+                    checkThreshold = false;
+                } else if (ScoreGroupCode.LISTENING.equals(sg.getGroupCode())) {
+                    groupMaxScore = 60;
+                    groupMinRequired = 19;
+                } else {
+                    // N1/N2/N3: LANGUAGE_KNOWLEDGE hoặc READING
+                    groupMaxScore = 60;
+                    groupMinRequired = 19;
+                }
             }
 
-            boolean isGroupPassed = scaledScore >= sg.getMinRequiredScore();
-            if (!isGroupPassed) {
+            int scaledScore = 0;
+            if (rawTotal > 0) {
+                scaledScore = (int) Math.round(((double) rawCorrect / rawTotal) * groupMaxScore);
+            }
+
+            boolean isGroupPassed = checkThreshold ? (scaledScore >= groupMinRequired) : (scaledScore >= (int) Math.round(groupMaxScore * 0.5));
+            if (checkThreshold && !isGroupPassed) {
                 hasThresholdFailed = true;
             }
 
             totalScaledScore += scaledScore;
+            targetMaxScaledScore += groupMaxScore;
+            targetPassingScore += (int) Math.round(groupMaxScore * 0.5); // Điểm đạt yêu cầu cho ca luyện tập là 50%
 
             AttemptGroupScore ags = AttemptGroupScore.builder()
                     .attempt(attempt)
@@ -266,12 +336,24 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                     .build();
             attemptGroupScoreRepository.save(ags);
 
-            groupScoreResponses.add(examMapper.toAttemptGroupScoreResponse(ags));
+            AttemptGroupScoreResponse agsResp = examMapper.toAttemptGroupScoreResponse(ags);
+            agsResp.setMaxScaledScore(groupMaxScore);
+            agsResp.setMinRequiredScore(groupMinRequired);
+            groupScoreResponses.add(agsResp);
         }
 
-        int passingThreshold = exam.getOverallPassingScore() != null ? exam.getOverallPassingScore() : 90;
-        boolean isOverallPassed = totalScaledScore >= passingThreshold;
-        boolean finalPassed = isOverallPassed && !hasThresholdFailed;
+        int passingThreshold;
+        boolean finalPassed;
+        if (isPracticeSection) {
+            passingThreshold = targetPassingScore;
+            boolean isOverallPassed = totalScaledScore >= passingThreshold;
+            finalPassed = isOverallPassed && !hasThresholdFailed;
+        } else {
+            passingThreshold = exam.getOverallPassingScore() != null ? exam.getOverallPassingScore() : 90;
+            targetMaxScaledScore = exam.getTotalScaledMaxScore() != null ? exam.getTotalScaledMaxScore() : 180;
+            boolean isOverallPassed = totalScaledScore >= passingThreshold;
+            finalPassed = isOverallPassed && !hasThresholdFailed;
+        }
 
         attempt.setStatus(AttemptStatus.SUBMITTED);
         attempt.setSubmittedAt(Instant.now());
@@ -282,6 +364,8 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         examAttemptRepository.save(attempt);
 
         ExamResultResponse result = examMapper.toResultResponse(attempt);
+        result.setTotalScaledMaxScore(targetMaxScaledScore);
+        result.setOverallPassingScore(passingThreshold);
         result.setHasThresholdFailed(hasThresholdFailed);
         result.setGroupScores(groupScoreResponses);
         return result;
@@ -299,6 +383,22 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         boolean hasThresholdFailed = groupScores.stream().anyMatch(g -> !g.isGroupPassed());
 
         ExamResultResponse result = examMapper.toResultResponse(attempt);
+        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION) {
+            int targetMax = 0;
+            int targetPass = 0;
+            for (var gs : groupScores) {
+                if (ScoreGroupCode.LANGUAGE_KNOWLEDGE_READING.equals(gs.getGroupCode())) {
+                    gs.setMaxScaledScore(60);
+                    gs.setMinRequiredScore(0);
+                } else {
+                    gs.setMaxScaledScore(60);
+                }
+                targetMax += gs.getMaxScaledScore();
+                targetPass += (int) Math.round(gs.getMaxScaledScore() * 0.5);
+            }
+            result.setTotalScaledMaxScore(targetMax > 0 ? targetMax : 60);
+            result.setOverallPassingScore(targetPass > 0 ? targetPass : 30);
+        }
         result.setHasThresholdFailed(hasThresholdFailed);
         result.setGroupScores(groupScores);
         return result;
@@ -350,6 +450,16 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                 .collect(Collectors.toList());
 
         ExamReviewResponse review = examMapper.toReviewResponse(attempt);
+        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION) {
+            review.setTotalScaledMaxScore(60);
+            review.setOverallPassingScore(30);
+            for (var gs : groupScores) {
+                if (ScoreGroupCode.LANGUAGE_KNOWLEDGE_READING.equals(gs.getGroupCode())) {
+                    gs.setMaxScaledScore(60);
+                    gs.setMinRequiredScore(19);
+                }
+            }
+        }
         review.setHasThresholdFailed(hasThresholdFailed);
         review.setGroupScores(groupScores);
         review.setSections(reviewSections);
@@ -397,6 +507,30 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         resp.setQuestionNumber(questionNumber);
         resp.setOptions(options);
         resp.setPassage(passage);
+
+        String mCode = q.getMondaiType() != null ? q.getMondaiType().getCode() : "";
+        boolean isKeyPointOrQuick = "KEY_POINT".equals(mCode) || "QUICK_RESPONSE".equals(mCode);
+        boolean isTextOnly = false;
+        if (!"UTTERANCE_EXPRESSIONS".equals(mCode) && (q.getImageUrl() == null || q.getImageUrl().isBlank()) && options != null) {
+            long meaningful = options.stream()
+                    .filter(o -> {
+                        String t = o.getOptionText() != null ? o.getOptionText().trim() : "";
+                        if (t.length() <= 1) return false;
+                        if (t.startsWith("Lựa chọn") || t.startsWith("Đáp án") ||
+                            t.startsWith("Option") || t.startsWith("Phương án")) return false;
+                        if (t.matches("^[ア-ンA-Za-z0-9\\s・、,/\\-()（）①-④]+$")) return false;
+                        return true;
+                    })
+                    .count();
+            if (meaningful >= 2) isTextOnly = true;
+        }
+        if (isKeyPointOrQuick || isTextOnly) {
+            resp.setImageUrl(null);
+            resp.setHasVisualOptions(false);
+            if (options != null) {
+                for (var opt : options) opt.setOptionImageUrl(null);
+            }
+        }
         return resp;
     }
 
@@ -426,6 +560,32 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         resp.setOptions(options);
         resp.setPassage(passage);
         resp.setStudentAnswer(studentAnsResp);
+
+        String mCode = q.getMondaiType() != null ? q.getMondaiType().getCode() : "";
+        boolean isKeyPointOrQuick = "KEY_POINT".equals(mCode) || "QUICK_RESPONSE".equals(mCode);
+        boolean hasAnyOptionImage = options != null && options.stream().anyMatch(o -> o.getOptionImageUrl() != null && !o.getOptionImageUrl().isBlank());
+        boolean isTextOnly = false;
+        if (!q.isHasVisualOptions() && !hasAnyOptionImage && !"UTTERANCE_EXPRESSIONS".equals(mCode) && (q.getImageUrl() == null || q.getImageUrl().isBlank()) && options != null) {
+            long meaningful = options.stream()
+                    .filter(o -> {
+                        String t = o.getOptionText() != null ? o.getOptionText().trim() : "";
+                        if (t.length() <= 1) return false;
+                        if (t.startsWith("Lựa chọn") || t.startsWith("Đáp án") ||
+                            t.startsWith("Option") || t.startsWith("Phương án") ||
+                            t.startsWith("選択肢")) return false;
+                        if (t.matches("^[ア-ンA-Za-z0-9\\s・、,/\\-()（）①-④]+$")) return false;
+                        return true;
+                    })
+                    .count();
+            if (meaningful >= 2) isTextOnly = true;
+        }
+        if (isKeyPointOrQuick || isTextOnly) {
+            resp.setImageUrl(null);
+            resp.setHasVisualOptions(false);
+            if (options != null) {
+                for (var opt : options) opt.setOptionImageUrl(null);
+            }
+        }
         return resp;
     }
 }

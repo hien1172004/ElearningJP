@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Volume2, BookOpen, Lightbulb } from 'lucide-react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Volume2, BookOpen } from 'lucide-react'
 import { playSmartAudio } from '@/utils'
 import { useGrammarItemDetail } from '@/hooks'
 import type { LessonGrammarItem } from '@/types'

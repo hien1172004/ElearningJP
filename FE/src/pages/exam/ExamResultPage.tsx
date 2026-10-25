@@ -223,10 +223,22 @@ export const ExamResultPage: React.FC = () => {
                             Đúng: <strong className="text-slate-700 dark:text-slate-300">{group.rawCorrectCount} / {group.rawTotalCount} câu</strong>
                           </span>
                           <span>
-                            Điểm liệt: <strong className="text-rose-500 font-semibold">&lt; {group.minRequiredScore}đ</strong> • {group.groupPassed ? (
-                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">Qua ngưỡng</span>
+                            {group.minRequiredScore > 0 ? (
+                              <>
+                                Điểm liệt: <strong className="text-rose-500 font-semibold">&lt; {group.minRequiredScore}đ</strong> • {group.groupPassed ? (
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Qua ngưỡng</span>
+                                ) : (
+                                  <span className="text-rose-600 font-bold">Dưới ngưỡng liệt</span>
+                                )}
+                              </>
                             ) : (
-                              <span className="text-rose-600 font-bold">Dưới ngưỡng liệt</span>
+                              <>
+                                Mục tiêu luyện tập: <strong className="text-indigo-600 font-semibold">&ge; 30đ (50%)</strong> • {group.groupPassed ? (
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Đạt mục tiêu</span>
+                                ) : (
+                                  <span className="text-amber-600 dark:text-amber-400 font-medium">Cần ôn luyện thêm</span>
+                                )}
+                              </>
                             )}
                           </span>
                         </div>
@@ -234,6 +246,15 @@ export const ExamResultPage: React.FC = () => {
                     )
                   })}
                 </div>
+
+                {!isFullExam && result.groupScores.some(g => g.groupCode === 'LANGUAGE_KNOWLEDGE_READING') && (
+                  <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+                    <span className="text-base shrink-0">💡</span>
+                    <span>
+                      <strong>Lưu ý quy chế JLPT:</strong> Đối với N4/N5, điểm liệt (tối thiểu 38/120 điểm) chỉ áp dụng trên tổng điểm gộp của cả 2 phần (Từ vựng + Ngữ pháp & Đọc hiểu) khi thi <strong>Toàn bài (Full Exam)</strong>. Khi luyện thi ca lẻ, hệ thống đánh giá theo tỷ lệ hoàn thành mục tiêu.
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

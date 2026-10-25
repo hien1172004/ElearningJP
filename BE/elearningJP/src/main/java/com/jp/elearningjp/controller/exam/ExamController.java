@@ -1,6 +1,7 @@
 package com.jp.elearningjp.controller.exam;
 
 import com.jp.elearningjp.dto.request.exam.StartExamRequest;
+import com.jp.elearningjp.dto.response.exam.LeaderboardResponse;
 import com.jp.elearningjp.dto.response.exam.ExamDetailResponse;
 import com.jp.elearningjp.dto.response.exam.ExamSummaryResponse;
 import com.jp.elearningjp.dto.response.exam.ExamTakingResponse;
@@ -33,6 +34,24 @@ public class ExamController {
     private final ExamAttemptService examAttemptService;
     private final CurrentUserService currentUserService;
 
+    @GetMapping("/leaderboard")
+    @Operation(summary = "Lấy bảng xếp hạng điểm thi theo cấp độ JLPT và khoảng thời gian (Tuần / Tháng / Toàn thời gian)")
+    public ApiResponse<LeaderboardResponse> getLeaderboard(
+            @RequestParam(required = false, defaultValue = "N5") JlptLevel level,
+            @RequestParam(required = false, defaultValue = "WEEK") String timeframe) {
+
+        User currentUser = currentUserService.getCurrentUserOrNull();
+        Long currentUserId = (currentUser != null) ? currentUser.getId() : null;
+        LeaderboardResponse leaderboard = examService.getLeaderboard(level, timeframe, currentUserId);
+
+        return ApiResponse.<LeaderboardResponse>builder()
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Lấy bảng xếp hạng thành công")
+                .data(leaderboard)
+                .build();
+    }
+
     @GetMapping
     @Operation(summary = "Lấy danh sách đề thi đã xuất bản (hỗ trợ lọc theo cấp độ JLPT và loại đề thi)")
     public ApiResponse<Page<ExamSummaryResponse>> getPublishedExams(
@@ -49,7 +68,7 @@ public class ExamController {
                 .build();
     }
 
-    @GetMapping(ApiPaths.Exam.BY_ID)
+    @GetMapping("/{id:\\d+}")
     @Operation(summary = "Xem thông tin chi tiết cấu trúc đề thi (các phần thi và nhóm điểm)")
     public ApiResponse<ExamDetailResponse> getExamDetail(@PathVariable Long id) {
         ExamDetailResponse detail = examService.getExamDetail(id);
@@ -58,6 +77,18 @@ public class ExamController {
                 .code(HttpStatus.OK.value())
                 .message("Lấy chi tiết đề thi thành công")
                 .data(detail)
+                .build();
+    }
+
+    @GetMapping("/course/{courseId}")
+    @Operation(summary = "Lấy danh sách đề thi đã xuất bản thuộc về một khóa học")
+    public ApiResponse<java.util.List<ExamSummaryResponse>> getPublishedCourseExams(@PathVariable Long courseId) {
+        var exams = examService.getPublishedCourseExams(courseId);
+        return ApiResponse.<java.util.List<ExamSummaryResponse>>builder()
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Lấy danh sách đề thi của khóa học thành công")
+                .data(exams)
                 .build();
     }
 

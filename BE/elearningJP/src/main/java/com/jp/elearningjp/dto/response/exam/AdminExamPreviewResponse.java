@@ -22,6 +22,8 @@ public class AdminExamPreviewResponse {
     Integer overallPassingScore;
     Integer totalQuestions;
     boolean published;
+    long totalAttempts;
+    long inProgressAttempts;
     List<ExamScoreGroupResponse> scoreGroups;
     List<ReviewSectionResponse> sections;
 }

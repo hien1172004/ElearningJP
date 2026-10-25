@@ -1,7 +1,13 @@
+"""
+PDFExtractor — Bóc tách hình ảnh nhúng và text từ file PDF đề thi JLPT.
+Giữ nguyên các method cũ + thêm render page to image cho Gemini Vision.
+"""
+
 import io
 import os
 from typing import List, Dict, Any
 from PIL import Image
+
 
 class PDFExtractor:
     @staticmethod
@@ -15,7 +21,10 @@ class PDFExtractor:
         except ImportError:
             return []
 
-        os.makedirs(output_dir, exist_ok=True)
+        from pathlib import Path
+        default_dir = Path(__file__).resolve().parent.parent.parent / "extracted_images"
+        target_dir = Path(output_dir) if os.path.isabs(output_dir) else default_dir
+        os.makedirs(target_dir, exist_ok=True)
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         extracted_images = []
 
@@ -33,15 +42,18 @@ class PDFExtractor:
                     continue
 
                 filename = f"page_{page_index + 1}_img_{img_index + 1}.{image_ext}"
-                filepath = os.path.join(output_dir, filename)
+                filepath = str(target_dir / filename)
 
                 with open(filepath, "wb") as f:
                     f.write(image_bytes)
+
+                url = f"http://localhost:8000/static/extracted_images/{filename}"
 
                 extracted_images.append({
                     "page": page_index + 1,
                     "filename": filename,
                     "filepath": filepath,
+                    "url": url,
                     "width": pil_image.width,
                     "height": pil_image.height
                 })
@@ -57,3 +69,41 @@ class PDFExtractor:
             return [page.get_text() for page in doc]
         except ImportError:
             return []
+
+    @staticmethod
+    def render_pages_to_images(pdf_bytes: bytes, dpi: int = 200) -> List[bytes]:
+        """
+        Render từng trang PDF thành ảnh PNG bytes để gửi cho Gemini Vision.
+
+        Args:
+            pdf_bytes: Nội dung file PDF dạng bytes
+            dpi: Độ phân giải ảnh (200 DPI cho cân bằng chất lượng/kích thước)
+
+        Returns:
+            Danh sách các ảnh PNG bytes, mỗi phần tử là 1 trang
+        """
+        try:
+            import fitz  # PyMuPDF
+        except ImportError:
+            return []
+
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        zoom = dpi / 72
+        mat = fitz.Matrix(zoom, zoom)
+        page_images = []
+
+        for page in doc:
+            pix = page.get_pixmap(matrix=mat)
+            page_images.append(pix.tobytes("png"))
+
+        return page_images
+
+    @staticmethod
+    def get_page_count(pdf_bytes: bytes) -> int:
+        """Đếm số trang PDF."""
+        try:
+            import fitz
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            return len(doc)
+        except ImportError:
+            return 0

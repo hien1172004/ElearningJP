@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { Modal, App } from 'antd'
 import { BookOpen } from 'lucide-react'
 import type { LessonSection } from '@/types'

@@ -149,7 +149,7 @@ export function useQuizItemMutations(lessonId: number) {
         payload,
       )
     },
-    onSuccess: (res: any) => {
+    onSuccess: () => {
       toast.success('Đã thêm câu hỏi')
       // CHỈ invalidate, KHÔNG optimistic applyToAllQuizCaches.
       // Lý do: response từ POST là LessonQuizItem (không có đáp án đúng
@@ -203,7 +203,7 @@ export function useQuizItemMutations(lessonId: number) {
       }
       return updated
     },
-    onSuccess: (updated) => {
+    onSuccess: () => {
       toast.success('Đã cập nhật câu hỏi')
       // CHỈ invalidate, KHÔNG applyToAllQuizCaches.
       // Lý do: response từ PUT /quiz/questions/{id} là LessonQuizItem

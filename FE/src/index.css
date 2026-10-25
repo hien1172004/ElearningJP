@@ -71,3 +71,24 @@ body {
 .ant-input-affix-wrapper-focused {
   border-color: #6366f1 !important;
 }
+
+/* JLPT Japanese Typography */
+.font-serif {
+  font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", "BIZ UDPMincho", "MS PMincho", Georgia, serif;
+}
+
+/* JLPT Furigana (Ruby / ルビ) Typography */
+ruby {
+  ruby-position: over;
+  display: inline-ruby;
+}
+
+rt {
+  font-size: 0.6em;
+  line-height: 1.2;
+  text-align: center;
+  color: inherit;
+  font-weight: normal;
+  user-select: none;
+}
+

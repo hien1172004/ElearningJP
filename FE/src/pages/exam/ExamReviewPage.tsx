@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { examService } from '../../services/exam.service'
 import type { ExamReviewData, ReviewQuestion } from '../../types/exam.types'
-import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatSectionName } from '../../utils/format'
+import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatSectionName, formatJapanesePassageHtml } from '../../utils/format'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -158,7 +158,7 @@ export const ExamReviewPage: React.FC = () => {
   }
 
   const activeSection = reviewData.sections[activeSectionIndex] || reviewData.sections[0]
-  const allQuestions = activeSection ? activeSection.questions : []
+  const allQuestions = activeSection ? [...activeSection.questions].sort((a, b) => (a.questionNumber ?? 0) - (b.questionNumber ?? 0)) : []
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans">
@@ -368,20 +368,28 @@ export const ExamReviewPage: React.FC = () => {
                   {/* Passage for Reading/Poster (Tự động gom nhóm) */}
                   {q.passage && (
                   (() => {
-                    const isSamePassageAsPrev = prevQ && prevQ.passage && prevQ.passage.id === q.passage.id;
+                    const isSamePassageAsPrev = prevQ && prevQ.passage && (
+                      (prevQ.passage.id && q.passage.id && prevQ.passage.id === q.passage.id) ||
+                      (Boolean(q.passage.contentJp) && prevQ.passage.contentJp?.trim() === q.passage.contentJp?.trim()) ||
+                      (Boolean(q.passage.imageUrl) && prevQ.passage.imageUrl?.trim() === q.passage.imageUrl?.trim())
+                    );
                     if (isSamePassageAsPrev) {
                       return (
-                        <div className="mb-5 p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between text-xs text-indigo-900 dark:text-indigo-300">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold">📍 Câu hỏi liên kết:</span>
-                            <span>Sử dụng bài đọc ở câu trên để trả lời câu {q.questionNumber}.</span>
+                        <div className="mb-5 rounded-xl border border-indigo-200 dark:border-indigo-800/60 overflow-hidden text-xs">
+                          <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 flex items-center justify-between text-indigo-900 dark:text-indigo-300">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">📍 Câu hỏi liên kết:</span>
+                              <span>Dùng chung bài đọc với câu {prevQ.questionNumber}.</span>
+                            </div>
+                            <details className="cursor-pointer">
+                              <summary className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold list-none flex items-center gap-1 select-none">
+                                <span>📖 Xem nhanh nội dung bài đọc</span>
+                              </summary>
+                              <div className="mt-3 p-4 bg-white dark:bg-slate-900 rounded-lg border border-indigo-100 dark:border-slate-700 text-sm font-serif leading-relaxed text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
+                                {cleanJapaneseText(q.passage.contentJp || '')}
+                              </div>
+                            </details>
                           </div>
-                          <a 
-                            href={`#review-q-${prevQ.questionNumber}`}
-                            className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold"
-                          >
-                            Xem lại bài đọc
-                          </a>
                         </div>
                       );
                     }
@@ -411,16 +419,10 @@ export const ExamReviewPage: React.FC = () => {
                         )}
 
                         {q.passage.contentJp && (
-                          q.passage.contentJp.includes('<table') || q.passage.contentJp.includes('<div') ? (
-                            <div 
-                              className="text-slate-800 dark:text-slate-200 leading-relaxed font-sans"
-                              dangerouslySetInnerHTML={{ __html: cleanJapaneseText(q.passage.contentJp) }}
-                            />
-                          ) : (
-                            <div className="text-base text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed font-serif p-3 bg-white dark:bg-slate-900/80 rounded-lg border border-slate-200 dark:border-slate-700">
-                              {cleanJapaneseText(q.passage.contentJp)}
-                            </div>
-                          )
+                          <div 
+                            className="text-slate-800 dark:text-slate-200 leading-relaxed font-sans p-4 bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs select-text"
+                            dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(q.passage.contentJp) }}
+                          />
                         )}
                       </div>
                     );
@@ -512,13 +514,14 @@ export const ExamReviewPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Question Image (minh họa tình huống) */}
+                {/* Question Image (minh họa tình huống đề bài) */}
                 {q.imageUrl && (
                   <div className="mb-4">
                     <img
                       src={q.imageUrl}
                       alt={`Minh họa câu ${q.questionNumber}`}
-                      className="max-h-64 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
+                      className="max-h-64 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm cursor-zoom-in"
+                      onClick={() => setZoomImageUrl(q.imageUrl || null)}
                     />
                   </div>
                 )}
@@ -529,13 +532,28 @@ export const ExamReviewPage: React.FC = () => {
                   dangerouslySetInnerHTML={{ __html: cleanQuestionPrompt(q.questionText, q.instructionJp) }}
                 />
 
-                {/* Options List */}
-                <div
-                  className={`grid gap-3 ${
-                    q.hasVisualOptions ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
-                  }`}
-                >
-                  {q.options.map((opt) => {
+                {(() => {
+                  const isThreeOptionsMondai = q.mondaiCode === 'UTTERANCE_EXPRESSIONS' || q.mondaiCode === 'QUICK_RESPONSE'
+                  const visibleOptions = q.options.filter((opt) => {
+                    if (isThreeOptionsMondai && opt.optionKey > 3) return false
+                    if (q.hasVisualOptions) {
+                      return Boolean(opt.optionImageUrl || (opt.optionText && opt.optionText.trim().length > 0))
+                    }
+                    if (opt.optionImageUrl || (opt.optionText && opt.optionText.trim().length > 0)) {
+                      return true
+                    }
+                    const othersHaveContent = q.options.some((o) => o.id !== opt.id && (Boolean(o.optionText?.trim()) || Boolean(o.optionImageUrl)))
+                    if (othersHaveContent) return false
+                    return isThreeOptionsMondai ? opt.optionKey <= 3 : opt.optionKey <= 4
+                  })
+
+                  return (
+                    <div
+                      className={`grid gap-3 ${
+                        q.hasVisualOptions ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
+                      }`}
+                    >
+                      {visibleOptions.map((opt) => {
                     const isUserChoice = q.studentAnswer?.selectedOptionId === opt.id
                     const isCorrectAnswer = opt.correct
 
@@ -589,9 +607,10 @@ export const ExamReviewPage: React.FC = () => {
                             />
                           </div>
                         ) : (
-                          <span className={`text-sm md:text-base ${textClass}`}>
-                            {cleanJapaneseText(opt.optionText)}
-                          </span>
+                          <span
+                            className={`text-sm md:text-base [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold ${textClass}`}
+                            dangerouslySetInnerHTML={{ __html: cleanJapaneseText(opt.optionText) }}
+                          />
                         )}
 
                         {badgeNode}
@@ -599,6 +618,8 @@ export const ExamReviewPage: React.FC = () => {
                     )
                   })}
                 </div>
+              )
+            })()}
 
                 {/* Star Position question re-ordering analysis */}
                 {q.starPosition && q.studentAnswer?.orderedOptionIds && (

@@ -11,25 +11,28 @@ import java.util.List;
 @Repository
 public interface ExamSectionQuestionRepository extends JpaRepository<ExamSectionQuestion, Long> {
 
-    List<ExamSectionQuestion> findBySectionIdAndDeletedFalseOrderByQuestionNumberAsc(Long sectionId);
+       List<ExamSectionQuestion> findBySectionIdAndDeletedFalseOrderByQuestionNumberAsc(Long sectionId);
 
-    List<ExamSectionQuestion> findByExamIdAndDeletedFalseOrderByQuestionNumberAsc(Long examId);
+       List<ExamSectionQuestion> findByExamIdAndDeletedFalseOrderByQuestionNumberAsc(Long examId);
 
-    @Query("SELECT sq FROM ExamSectionQuestion sq " +
-           "JOIN FETCH sq.question q " +
-           "LEFT JOIN FETCH q.options " +
-           "LEFT JOIN FETCH q.passage " +
-           "LEFT JOIN FETCH q.mondaiType " +
-           "WHERE sq.section.id = :sectionId AND sq.deleted = false " +
-           "ORDER BY sq.questionNumber ASC")
-    List<ExamSectionQuestion> findBySectionIdWithQuestionDetails(@Param("sectionId") Long sectionId);
+       @Query("SELECT sq FROM ExamSectionQuestion sq WHERE sq.exam.id = :examId AND sq.question.id = :questionId AND sq.deleted = false")
+       List<ExamSectionQuestion> findByExamIdAndQuestionId(@Param("examId") Long examId, @Param("questionId") Long questionId);
 
-    @Query("SELECT sq FROM ExamSectionQuestion sq " +
-           "JOIN FETCH sq.question q " +
-           "LEFT JOIN FETCH q.options " +
-           "LEFT JOIN FETCH q.passage " +
-           "LEFT JOIN FETCH q.mondaiType " +
-           "WHERE sq.exam.id = :examId AND sq.deleted = false " +
-           "ORDER BY sq.questionNumber ASC")
-    List<ExamSectionQuestion> findByExamIdWithQuestionDetails(@Param("examId") Long examId);
+       @Query("SELECT DISTINCT sq FROM ExamSectionQuestion sq " +
+                     "JOIN FETCH sq.question q " +
+                     "LEFT JOIN FETCH q.options " +
+                     "LEFT JOIN FETCH q.passage " +
+                     "LEFT JOIN FETCH q.mondaiType " +
+                     "WHERE sq.section.id = :sectionId AND sq.deleted = false " +
+                     "ORDER BY sq.questionNumber ASC")
+       List<ExamSectionQuestion> findBySectionIdWithQuestionDetails(@Param("sectionId") Long sectionId);
+
+       @Query("SELECT DISTINCT sq FROM ExamSectionQuestion sq " +
+                     "JOIN FETCH sq.question q " +
+                     "LEFT JOIN FETCH q.options " +
+                     "LEFT JOIN FETCH q.passage " +
+                     "LEFT JOIN FETCH q.mondaiType " +
+                     "WHERE sq.exam.id = :examId AND sq.deleted = false " +
+                     "ORDER BY sq.questionNumber ASC")
+       List<ExamSectionQuestion> findByExamIdWithQuestionDetails(@Param("examId") Long examId);
 }

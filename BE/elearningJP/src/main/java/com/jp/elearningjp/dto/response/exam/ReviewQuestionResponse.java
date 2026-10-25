@@ -19,6 +19,7 @@ public class ReviewQuestionResponse {
     String instructionVi;
     String questionText;
     String imageUrl;
+    String audioUrl;
     Integer audioStartTime;
     Integer audioEndTime;
     String transcriptJp;

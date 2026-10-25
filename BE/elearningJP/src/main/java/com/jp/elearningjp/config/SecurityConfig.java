@@ -38,6 +38,8 @@ public class SecurityConfig {
             // Thi thử JLPT công khai
             "/api/v1/exams/*/attempts",
             "/api/v1/exam-attempts/*/submit",
+            // Upload media (ảnh, audio)
+            "/api/v1/media/upload",
     };
 
     private static final String[] PUBLIC_PUT_ENDPOINTS = {
@@ -59,6 +61,7 @@ public class SecurityConfig {
             "/api/v1/dictionary/**",
             // Đề thi công khai
             "/api/v1/exams",
+            "/api/v1/exams/leaderboard",
             "/api/v1/exams/{id:[0-9]+}",
             "/api/v1/exam-attempts/*/result",
             "/api/v1/exam-attempts/*/review",

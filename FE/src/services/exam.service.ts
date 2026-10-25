@@ -13,9 +13,18 @@ import type {
   JlptLevel,
   ExamType,
   AttemptType,
+  LeaderboardData,
 } from '@/types'
 
 export const examService = {
+  // Lấy bảng xếp hạng thi thử theo chuẩn JLPT
+  getLeaderboard: async (params?: {
+    level?: JlptLevel
+    timeframe?: 'WEEK' | 'MONTH' | 'ALL'
+  }): Promise<ApiResponse<LeaderboardData>> => {
+    return axiosClient.get('/exams/leaderboard', { params })
+  },
+
   // Lấy danh sách đề thi đã xuất bản
   getPublishedExams: async (params?: {
     level?: JlptLevel
@@ -117,7 +126,129 @@ export const examService = {
     return res.data
   },
 
+  importExam: async (payload: any): Promise<number> => {
+    const res: any = await axiosClient.post('/admin/exams', payload)
+    return res.data
+  },
+
+  addQuestion: async (
+    examId: number,
+    sectionId: number,
+    payload: any
+  ): Promise<number> => {
+    const res: any = await axiosClient.post(
+      `/admin/exams/${examId}/sections/${sectionId}/questions`,
+      payload
+    )
+    return res.data
+  },
+
+  deleteQuestion: async (
+    examId: number,
+    questionId: number
+  ): Promise<void> => {
+    await axiosClient.delete(
+      `/admin/exams/${examId}/questions/${questionId}`
+    )
+  },
+
+  clearSectionQuestions: async (
+    examId: number,
+    sectionId: number
+  ): Promise<void> => {
+    await axiosClient.delete(
+      `/admin/exams/${examId}/sections/${sectionId}/questions`
+    )
+  },
+
+  saveSnapshot: async (
+    examId: number,
+    snapshot?: any
+  ): Promise<ApiResponse<AdminExamPreview>> => {
+    return axiosClient.post(`/admin/exams/${examId}/snapshot`, snapshot)
+  },
+
+  getSnapshot: async (examId: number): Promise<ApiResponse<AdminExamPreview>> => {
+    return axiosClient.get(`/admin/exams/${examId}/snapshot`)
+  },
+
+  rollbackExam: async (
+    examId: number,
+    snapshot?: any
+  ): Promise<ApiResponse<AdminExamPreview>> => {
+    return axiosClient.post(`/admin/exams/${examId}/rollback`, snapshot)
+  },
+
+  getCourseExams: async (courseId: number): Promise<ExamSummary[]> => {
+    const res: any = await axiosClient.get(`/exams/course/${courseId}`)
+    return res.data || []
+  },
+
   publishExam: async (id: number): Promise<ApiResponse<void>> => {
     return axiosClient.post(`/admin/exams/${id}/publish`)
   },
+
+  updateSectionAudio: async (
+    examId: number,
+    sectionId: number,
+    audioUrl: string
+  ): Promise<void> => {
+    await axiosClient.put(`/admin/exams/${examId}/sections/${sectionId}/audio`, {
+      audioUrl,
+    })
+  },
+
+  updatePassage: async (
+    examId: number,
+    passageId: number,
+    payload: {
+      title?: string
+      contentJp?: string
+      translationVi?: string
+      imageUrl?: string
+    }
+  ): Promise<void> => {
+    await axiosClient.put(`/admin/exams/${examId}/passages/${passageId}`, payload)
+  },
+
+  deletePassage: async (
+    examId: number,
+    passageId: number
+  ): Promise<void> => {
+    await axiosClient.delete(`/admin/exams/${examId}/passages/${passageId}`)
+  },
+
+  deleteExam: async (id: number): Promise<void> => {
+    await axiosClient.delete(`/admin/exams/${id}`)
+  },
+
+  getAllAdminExams: async (params?: {
+    level?: JlptLevel
+    examType?: ExamType
+    published?: boolean
+    page?: number
+    size?: number
+  }): Promise<ApiResponse<PageResponse<ExamSummary>>> => {
+    return axiosClient.get('/admin/exams', { params })
+  },
+
+  unpublishExam: async (id: number): Promise<ApiResponse<void>> => {
+    return axiosClient.post(`/admin/exams/${id}/unpublish`)
+  },
+
+  reorderQuestions: async (examId: number): Promise<AdminExamPreview> => {
+    const res = await axiosClient.post<ApiResponse<AdminExamPreview>>(`/admin/exams/${examId}/reorder-questions`)
+    return res.data.data!
+  },
+
+  cloneExam: async (examId: number): Promise<number> => {
+    const res: any = await axiosClient.post(`/admin/exams/${examId}/clone`)
+    return res.data
+  },
+
+  regradeExam: async (examId: number): Promise<number> => {
+    const res: any = await axiosClient.post(`/admin/exams/${examId}/regrade`)
+    return res.data
+  },
 }
+

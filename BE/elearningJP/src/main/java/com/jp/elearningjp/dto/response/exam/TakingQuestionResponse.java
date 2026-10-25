@@ -19,6 +19,7 @@ public class TakingQuestionResponse {
     String instructionVi;
     String questionText;
     String imageUrl;
+    String audioUrl;
     Integer audioStartTime;
     Integer audioEndTime;
     Short starPosition;

@@ -1,4 +1,4 @@
-package com.jp.elearningjp.shared.utils;
+package com.jp.elearningjp.shared.util;
 
 import java.text.Normalizer;
 import java.util.Locale;

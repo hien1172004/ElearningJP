@@ -1,6 +1,7 @@
 package com.jp.elearningjp.entity.exam;
 
 
+import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.shared.enums.ExamType;
 import com.jp.elearningjp.shared.enums.JlptLevel;
@@ -70,6 +71,10 @@ public class Exam extends SoftDeletableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
 
     @Builder.Default
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, orphanRemoval = true)

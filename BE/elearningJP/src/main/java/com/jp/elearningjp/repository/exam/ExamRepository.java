@@ -19,10 +19,22 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
 
     Page<Exam> findByPublishedTrueAndDeletedFalse(Pageable pageable);
 
+    Page<Exam> findByDeletedFalse(Pageable pageable);
+
+    Page<Exam> findByJlptLevelAndDeletedFalse(JlptLevel jlptLevel, Pageable pageable);
+
+    Page<Exam> findByPublishedAndDeletedFalse(boolean published, Pageable pageable);
+
+    Page<Exam> findByJlptLevelAndPublishedAndDeletedFalse(JlptLevel jlptLevel, boolean published, Pageable pageable);
+
     Page<Exam> findByJlptLevelAndPublishedTrueAndDeletedFalse(JlptLevel jlptLevel, Pageable pageable);
 
     Page<Exam> findByJlptLevelAndExamTypeAndPublishedTrueAndDeletedFalse(
             JlptLevel jlptLevel, ExamType examType, Pageable pageable);
+
+    java.util.List<Exam> findByCourseIdAndDeletedFalse(Long courseId);
+
+    java.util.List<Exam> findByCourseIdAndPublishedTrueAndDeletedFalse(Long courseId);
 
     @Query("SELECT e FROM Exam e LEFT JOIN FETCH e.scoreGroups WHERE e.id = :id AND e.deleted = false")
     Optional<Exam> findByIdWithScoreGroups(@Param("id") Long id);

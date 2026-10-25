@@ -170,6 +170,9 @@ public final class ApiPaths {
         public static final String AI_EXTRACT = "/ai-extract";
         public static final String PREVIEW = "/{id}/preview";
         public static final String UPDATE_QUESTION = "/{id}/questions/{questionId}";
+        public static final String ADD_QUESTION = "/{id}/sections/{sectionId}/questions";
+        public static final String DELETE_QUESTION = "/{id}/questions/{questionId}";
+        public static final String BY_COURSE = "/by-course/{courseId}";
         public static final String PUBLISH = "/{id}/publish";
     }
 }

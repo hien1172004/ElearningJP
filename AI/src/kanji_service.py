@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import List, Tuple, Optional
 import numpy as np
 from PIL import Image, ImageOps
-import tensorflow as tf
 
 from .schemas import PredictionItem, PredictionResponse
 
@@ -22,7 +21,11 @@ LABEL_PATH = MODELS_DIR / "label_3169.json"
 
 def _build_kanji_residual_model(num_classes: int, input_shape=(128, 128, 1)):
     """Xây dựng kiến trúc Deep Residual CNN tương thích với checkpoint huấn luyện"""
-    from tensorflow.keras import layers, models
+    try:
+        from keras import layers, models
+    except ImportError:
+        from tensorflow.keras import layers, models
+
     inputs = layers.Input(shape=input_shape)
 
     # Block 1
@@ -99,7 +102,12 @@ class KanjiRecognitionService:
             logger.info("✅ Nạp trọng số mô hình qua load_weights thành công!")
         except Exception as e:
             logger.warning(f"Thử nạp trực tiếp bằng load_model do: {e}")
-            self.model = tf.keras.models.load_model(str(MODEL_PATH), compile=False)
+            try:
+                import keras
+                self.model = keras.models.load_model(str(MODEL_PATH), compile=False)
+            except Exception:
+                import tensorflow as tf
+                self.model = tf.keras.models.load_model(str(MODEL_PATH), compile=False)
 
         self.input_shape = self.model.input_shape
         self.target_size = (self.input_shape[1], self.input_shape[2]) if len(self.input_shape) >= 3 else (128, 128)

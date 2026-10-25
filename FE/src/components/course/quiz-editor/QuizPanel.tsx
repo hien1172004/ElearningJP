@@ -263,14 +263,14 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                       )}
                     </p>
                   </div>
-                  {/* Nút ↑/↓ reorder — luôn hiển thị (không hover) để dễ thao tác.
+                  {/* Nút ↑/↓ reorder — luôn hiển thị để dễ thao tác.
                       Enable/disable theo vị trí đầu/cuối. */}
-                  {/* <div className="flex flex-col gap-0.5 shrink-0">
+                  <div className="flex flex-col gap-0.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleReorderQuestion('up', q.id)}
                       disabled={isFirst || isReordering}
-                      className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                       title="Di chuyển lên"
                     >
                       <ChevronUp className="w-3.5 h-3.5" />
@@ -279,12 +279,12 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                       type="button"
                       onClick={() => handleReorderQuestion('down', q.id)}
                       disabled={isLast || isReordering}
-                      className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                       title="Di chuyển xuống"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
                     </button>
-                  </div> */}
+                  </div>
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0">
                     <button
                       type="button"

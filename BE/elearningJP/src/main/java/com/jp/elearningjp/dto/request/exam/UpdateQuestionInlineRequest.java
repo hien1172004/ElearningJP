@@ -13,13 +13,20 @@ import java.util.List;
 public class UpdateQuestionInlineRequest {
     String questionText;
     String imageUrl;
+    String audioUrl;
     Integer audioStartTime;
     Integer audioEndTime;
     String transcriptJp;
     String transcriptVi;
     Short starPosition;
+    Boolean hasVisualOptions;
+    String mondaiCode;
     String explanationVi;
     Short correctOptionKey;
+    String passageTitle;
+    String passageContentJp;
+    String passageTranslationVi;
+    String passageImageUrl;
     List<OptionInlineUpdateRequest> options;
 
     @Data
@@ -33,5 +40,10 @@ public class UpdateQuestionInlineRequest {
         String optionText;
         String optionImageUrl;
         Boolean isCorrect;
+        Boolean correct;
+
+        public Boolean getIsCorrect() {
+            return isCorrect != null ? isCorrect : correct;
+        }
     }
 }
