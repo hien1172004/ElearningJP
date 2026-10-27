@@ -42,6 +42,8 @@ BE/**/src/main/resources/static/audio/
 BE/**/tools/
 AGENTS.md
 **/AGENTS.md
+.agents/
+**/.agents/
 
 
 #HTTP-TEST
