@@ -1,5 +1,6 @@
 export * from './api/axiosClient'
 export * from './auth.service'
+export * from './user.service'
 export * from './dictionary.service'
 export * from './ai.service'
 export * from './course.service'

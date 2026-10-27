@@ -13,6 +13,7 @@ public final class ApiPaths {
         public static final String INTROSPECT = "/introspect";
         public static final String FORGOT_PASSWORD = "/forgot-password";
         public static final String RESET_PASSWORD = "/reset-password";
+        public static final String GOOGLE = "/google";
     }
 
     public static final class User {

@@ -19,6 +19,7 @@ FE/**/node_modules/
 FE/**/.next/
 FE/**/dist/
 FE/**/build/
+FE/**/.env
 FE/**/.env.local
 FE/**/.env.development.local
 FE/**/.env.test.local

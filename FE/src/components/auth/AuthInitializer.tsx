@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { storage } from '@/utils/storage'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { userService } from '@/services/user.service'
 import {
   decodeJwt,
   extractEmailFromToken,
@@ -19,12 +20,8 @@ import type { User } from '@/types'
  * Ưu tiên:
  * 1. Nếu không có accessToken → set initialized, return.
  * 2. Decode JWT offline (BE là nguồn sự thật về quyền; chỉ dùng để hiển thị UI).
- * 3. Chỉ gọi BE (/auth/introspect) để validate khi cần. Khi BE lỗi mạng /
- *    500 / timeout → GIỮ token, không xoá. Khi token hết hạn (BE trả valid:false)
- *    → mới clearAuth.
- *
- * Lưu ý: thực tế việc token còn hạn hay không vẫn do axiosClient + refresh
- * interceptor xử lý khi user gọi API. AuthInitializer chỉ phục hồi UI state.
+ * 3. Đồng thời gọi BE (/users/me) để nạp thêm thông tin chi tiết (fullName, avatarUrl).
+ * 4. Chỉ khi token hết hạn mới clearAuth.
  */
 export const AuthInitializer = ({ children }: { children: ReactNode }) => {
   const setInitialized = useAuthStore((s) => s.setInitialized)
@@ -49,36 +46,48 @@ export const AuthInitializer = ({ children }: { children: ReactNode }) => {
     const userId = extractUserIdFromToken(accessToken)
     const email = extractEmailFromToken(accessToken)
 
-    // Kiểm tra exp nhanh: nếu token hết hạn rồi → clear & return
+    // Kiểm tra exp nhanh: nếu token hết hạn rồi
     if (payload?.exp && typeof payload.exp === 'number') {
       const nowSec = Math.floor(Date.now() / 1000)
       if (payload.exp <= nowSec) {
-        // Token hết hạn: KHÔNG xoá vội, để axiosClient thử refresh.
-        // Nếu remember me = false thì request kế tiếp sẽ fail và clear.
-        // Ở đây chỉ cần đảm bảo store vẫn còn accessToken để request refresh
-        // được gửi đi. KHÔNG clearAuth ở đây.
         setInitialized(true)
         return
       }
     }
 
     if (userId != null || roles.length > 0) {
-      const user: User = {
+      const initialUser: User = {
         id: userId ?? 0,
         email,
         fullName: '',
         role: roles[0] ?? 'STUDENT',
         roles,
       }
-      setUser(user)
+      setUser(initialUser)
       setInitialized(true)
+
+      // Bước 2: Nạp thông tin đầy đủ từ API /users/me
+      userService
+        .getMyProfile()
+        .then((res) => {
+          if (res?.data) {
+            setUser({
+              id: res.data.id,
+              email: res.data.email,
+              fullName: res.data.fullName,
+              avatarUrl: res.data.avatarUrl,
+              role: res.data.roles?.[0] ?? initialUser.role,
+              roles: res.data.roles ?? initialUser.roles,
+              phone: res.data.phoneNumber,
+            })
+          }
+        })
+        .catch(() => {
+          // Lỗi mạng hoặc server sẽ được interceptor xử lý
+        })
       return
     }
 
-    // --------------------------------------------------------------
-    // Bước 2: token không decode được (lỗi hiếm gặp) → set initialized
-    // để app không kẹt ở loading. KHÔNG clearAuth — để axios xử lý.
-    // --------------------------------------------------------------
     setInitialized(true)
   }, [setInitialized, setUser])
 

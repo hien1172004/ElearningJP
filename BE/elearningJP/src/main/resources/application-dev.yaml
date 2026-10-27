@@ -63,6 +63,8 @@ server:
 
 app:
   frontend-url: http://localhost:3000
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
 
 springdoc:
   api-docs:

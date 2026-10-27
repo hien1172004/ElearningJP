@@ -4,6 +4,9 @@ export { useLogout } from './useLogout'
 export { useForgotPassword } from './useForgotPassword'
 export { useResetPassword } from './useResetPassword'
 export { useValidateResetToken } from './useValidateResetToken'
+export { useGoogleLogin } from './useGoogleLogin'
+export { useUserProfile, useUpdateProfile, useChangeAvatar, USER_PROFILE_QUERY_KEY } from './useUserProfile'
+export { useChangePassword } from './useChangePassword'
 
 // Course / Lesson / Enrollment
 export { useCourses } from './useCourses'

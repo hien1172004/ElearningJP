@@ -31,6 +31,7 @@ public class SecurityConfig {
             "/api/v1/auth/refresh",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
+            "/api/v1/auth/google",
             // Payment gateway webhook (IPN) called by VNPay
             "/api/v1/payments/vnpay/ipn",
             // Promotion preview/apply endpoints (kept public if frontend needs them before auth)

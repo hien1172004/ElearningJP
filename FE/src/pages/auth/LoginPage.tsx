@@ -1,10 +1,36 @@
-﻿import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, BookOpen, Brain, BarChart2 } from 'lucide-react'
-import { App, Button as AntdButton, Checkbox, Form, Input as AntdInput } from 'antd'
+import { App, Button as AntdButton, Checkbox, Form, Input as AntdInput, Spin } from 'antd'
 import { z } from 'zod'
 import { AuthFooter } from '@/components/auth'
-import { useLogin } from '@/hooks'
+import { useLogin, useGoogleLogin } from '@/hooks'
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string
+            callback: (response: { credential: string }) => void
+          }) => void
+          renderButton: (
+            parent: HTMLElement,
+            options: {
+              theme?: 'outline' | 'filled_blue' | 'filled_black'
+              size?: 'large' | 'medium' | 'small'
+              text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin'
+              shape?: 'rectangular' | 'pill' | 'circle' | 'square'
+              width?: number
+            },
+          ) => void
+          prompt?: () => void
+        }
+      }
+    }
+  }
+}
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Vui lòng nhập email').email('Email không hợp lệ'),
@@ -31,9 +57,12 @@ export const LoginPage: React.FC = () => {
   const { message } = App.useApp()
   const [form] = Form.useForm<LoginFormValues>()
 
-  const { mutate, isPending } = useLogin({ remember, redirectTo })
+  const googleBtnRef = useRef<HTMLDivElement>(null)
 
-  React.useEffect(() => {
+  const { mutate, isPending } = useLogin({ remember, redirectTo })
+  const { mutate: googleLogin, isPending: isGooglePending } = useGoogleLogin({ redirectTo })
+
+  useEffect(() => {
     if (searchParams.get('expired') === '1') {
       message.warning({
         content: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.',
@@ -41,6 +70,51 @@ export const LoginPage: React.FC = () => {
       })
     }
   }, [searchParams, message])
+
+  // Khởi tạo Google Identity Services
+  useEffect(() => {
+    const clientId =
+      import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+      '142602742944-vskbcvgq85k9kgl1469k0f5k2d5h73m0.apps.googleusercontent.com'
+
+    const initGoogle = () => {
+      if (window.google && googleBtnRef.current) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (res: { credential: string }) => {
+              if (res.credential) {
+                googleLogin(res.credential)
+              }
+            },
+          })
+
+          googleBtnRef.current.innerHTML = ''
+          window.google.accounts.id.renderButton(googleBtnRef.current, {
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            shape: 'rectangular',
+            width: 350,
+          })
+        } catch (e) {
+          console.error('Google gsi init error:', e)
+        }
+      }
+    }
+
+    if (!document.getElementById('google-gsi-script')) {
+      const script = document.createElement('script')
+      script.id = 'google-gsi-script'
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      script.onload = initGoogle
+      document.body.appendChild(script)
+    } else {
+      initGoogle()
+    }
+  }, [googleLogin])
 
   const onFinish = async () => {
     try {
@@ -96,15 +170,6 @@ export const LoginPage: React.FC = () => {
             ))}
           </div>
         </div>
-
-        {/* Stats */}
-        {/* <div className="flex items-center gap-8 text-sm text-indigo-200/60">
-          <span>10K+ học viên</span>
-          <span>•</span>
-          <span>5K+ từ vựng</span>
-          <span>•</span>
-          <span>N5 - N1</span>
-        </div> */}
       </div>
 
       {/* Right Panel - Login Form */}
@@ -131,7 +196,7 @@ export const LoginPage: React.FC = () => {
               layout="vertical"
               requiredMark={false}
               onFinish={onFinish}
-              disabled={isPending}
+              disabled={isPending || isGooglePending}
               initialValues={{ email: '', password: '' }}
             >
               <Form.Item
@@ -188,12 +253,34 @@ export const LoginPage: React.FC = () => {
                   htmlType="submit"
                   block
                   loading={isPending}
-                  className="!rounded !font-medium"
+                  className="!rounded !font-medium bg-indigo-600 hover:bg-indigo-700"
                 >
                   Đăng nhập
                 </AntdButton>
               </Form.Item>
             </Form>
+
+            {/* Google Sign-in Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-3 text-gray-500 font-medium">Hoặc</span>
+              </div>
+            </div>
+
+            {/* Google Button */}
+            <div className="flex justify-center w-full min-h-[44px]">
+              {isGooglePending ? (
+                <div className="flex items-center gap-2 text-indigo-600 font-medium py-2">
+                  <Spin size="small" />
+                  <span className="text-sm">Đang xác thực Google...</span>
+                </div>
+              ) : (
+                <div ref={googleBtnRef} className="w-full flex justify-center" />
+              )}
+            </div>
 
             <AuthFooter>
               <p className="text-sm text-gray-600">
