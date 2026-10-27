@@ -199,4 +199,48 @@ export const speakingService = {
     // Trả về hàm hủy kết nối
     return () => controller.abort()
   },
+
+  /**
+   * Sinh gợi ý câu thoại thông minh theo ngữ cảnh hội thoại thời gian thực từ AI (FastAPI / Gemini)
+   */
+  async getSmartSuggestions(params: {
+    lastAiMessage?: string
+    scenarioTitle?: string
+    jlptLevel?: string
+    incompleteTasks?: string[]
+  }): Promise<Array<{ ja: string; vi: string }>> {
+    try {
+      const AI_API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${AI_API_URL}/api/v1/speaking/suggestions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          last_ai_message: params.lastAiMessage || '',
+          scenario_title: params.scenarioTitle || '',
+          jlpt_level: params.jlptLevel || 'N4',
+          incomplete_tasks: params.incompleteTasks || [],
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`AI suggestion service error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      if (data && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        return data.suggestions
+      }
+    } catch (err) {
+      console.warn('Lỗi gọi AI suggestions, fallback gợi ý cơ bản:', err)
+    }
+
+    return [
+      { ja: 'はい、そうですね。とても面白いです！', vi: 'Vâng, đúng vậy nhỉ. Thú vị thật đấy!' },
+      { ja: 'すみません、もう少し詳しく教えていただけますか？', vi: 'Xin lỗi, bạn có thể nói rõ hơn một chút được không?' },
+      { ja: '私もそう思います。あなたはどうですか？', vi: 'Tôi cũng nghĩ như vậy. Còn bạn thì sao?' },
+    ]
+  },
 }
+

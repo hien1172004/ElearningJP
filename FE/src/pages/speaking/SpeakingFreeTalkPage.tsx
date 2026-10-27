@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ChevronLeft,
@@ -7,12 +7,15 @@ import {
   Sparkles,
   Keyboard,
   Mic,
+  X,
   AlertTriangle,
+  ArrowUp,
+  Square,
 } from 'lucide-react'
 import { MaziikoMascot } from '@/components/speaking/MaziikoMascot'
 import { speakingService } from '@/services/speaking.service'
 import { useAuthStore } from '@/stores'
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { useSpeechRecognition, cleanDuplicateSpeech } from '@/hooks/useSpeechRecognition'
 
 const FREE_TALK_TOPICS = [
   { id: 'anime', text: '好きなアニメ', sub: 'Anime yêu thích' },
@@ -31,24 +34,84 @@ export const SpeakingFreeTalkPage: React.FC = () => {
   const [isKeyboardMode, setIsKeyboardMode] = useState(false)
   const [isStartingSession, setIsStartingSession] = useState(false)
   const [showSettingsPopover, setShowSettingsPopover] = useState(false)
-  const [showRomaji, setShowRomaji] = useState(true)
-  const [showFurigana, setShowFurigana] = useState(true)
+  const [showRomaji, setShowRomaji] = useState<boolean>(() => {
+    const saved = localStorage.getItem('speaking_show_romaji')
+    return saved !== null ? saved === 'true' : true
+  })
+  const [showFurigana, setShowFurigana] = useState<boolean>(() => {
+    const saved = localStorage.getItem('speaking_show_furigana')
+    return saved !== null ? saved === 'true' : true
+  })
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
+  const [selectedVoice, setSelectedVoice] = useState<'female' | 'male'>(() => {
+    return (localStorage.getItem('speaking_voice_gender') as 'female' | 'male') || 'female'
+  })
 
-  // Speech Recognition hook
-  const { isListening, transcript, startListening, stopListening, resetTranscript } =
-    useSpeechRecognition({
-      lang: 'ja-JP',
-      onResult: (text) => {
-        if (text) {
-          handleStartWithInput(text)
-        }
-      },
+  const handleToggleRomaji = () => {
+    setShowRomaji((prev) => {
+      const next = !prev
+      localStorage.setItem('speaking_show_romaji', String(next))
+      return next
     })
+  }
+
+  const handleToggleFurigana = () => {
+    setShowFurigana((prev) => {
+      const next = !prev
+      localStorage.setItem('speaking_show_furigana', String(next))
+      return next
+    })
+  }
+
+  const handleSelectVoice = (voice: 'female' | 'male') => {
+    setSelectedVoice(voice)
+    localStorage.setItem('speaking_voice_gender', voice)
+  }
+
+  // Speech Recognition hook: silenceTimeoutMs = 0 (tắt tự gửi)
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    error: speechError,
+    startListening,
+    stopListening,
+    cancelListening,
+    resetTranscript,
+  } = useSpeechRecognition({
+    lang: 'ja-JP',
+    continuous: true,
+    silenceTimeoutMs: 0,
+    onError: (err) => {
+      console.warn('Speech recognition error:', err)
+    },
+  })
+
+  // Đoạn text thu âm trực tiếp khi người dùng nói (đã làm sạch và khử trùng lặp câu)
+  const spokenText = cleanDuplicateSpeech((transcript + (interimTranscript ? ' ' + interimTranscript : '')).trim())
+
+  const handleSendSpeech = () => {
+    const textToSend = cleanDuplicateSpeech(spokenText)
+    if (!textToSend || isStartingRef.current) return
+    stopListening()
+    resetTranscript()
+    handleStartWithInput(textToSend)
+  }
+
+  const handleCancelSpeech = () => {
+    cancelListening()
+  }
+
+  const handleResumeListening = () => {
+    startListening(true)
+  }
+
+  const isStartingRef = useRef(false)
 
   // Bắt đầu phiên trò chuyện tự do với chủ đề được chọn
   const handleStartSession = async (topic: string, initialUserText?: string) => {
-    if (isStartingSession) return
+    if (isStartingRef.current || isStartingSession) return
+    isStartingRef.current = true
     try {
       setIsStartingSession(true)
       const session = await speakingService.createSession({
@@ -69,12 +132,14 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       alert('Không thể kết nối với AI. Vui lòng thử lại!')
     } finally {
       setIsStartingSession(false)
+      isStartingRef.current = false
     }
   }
 
   const handleStartWithInput = (text: string) => {
-    if (!text.trim()) return
-    handleStartSession('日常会話', text)
+    const cleaned = cleanDuplicateSpeech(text).trim()
+    if (!cleaned) return
+    handleStartSession('日常会話', cleaned)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -125,7 +190,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                     <span className="text-sm font-semibold text-slate-700">Hiện Romaji</span>
                     <button
                       type="button"
-                      onClick={() => setShowRomaji(!showRomaji)}
+                      onClick={handleToggleRomaji}
                       className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
                         showRomaji ? 'bg-blue-600' : 'bg-slate-300'
                       }`}
@@ -143,7 +208,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                     <span className="text-sm font-semibold text-slate-700">Hiện Furigana</span>
                     <button
                       type="button"
-                      onClick={() => setShowFurigana(!showFurigana)}
+                      onClick={handleToggleFurigana}
                       className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
                         showFurigana ? 'bg-blue-600' : 'bg-slate-300'
                       }`}
@@ -174,6 +239,40 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                     </div>
                     <div className="text-center text-xs font-semibold text-slate-500">
                       Tốc độ: x{playbackSpeed.toFixed(1)}
+                    </div>
+                  </div>
+
+                  {/* Giọng đọc AI */}
+                  <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-700">Giọng đọc AI</span>
+                      <span className="text-xs text-blue-600 font-medium">
+                        {selectedVoice === 'female' ? 'Nữ (Nanami)' : 'Nam (Keita)'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVoice('female')}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                          selectedVoice === 'female'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>👩 Nữ (Nanami)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVoice('male')}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                          selectedVoice === 'male'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>👨 Nam (Keita)</span>
+                      </button>
                     </div>
                   </div>
 
@@ -285,61 +384,162 @@ export const SpeakingFreeTalkPage: React.FC = () => {
               <Keyboard className="w-5 h-5" />
             </button>
 
-            {/* Input hoặc Placeholder */}
-            {isKeyboardMode ? (
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Hãy thử gõ gì đó bằng tiếng Nhật..."
-                autoFocus
-                className="flex-1 bg-transparent border-none text-sm text-slate-800 placeholder:text-slate-400 focus:outline-hidden"
-              />
-            ) : (
-              <div
-                onClick={() => {
-                  if (isListening) {
-                    stopListening()
-                  } else {
+          {/* Card thu âm trực tiếp hoặc Capsule thông thường */}
+          {isListening || !!spokenText ? (
+            <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+              {/* Dòng chữ nhận diện trực tiếp khi nói */}
+              <div className="text-slate-800 text-sm sm:text-base font-medium min-h-[32px] select-text">
+                {spokenText || (
+                  <span className="text-slate-400 italic">
+                    {isListening ? 'Đang lắng nghe bạn nói...' : 'Bấm mic để nói tiếp...'}
+                  </span>
+                )}
+              </div>
+
+              {/* Hàng điều khiển: [✕]   [Soundwave Bars]   [■ / Mic] [↑] */}
+              <div className="flex items-center justify-between pt-1">
+                {/* Nút hủy X */}
+                <button
+                  type="button"
+                  onClick={handleCancelSpeech}
+                  className="w-9 h-9 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center transition"
+                  title="Hủy câu nói"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Sóng âm thanh Soundwave Visualizer */}
+                <div className="flex items-center gap-1 px-2 sm:px-4">
+                  {[10, 16, 22, 14, 26, 18, 12, 24, 16, 28, 20, 14, 22, 16, 10, 24, 18, 12, 26, 16, 10].map((h, i) => (
+                    <span
+                      key={i}
+                      className={`w-1 rounded-full transition-all duration-150 ${
+                        isListening ? 'bg-indigo-400/80 animate-pulse' : 'bg-slate-200'
+                      }`}
+                      style={{
+                        height: isListening ? `${h}px` : '6px',
+                        animationDelay: `${(i * 60) % 500}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Các nút bên phải: Dừng nói (Square) & Gửi (ArrowUp) */}
+                <div className="flex items-center gap-2">
+                  {/* Nút Dừng nói hoặc tiếp tục nói */}
+                  {isListening ? (
+                    <button
+                      type="button"
+                      onClick={stopListening}
+                      className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center transition shadow-xs"
+                      title="Dừng ghi âm"
+                    >
+                      <Square className="w-4 h-4 fill-white text-white rounded-xs" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResumeListening}
+                      className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition"
+                      title="Tiếp tục nói"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {/* Nút Gửi (Mũi tên lên tím-xanh) */}
+                  <button
+                    type="button"
+                    disabled={isStartingSession || !spokenText.trim()}
+                    onClick={handleSendSpeech}
+                    className="w-10 h-10 rounded-full bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center transition shadow-md hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    title="Bắt đầu trò chuyện"
+                  >
+                    <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
+              {/* Nút bàn phím */}
+              <button
+                type="button"
+                onClick={() => setIsKeyboardMode((prev) => !prev)}
+                className={`p-2 rounded-full transition ${
+                  isKeyboardMode
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                }`}
+                title="Chuyển sang gõ chữ"
+              >
+                <Keyboard className="w-5 h-5" />
+              </button>
+
+              {/* Input hoặc Placeholder giọng nói */}
+              {isKeyboardMode ? (
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Hãy thử gõ câu bạn muốn nói..."
+                  autoFocus
+                  className="flex-1 bg-transparent border-none text-sm text-slate-800 placeholder:text-slate-400 focus:outline-hidden"
+                />
+              ) : (
+                <div
+                  onClick={() => {
                     resetTranscript()
                     startListening()
-                  }
-                }}
-                className="flex-1 text-center text-xs sm:text-sm text-slate-500 cursor-pointer select-none"
-              >
-                {isListening
-                  ? transcript || 'Đang lắng nghe bạn nói...'
-                  : 'Hãy thử nói gì đó'}
-              </div>
-            )}
-
-            {/* Nút Micro tím gradient */}
-            <button
-              type="button"
-              disabled={isStartingSession}
-              onClick={() => {
-                if (isKeyboardMode && inputText.trim()) {
-                  handleStartWithInput(inputText)
-                } else if (isListening) {
-                  stopListening()
-                } else {
-                  resetTranscript()
-                  startListening()
-                }
-              }}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${
-                isListening
-                  ? 'bg-rose-500 animate-pulse text-white'
-                  : 'bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white hover:scale-105'
-              }`}
-            >
-              {isStartingSession ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Mic className="w-5 h-5" />
+                  }}
+                  className="flex-1 text-center text-xs sm:text-sm text-slate-500 cursor-pointer select-none truncate px-2"
+                >
+                  {speechError ? (
+                    <span className="text-rose-500 font-medium text-xs px-2" title={speechError}>
+                      ⚠️ {speechError}
+                    </span>
+                  ) : (
+                    'Hãy thử nói gì đó'
+                  )}
+                </div>
               )}
-            </button>
+
+              {/* Các nút hành động bên phải */}
+              {isKeyboardMode ? (
+                <button
+                  type="button"
+                  disabled={isStartingSession || !inputText.trim()}
+                  onClick={() => handleStartWithInput(inputText)}
+                  className="w-10 h-10 rounded-full bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center transition shadow-md hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  title="Bắt đầu trò chuyện"
+                >
+                  {isStartingSession ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isStartingSession}
+                  onClick={() => {
+                    resetTranscript()
+                    startListening()
+                  }}
+                  className="w-10 h-10 rounded-full bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center transition shadow-md hover:scale-105 shrink-0"
+                  title="Bật microphone để nói"
+                >
+                  {isStartingSession ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Mic className="w-5 h-5" />
+                  )}
+                </button>
+              )}
+            </div>
+          )}
           </div>
 
           {/* Dòng chữ disclaimer nhỏ */}

@@ -33,15 +33,35 @@ public class GeminiLlmClient implements LlmClient {
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
     private static final Pattern JSON_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
 
+    private static final List<String> DEFAULT_FALLBACK_MODELS = List.of(
+            "gemini-3.5-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-3.5-flash",
+            "gemini-2.0-flash"
+    );
+
     public GeminiLlmClient(
             @Value("${gemini.api-key:}") String apiKey,
-            @Value("${gemini.model:gemini-3.5-flash}") String model,
+            @Value("${gemini.model:gemini-3.5-flash-lite}") String model,
             ObjectMapper objectMapper
     ) {
         this.apiKey = apiKey != null ? apiKey.trim() : "";
-        this.model = (model != null && !model.isBlank()) ? model.trim() : "gemini-3.5-flash";
+        this.model = (model != null && !model.isBlank()) ? model.trim() : "gemini-3.5-flash-lite";
         this.objectMapper = objectMapper;
         this.restClient = RestClient.builder().build();
+    }
+
+    private List<String> getCandidateModels() {
+        List<String> list = new ArrayList<>();
+        if (model != null && !model.isBlank()) {
+            list.add(model.trim());
+        }
+        for (String m : DEFAULT_FALLBACK_MODELS) {
+            if (!list.contains(m)) {
+                list.add(m);
+            }
+        }
+        return list;
     }
 
     @Override
@@ -51,12 +71,12 @@ public class GeminiLlmClient implements LlmClient {
         }
 
         Map<String, Object> requestBody = buildGeminiPayload(prompt);
+        List<String> modelsToTry = getCandidateModels();
 
-        // Gọi Gemini với cơ chế thử lại tối đa 2 lần nếu JSON lỗi
-        for (int attempt = 1; attempt <= 2; attempt++) {
+        for (String currentModel : modelsToTry) {
             try {
                 String rawResponse = restClient.post()
-                        .uri(GEMINI_API_URL, model, apiKey)
+                        .uri(GEMINI_API_URL, currentModel, apiKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(requestBody)
                         .retrieve()
@@ -64,17 +84,20 @@ public class GeminiLlmClient implements LlmClient {
 
                 AiSpeakingResponse parsed = parseGeminiResponse(rawResponse);
                 if (parsed != null && parsed.getReplyJa() != null && !parsed.getReplyJa().isBlank()) {
+                    log.info("Gemini phản hồi thành công qua model: {}", currentModel);
                     return parsed;
                 }
             } catch (Exception e) {
-                log.warn("Lỗi gọi Gemini lần {}: {}", attempt, e.getMessage());
-                if (attempt == 2) {
-                    throw new RuntimeException("Không thể nhận phản hồi hợp lệ từ Gemini sau 2 lần thử: " + e.getMessage(), e);
-                }
+                log.warn("Model {} bị quá tải hoặc gặp sự cố ({}). Đang tự động thử model dự phòng tiếp theo...", currentModel, e.getMessage());
             }
         }
 
-        throw new RuntimeException("Gemini không trả về câu thoại hợp lệ");
+        // Nếu tất cả các model đều quá tải hoặc mất mạng quốc tế, trả về phản hồi fallback thông minh, không văng lỗi làm ngắt trải nghiệm học viên
+        log.warn("Tất cả model Gemini đều không khả dụng. Trả về lượt thoại thông minh dự phòng.");
+        return AiSpeakingResponse.builder()
+                .replyJa("はい、よく分かりました！そのことについて、もっと詳しく教えていただけますか？")
+                .replyVi("Vâng, tôi hiểu rồi! Bạn có thể chia sẻ thêm chi tiết về điều đó được không?")
+                .build();
     }
 
     @Override

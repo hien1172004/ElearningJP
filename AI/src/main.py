@@ -1,11 +1,13 @@
 import base64
+import hashlib
 import logging
 import os
 import re
 import json
 from typing import Optional, Any, List, Dict, Union
-from fastapi import FastAPI, File, UploadFile, Query, HTTPException, Body
+from fastapi import FastAPI, File, UploadFile, Query, HTTPException, Body, Response
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 try:
     from dotenv import load_dotenv
@@ -145,6 +147,91 @@ def suggest_furigana(text: str = Query(..., min_length=1, description="Từ Hán
     except Exception as e:
         logger.warning(f"Lỗi gợi ý Furigana cho '{text}': {e}")
         return {"text": text, "reading": "", "success": False}
+
+
+# ==============================================================================
+# NEURAL TEXT-TO-SPEECH (MICROSOFT EDGE TTS - HIGH FIDELITY JAPANESE AI VOICE)
+# ==============================================================================
+
+TTS_CACHE_DIR = Path(__file__).resolve().parent.parent / "extracted_audio" / "tts_cache"
+os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+
+VOICE_MAP = {
+    "female": "ja-JP-NanamiNeural",
+    "nanami": "ja-JP-NanamiNeural",
+    "male": "ja-JP-KeitaNeural",
+    "keita": "ja-JP-KeitaNeural",
+    "ja": "ja-JP-NanamiNeural",
+    "ja-jp": "ja-JP-NanamiNeural",
+}
+
+@app.api_route("/api/v1/tts/synthesize", methods=["GET", "POST", "HEAD"], tags=["Text-to-Speech"])
+@app.api_route("/api/v1/tts/stream", methods=["GET", "HEAD"], tags=["Text-to-Speech"])
+async def synthesize_speech(
+    text: str = Query(..., min_length=1, description="Văn bản tiếng Nhật cần phát âm"),
+    voice: Optional[str] = Query("ja-JP-NanamiNeural", description="Giọng đọc: ja-JP-NanamiNeural (Nữ), ja-JP-KeitaNeural (Nam)"),
+    rate: Optional[str] = Query("+0%", description="Tốc độ nói (+0%, -10%, +10%)"),
+    pitch: Optional[str] = Query("+0Hz", description="Cao độ giọng (+0Hz, +5Hz)")
+):
+    """
+    Tạo giọng đọc AI tiếng Nhật cực chuẩn (Microsoft Neural Voice - 0% robot, có hơi thở và ngữ điệu tự nhiên).
+    Kết quả trả về trực tiếp audio/mpeg (MP3) với cơ chế cache đĩa cực nhanh.
+    """
+    clean_text = text.strip()
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Văn bản không được để trống")
+
+    voice_key = voice.lower() if voice else "ja-jp-nanamineural"
+    chosen_voice = VOICE_MAP.get(voice_key, voice or "ja-JP-NanamiNeural")
+    if not chosen_voice.startswith("ja-JP-"):
+        chosen_voice = "ja-JP-NanamiNeural"
+
+    safe_rate = rate.strip() if rate else "+0%"
+    safe_pitch = pitch.strip() if pitch else "+0Hz"
+
+    cache_key = hashlib.md5(f"{chosen_voice}:{safe_rate}:{safe_pitch}:{clean_text}".encode("utf-8")).hexdigest()
+    cache_file = TTS_CACHE_DIR / f"{cache_key}.mp3"
+
+    if cache_file.exists():
+        try:
+            with open(cache_file, "rb") as f:
+                audio_bytes = f.read()
+            if audio_bytes:
+                return Response(
+                    content=audio_bytes,
+                    media_type="audio/mpeg",
+                    headers={"Cache-Control": "public, max-age=604800, immutable", "X-Audio-Cache": "HIT"}
+                )
+        except Exception as e:
+            logger.warning(f"Lỗi đọc file cache TTS {cache_file}: {e}")
+
+    try:
+        import edge_tts
+        communicate = edge_tts.Communicate(text=clean_text, voice=chosen_voice, rate=safe_rate, pitch=safe_pitch)
+        chunks = []
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                chunks.append(chunk["data"])
+        
+        audio_bytes = b"".join(chunks)
+        if not audio_bytes:
+            raise HTTPException(status_code=500, detail="Không thể tạo âm thanh từ Edge TTS")
+
+        try:
+            with open(cache_file, "wb") as f:
+                f.write(audio_bytes)
+        except Exception as e:
+            logger.warning(f"Lỗi ghi cache TTS {cache_file}: {e}")
+
+        return Response(
+            content=audio_bytes,
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "public, max-age=604800, immutable", "X-Audio-Cache": "MISS"}
+        )
+    except Exception as e:
+        logger.error(f"Lỗi tổng hợp giọng nói Edge TTS cho text '{clean_text}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Lỗi tạo âm thanh: {str(e)}")
+
 
 
 # ==============================================================================
@@ -1092,5 +1179,199 @@ async def extract_full_exam_endpoint(
         total_duration_minutes=total_duration,
         sections=sections,
     )
+
+
+# ==============================================================================
+# AI SPEAKING CONTEXTUAL SUGGESTIONS (GEMINI FLASH)
+# ==============================================================================
+
+class SpeakingSuggestionItem(BaseModel):
+    ja: str
+    vi: str
+
+class SpeakingSuggestionsRequest(BaseModel):
+    last_ai_message: Optional[str] = None
+    scenario_title: Optional[str] = None
+    scenario_description: Optional[str] = None
+    jlpt_level: Optional[str] = "N4"
+    incomplete_tasks: Optional[List[str]] = []
+
+class SpeakingSuggestionsResponse(BaseModel):
+    suggestions: List[SpeakingSuggestionItem]
+
+
+def _generate_smart_contextual_suggestions(last_ai: str, topic: str, level: str) -> List[SpeakingSuggestionItem]:
+    topic_lower = (topic or "").lower()
+    lvl = (level or "N4").upper()
+
+    # 1. Câu hỏi về trường học / sinh viên
+    if any(k in last_ai for k in ["学生", "大学", "学校", "学部"]):
+        if lvl in ["N3", "N2", "N1"]:
+            return [
+                SpeakingSuggestionItem(ja="はい、大学で国際関係を専攻しております。よろしくお願いいたします。", vi="Vâng, tôi đang theo học chuyên ngành quan hệ quốc tế tại trường đại học. Rất mong được giúp đỡ."),
+                SpeakingSuggestionItem(ja="今年入学したばかりで、まだ慣れないことも多いですが充実しています。", vi="Tôi vừa mới nhập học năm nay, dù còn nhiều điều chưa quen nhưng cuộc sống rất phong phú."),
+                SpeakingSuggestionItem(ja="はい、経済学部で学んでいます。専攻について詳しくお話ししましょうか？", vi="Vâng, tôi đang học khoa kinh tế. Bạn có muốn trao đổi thêm về chuyên ngành không?"),
+            ]
+        return [
+            SpeakingSuggestionItem(ja="はい、さくら大学の学生です。はじめまして！", vi="Vâng, tôi là sinh viên trường đại học Sakura. Rất vui được làm quen!"),
+            SpeakingSuggestionItem(ja="そうです、今年からさくら大学に入学しました。", vi="Đúng vậy, tôi vừa nhập học trường đại học Sakura từ năm nay."),
+            SpeakingSuggestionItem(ja="はい！経済学部で勉強しています。あなたは何学部ですか？", vi="Vâng! Tôi đang học tại khoa kinh tế. Bạn học khoa nào vậy?"),
+        ]
+
+    # 2. Câu hỏi về Anime / sở thích / phim ảnh
+    if any(k in last_ai for k in ["アニメ", "映画", "趣味", "音楽", "スポーツ"]):
+        return [
+            SpeakingSuggestionItem(ja="はい、日常系やコメディのアニメが大好きです！", vi="Vâng, tôi rất thích các bộ anime đời thường và hài hước!"),
+            SpeakingSuggestionItem(ja="最近は忙しくてあまり見ていませんが、おすすめはありますか？", vi="Dạo này tôi bận nên ít xem, bạn có bộ nào hay muốn gợi ý không?"),
+            SpeakingSuggestionItem(ja="『SPY×FAMILY』や『鬼滅の刃』が好きでよく見ます。", vi="Tôi rất thích và hay xem 'SPY×FAMILY' hoặc 'Kimetsu no Yaiba'."),
+        ]
+
+    # 3. Câu hỏi về công việc / bận rộn
+    if any(k in last_ai for k in ["忙し", "仕事", "会社", "勉強", "お疲れ"]):
+        return [
+            SpeakingSuggestionItem(ja="はい、最近は仕事が少し忙しいですが、頑張っています！", vi="Vâng, dạo này công việc hơi bận một chút, nhưng tôi vẫn đang cố gắng!"),
+            SpeakingSuggestionItem(ja="お疲れ様です！週末はゆっくり休む予定です。", vi="Cảm ơn bạn! Cuối tuần này tôi dự định sẽ nghỉ ngơi thoải mái."),
+            SpeakingSuggestionItem(ja="そうですね、でも日本語の勉強はとても楽しいです。", vi="Đúng vậy, nhưng việc học tiếng Nhật thì rất thú vị."),
+        ]
+
+    # 4. Khi theo chủ đề: Gọi món / Quán ăn / Nhà hàng
+    if any(k in topic_lower for k in ["gọi món", "nhà hàng", "quán ăn", "ăn uống", "restaurant", "food", "注文", "料理"]):
+        return [
+            SpeakingSuggestionItem(ja="すみません、注文をお願いします。", vi="Xin lỗi, cho tôi gọi món với ạ."),
+            SpeakingSuggestionItem(ja="おすすめの料理は何ですか？", vi="Ở quán có món gì ngon gợi ý không ạ?"),
+            SpeakingSuggestionItem(ja="これを一つと、お水をいただけますか？", vi="Cho tôi xin một phần món này và một ly nước được không ạ?"),
+        ]
+
+    # 5. Khi theo chủ đề: Mua sắm / Siêu thị / Cửa hàng
+    if any(k in topic_lower for k in ["mua sắm", "siêu thị", "cửa hàng", "shopping", "買い物", "店"]):
+        return [
+            SpeakingSuggestionItem(ja="すみません、これはいくらですか？", vi="Xin lỗi, cái này giá bao nhiêu vậy ạ?"),
+            SpeakingSuggestionItem(ja="他の色やサイズはありますか？", vi="Món này còn màu hoặc kích cỡ khác không ạ?"),
+            SpeakingSuggestionItem(ja="これを試着してもいいですか？", vi="Tôi có thể mặc thử món đồ này được không?"),
+        ]
+
+    # 6. Khi theo chủ đề: Du lịch / Khách sạn / Hỏi đường / Ga tàu
+    if any(k in topic_lower for k in ["du lịch", "khách sạn", "hỏi đường", "sân bay", "ga", "travel", "hotel", "旅行", "道"]):
+        return [
+            SpeakingSuggestionItem(ja="すみません、駅への道を教えていただけますか？", vi="Xin lỗi, bạn có thể chỉ đường đến ga giúp tôi được không ạ?"),
+            SpeakingSuggestionItem(ja="チェックインをお願いしたいのですが。", vi="Tôi muốn làm thủ tục nhận phòng ạ."),
+            SpeakingSuggestionItem(ja="この近くでおすすめの観光地はどこですか？", vi="Gần đây có địa điểm tham quan nào hay không ạ?"),
+        ]
+
+    # 7. Khi theo chủ đề: Phỏng vấn xin việc / Part-time / Công sở
+    if any(k in topic_lower for k in ["phỏng vấn", "xin việc", "baito", "interview", "面接", "アルバイト"]):
+        return [
+            SpeakingSuggestionItem(ja="私の強みは責任感があり、粘り強く取り組むところです。", vi="Điểm mạnh của tôi là có trách nhiệm và luôn kiên trì trong công việc."),
+            SpeakingSuggestionItem(ja="一生懸命頑張りますので、よろしくお願いいたします。", vi="Tôi sẽ nỗ lực hết sức mình, rất mong nhận được sự giúp đỡ."),
+            SpeakingSuggestionItem(ja="実践を通して日本語と業務スキルを磨きたいと考えております。", vi="Tôi muốn thông qua thực tế để trau dồi tiếng Nhật và kỹ năng nghiệp vụ."),
+        ]
+
+    # 8. Câu chào hỏi ban đầu (こんにちは、はじめまして、こんばんは)
+    if any(k in last_ai for k in ["こんにちは", "はじめまして", "こんばんは", "おはよう"]):
+        return [
+            SpeakingSuggestionItem(ja="こんにちは！はじめまして、よろしくお願いします。", vi="Xin chào! Rất vui được làm quen, mong được bạn giúp đỡ."),
+            SpeakingSuggestionItem(ja="はじめまして！お会いできて嬉しいです。", vi="Rất vui được gặp bạn! Tôi rất vui khi được trò chuyện cùng bạn."),
+            SpeakingSuggestionItem(ja="こんにちは！今日はいい天気ですね。", vi="Xin chào! Hôm nay thời tiết đẹp nhỉ."),
+        ]
+
+    # 9. Câu hỏi có trợ từ nghi vấn か？
+    if "か？" in last_ai or "ですか" in last_ai or "ますか" in last_ai:
+        return [
+            SpeakingSuggestionItem(ja="はい、そうです。あなたはどうですか？", vi="Vâng, đúng vậy. Còn bạn thì sao?"),
+            SpeakingSuggestionItem(ja="いえ、そうではありませんが、興味があります。", vi="Không, không hẳn là như vậy, nhưng tôi rất có hứng thú."),
+            SpeakingSuggestionItem(ja="とても面白いですね！詳しく教えてください。", vi="Thú vị quá nhỉ! Bạn có thể kể chi tiết hơn được không?"),
+        ]
+
+    # Mặc định tự nhiên theo cấp độ
+    if lvl in ["N3", "N2", "N1"]:
+        return [
+            SpeakingSuggestionItem(ja="なるほど、その通りですね。大変勉強になります！", vi="Ra là vậy, đúng như vậy nhỉ. Tôi học hỏi được rất nhiều!"),
+            SpeakingSuggestionItem(ja="恐れ入りますが、もう少し具体的に教えていただけますか？", vi="Xin thứ lỗi, bạn có thể giải thích cụ thể hơn một chút được không ạ?"),
+            SpeakingSuggestionItem(ja="私も同感です。あなたのご意見もぜひお聞きしたいです。", vi="Tôi cũng đồng ý như vậy. Rất mong được lắng nghe thêm ý kiến từ bạn."),
+        ]
+
+    return [
+        SpeakingSuggestionItem(ja="はい、そうですね。とても面白いです！", vi="Vâng, đúng vậy nhỉ. Thú vị thật đấy!"),
+        SpeakingSuggestionItem(ja="すみません、もう少し詳しく教えていただけますか？", vi="Xin lỗi, bạn có thể nói rõ hơn một chút được không?"),
+        SpeakingSuggestionItem(ja="私もそう思います。あなたはどうですか？", vi="Tôi cũng nghĩ như vậy. Còn bạn thì sao?"),
+    ]
+
+
+@app.post(
+    "/api/v1/speaking/suggestions",
+    response_model=SpeakingSuggestionsResponse,
+    tags=["AI Speaking"],
+)
+async def get_speaking_suggestions(req: SpeakingSuggestionsRequest):
+    """
+    Sinh 2-3 gợi ý câu thoại thông minh theo ngữ cảnh hội thoại gần nhất và mục tiêu bài học (Gemini + Local Contextual Engine).
+    """
+    import asyncio
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+
+    last_ai = (req.last_ai_message or "").strip()
+    topic = req.scenario_title or "Giao tiếp hàng ngày"
+    level = req.jlpt_level or "N4"
+
+    # Gợi ý dự phòng tức thì nếu mất mạng / hết quota
+    context_suggestions = _generate_smart_contextual_suggestions(last_ai, topic, level)
+
+    # Ưu tiên số 1: Gọi trực tiếp mô hình AI Gemini để sinh gợi ý linh hoạt thời gian thực
+    if api_key and len(api_key) > 10:
+        try:
+            from google import genai
+            from google.genai import types as genai_types
+
+            client = genai.Client(api_key=api_key)
+            prompt = f"""
+You are an expert Japanese conversation coach in an interactive speaking app.
+Generate 3 natural, level-appropriate ({level}) Japanese response options to reply to: "{last_ai or 'こんにちは！'}".
+Topic: {topic}
+
+Return ONLY a JSON array of objects with keys "ja" and "vi".
+Example:
+[
+  {{"ja": "はい、さくら大学の学生です。", "vi": "Vâng, tôi là sinh viên trường Sakura."}},
+  {{"ja": "そうです、今年入学したばかりです。", "vi": "Đúng vậy, tôi vừa nhập học năm nay."}}
+]
+"""
+            loop = asyncio.get_event_loop()
+            response = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=genai_types.GenerateContentConfig(
+                            temperature=0.7,
+                            response_mime_type="application/json",
+                        ),
+                    ),
+                ),
+                timeout=4.0,
+            )
+
+            raw_text = (response.text or "").strip()
+            if raw_text.startswith("```"):
+                raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
+                raw_text = re.sub(r"\s*```$", "", raw_text)
+
+            data = json.loads(raw_text)
+            if isinstance(data, list) and len(data) > 0:
+                items = []
+                for item in data:
+                    ja = item.get("ja", "").strip()
+                    vi = item.get("vi", "").strip()
+                    if ja:
+                        items.append(SpeakingSuggestionItem(ja=ja, vi=vi or "Gợi ý trả lời"))
+                if items:
+                    return SpeakingSuggestionsResponse(suggestions=items)
+        except Exception as e:
+            logger.info(f"Gemini suggestions fallback to contextual engine: {e}")
+
+    return SpeakingSuggestionsResponse(suggestions=context_suggestions)
+
+
 
 

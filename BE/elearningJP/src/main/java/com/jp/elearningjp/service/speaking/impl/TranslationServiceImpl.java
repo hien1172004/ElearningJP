@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClient;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -55,8 +56,11 @@ public class TranslationServiceImpl implements TranslationService {
         if (request.getMessageId() != null) {
             message = messageRepository.findById(request.getMessageId()).orElse(null);
             if (message != null) {
-                // Nếu tin nhắn đã có bản dịch sẵn trong DB, trả về ngay lập tức
-                if (message.getTextVi() != null && !message.getTextVi().isBlank()) {
+                // Nếu tin nhắn đã có bản dịch sẵn trong DB và hợp lệ (khác câu gốc và không phải chuỗi lỗi), trả về ngay
+                if (message.getTextVi() != null 
+                        && !message.getTextVi().isBlank() 
+                        && !message.getTextVi().trim().equalsIgnoreCase(message.getTextJa().trim())
+                        && !message.getTextVi().trim().equalsIgnoreCase("Không có bản dịch tiếng Việt.")) {
                     return TranslateResponse.builder()
                             .messageId(message.getId())
                             .originalText(message.getTextJa())
@@ -75,8 +79,12 @@ public class TranslationServiceImpl implements TranslationService {
 
         String translated = translateJapaneseToVietnamese(textToTranslate.trim());
 
-        // Lưu bản dịch vào ai_message nếu có
-        if (message != null) {
+        // Lưu bản dịch vào ai_message nếu dịch thành công sang tiếng Việt
+        if (message != null 
+                && translated != null 
+                && !translated.isBlank() 
+                && !translated.trim().equalsIgnoreCase(textToTranslate.trim())
+                && !translated.trim().equalsIgnoreCase("Không có bản dịch tiếng Việt.")) {
             message.setTextVi(translated);
             messageRepository.save(message);
         }
@@ -100,58 +108,58 @@ public class TranslationServiceImpl implements TranslationService {
             return cached;
         }
 
-        // 1. Dùng Gemini LLM để dịch chuẩn xác theo ngữ cảnh hội thoại (tắt thinking token để phản hồi siêu tốc)
+        // 1. Dùng Gemini LLM với multi-model fallback để dịch chuẩn xác sang tiếng Việt
         if (geminiApiKey != null && !geminiApiKey.isBlank()) {
-            try {
-                String prompt = "Dịch câu tiếng Nhật sau sang tiếng Việt tự nhiên và chuẩn xác. Chỉ trả về duy nhất 1 dòng câu dịch tiếng Việt, tuyệt đối không có lời dẫn dắt, không có giải thích hay chú thích: " + key;
-                java.net.URI geminiUri = java.net.URI.create("https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel + ":generateContent?key=" + geminiApiKey);
+            List<String> modelsToTry = List.of("gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-3.5-flash");
+            String prompt = "Dịch câu tiếng Nhật sau sang tiếng Việt tự nhiên và chuẩn xác. Chỉ trả về duy nhất 1 câu dịch tiếng Việt, tuyệt đối không có giải thích hay chú thích: " + key;
 
-                Map<String, Object> body = Map.of(
-                        "contents", java.util.List.of(
-                                Map.of("parts", java.util.List.of(Map.of("text", prompt)))
-                        ),
-                        "generationConfig", Map.of(
-                                "temperature", 0.1,
-                                "maxOutputTokens", 120,
-                                "thinkingConfig", Map.of("thinkingBudget", 0)
-                        )
-                );
+            for (String currentModel : modelsToTry) {
+                try {
+                    java.net.URI geminiUri = java.net.URI.create("https://generativelanguage.googleapis.com/v1beta/models/" + currentModel + ":generateContent?key=" + geminiApiKey);
 
-                String geminiResponse = restClient.post()
-                        .uri(geminiUri)
-                        .header("Content-Type", "application/json")
-                        .body(body)
-                        .retrieve()
-                        .body(String.class);
+                    Map<String, Object> body = Map.of(
+                            "contents", java.util.List.of(
+                                    Map.of("parts", java.util.List.of(Map.of("text", prompt)))
+                            ),
+                            "generationConfig", Map.of(
+                                    "temperature", 0.1,
+                                    "maxOutputTokens", 120
+                            )
+                    );
 
-                if (geminiResponse != null) {
-                    JsonNode root = objectMapper.readTree(geminiResponse);
-                    JsonNode candidate = root.path("candidates").path(0);
-                    JsonNode parts = candidate.path("content").path("parts");
-                    if (parts.isArray() && parts.size() > 0) {
-                        for (JsonNode part : parts) {
-                            if (!part.path("thought").asBoolean(false) && part.has("text")) {
-                                String rawText = part.path("text").asText().trim();
-                                if (!rawText.isBlank()) {
-                                    // Lấy dòng đầu tiên nếu model trả về nhiều dòng
-                                    String[] lines = rawText.split("\n");
-                                    for (String line : lines) {
-                                        String clean = line.replaceAll("^[\"“*\\-\\s]+|[\"”*\\-\\s]+$", "").trim();
-                                        if (!clean.isEmpty()) {
-                                            translationCache.put(key, clean);
-                                            return clean;
+                    String geminiResponse = restClient.post()
+                            .uri(geminiUri)
+                            .header("Content-Type", "application/json")
+                            .body(body)
+                            .retrieve()
+                            .body(String.class);
+
+                    if (geminiResponse != null) {
+                        JsonNode root = objectMapper.readTree(geminiResponse);
+                        JsonNode candidate = root.path("candidates").path(0);
+                        JsonNode parts = candidate.path("content").path("parts");
+                        if (parts.isArray() && parts.size() > 0) {
+                            for (JsonNode part : parts) {
+                                if (part.has("text")) {
+                                    String rawText = part.path("text").asText().trim();
+                                    if (!rawText.isBlank()) {
+                                        String[] lines = rawText.split("\n");
+                                        for (String line : lines) {
+                                            String clean = line.replaceAll("^[\"“*\\-\\s>]+|[\"”*\\-\\s]+$", "").trim();
+                                            if (!clean.isEmpty() && !clean.equalsIgnoreCase(key)) {
+                                                translationCache.put(key, clean);
+                                                log.info("Dịch thành công qua model {}: '{}' -> '{}'", currentModel, key, clean);
+                                                return clean;
+                                            }
                                         }
                                     }
-                                    String clean = rawText.replaceAll("^\"|\"$", "").trim();
-                                    translationCache.put(key, clean);
-                                    return clean;
                                 }
                             }
                         }
                     }
+                } catch (Exception e) {
+                    log.warn("Gemini model {} translation error: {}", currentModel, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.warn("Gemini translation error, falling back to Google: {}", e.getMessage());
             }
         }
 
@@ -162,6 +170,7 @@ public class TranslationServiceImpl implements TranslationService {
 
             String response = restClient.get()
                     .uri(googleUri)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                     .retrieve()
                     .body(String.class);
 
@@ -175,7 +184,8 @@ public class TranslationServiceImpl implements TranslationService {
                         }
                     }
                     String result = sb.toString().trim();
-                    if (!result.isEmpty()) {
+                    if (!result.isEmpty() && !result.equalsIgnoreCase(key)) {
+                        translationCache.put(key, result);
                         return result;
                     }
                 }
@@ -184,6 +194,6 @@ public class TranslationServiceImpl implements TranslationService {
             log.warn("Google translate fallback error: {}", e.getMessage());
         }
 
-        return textJa;
+        return "Không có bản dịch tiếng Việt.";
     }
 }
