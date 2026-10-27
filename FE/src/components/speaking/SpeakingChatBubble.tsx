@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { Volume2, Languages, Loader2, Sparkles, User, RotateCcw } from 'lucide-react'
+import { Volume2, Languages, Loader2, User, RotateCcw } from 'lucide-react'
 import { FuriganaText } from './FuriganaText'
 import { GrammarCorrectionCard } from './GrammarCorrectionCard'
 import { MaziikoMascot } from './MaziikoMascot'
 import { speakingService } from '@/services/speaking.service'
+import { playSmartAudio, stopSpeaking } from '@/utils'
 import type { AiMessage } from '@/types/speaking.types'
 
 interface SpeakingChatBubbleProps {
@@ -11,6 +12,7 @@ interface SpeakingChatBubbleProps {
   aiRoleName?: string
   onRepeatPrompt?: (text: string) => void
   showRomaji?: boolean
+  showFurigana?: boolean
 }
 
 export const SpeakingChatBubble: React.FC<SpeakingChatBubbleProps> = ({
@@ -18,53 +20,58 @@ export const SpeakingChatBubble: React.FC<SpeakingChatBubbleProps> = ({
   aiRoleName = 'Maziiko',
   onRepeatPrompt,
   showRomaji = true,
+  showFurigana = true,
 }) => {
   const isAI = message.role === 'AI'
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
   const [isTranslating, setIsTranslating] = useState(false)
-  const [showTranslation, setShowTranslation] = useState(Boolean(message.textVi))
-  const [translatedText, setTranslatedText] = useState(message.textVi || '')
+  const isValidTranslation = (text?: string | null) =>
+    Boolean(text && text.trim() && text.trim() !== message.textJa.trim() && text.trim() !== 'Không có bản dịch tiếng Việt.')
+
+  const [showTranslation, setShowTranslation] = useState(isValidTranslation(message.textVi))
+  const [translatedText, setTranslatedText] = useState(isValidTranslation(message.textVi) ? (message.textVi || '') : '')
   const [audioUrl, setAudioUrl] = useState(message.audioUrl || '')
 
   const handlePlayAudio = async () => {
-    if (isPlayingAudio) return
+    if (isPlayingAudio) {
+      stopSpeaking()
+      setIsPlayingAudio(false)
+      return
+    }
 
     try {
       setIsPlayingAudio(true)
-
       let targetUrl = audioUrl
-      if (!targetUrl) {
-        // Gọi backend sinh file TTS
-        const ttsRes = await speakingService.generateTts(message.textJa, 'ja', message.id)
-        targetUrl = ttsRes.audioUrl
-        setAudioUrl(targetUrl)
-      }
-
-      // Format URL nếu là relative path
-      const fullUrl = targetUrl.startsWith('http')
-        ? targetUrl
-        : `${import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:8080'}${targetUrl}`
-
-      const audio = new Audio(fullUrl)
-      audio.onended = () => setIsPlayingAudio(false)
-      audio.onerror = () => {
-        setIsPlayingAudio(false)
-        // Fallback sang Web Speech Synthesis của trình duyệt nếu file audio máy chủ gặp sự cố mạng
-        if ('speechSynthesis' in window) {
-          const utter = new SpeechSynthesisUtterance(message.textJa)
-          utter.lang = 'ja-JP'
-          window.speechSynthesis.speak(utter)
+      if (!targetUrl && message.id) {
+        try {
+          const ttsRes = await speakingService.generateTts(message.textJa, 'ja', message.id)
+          targetUrl = ttsRes.audioUrl
+          setAudioUrl(targetUrl)
+        } catch (e) {
+          console.warn('Backend TTS request error, using smart audio:', e)
         }
       }
-      await audio.play()
+
+      const fullUrl = targetUrl
+        ? (targetUrl.startsWith('http')
+            ? targetUrl
+            : `${import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:8080'}${targetUrl}`)
+        : undefined
+
+      playSmartAudio({
+        text: message.textJa,
+        audioUrl: fullUrl,
+        voice: 'female',
+        onEnd: () => setIsPlayingAudio(false),
+      })
     } catch (err) {
       console.warn('Lỗi phát âm thanh:', err)
       setIsPlayingAudio(false)
-      if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance(message.textJa)
-        utter.lang = 'ja-JP'
-        window.speechSynthesis.speak(utter)
-      }
+      playSmartAudio({
+        text: message.textJa,
+        voice: 'female',
+        onEnd: () => setIsPlayingAudio(false),
+      })
     }
   }
 
@@ -74,7 +81,7 @@ export const SpeakingChatBubble: React.FC<SpeakingChatBubbleProps> = ({
       return
     }
 
-    if (translatedText) {
+    if (isValidTranslation(translatedText)) {
       setShowTranslation(true)
       return
     }
@@ -102,6 +109,7 @@ export const SpeakingChatBubble: React.FC<SpeakingChatBubbleProps> = ({
           <FuriganaText
             text={message.textJa}
             showRomaji={showRomaji}
+            showFurigana={showFurigana}
             size="md"
             className="text-white"
           />
@@ -132,6 +140,7 @@ export const SpeakingChatBubble: React.FC<SpeakingChatBubbleProps> = ({
         <FuriganaText
           text={message.textJa}
           showRomaji={showRomaji}
+          showFurigana={showFurigana}
           size="md"
           className="text-slate-800"
         />

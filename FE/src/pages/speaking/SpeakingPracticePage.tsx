@@ -15,12 +15,15 @@ import {
   X,
   AlertTriangle,
   CheckCircle2,
+  ArrowUp,
+  Square,
 } from 'lucide-react'
 import { speakingService } from '@/services/speaking.service'
 import { FuriganaText } from '@/components/speaking/FuriganaText'
 import { MaziikoMascot } from '@/components/speaking/MaziikoMascot'
 import { GrammarCorrectionCard } from '@/components/speaking/GrammarCorrectionCard'
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { useSpeechRecognition, cleanDuplicateSpeech } from '@/hooks/useSpeechRecognition'
+import { playSmartAudio } from '@/utils'
 import type { AiSession, AiMessage, ScenarioTask } from '@/types/speaking.types'
 
 export const SpeakingPracticePage: React.FC = () => {
@@ -35,9 +38,39 @@ export const SpeakingPracticePage: React.FC = () => {
 
   // Settings State (Modal / Popover)
   const [showSettings, setShowSettings] = useState(false)
-  const [showRomaji, setShowRomaji] = useState(true)
-  const [showFurigana, setShowFurigana] = useState(true)
+  const [showRomaji, setShowRomaji] = useState<boolean>(() => {
+    const saved = localStorage.getItem('speaking_show_romaji')
+    return saved !== null ? saved === 'true' : true
+  })
+  const [showFurigana, setShowFurigana] = useState<boolean>(() => {
+    const saved = localStorage.getItem('speaking_show_furigana')
+    return saved !== null ? saved === 'true' : true
+  })
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0)
+  const [selectedVoice, setSelectedVoice] = useState<'female' | 'male'>(() => {
+    return (localStorage.getItem('speaking_voice_gender') as 'female' | 'male') || 'female'
+  })
+
+  const handleToggleRomaji = () => {
+    setShowRomaji((prev) => {
+      const next = !prev
+      localStorage.setItem('speaking_show_romaji', String(next))
+      return next
+    })
+  }
+
+  const handleToggleFurigana = () => {
+    setShowFurigana((prev) => {
+      const next = !prev
+      localStorage.setItem('speaking_show_furigana', String(next))
+      return next
+    })
+  }
+
+  const handleSelectVoice = (voice: 'female' | 'male') => {
+    setSelectedVoice(voice)
+    localStorage.setItem('speaking_voice_gender', voice)
+  }
 
   // Translation per message
   const [translationsVisible, setTranslationsVisible] = useState<Record<number, boolean>>({})
@@ -46,32 +79,60 @@ export const SpeakingPracticePage: React.FC = () => {
 
   // Floating Action Popups: Nhiệm vụ | Gợi ý
   const [showTasksModal, setShowTasksModal] = useState(false)
-  const [showSuggestionsModal, setShowSuggestionsModal] = useState(false)
-  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showInlineSuggestion, setShowInlineSuggestion] = useState(false)
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const [suggestionList, setSuggestionList] = useState<Array<{ ja: string; vi?: string }>>([])
+  const [currentSugIndex, setCurrentSugIndex] = useState(0)
 
   // Input capsule state
   const [isKeyboardMode, setIsKeyboardMode] = useState(false)
   const [inputText, setInputText] = useState('')
 
-  // Audio player ref
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const isProcessingRef = useRef(false)
+  const lastSentTextRef = useRef('')
+  const lastSentTimeRef = useRef(0)
 
-  // Speech Recognition hook
+  // Speech Recognition hook: silenceTimeoutMs = 0 (tắt tự gửi, hiển thị chữ trực tiếp)
   const {
     isListening,
     transcript,
+    interimTranscript,
+    error: speechError,
     startListening,
     stopListening,
+    cancelListening,
     resetTranscript,
   } = useSpeechRecognition({
     lang: 'ja-JP',
-    onResult: (spokenText) => {
-      if (spokenText) {
-        handleSendMessage(spokenText)
-      }
+    continuous: true,
+    silenceTimeoutMs: 0,
+    onError: (err) => {
+      console.warn('Speech recognition error:', err)
     },
   })
+
+  // Đoạn text thu âm trực tiếp khi người dùng nói (đã làm sạch và khử trùng lặp câu)
+  const spokenText = cleanDuplicateSpeech((transcript + (interimTranscript ? ' ' + interimTranscript : '')).trim())
+
+  // Gửi câu thoại đã nói cho AI khi người dùng bấm nút gửi
+  const handleSendSpeech = () => {
+    const textToSend = cleanDuplicateSpeech(spokenText)
+    if (!textToSend || isProcessingRef.current) return
+    stopListening()
+    resetTranscript()
+    handleSendMessage(textToSend)
+  }
+
+  // Hủy phiên thu âm hiện tại
+  const handleCancelSpeech = () => {
+    cancelListening()
+  }
+
+  // Tiếp tục nói thêm
+  const handleResumeListening = () => {
+    startListening(true)
+  }
 
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' })
@@ -116,11 +177,23 @@ export const SpeakingPracticePage: React.FC = () => {
 
   // Gửi tin nhắn từ người học và stream phản hồi AI
   const handleSendMessage = (textToSend: string) => {
-    if (!session || !textToSend.trim() || isProcessing) return
+    const cleanText = cleanDuplicateSpeech(textToSend).trim()
+    const now = Date.now()
+    if (!session || !cleanText || isProcessingRef.current) return
+
+    // Chống gửi trùng lặp câu nói trong vòng 2 giây
+    if (cleanText === lastSentTextRef.current && now - lastSentTimeRef.current < 2000) {
+      console.warn('Bỏ qua tin nhắn trùng lặp:', cleanText)
+      return
+    }
+
+    isProcessingRef.current = true
+    lastSentTextRef.current = cleanText
+    lastSentTimeRef.current = now
 
     const userMsg: AiMessage = {
       role: 'USER',
-      textJa: textToSend.trim(),
+      textJa: cleanText,
       createdAt: new Date().toISOString(),
     }
 
@@ -135,7 +208,7 @@ export const SpeakingPracticePage: React.FC = () => {
     setIsProcessing(true)
     setInputText('')
 
-    speakingService.sendStreamMessage(session.id, textToSend.trim(), {
+    speakingService.sendStreamMessage(session.id, cleanText, {
       onChunk: (chunk: string) => {
         setMessages((prev) => {
           const next = [...prev]
@@ -150,6 +223,7 @@ export const SpeakingPracticePage: React.FC = () => {
         })
       },
       onComplete: (event) => {
+        isProcessingRef.current = false
         setIsProcessing(false)
         setMessages((prev) => {
           const next = [...prev]
@@ -176,9 +250,17 @@ export const SpeakingPracticePage: React.FC = () => {
           return next
         })
 
-        // Tự động phát âm thanh câu trả lời của AI nếu muốn
-        if (event.response?.reply_ja) {
-          playTts(event.response.reply_ja)
+        // Tự động phát âm thanh câu trả lời của AI ngay khi vừa nhận xong
+        const aiReply =
+          event.response?.reply_ja ||
+          (event.response as any)?.replyJa ||
+          ''
+        if (aiReply) {
+          playSmartAudio({
+            text: aiReply,
+            voice: selectedVoice,
+            rate: playbackSpeed,
+          })
         }
 
         // Cập nhật nhiệm vụ hoàn thành nếu là kịch bản
@@ -195,6 +277,7 @@ export const SpeakingPracticePage: React.FC = () => {
         }
       },
       onError: (err) => {
+        isProcessingRef.current = false
         setIsProcessing(false)
         console.error('Lỗi SSE:', err)
         setMessages((prev) => {
@@ -213,30 +296,14 @@ export const SpeakingPracticePage: React.FC = () => {
     })
   }
 
-  // Phát TTS kèm tốc độ đọc
-  const playTts = async (text: string) => {
-    try {
-      if (audioRef.current) audioRef.current.pause()
-
-      const tts = await speakingService.generateTts(text, 'ja')
-      const audioUrl = tts.audioUrl.startsWith('http')
-        ? tts.audioUrl
-        : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'}${tts.audioUrl.replace('/api/v1', '')}`
-
-      const audio = new Audio(audioUrl)
-      audio.playbackRate = playbackSpeed
-      audioRef.current = audio
-      await audio.play()
-    } catch (err) {
-      console.warn('Lỗi phát âm:', err)
-      // Fallback Web Speech
-      if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance(text)
-        utter.lang = 'ja-JP'
-        utter.rate = playbackSpeed
-        window.speechSynthesis.speak(utter)
-      }
-    }
+  // Phát TTS kèm tốc độ đọc & giọng đọc được chọn (Edge-TTS Nanami/Keita chuẩn người bản xứ)
+  const playTts = (text: string) => {
+    if (!text || !text.trim()) return
+    playSmartAudio({
+      text: text.trim(),
+      voice: selectedVoice,
+      rate: playbackSpeed,
+    })
   }
 
   // Sao chép nội dung vào clipboard
@@ -255,8 +322,8 @@ export const SpeakingPracticePage: React.FC = () => {
 
     if (!translatedTexts[index]) {
       const msg = messages[index]
-      // Nếu tin nhắn đã có sẵn bản dịch (0ms instant)
-      if (msg?.textVi) {
+      // Nếu tin nhắn đã có sẵn bản dịch tiếng Việt thực sự (khác tiếng Nhật)
+      if (msg?.textVi && msg.textVi.trim() !== msg.textJa.trim()) {
         setTranslatedTexts((prev) => ({ ...prev, [index]: msg.textVi! }))
         setTranslationsVisible((prev) => ({ ...prev, [index]: true }))
         return
@@ -282,21 +349,52 @@ export const SpeakingPracticePage: React.FC = () => {
     }
   }
 
-  // Nút "Gợi ý": Tạo 3 câu gợi ý cho người học
-  const handleOpenSuggestions = () => {
-    setShowSuggestionsModal(true)
-    if (session?.scenario?.sampleDialogue && session.scenario.sampleDialogue.length > 0) {
-      const userLines = session.scenario.sampleDialogue
-        .filter((l) => l.speaker === 'USER' || l.role === 'USER')
-        .map((l) => l.text || l.ja || '')
-        .filter(Boolean)
-      setSuggestions(userLines.slice(0, 3))
-    } else {
-      setSuggestions([
-        'はい、そうですね。 (Vâng, đúng vậy nhỉ.)',
-        'すみません、もう一度言ってください。 (Xin lỗi, hãy nói lại một lần nữa ạ.)',
-        'とても面白いと思います！ (Tôi thấy điều đó rất thú vị!)',
-      ])
+  // Nút "Gợi ý": Mở/đóng thẻ gợi ý câu thoại thông minh từ AI (1:1 Screenshot 2)
+  const handleOpenSuggestions = async () => {
+    if (showInlineSuggestion) {
+      setShowInlineSuggestion(false)
+      return
+    }
+
+    setShowInlineSuggestion(true)
+    setIsLoadingSuggestions(true)
+
+    try {
+      // 1. Lấy câu thoại gần nhất của AI trong cuộc trò chuyện
+      const lastAiMsg = [...messages].reverse().find((m) => m.role === 'AI')?.textJa || ''
+      const incompleteTasks =
+        session?.scenario?.tasks
+          ?.map((t) => t.text || '') || []
+
+      // 2. Gọi AI Suggestion Service thời gian thực
+      const suggestions = await speakingService.getSmartSuggestions({
+        lastAiMessage: lastAiMsg,
+        scenarioTitle: session?.title || session?.scenario?.title || 'Luyện nói tiếng Nhật',
+        jlptLevel: session?.scenario?.jlptLevel || 'N4',
+        incompleteTasks,
+      })
+
+      if (suggestions && suggestions.length > 0) {
+        setSuggestionList(suggestions)
+        setCurrentSugIndex(0)
+      } else if (session?.scenario?.sampleDialogue && session.scenario.sampleDialogue.length > 0) {
+        // Fallback sang câu mẫu kịch bản nếu có
+        const userLines = session.scenario.sampleDialogue
+          .filter((l) => l.speaker === 'USER' || l.role === 'USER')
+          .map((l) => ({
+            ja: l.text || l.ja || '',
+            vi: l.meaning || l.vi || '',
+          }))
+          .filter((item) => !!item.ja)
+        if (userLines.length > 0) {
+          setSuggestionList(userLines)
+          setCurrentSugIndex(0)
+        }
+      }
+    } catch (err) {
+      console.warn('Lỗi lấy AI suggestions:', err)
+    } finally {
+      setIsLoadingSuggestions(false)
     }
   }
 
@@ -379,7 +477,7 @@ export const SpeakingPracticePage: React.FC = () => {
                   <span className="text-sm font-semibold text-slate-700">Hiện Romaji</span>
                   <button
                     type="button"
-                    onClick={() => setShowRomaji(!showRomaji)}
+                    onClick={handleToggleRomaji}
                     className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
                       showRomaji ? 'bg-blue-600' : 'bg-slate-300'
                     }`}
@@ -397,7 +495,7 @@ export const SpeakingPracticePage: React.FC = () => {
                   <span className="text-sm font-semibold text-slate-700">Hiện Furigana</span>
                   <button
                     type="button"
-                    onClick={() => setShowFurigana(!showFurigana)}
+                    onClick={handleToggleFurigana}
                     className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
                       showFurigana ? 'bg-blue-600' : 'bg-slate-300'
                     }`}
@@ -428,6 +526,40 @@ export const SpeakingPracticePage: React.FC = () => {
                   </div>
                   <div className="text-center text-xs font-semibold text-slate-500">
                     Tốc độ: x{playbackSpeed.toFixed(1)}
+                  </div>
+                </div>
+
+                {/* Giọng đọc AI */}
+                <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-700">Giọng đọc AI</span>
+                    <span className="text-xs text-blue-600 font-medium">
+                      {selectedVoice === 'female' ? 'Nữ (Nanami)' : 'Nam (Keita)'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVoice('female')}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                        selectedVoice === 'female'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span>👩 Nữ (Nanami)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVoice('male')}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                        selectedVoice === 'male'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-xs'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span>👨 Nam (Keita)</span>
+                    </button>
                   </div>
                 </div>
 
@@ -502,9 +634,17 @@ export const SpeakingPracticePage: React.FC = () => {
                   <FuriganaText
                     text={msg.textJa}
                     showRomaji={showRomaji}
+                    showFurigana={showFurigana}
                     size="md"
                     className="text-slate-800"
                   />
+
+                  {/* Bản dịch tiếng Việt nếu bật */}
+                  {isTranslated && (
+                    <div className="mt-2 pt-2 border-t border-slate-100 text-xs sm:text-sm text-indigo-700 font-medium">
+                      {translatedTexts[index] || msg.textVi || 'Đang dịch...'}
+                    </div>
+                  )}
 
                   {/* Thanh công cụ nhỏ */}
                   <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-100 text-slate-500">
@@ -561,6 +701,7 @@ export const SpeakingPracticePage: React.FC = () => {
                 <FuriganaText
                   text={msg.textJa}
                   showRomaji={showRomaji}
+                  showFurigana={showFurigana}
                   size="md"
                   className="text-slate-800"
                 />
@@ -657,89 +798,283 @@ export const SpeakingPracticePage: React.FC = () => {
 
             <button
               type="button"
+              disabled={isLoadingSuggestions}
               onClick={handleOpenSuggestions}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Lightbulb className="w-3.5 h-3.5 text-purple-600" />
-              <span>Gợi ý</span>
+              {isLoadingSuggestions ? (
+                <div className="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Lightbulb className="w-3.5 h-3.5 text-purple-600" />
+              )}
+              <span>{isLoadingSuggestions ? 'Đang gợi ý...' : 'Gợi ý'}</span>
             </button>
           </div>
 
-          {/* Capsule Input Bar (1:1 Screenshot 1) */}
-          <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
-            {/* Nút bàn phím */}
-            <button
-              type="button"
-              onClick={() => setIsKeyboardMode((prev) => !prev)}
-              className={`p-2 rounded-full transition ${
-                isKeyboardMode
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
-              }`}
-              title="Chuyển sang gõ chữ"
-            >
-              <Keyboard className="w-5 h-5" />
-            </button>
+          {/* Thẻ Gợi ý trực quan inline phía trên thanh nhập liệu (1:1 Screenshot 2) */}
+          {showInlineSuggestion && (
+            <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+              {isLoadingSuggestions ? (
+                <div className="flex items-center gap-3 py-2 text-indigo-600 text-sm font-medium">
+                  <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <span>AI đang phân tích câu nói và gợi ý phản hồi phù hợp...</span>
+                </div>
+              ) : suggestionList.length > 0 ? (
+                <>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 pr-2">
+                      <div className="text-slate-800 font-semibold text-sm sm:text-base leading-snug">
+                        {suggestionList[currentSugIndex].ja}
+                      </div>
+                      {suggestionList[currentSugIndex].vi && (
+                        <div className="text-slate-500 text-xs sm:text-sm">
+                          {suggestionList[currentSugIndex].vi}
+                        </div>
+                      )}
+                    </div>
 
-            {/* Input hoặc Placeholder giọng nói */}
-            {isKeyboardMode ? (
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && inputText.trim()) {
-                    handleSendMessage(inputText)
-                  }
-                }}
-                placeholder="Hãy thử gõ câu trả lời..."
-                autoFocus
-                className="flex-1 bg-transparent border-none text-sm text-slate-800 placeholder:text-slate-400 focus:outline-hidden"
-              />
-            ) : (
-              <div
-                onClick={() => {
-                  if (isListening) stopListening()
-                  else {
+                    {/* Nút gửi câu gợi ý này */}
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => {
+                        handleSendMessage(suggestionList[currentSugIndex].ja)
+                        setShowInlineSuggestion(false)
+                      }}
+                      className="w-10 h-10 rounded-full bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-md hover:scale-105 transition disabled:opacity-40"
+                      title="Gửi câu gợi ý này cho AI"
+                    >
+                      <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+                    </button>
+                  </div>
+
+              {/* Toolbar nhỏ: Phát âm & Sao chép */}
+              <div className="flex items-center gap-1.5 pt-1 text-slate-500">
+                <button
+                  type="button"
+                  onClick={() => playTts(suggestionList[currentSugIndex].ja)}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition"
+                  title="Nghe phát âm"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopy('suggestion', suggestionList[currentSugIndex].ja)}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition"
+                  title="Sao chép"
+                >
+                  {copiedId === 'suggestion' ? (
+                    <Check className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+
+              {/* Dòng ngăn cách: Gợi ý ----------- Đóng */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-700">Gợi ý</span>
+                  {suggestionList.length > 1 && (
+                    <span className="text-[11px] text-slate-400">
+                      ({currentSugIndex + 1}/{suggestionList.length})
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  {suggestionList.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentSugIndex((prev) => (prev + 1) % suggestionList.length)
+                      }
+                      className="text-indigo-600 hover:text-indigo-700 font-medium"
+                    >
+                      Câu khác
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowInlineSuggestion(false)}
+                    className="hover:text-slate-700 font-medium underline"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+          {/* Khung nhập liệu: Khi đang thu âm hoặc có chữ vừa nói thì hiển thị Thẻ Thu Âm (1:1 Screenshot 2) */}
+          {isListening || !!spokenText ? (
+            <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+              {/* Dòng chữ nhận diện trực tiếp khi nói */}
+              <div className="text-slate-800 text-sm sm:text-base font-medium min-h-[32px] select-text">
+                {spokenText || (
+                  <span className="text-slate-400 italic">
+                    {isListening ? 'Đang lắng nghe bạn nói...' : 'Bấm mic để nói tiếp...'}
+                  </span>
+                )}
+              </div>
+
+              {/* Hàng điều khiển: [✕]   [Soundwave Bars]   [■ / Mic] [↑] */}
+              <div className="flex items-center justify-between pt-1">
+                {/* Nút hủy X */}
+                <button
+                  type="button"
+                  onClick={handleCancelSpeech}
+                  className="w-9 h-9 rounded-full hover:bg-slate-100 text-slate-500 flex items-center justify-center transition"
+                  title="Hủy câu nói"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Sóng âm thanh Soundwave Visualizer */}
+                <div className="flex items-center gap-1 px-2 sm:px-4">
+                  {[10, 16, 22, 14, 26, 18, 12, 24, 16, 28, 20, 14, 22, 16, 10, 24, 18, 12, 26, 16, 10].map((h, i) => (
+                    <span
+                      key={i}
+                      className={`w-1 rounded-full transition-all duration-150 ${
+                        isListening ? 'bg-indigo-400/80 animate-pulse' : 'bg-slate-200'
+                      }`}
+                      style={{
+                        height: isListening ? `${h}px` : '6px',
+                        animationDelay: `${(i * 60) % 500}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Các nút bên phải: Dừng nói (Square) & Gửi (ArrowUp) */}
+                <div className="flex items-center gap-2">
+                  {/* Nút Dừng nói hoặc tiếp tục nói */}
+                  {isListening ? (
+                    <button
+                      type="button"
+                      onClick={stopListening}
+                      className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center transition shadow-xs"
+                      title="Dừng ghi âm"
+                    >
+                      <Square className="w-4 h-4 fill-white text-white rounded-xs" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleResumeListening}
+                      className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition"
+                      title="Tiếp tục nói"
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {/* Nút Gửi (Mũi tên lên tím-xanh) */}
+                  <button
+                    type="button"
+                    disabled={isProcessing || !spokenText.trim()}
+                    onClick={handleSendSpeech}
+                    className="w-10 h-10 rounded-full bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center transition shadow-md hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    title="Gửi câu nói cho AI"
+                  >
+                    <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Thanh Capsule bình thường khi ở chế độ chờ hoặc gõ phím */
+            <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
+              {/* Nút bàn phím */}
+              <button
+                type="button"
+                onClick={() => setIsKeyboardMode((prev) => !prev)}
+                className={`p-2 rounded-full transition ${
+                  isKeyboardMode
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                }`}
+                title="Chuyển sang gõ chữ"
+              >
+                <Keyboard className="w-5 h-5" />
+              </button>
+
+              {/* Input hoặc Placeholder giọng nói */}
+              {isKeyboardMode ? (
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && inputText.trim()) {
+                      handleSendMessage(inputText)
+                      setInputText('')
+                    }
+                  }}
+                  placeholder="Hãy thử gõ câu trả lời..."
+                  autoFocus
+                  className="flex-1 bg-transparent border-none text-sm text-slate-800 placeholder:text-slate-400 focus:outline-hidden"
+                />
+              ) : (
+                <div
+                  onClick={() => {
                     resetTranscript()
                     startListening()
-                  }
-                }}
-                className="flex-1 text-center text-xs sm:text-sm text-slate-500 cursor-pointer select-none truncate"
-              >
-                {isListening
-                  ? transcript || 'Đang lắng nghe bạn nói...'
-                  : 'Hãy thử nói gì đó'}
-              </div>
-            )}
-
-            {/* Nút Mic tròn gradient tím (Screenshot 1) */}
-            <button
-              type="button"
-              disabled={isProcessing}
-              onClick={() => {
-                if (isKeyboardMode && inputText.trim()) {
-                  handleSendMessage(inputText)
-                } else if (isListening) {
-                  stopListening()
-                } else {
-                  resetTranscript()
-                  startListening()
-                }
-              }}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition shadow-md shrink-0 ${
-                isListening
-                  ? 'bg-rose-500 animate-pulse text-white'
-                  : 'bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white hover:scale-105'
-              }`}
-            >
-              {isProcessing ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Mic className="w-5 h-5" />
+                  }}
+                  className="flex-1 text-center text-xs sm:text-sm text-slate-500 cursor-pointer select-none truncate px-2"
+                >
+                  {speechError ? (
+                    <span className="text-rose-500 font-medium text-xs px-2" title={speechError}>
+                      ⚠️ {speechError}
+                    </span>
+                  ) : (
+                    'Hãy thử nói gì đó'
+                  )}
+                </div>
               )}
-            </button>
-          </div>
+
+              {/* Nút hành động bên phải */}
+              {isKeyboardMode ? (
+                <button
+                  type="button"
+                  disabled={isProcessing || !inputText.trim()}
+                  onClick={() => {
+                    if (inputText.trim()) {
+                      handleSendMessage(inputText)
+                      setInputText('')
+                    }
+                  }}
+                  className="w-10 h-10 rounded-full bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center transition shadow-md hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  title="Gửi câu trả lời"
+                >
+                  {isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => {
+                    resetTranscript()
+                    startListening()
+                  }}
+                  className="w-10 h-10 rounded-full bg-linear-to-r from-purple-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center transition shadow-md hover:scale-105 shrink-0"
+                  title="Bật microphone để nói"
+                >
+                  {isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Mic className="w-5 h-5" />
+                  )}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Dòng chữ disclaimer nhỏ */}
           <div className="text-[11px] text-slate-400 font-medium">
@@ -786,44 +1121,6 @@ export const SpeakingPracticePage: React.FC = () => {
                 )
               })}
             </ul>
-          </div>
-        </div>
-      )}
-
-      {/* ==================================================================== */}
-      {/* Modal: Gợi ý câu trả lời AI */}
-      {/* ==================================================================== */}
-      {showSuggestionsModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
-            <button
-              onClick={() => setShowSuggestionsModal(false)}
-              className="absolute top-4 right-4 p-1 rounded-full hover:bg-slate-100 text-slate-400"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <Lightbulb className="w-5 h-5 text-purple-600" />
-              <span>Gợi ý câu thoại</span>
-            </h3>
-            <p className="text-xs text-slate-500">
-              Bạn có thể chạm vào một câu để nói theo hoặc gửi cho AI:
-            </p>
-            <div className="space-y-2 pt-1">
-              {suggestions.map((sug, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    handleSendMessage(sug)
-                    setShowSuggestionsModal(false)
-                  }}
-                  className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50 text-xs sm:text-sm font-medium text-slate-800 transition"
-                >
-                  {sug}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       )}

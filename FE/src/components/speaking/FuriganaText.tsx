@@ -7,6 +7,7 @@ interface FuriganaTextProps {
   romaji?: string
   size?: 'sm' | 'md' | 'lg'
   showRomaji?: boolean
+  showFurigana?: boolean
   className?: string
 }
 
@@ -19,6 +20,7 @@ export const FuriganaText: React.FC<FuriganaTextProps> = ({
   romaji: initialRomaji,
   size = 'md',
   showRomaji = true,
+  showFurigana = true,
   className = '',
 }) => {
   const [rubyHtml, setRubyHtml] = useState<string>(initialRubyHtml || furiganaCache.get(text)?.rubyHtml || '')
@@ -73,7 +75,7 @@ export const FuriganaText: React.FC<FuriganaTextProps> = ({
 
   return (
     <div className={`japanese-text-container select-text ${className}`}>
-      {rubyHtml ? (
+      {showFurigana && rubyHtml ? (
         <span
           className={`japanese-ruby inline-block font-sans ${fontSizeClasses[size]}`}
           dangerouslySetInnerHTML={{ __html: rubyHtml }}

@@ -34,11 +34,19 @@ public class TtsServiceImpl implements TtsService {
     @Value("${app.tts.cache-dir:uploads/tts_cache}")
     private String cacheDir;
 
+    @Value("${app.ai-service-url:http://host.docker.internal:8000}")
+    private String aiServiceUrl;
+
     private RestClient restClient;
 
     @PostConstruct
     public void init() {
+        org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(java.time.Duration.ofSeconds(2));
+        requestFactory.setReadTimeout(java.time.Duration.ofSeconds(6));
+
         this.restClient = RestClient.builder()
+                .requestFactory(requestFactory)
                 .defaultHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
                 .build();
 
@@ -68,7 +76,30 @@ public class TtsServiceImpl implements TtsService {
             return cached;
         }
 
-        // 2. Synthesize via Google TTS
+        // 2. Synthesize via Edge TTS on AI Service (Neural high-fidelity voice)
+        try {
+            String encodedText = URLEncoder.encode(text.trim(), StandardCharsets.UTF_8);
+            String aiVoice = (voiceCode.equalsIgnoreCase("male") || voiceCode.equalsIgnoreCase("keita"))
+                    ? "ja-JP-KeitaNeural" : "ja-JP-NanamiNeural";
+
+            java.net.URI uri = java.net.URI.create(aiServiceUrl + "/api/v1/tts/synthesize?text=" + encodedText + "&voice=" + aiVoice);
+
+            ResponseEntity<byte[]> response = restClient.get()
+                    .uri(uri)
+                    .retrieve()
+                    .toEntity(byte[].class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && response.getBody().length > 0) {
+                byte[] audioBytes = response.getBody();
+                saveToCache(hash, audioBytes);
+                log.info("Successfully synthesized neural Japanese audio via Edge TTS for '{}' ({} bytes)", text.trim(), audioBytes.length);
+                return audioBytes;
+            }
+        } catch (Exception e) {
+            log.warn("Edge TTS AI service unreachable at {}, falling back to Google TTS: {}", aiServiceUrl, e.getMessage());
+        }
+
+        // 3. Fallback to Google TTS if AI service is unavailable
         try {
             String encodedText = URLEncoder.encode(text.trim(), StandardCharsets.UTF_8);
             java.net.URI uri = java.net.URI.create("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ja&q=" + encodedText);
@@ -84,7 +115,7 @@ public class TtsServiceImpl implements TtsService {
                 return audioBytes;
             }
         } catch (Exception e) {
-            log.error("Error synthesizing speech via TTS service for text '{}': {}", text, e.getMessage());
+            log.error("Error synthesizing speech via Google TTS fallback for text '{}': {}", text, e.getMessage());
         }
 
         return new byte[0];

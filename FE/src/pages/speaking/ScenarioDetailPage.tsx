@@ -24,6 +24,7 @@ import {
 import { speakingService } from '@/services/speaking.service'
 import { FuriganaText } from '@/components/speaking/FuriganaText'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { getBestJapaneseVoice } from '@/utils'
 import type { AiScenario, SampleDialogueLine, ScenarioVocab } from '@/types/speaking.types'
 
 type ActiveTab = 'dialogue' | 'vocabulary' | 'grammar' | 'tips'
@@ -134,7 +135,7 @@ export const ScenarioDetailPage: React.FC = () => {
     }
   }
 
-  // Phát âm thanh tiếng Nhật qua Web Speech API (dự phòng đảm bảo 100% người dùng luôn nghe thấy tiếng)
+  // Phát âm thanh tiếng Nhật qua Web Speech API (dự phòng tối ưu giọng tự nhiên)
   const speakWithBrowser = (text: string): Promise<void> => {
     return new Promise((resolve) => {
       if (!('speechSynthesis' in window)) {
@@ -148,10 +149,9 @@ export const ScenarioDetailPage: React.FC = () => {
         utterance.rate = 0.95
         utterance.pitch = 1.0
 
-        const voices = window.speechSynthesis.getVoices()
-        const jaVoice = voices.find((v) => v.lang.startsWith('ja') || v.lang.includes('JP'))
-        if (jaVoice) {
-          utterance.voice = jaVoice
+        const bestVoice = getBestJapaneseVoice()
+        if (bestVoice) {
+          utterance.voice = bestVoice
         }
 
         utterance.onend = () => resolve()
