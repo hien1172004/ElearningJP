@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.auth;
 
+import com.jp.elearningjp.dto.request.auth.GoogleLoginRequest;
 import com.jp.elearningjp.dto.request.auth.IntrospectReq;
 import com.jp.elearningjp.dto.request.auth.LoginRequest;
 import com.jp.elearningjp.dto.request.auth.LogoutRequest;
@@ -17,6 +18,11 @@ import com.jp.elearningjp.repository.user.RoleRepository;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.redis.TokenBlacklistService;
 import com.jp.elearningjp.shared.constants.PredefinedRole;
+import com.jp.elearningjp.entity.user.UserProfile;
+import com.jp.elearningjp.repository.user.UserProfileRepository;
+import com.jp.elearningjp.shared.enums.AuthProvider;
+import com.jp.elearningjp.shared.enums.JlptLevel;
+import com.jp.elearningjp.shared.enums.LearnerLevel;
 import com.jp.elearningjp.shared.enums.UserStatus;
 import com.jp.elearningjp.shared.response.IntrospectResponse;
 import com.nimbusds.jose.*;
@@ -28,6 +34,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.web.client.RestClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -47,6 +55,10 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final TokenBlacklistService tokenBlacklistService;
     private final RoleRepository roleRepository;
+    private final UserProfileRepository userProfileRepository;
+
+    @Value("${app.google.client-id:}")
+    String googleClientId;
     @Value("${jwt.signerKey}")
     String signerKey;
 
@@ -98,6 +110,97 @@ public class AuthService {
         return LoginResponse.builder()
                 .success(true)
                 .accessToken(generateToken(userEntity))
+                .build();
+    }
+
+    // =========================================================
+    // ĐĂNG NHẬP BẰNG GOOGLE (OAUTH2 ID TOKEN)
+    // =========================================================
+    public LoginResponse loginWithGoogle(GoogleLoginRequest request) {
+        Map<String, Object> tokenInfo;
+        try {
+            RestClient restClient = RestClient.create();
+            tokenInfo = restClient.get()
+                    .uri("https://oauth2.googleapis.com/tokeninfo?id_token=" + request.getIdToken())
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.error("Google token verification failed: {}", e.getMessage());
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        if (tokenInfo == null || !"true".equals(String.valueOf(tokenInfo.get("email_verified")))) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        if (googleClientId != null && !googleClientId.isBlank() && !googleClientId.contains("your-google-client-id")) {
+            String aud = (String) tokenInfo.get("aud");
+            if (!googleClientId.equals(aud)) {
+                log.warn("Google token audience mismatch: expected={}, actual={}", googleClientId, aud);
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+        }
+
+        String email = (String) tokenInfo.get("email");
+        String googleId = (String) tokenInfo.get("sub");
+        String name = (String) tokenInfo.get("name");
+        String picture = (String) tokenInfo.get("picture");
+
+        if (email == null || email.isBlank()) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        User user = userRepo.findUserByEmail(email)
+                .map(existingUser -> {
+                    if (existingUser.getStatus() == UserStatus.BANNED) {
+                        throw new AppException(ErrorCode.USER_BANNED);
+                    }
+                    if (existingUser.getAuthProvider() == null || existingUser.getAuthProvider() == AuthProvider.LOCAL) {
+                        existingUser.setAuthProvider(AuthProvider.GOOGLE);
+                    }
+                    if (existingUser.getProviderId() == null || existingUser.getProviderId().isBlank()) {
+                        existingUser.setProviderId(googleId);
+                    }
+                    if ((existingUser.getAvatarUrl() == null || existingUser.getAvatarUrl().isBlank()) && picture != null) {
+                        existingUser.setAvatarUrl(picture);
+                    }
+                    return userRepo.save(existingUser);
+                })
+                .orElseGet(() -> {
+                    Role role = roleRepository.findByName(PredefinedRole.USER_ROLE)
+                            .orElseThrow(() -> new RuntimeException("Role not found"));
+
+                    String displayName = (name != null && !name.isBlank()) ? name : email.split("@")[0];
+
+                    User newUser = User.builder()
+                            .email(email)
+                            .fullName(displayName)
+                            .avatarUrl(picture)
+                            .authProvider(AuthProvider.GOOGLE)
+                            .providerId(googleId)
+                            .status(UserStatus.ACTIVE)
+                            .emailVerifiedAt(Instant.now())
+                            .roles(Set.of(role))
+                            .build();
+
+                    User savedUser = userRepo.save(newUser);
+
+                    UserProfile profile = UserProfile.builder()
+                            .user(savedUser)
+                            .currentLevel(LearnerLevel.BEGINNER)
+                            .targetLevel(JlptLevel.N5)
+                            .dailyStudyTimeMinutes(30)
+                            .timezone("Asia/Ho_Chi_Minh")
+                            .build();
+                    userProfileRepository.save(profile);
+
+                    log.info("Created new user via Google login: email={}, id={}", email, savedUser.getId());
+                    return savedUser;
+                });
+
+        return LoginResponse.builder()
+                .success(true)
+                .accessToken(generateToken(user))
                 .build();
     }
 
@@ -212,7 +315,16 @@ public class AuthService {
     }
 
     private byte[] getSignerKey() {
-        return Base64.getDecoder().decode(signerKey);
+        byte[] keyBytes;
+        try {
+            keyBytes = Base64.getDecoder().decode(signerKey);
+        } catch (IllegalArgumentException e) {
+            keyBytes = signerKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+        if (keyBytes.length < 64) {
+            return Arrays.copyOf(keyBytes, 64);
+        }
+        return keyBytes;
     }
 
     private String buildScope(User user) {

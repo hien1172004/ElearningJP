@@ -45,7 +45,6 @@ services:
   # 3. Spring Boot Backend Application
   # -------------------------------------------------------------
   backend:
-    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
@@ -68,6 +67,7 @@ services:
       CLOUD_API_SECRET: ${CLOUD_API_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     depends_on:
       postgres:
         condition: service_healthy

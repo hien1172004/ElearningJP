@@ -145,10 +145,18 @@ export const MainLayout: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Link
                   to="/profile"
-                  className="hidden sm:flex items-center gap-2 text-sm font-semibold px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50"
+                  className="hidden sm:flex items-center gap-2 text-sm font-semibold px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 transition"
                   title="Tài khoản"
                 >
-                  <UserIcon className="w-4 h-4" />
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.fullName || 'Avatar'}
+                      className="w-6 h-6 rounded-full object-cover border border-indigo-200"
+                    />
+                  ) : (
+                    <UserIcon className="w-4 h-4 text-gray-500" />
+                  )}
                   <span className="max-w-[140px] truncate">
                     {user?.fullName || user?.email || 'Tài khoản'}
                   </span>

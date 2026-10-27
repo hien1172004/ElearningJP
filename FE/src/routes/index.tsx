@@ -25,6 +25,7 @@ import {
   SpeakingPracticePage,
   ScenarioDetailPage,
   SpeakingFreeTalkPage,
+  ProfilePage,
 } from '@/pages'
 import { ProtectedRoute } from './ProtectedRoute'
 
@@ -75,6 +76,20 @@ export const router = createBrowserRouter([
   {
     path: '/exams/review/:attemptId',
     element: <ExamReviewPage />,
+  },
+
+  // ====================================================================
+  // Protected: User Profile (with MainLayout)
+  // ====================================================================
+  {
+    path: '/profile',
+    element: (
+      <ProtectedRoute>
+        <WithMainLayout>
+          <ProfilePage />
+        </WithMainLayout>
+      </ProtectedRoute>
+    ),
   },
 
   // ====================================================================
@@ -153,6 +168,4 @@ export const router = createBrowserRouter([
   },
 ])
 
-export const AppRouter: React.FC = () => {
-  return <RouterProvider router={router} />
-}
+export const AppRouter: React.FC = () => <RouterProvider router={router} />

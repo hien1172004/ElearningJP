@@ -22,6 +22,15 @@ export const authService = {
   },
 
   // ----------------------------------------------------------------
+  // GOOGLE LOGIN
+  // ----------------------------------------------------------------
+  googleLogin: async (
+    idToken: string,
+  ): Promise<ApiResponse<LoginResponse>> => {
+    return axiosClient.post('/auth/google', { idToken })
+  },
+
+  // ----------------------------------------------------------------
   // REGISTER
   // ----------------------------------------------------------------
   register: async (

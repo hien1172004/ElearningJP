@@ -4,6 +4,7 @@ export * from './auth/RegisterPage'
 export * from './auth/ForgotPasswordPage'
 export * from './auth/ResetPasswordPage'
 export * from './dictionary/DictionaryPage'
+export * from './profile/ProfilePage'
 
 // Course pages
 export * from './courses/CourseCatalogPage'
