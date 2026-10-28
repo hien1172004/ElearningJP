@@ -67,4 +67,19 @@ public interface WritingCharacterRepository extends JpaRepository<WritingCharact
     Page<WritingCharacter> searchKanjiWithFilter(@Param("keyword") String keyword,
                                                  @Param("jlptLevel") JlptLevel jlptLevel,
                                                  Pageable pageable);
+
+    /**
+     * Batch fetch thông tin hiển thị của nhiều chữ Hán theo ký tự — dùng cho
+     * bảng "Top từ đã tra" (Khoi 4).
+     *
+     * <p><b>Vì sao cần hàm riêng?</b> Bảng top cần vài cột hiển thị. Gọi
+     * {@code findAllByCharacterIn} sẽ kéo theo {@code @ElementCollection strokes}
+     * (vector nét vẽ) — dữ liệu nặng mà bảng top không dùng.</p>
+     *
+     * @return list {@code [character, hanViet, meaningVi, jlptLevel]}
+     */
+    @Query("SELECT wc.character, wc.hanViet, wc.meaningVi, wc.jlptLevel " +
+           "FROM WritingCharacter wc " +
+           "WHERE wc.character IN :characters AND wc.deleted = false")
+    List<Object[]> findDisplayInfoByCharacters(@Param("characters") Collection<String> characters);
 }

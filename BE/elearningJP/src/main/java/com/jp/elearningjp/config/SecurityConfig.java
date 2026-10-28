@@ -105,7 +105,14 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
-                                "/actuator/health"
+                                "/actuator/health",
+                                // WebSocket handshake — browser không gắn được header
+                                // Authorization vào handshake HTTP, nên phải permitAll.
+                                // Xác thực thật sự diễn ra ở frame STOMP CONNECT
+                                // (WebSocketAuthInterceptor), origin do
+                                // WebSocketConfig.setAllowedOriginPatterns kiểm soát.
+                                "/ws",
+                                "/ws/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS).permitAll()
                         .requestMatchers(HttpMethod.PUT, PUBLIC_PUT_ENDPOINTS).permitAll()

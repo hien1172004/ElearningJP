@@ -6,6 +6,7 @@ import axios, {
 import { storage } from '@/utils/storage'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { authService } from '@/services/auth.service'
+import { emitAuthExpired } from '@/utils/authEvents'
 
 /**
  * Tạo axiosClient với:
@@ -94,12 +95,12 @@ axiosClient.interceptors.response.use(
     // Nếu user không bật Remember me -> logout mềm.
     if (!remember) {
       useAuthStore.getState().clearAuth()
-      if (
-        typeof window !== 'undefined' &&
-        !window.location.pathname.startsWith('/login')
-      ) {
-        const redirect = encodeURIComponent(window.location.pathname)
-        window.location.href = `/login?expired=1&redirect=${redirect}`
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname + window.location.search
+        emitAuthExpired({
+          redirectTo: currentPath === '/login' ? '/' : currentPath,
+          reason: 'expired',
+        })
       }
       return Promise.reject(error)
     }
@@ -145,12 +146,12 @@ axiosClient.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null)
       useAuthStore.getState().clearAuth()
-      if (
-        typeof window !== 'undefined' &&
-        !window.location.pathname.startsWith('/login')
-      ) {
-        const redirect = encodeURIComponent(window.location.pathname)
-        window.location.href = `/login?expired=1&redirect=${redirect}`
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname + window.location.search
+        emitAuthExpired({
+          redirectTo: currentPath === '/login' ? '/' : currentPath,
+          reason: 'refresh_failed',
+        })
       }
       return Promise.reject(refreshError)
     } finally {

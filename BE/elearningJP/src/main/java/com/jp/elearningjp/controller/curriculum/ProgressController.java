@@ -18,7 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Progress", description = "Theo dõi tiến độ học tập của user")
-@RestController
+@RestController("curriculumProgressController")
 @RequestMapping(ApiPaths.API_V1 + ApiPaths.Progress.BASE)
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)

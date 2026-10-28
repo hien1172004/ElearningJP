@@ -1,7 +1,8 @@
 ﻿import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Volume2, ChevronLeft, ChevronRight, BookOpen, SpeakerIcon } from 'lucide-react'
+import { Volume2, ChevronLeft, ChevronRight, BookOpen, SpeakerIcon, PenTool, Loader2 } from 'lucide-react'
 import { speakJapanese } from '@/utils'
-import { useKanjiItemDetail } from '@/hooks'
+import { useKanjiItemDetail, useKanjiDetail } from '@/hooks'
+import { KanjiPracticeModal } from '@/components/dictionary'
 import type { LessonKanjiItem } from '@/types'
 
 interface KanjiStudyViewProps {
@@ -59,7 +60,9 @@ export const KanjiStudyView: React.FC<KanjiStudyViewProps> = ({ items, onSection
 
   return (
     <div className="space-y-6">
-      <KanjiStudyCard item={currentItem} />
+      {/* `key` theo item.id → mỗi chữ Hán là 1 instance mới, tránh giữ trạng thái
+          (modal đang mở, nét vẽ cũ) của chữ trước khi chuyển trang. */}
+      <KanjiStudyCard key={currentItem.id} item={currentItem} />
 
       {/* Phân trang */}
       <PaginationFooter
@@ -84,6 +87,13 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
   const relatedVocabs = item.relatedVocabulary?.length
     ? item.relatedVocabulary
     : (detail?.relatedVocabulary ?? [])
+
+  // ===== Luyện viết AI (modal KanjiPracticeModal) =====
+  const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
+  // `LessonKanjiItem` không chứa field `strokes` → gọi endpoint từ điển để lấy nét chuẩn.
+  // Fetch ngay khi thẻ hiển thị (mỗi trang chỉ có 1 chữ Hán) để khi user bấm nút thì modal
+  // mở lên đã có sẵn nét chuẩn, không nhấp nháy "0 nét". React Query cache 5 phút.
+  const { data: kanjiDetail, isLoading: isKanjiLoading } = useKanjiDetail(item.character)
 
   return (
     <>
@@ -110,15 +120,33 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
               <p className="text-sm text-gray-500 italic">{item.meaningEn}</p>
             )}
             {item.character && (
-              <button
-                type="button"
-                onClick={() => speakJapanese(item.character!)}
-                className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-200 text-amber-800 hover:bg-amber-300 transition text-sm font-semibold"
-                title="Nghe phát âm"
-              >
-                <Volume2 className="w-4 h-4" />
-                Phát âm
-              </button>
+              <div className="mt-3 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                <button
+                  type="button"
+                  onClick={() => speakJapanese(item.character!)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-200 text-amber-800 hover:bg-amber-300 transition text-sm font-semibold"
+                  title="Nghe phát âm"
+                >
+                  <Volume2 className="w-4 h-4" />
+                  Phát âm
+                </button>
+
+                {/* Nút luyện viết AI — mở modal luyện viết & chấm điểm nét (giống trang từ điển) */}
+                <button
+                  type="button"
+                  onClick={() => setIsPracticeOpen(true)}
+                  disabled={isKanjiLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 active:scale-95 transition text-sm font-semibold text-white shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  title="Luyện viết & Chấm điểm nét AI"
+                >
+                  {isKanjiLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <PenTool className="w-4 h-4" />
+                  )}
+                  Luyện viết AI
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -198,6 +226,19 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Modal luyện viết & chấm điểm nét AI — cùng component với trang từ điển.
+          `strokes` lấy từ từ điển (BE) vì LessonKanjiItem không chứa nét vẽ. */}
+      {item.character && (
+        <KanjiPracticeModal
+          isOpen={isPracticeOpen}
+          onClose={() => setIsPracticeOpen(false)}
+          character={item.character}
+          meaningVi={item.meaningVi}
+          hanViet={item.hanViet}
+          strokes={kanjiDetail?.strokes ?? []}
+        />
       )}
     </>
   )

@@ -1,3 +1,5 @@
 export * from './AuthHeader'
 export * from './AuthFooter'
 export * from './AuthInitializer'
+export * from './AuthModal'
+export * from './GoogleButton'

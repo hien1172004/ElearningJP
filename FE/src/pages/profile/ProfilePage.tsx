@@ -345,7 +345,7 @@ export const ProfilePage: React.FC = () => {
                     <Form.Item name="targetLevel" label="Mục tiêu JLPT">
                       <Select
                         size="large"
-                        placeholder="Chọn cấp độ JLPT bạn muốn chinh phục"
+                        placeholder="Chọn cấp độ bạn muốn chinh phục"
                         options={[
                           { value: 'N5', label: 'JLPT N5 (Cơ bản)' },
                           { value: 'N4', label: 'JLPT N4 (Sơ cấp)' },

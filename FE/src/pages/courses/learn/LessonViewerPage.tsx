@@ -14,7 +14,8 @@ import {
   EditOutlined,
   FileTextOutlined,
 } from '@ant-design/icons'
-import { PageHeader, LoadingState } from '@/components/common'
+import { PageHeader, LoadingState, StudyTimerTracker } from '@/components/common'
+import { CommentSection } from '@/components/comment'
 import {
   LessonNavSidebar,
   KanjiStudyView,
@@ -65,11 +66,11 @@ export const LessonViewerPage: React.FC = () => {
   // Nếu param là số (URL cũ) thì dùng luôn làm id, nếu không thì ưu tiên query string
   const cId = Number(
     qCourseId ??
-      (params.courseSlug && /^\d+$/.test(params.courseSlug) ? params.courseSlug : ''),
+    (params.courseSlug && /^\d+$/.test(params.courseSlug) ? params.courseSlug : ''),
   )
   const lId = Number(
     qLessonId ??
-      (params.lessonSlug && /^\d+$/.test(params.lessonSlug) ? params.lessonSlug : ''),
+    (params.lessonSlug && /^\d+$/.test(params.lessonSlug) ? params.lessonSlug : ''),
   )
 
   const navigate = useNavigate()
@@ -419,6 +420,8 @@ export const LessonViewerPage: React.FC = () => {
 
   return (
     <div className="pb-12">
+      {/* Đếm thời gian học — component ẩn, không ảnh hưởng layout */}
+      <StudyTimerTracker />
       {/* Header */}
       <PageHeader
         title={
@@ -522,6 +525,15 @@ export const LessonViewerPage: React.FC = () => {
                 <ChevronRight className="w-4 h-4 ml-1" />
               </AntdButton>
             </div>
+
+            {/* Bình luận bài học (đặt dưới card nội dung, trên footer Back/Next) */}
+            {lId > 0 && (
+              <div className="mt-6">
+                <CommentSection targetType="LESSON" targetId={lId} />
+              </div>
+            )}
+
+
           </div>
         </div>
       </div>
@@ -591,15 +603,14 @@ const PageNavigator: React.FC<PageNavigatorProps> = ({
               onSelect(idx)
             }}
             title={isLocked ? 'Hoàn thành dạng bài trước để mở khóa' : undefined}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-left text-sm transition ${
-              isLocked
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-left text-sm transition ${isLocked
                 ? 'bg-gray-50 border border-gray-100 text-gray-400 cursor-not-allowed'
                 : active
                   ? 'bg-indigo-50 border border-indigo-200 text-indigo-800 font-semibold'
                   : isDone
                     ? 'bg-emerald-50/60 border border-emerald-100 text-emerald-800 hover:bg-emerald-50'
                     : 'border border-transparent text-gray-700 hover:bg-gray-50'
-            }`}
+              }`}
           >
             <span className="text-base w-6 shrink-0 text-center flex items-center justify-center">
               {isLocked ? <Lock className="w-4 h-4" /> : it.icon}

@@ -17,7 +17,7 @@ export const formatDate = (date: string | Date): string => {
  *        "Ngữ pháp ①" → "ngu-phap-1"
  */
 export const toSlug = (text: string): string => {
-  return text
+    return text
     .toLowerCase()
     // Thay chữ có dấu tiếng Việt → không dấu
     .normalize('NFD')
@@ -345,4 +345,38 @@ export const isQuestionTextOnly = (q: any): boolean => {
   })
 
   return meaningfulOpts.length >= 2
+}
+/*
+ * Format thời gian tương đối — dùng cho bình luận, hoạt động gần đây.
+ *
+ * - `< 60 giây`      → "vừa xong"
+ * - `< 60 phút`      → "5 phút trước"
+ * - `< 24 giờ`       → "2 giờ trước"
+ * - `< 7 ngày`       → "3 ngày trước"
+ * - còn lại          → "dd/MM/yyyy"
+ *
+ * @param value chuỗi ISO hoặc Date
+ */
+export const formatRelativeTime = (value: string | Date | null | undefined): string => {
+  if (!value) return ''
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const diffMs = Date.now() - date.getTime()
+  // Tương lai (lệch múi giờ) → coi như "vừa xong"
+  if (diffMs < 0) return 'vừa xong'
+
+  const seconds = Math.floor(diffMs / 1000)
+  if (seconds < 60) return 'vừa xong'
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} phút trước`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} giờ trước`
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days} ngày trước`
+
+  return formatDate(date)
 }

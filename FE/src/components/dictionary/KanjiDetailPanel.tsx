@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 import { Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
@@ -9,14 +9,31 @@ import { KanjiPracticeModal } from './KanjiPracticeModal'
 interface KanjiDetailPanelProps {
   character: string
   onSelectVocab?: (vocabId: number) => void
+  /**
+   * Gọi khi đã resolve xong id của chữ Hán.
+   * BE dùng `writing_characters.id` làm targetId cho bình luận KANJI,
+   * trong khi state của trang tra cứu chỉ giữ ký tự (character).
+   */
+  onIdResolved?: (id: number) => void
 }
 
-export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({ character, onSelectVocab }) => {
+export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
+  character,
+  onSelectVocab,
+  onIdResolved,
+}) => {
   const [detail, setDetail] = useState<KanjiDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
   const [expandedReadings, setExpandedReadings] = useState<Record<string, boolean>>({})
+
+  // Giữ callback trong ref để không tạo vòng lặp render vô hạn khi parent
+  // truyền callback mới mỗi lần render.
+  const onIdResolvedRef = useRef(onIdResolved)
+  useEffect(() => {
+    onIdResolvedRef.current = onIdResolved
+  }, [onIdResolved])
 
   useEffect(() => {
     let isMounted = true
@@ -28,6 +45,8 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({ character, o
       .then((res) => {
         if (isMounted && res.data) {
           setDetail(res.data)
+          // Đưa id của chữ Hán ra ngoài (dùng làm targetId cho bình luận).
+          onIdResolvedRef.current?.(res.data.id)
         }
       })
       .catch((err) => console.error('Lỗi tải chi tiết chữ Hán:', err))

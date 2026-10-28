@@ -20,6 +20,20 @@ export const QUERY_KEYS = {
     due: (params: Record<string, unknown>) => ['srs', 'due', params] as const,
     stats: ['srs', 'stats'] as const,
   },
+  progress: {
+    summary: (params: Record<string, unknown>) =>
+      ['progress', 'summary', params] as const,
+    calendar: (month?: string) =>
+      ['progress', 'calendar', month ?? 'current'] as const,
+    chart: (params: Record<string, unknown>) =>
+      ['progress', 'chart', params] as const,
+    topLookups: (params: Record<string, unknown>) =>
+      ['progress', 'top-lookups', params] as const,
+    leaderboard: (week?: string) =>
+      ['progress', 'leaderboard', week ?? 'current'] as const,
+    myRank: (week?: string) =>
+      ['progress', 'my-rank', week ?? 'current'] as const,
+  },
   dictionary: {
     unified: (params: Record<string, unknown>) =>
       ['dictionary', 'unified', params] as const,
@@ -27,5 +41,18 @@ export const QUERY_KEYS = {
     kanji: (character: string) => ['dictionary', 'kanji', character] as const,
     grammar: (id: number) => ['dictionary', 'grammar', id] as const,
     kana: (type: string) => ['dictionary', 'kana', type] as const,
+  },
+  comment: {
+    list: (targetType: string, targetId: number | string, page: number) =>
+      ['comments', 'list', targetType, targetId, page] as const,
+    replies: (commentId: number | string, page: number) =>
+      ['comments', 'replies', commentId, page] as const,
+  },
+  notification: {
+    /** Key gốc — invalidate `all` sẽ quét cả list/unread/recent. */
+    all: ['notifications'] as const,
+    list: (page: number) => ['notifications', 'list', page] as const,
+    unreadCount: ['notifications', 'unread-count'] as const,
+    recent: ['notifications', 'recent'] as const,
   },
 }

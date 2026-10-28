@@ -137,52 +137,38 @@ public class LessonService {
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
         ensureCourseOwnerOrAdmin(course);
 
-        // ADJACENT SWAP: tạo entity với orderIndex tạm = max+1, rồi swap chain
-        // từng bước một về vị trí đích để preserve thứ tự tương đối.
+        // SEQUENTIAL RENUMBER: chèn lesson vào vị trí đích trong bộ nhớ, rồi
+        // đánh số lại toàn bộ 1..N và ghi an toàn (marker âm → 1..N).
         //
-        // Ví dụ: items=[A(1),B(2),C(3),D(4)], client tạo E với orderIndex=2.
-        //   - max=4, target=2, tempIndex=max+1=5
-        //   - Step 1: Save E@5 → [A(1),B(2),C(3),D(4),E(5)]
-        //   - Step 2: swap E@5 ↔ D@4 → [A(1),B(2),C(3),E(4),D(5)]
-        //   - Step 3: swap E@4 ↔ C@3 → [A(1),B(2),E(3),C(4),D(5)]
-        //   - Step 4: swap E@3 ↔ B@2 → [A(1),E(2),B(3),C(4),D(5)]   ← kết quả
-        Integer maxOrder = lessonRepository.findMaxOrderIndexByCourseId(courseId);
-        int currentMax = (maxOrder != null ? maxOrder : 0);
-        Integer requestedIndex = request.getOrderIndex();
-        boolean clientChoseIndex = requestedIndex != null && requestedIndex > 0
-                && requestedIndex <= currentMax + 1;
-
-        int tempIndex = currentMax + 1;
-        int finalIndex = clientChoseIndex ? requestedIndex : tempIndex;
+        // Ví dụ: [A(1),B(2),C(3),D(4)], client tạo E với orderIndex=2
+        //   → insert E tại vị trí 2 → [A,E,B,C,D] → gán lại [A(1),E(2),B(3),C(4),D(5)].
+        //
+        // Khác cách cũ (adjacent swap chain): không phụ thuộc dãy index liên tục,
+        // nên vẫn đúng kể cả khi đã có "lỗ hổng" do soft-delete.
+        List<Lesson> ordered = new ArrayList<>(
+                lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId));
 
         Lesson lesson = lessonMapper.toLessonEntity(request);
         lesson.setCourse(course);
-        lesson.setOrderIndex(tempIndex);
-
+        // orderIndex tạm — sẽ được gán lại chính xác khi persist
+        lesson.setOrderIndex(ordered.size() + 1);
         Lesson saved = lessonRepository.save(lesson);
         lessonRepository.flush();
-        log.info("[LESSON] Created lesson id={}, title='{}' at tempIndex={} in course id={}",
-                saved.getId(), saved.getTitle(), tempIndex, courseId);
 
-        if (clientChoseIndex && finalIndex != tempIndex) {
-            Long newId = saved.getId();
-            int step = (finalIndex < tempIndex) ? -1 : 1;
-            int current = tempIndex;
-            int safetyCounter = 0;
-            final int MAX_SWAPS = tempIndex + 2;
-            while (current != finalIndex && safetyCounter++ < MAX_SWAPS) {
-                int nextIndex = current + step;
-                Long neighborId = lessonRepository.findIdByCourseIdAndOrderIndex(courseId, nextIndex);
-                if (neighborId == null) break;
-                lessonRepository.swapOrderIndexes(newId, nextIndex, neighborId, current);
-                lessonRepository.flush();
-                current = nextIndex;
-            }
-            saved.setOrderIndex(finalIndex);
-            lessonRepository.flush();
-            log.info("[LESSON] Swapped new lesson id={} from tempIndex={} to orderIndex={} (courseId={})",
-                    newId, tempIndex, finalIndex, courseId);
-        }
+        Integer requestedIndex = request.getOrderIndex();
+        int target = (requestedIndex != null && requestedIndex > 0)
+                ? Math.min(requestedIndex, ordered.size() + 1)
+                : ordered.size() + 1;
+        ordered.add(target - 1, saved);
+
+        OrderIndexResolver.persistSequential(
+                ordered,
+                Lesson::getId,
+                Lesson::setOrderIndex,
+                lessonRepository::flush
+        );
+        log.info("[LESSON] Created lesson id={}, title='{}' at orderIndex={} in course id={}",
+                saved.getId(), saved.getTitle(), saved.getOrderIndex(), courseId);
 
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(saved);
         response.setHasQuiz(false);
@@ -214,42 +200,26 @@ public class LessonService {
 
         if (newOrderIndex != null && newOrderIndex > 0 && !newOrderIndex.equals(oldOrderIndex)) {
             Long courseId = lesson.getCourse().getId();
-            int target = OrderIndexResolver.clampToMaxPlusOne(
+            List<Lesson> ordered = new ArrayList<>(
+                    lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId));
+
+            // Move trong bộ nhớ tới vị trí đích (1-based), rồi đánh số lại 1..N.
+            boolean moved = OrderIndexResolver.moveToPosition(
+                    ordered,
+                    lesson,
                     newOrderIndex,
-                    () -> lessonRepository.findMaxOrderIndexByCourseId(courseId)
+                    Lesson::setOrderIndex
             );
 
-            OrderIndexResolver.Movement movement = OrderIndexResolver.planMove(
-                    oldOrderIndex, target,
-                    () -> lessonRepository.findMaxOrderIndexByCourseId(courseId)
-            );
-
-            if (movement == OrderIndexResolver.Movement.MOVE_UP || movement == OrderIndexResolver.Movement.MOVE_DOWN) {
-                int currentOld = lesson.getOrderIndex();
-                log.info("[LESSON] Adjacent-swap: moving lesson id={} from orderIndex={} → target={} (courseId={})",
-                        lessonId, currentOld, target, courseId);
-                int step = (target < currentOld) ? -1 : 1;
-                int current = currentOld;
-                int safetyCounter = 0;
-                final int MAX_SWAPS = (lessonRepository.findMaxOrderIndexByCourseId(courseId) != null
-                        ? lessonRepository.findMaxOrderIndexByCourseId(courseId) : 0) + 2;
-                while (current != target && safetyCounter++ < MAX_SWAPS) {
-                    int nextIndex = current + step;
-                    Long neighborId = lessonRepository.findIdByCourseIdAndOrderIndex(courseId, nextIndex);
-                    if (neighborId == null) break;
-                    lessonRepository.swapOrderIndexes(lessonId, nextIndex, neighborId, current);
-                    lessonRepository.flush();
-                    current = nextIndex;
-                }
-                lesson.setOrderIndex(target);
-            }
-            // Movement.NOOP → giữ nguyên index
-
-            // Check phòng race condition
-            if (lessonRepository.existsByCourseIdAndOrderIndexExcludingId(courseId, lesson.getOrderIndex(), lessonId)) {
-                log.warn("[LESSON] OrderIndex conflict detected at updateLesson for lesson id={}, orderIndex={}",
-                        lessonId, lesson.getOrderIndex());
-                throw new AppException(ErrorCode.LESSON_ORDER_CONFLICT);
+            if (moved) {
+                log.info("[LESSON] Moving lesson id={} from orderIndex={} → {} (courseId={})",
+                        lessonId, oldOrderIndex, newOrderIndex, courseId);
+                OrderIndexResolver.persistSequential(
+                        ordered,
+                        Lesson::getId,
+                        Lesson::setOrderIndex,
+                        lessonRepository::flush
+                );
             }
         }
 
@@ -333,29 +303,22 @@ public class LessonService {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
 
-        // 3) Dùng helper generic để gán lại orderIndex theo list mới
-        //    Helper tự set marker tạm âm + gán index mới, tránh UNIQUE conflict
+        // 3) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
         OrderIndexResolver.bulkReorder(
                 currentLessons,
                 request.getLessonIds(),
                 Lesson::getId,
-                Lesson::getOrderIndex,
                 Lesson::setOrderIndex
         );
 
-        // 4) Save tất cả cùng lúc
-        List<Lesson> saved = lessonRepository.saveAll(currentLessons);
-        lessonRepository.flush();
-
-        // 5) Check phòng race condition (hiếm)
-        for (Lesson l : saved) {
-            if (lessonRepository.existsByCourseIdAndOrderIndexExcludingId(
-                    courseId, l.getOrderIndex(), l.getId())) {
-                log.warn("[LESSON] OrderIndex conflict after bulk reorder: course={}, id={}, idx={}",
-                        courseId, l.getId(), l.getOrderIndex());
-                throw new AppException(ErrorCode.LESSON_ORDER_CONFLICT);
-            }
-        }
+        // 4) Ghi an toàn 2 pha (marker âm → 1..N), tránh UNIQUE conflict
+        OrderIndexResolver.persistSequential(
+                currentLessons,
+                Lesson::getId,
+                Lesson::setOrderIndex,
+                lessonRepository::flush
+        );
+        List<Lesson> saved = currentLessons;
 
         log.info("[LESSON] Bulk reordered {} lesson(s) in course id={}", saved.size(), courseId);
         // Trả về list theo thứ tự mới

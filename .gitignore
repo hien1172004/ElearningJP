@@ -25,6 +25,7 @@ FE/**/.env.development.local
 FE/**/.env.test.local
 FE/**/.env.production.local
 FE/**/.cache/
+FE/scripts/
 
 # ------------------------------------------
 # Operating System & IDE Files

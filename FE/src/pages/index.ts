@@ -3,8 +3,10 @@ export * from './auth/LoginPage'
 export * from './auth/RegisterPage'
 export * from './auth/ForgotPasswordPage'
 export * from './auth/ResetPasswordPage'
+export * from './auth/GoogleCallbackPage'
 export * from './dictionary/DictionaryPage'
 export * from './profile/ProfilePage'
+export * from './progress/ProgressPage'
 
 // Course pages
 export * from './courses/CourseCatalogPage'

@@ -436,7 +436,7 @@ export const AdminDashboardPage: React.FC = () => {
         {/* KPI 4: Phân loại cấp độ JLPT */}
         <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-            <span>Cấp độ JLPT</span>
+            <span>Cấp độ</span>
             <span className="text-indigo-600 font-bold">N1 ~ N5</span>
           </div>
           <div className="grid grid-cols-5 gap-1 pt-1.5">

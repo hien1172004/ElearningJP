@@ -12,13 +12,21 @@ interface UseLoginOptions {
   redirectTo?: string
 }
 
+/**
+ * Payload login có thể kèm {@code __redirectTo} để override đích điều hướng
+ * sau khi đăng nhập thành công (dùng khi login từ modal, nơi redirectTo
+ * được truyền theo từng lần gọi thay vì lúc khởi tạo hook).
+ */
+type LoginPayload = LoginRequest & { __redirectTo?: string }
+
 export function useLogin(options: UseLoginOptions = {}) {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
 
   return useMutation({
-    mutationFn: async (payload: LoginRequest) => {
-      return authService.login(payload)
+    mutationFn: async (payload: LoginPayload) => {
+      const { __redirectTo, ...rest } = payload
+      return authService.login(rest as LoginRequest)
     },
     onSuccess: (res, variables) => {
       const data: LoginResponse | undefined = res?.data
@@ -55,7 +63,8 @@ export function useLogin(options: UseLoginOptions = {}) {
         description: 'Chào mừng bạn quay lại với ElearningJP!',
       })
 
-      const redirectTo = options.redirectTo || '/'
+      // Ưu tiên __redirectTo truyền theo lần gọi (từ modal) → fallback option → '/'
+      const redirectTo = variables.__redirectTo || options.redirectTo || '/'
       navigate(redirectTo, { replace: true })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {

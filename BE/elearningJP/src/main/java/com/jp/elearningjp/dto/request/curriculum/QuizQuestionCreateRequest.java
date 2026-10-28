@@ -3,6 +3,7 @@ package com.jp.elearningjp.dto.request.curriculum;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -24,11 +25,10 @@ public class QuizQuestionCreateRequest {
 
     String explanation;
 
-    @Builder.Default
-    Integer orderIndex = 1;
+    Integer orderIndex;
 
-    @Builder.Default
-    QuizQuestionType questionType = com.jp.elearningjp.shared.enums.QuizQuestionType.MULTIPLE_CHOICE;
+    @NotNull(message = "Loại câu hỏi không được để trống")
+    QuizQuestionType questionType;
 
     String correctTextAnswer; // Đáp án đúng nếu dạng FILL_IN_THE_BLANK
 

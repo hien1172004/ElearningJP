@@ -5,6 +5,7 @@ import com.jp.elearningjp.dto.request.comment.CommentReplyCreateRequest;
 import com.jp.elearningjp.dto.request.comment.CommentUpdateRequest;
 import com.jp.elearningjp.dto.response.comment.CommentDetailResponse;
 import com.jp.elearningjp.dto.response.comment.CommentListResponse;
+import com.jp.elearningjp.dto.response.comment.CommentReactionResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyListResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyResponse;
 import com.jp.elearningjp.dto.response.comment.CommentResponse;
@@ -22,8 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 /**
  * Controller cho module Comment — phục vụ bình luận trên bài học và tra cứu.
@@ -200,12 +199,12 @@ public class CommentController {
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.Comment.LIKE)
-    public ApiResponse<Map<String, Boolean>> toggleLike(@PathVariable("id") Long commentId) {
-        boolean liked = commentService.toggleLike(commentId);
-        return ApiResponse.<Map<String, Boolean>>builder()
+    public ApiResponse<CommentReactionResponse> toggleLike(@PathVariable("id") Long commentId) {
+        CommentReactionResponse reaction = commentService.toggleLike(commentId);
+        return ApiResponse.<CommentReactionResponse>builder()
                 .success(true)
-                .message(liked ? "Đã thích bình luận" : "Đã bỏ thích bình luận")
-                .data(Map.of("liked", liked))
+                .message(reaction.isLiked() ? "Đã thích bình luận" : "Đã bỏ thích bình luận")
+                .data(reaction)
                 .build();
     }
 
@@ -213,12 +212,12 @@ public class CommentController {
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.Comment.DISLIKE)
-    public ApiResponse<Map<String, Boolean>> toggleDislike(@PathVariable("id") Long commentId) {
-        boolean disliked = commentService.toggleDislike(commentId);
-        return ApiResponse.<Map<String, Boolean>>builder()
+    public ApiResponse<CommentReactionResponse> toggleDislike(@PathVariable("id") Long commentId) {
+        CommentReactionResponse reaction = commentService.toggleDislike(commentId);
+        return ApiResponse.<CommentReactionResponse>builder()
                 .success(true)
-                .message(disliked ? "Đã đánh giá không hữu ích" : "Đã bỏ đánh giá")
-                .data(Map.of("disliked", disliked))
+                .message(reaction.isDisliked() ? "Đã đánh giá không hữu ích" : "Đã bỏ đánh giá")
+                .data(reaction)
                 .build();
     }
 
@@ -226,12 +225,12 @@ public class CommentController {
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.CommentReply.LIKE)
-    public ApiResponse<Map<String, Boolean>> toggleReplyLike(@PathVariable("id") Long replyId) {
-        boolean liked = commentService.toggleReplyLike(replyId);
-        return ApiResponse.<Map<String, Boolean>>builder()
+    public ApiResponse<CommentReactionResponse> toggleReplyLike(@PathVariable("id") Long replyId) {
+        CommentReactionResponse reaction = commentService.toggleReplyLike(replyId);
+        return ApiResponse.<CommentReactionResponse>builder()
                 .success(true)
-                .message(liked ? "Đã thích reply" : "Đã bỏ thích reply")
-                .data(Map.of("liked", liked))
+                .message(reaction.isLiked() ? "Đã thích reply" : "Đã bỏ thích reply")
+                .data(reaction)
                 .build();
     }
 
@@ -239,12 +238,12 @@ public class CommentController {
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.CommentReply.DISLIKE)
-    public ApiResponse<Map<String, Boolean>> toggleReplyDislike(@PathVariable("id") Long replyId) {
-        boolean disliked = commentService.toggleReplyDislike(replyId);
-        return ApiResponse.<Map<String, Boolean>>builder()
+    public ApiResponse<CommentReactionResponse> toggleReplyDislike(@PathVariable("id") Long replyId) {
+        CommentReactionResponse reaction = commentService.toggleReplyDislike(replyId);
+        return ApiResponse.<CommentReactionResponse>builder()
                 .success(true)
-                .message(disliked ? "Đã đánh giá không hữu ích" : "Đã bỏ đánh giá")
-                .data(Map.of("disliked", disliked))
+                .message(reaction.isDisliked() ? "Đã đánh giá không hữu ích" : "Đã bỏ đánh giá")
+                .data(reaction)
                 .build();
     }
 }

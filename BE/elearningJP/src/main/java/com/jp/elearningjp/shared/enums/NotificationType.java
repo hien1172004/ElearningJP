@@ -6,5 +6,7 @@ public enum NotificationType {
     TASK_REMINDER,
     EXAM_RESULT,
     BADGE_UNLOCKED,
-    COMMUNITY_REPLY
+    COMMUNITY_REPLY,
+    COMMUNITY_LIKE,
+    COMMUNITY_DISLIKE
 }

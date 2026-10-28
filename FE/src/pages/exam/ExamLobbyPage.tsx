@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { examService } from '@/services'
 import type { ExamSummary, ExamDetail, JlptLevel, AttemptType } from '@/types'
 import { useAuthStore } from '@/stores'
+import { isTeacherOrAdmin as checkTeacherOrAdmin } from '@/utils/roles'
 import { 
   Award, Clock, HelpCircle, CheckCircle2, ChevronRight, 
   Flame, BookOpen, Headphones, Play, X, Loader2, Sparkles, Filter, ShieldCheck, Edit3
@@ -13,10 +14,7 @@ export const ExamLobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const isTeacherOrAdmin =
-    user?.role === 'TEACHER' ||
-    user?.role === 'ADMIN' ||
-    user?.roles?.some((r) => r === 'TEACHER' || r === 'ADMIN')
+  const isTeacherOrAdmin = checkTeacherOrAdmin(user)
 
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | 'ALL'>('ALL')
   const [exams, setExams] = useState<ExamSummary[]>([])

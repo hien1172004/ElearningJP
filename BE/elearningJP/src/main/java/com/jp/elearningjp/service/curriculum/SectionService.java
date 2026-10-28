@@ -137,49 +137,34 @@ public class SectionService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
-        // ADJACENT SWAP: tạo section với orderIndex tạm = max+1, rồi swap chain
-        // từng bước về target (xem comment chi tiết trong LessonService.createLesson)
-        List<LessonSection> existing = lessonSectionRepository
-                .findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
-        int currentMax = OrderIndexResolver.maxOrderIndex(existing, LessonSection::getOrderIndex);
-        Integer requestedIndex = requestedOrderIndex;
-        boolean clientChoseIndex = requestedIndex != null && requestedIndex > 0
-                && requestedIndex <= currentMax + 1;
-
-        int tempIndex = currentMax + 1;
-        int finalIndex = clientChoseIndex ? requestedIndex : tempIndex;
+        // SEQUENTIAL RENUMBER: chèn section vào vị trí đích trong bộ nhớ, rồi
+        // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
+        List<LessonSection> ordered = new ArrayList<>(
+                lessonSectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId));
 
         LessonSection section = LessonSection.builder()
                 .lesson(lesson)
                 .sectionType(sectionType)
                 .title(title)
-                .orderIndex(tempIndex)
+                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
                 .build();
 
         LessonSection saved = lessonSectionRepository.save(section);
         lessonSectionRepository.flush();
-        log.info("[SECTION] Created section id={}, type={} at tempIndex={} in lesson id={}",
-                saved.getId(), sectionType, tempIndex, lessonId);
 
-        if (clientChoseIndex && finalIndex != tempIndex) {
-            Long newId = saved.getId();
-            int step = (finalIndex < tempIndex) ? -1 : 1;
-            int current = tempIndex;
-            int safetyCounter = 0;
-            final int MAX_SWAPS = tempIndex + 2;
-            while (current != finalIndex && safetyCounter++ < MAX_SWAPS) {
-                int nextIndex = current + step;
-                Long neighborId = lessonSectionRepository.findIdByLessonIdAndOrderIndex(lessonId, nextIndex);
-                if (neighborId == null) break;
-                lessonSectionRepository.swapOrderIndexes(newId, nextIndex, neighborId, current);
-                lessonSectionRepository.flush();
-                current = nextIndex;
-            }
-            saved.setOrderIndex(finalIndex);
-            lessonSectionRepository.flush();
-            log.info("[SECTION] Swapped new section id={} from tempIndex={} to orderIndex={} (lessonId={})",
-                    newId, tempIndex, finalIndex, lessonId);
-        }
+        int target = (requestedOrderIndex != null && requestedOrderIndex > 0)
+                ? Math.min(requestedOrderIndex, ordered.size() + 1)
+                : ordered.size() + 1;
+        ordered.add(target - 1, saved);
+
+        OrderIndexResolver.persistSequential(
+                ordered,
+                LessonSection::getId,
+                LessonSection::setOrderIndex,
+                lessonSectionRepository::flush
+        );
+        log.info("[SECTION] Created section id={}, type={} at orderIndex={} in lesson id={}",
+                saved.getId(), sectionType, saved.getOrderIndex(), lessonId);
 
         return lessonSectionMapper.toSectionResponse(saved);
     }
@@ -207,37 +192,25 @@ public class SectionService {
 
         if (orderIndex != null && orderIndex > 0 && !orderIndex.equals(section.getOrderIndex())) {
             Long lessonId = section.getLesson().getId();
-            int currentMax = OrderIndexResolver.maxOrderIndex(
-                    lessonSectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId),
-                    LessonSection::getOrderIndex
+            List<LessonSection> ordered = new ArrayList<>(
+                    lessonSectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId));
+
+            boolean moved = OrderIndexResolver.moveToPosition(
+                    ordered,
+                    section,
+                    orderIndex,
+                    LessonSection::setOrderIndex
             );
-            int target = OrderIndexResolver.clampToMaxPlusOne(orderIndex, () -> currentMax);
 
-            if (target != section.getOrderIndex()) {
-                int oldOrderIndex = section.getOrderIndex();
-                log.info("[SECTION] Adjacent-swap: moving section id={} from orderIndex={} → target={} (lessonId={})",
-                        sectionId, oldOrderIndex, target, lessonId);
-                int step = (target < oldOrderIndex) ? -1 : 1;
-                int current = oldOrderIndex;
-                int safetyCounter = 0;
-                final int MAX_SWAPS = currentMax + 2;
-                while (current != target && safetyCounter++ < MAX_SWAPS) {
-                    int nextIndex = current + step;
-                    Long neighborId = lessonSectionRepository.findIdByLessonIdAndOrderIndex(lessonId, nextIndex);
-                    if (neighborId == null) break;
-                    lessonSectionRepository.swapOrderIndexes(sectionId, nextIndex, neighborId, current);
-                    lessonSectionRepository.flush();
-                    current = nextIndex;
-                }
-                section.setOrderIndex(target);
-            }
-
-            // Check race condition
-            if (lessonSectionRepository.existsByLessonIdAndOrderIndexExcludingId(
-                    section.getLesson().getId(), section.getOrderIndex(), sectionId)) {
-                log.warn("[SECTION] OrderIndex conflict detected at updateSection for section id={}, orderIndex={}",
-                        sectionId, section.getOrderIndex());
-                throw new AppException(ErrorCode.LESSON_ORDER_CONFLICT);
+            if (moved) {
+                log.info("[SECTION] Moving section id={} to orderIndex={} (lessonId={})",
+                        sectionId, orderIndex, lessonId);
+                OrderIndexResolver.persistSequential(
+                        ordered,
+                        LessonSection::getId,
+                        LessonSection::setOrderIndex,
+                        lessonSectionRepository::flush
+                );
             }
         }
 
@@ -307,20 +280,24 @@ public class SectionService {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
 
-        // Dùng helper generic
+        // Dùng helper generic để gán lại orderIndex theo list mới (1..N)
         OrderIndexResolver.bulkReorder(
                 currentSections,
                 request.getItemIds(),
                 LessonSection::getId,
-                LessonSection::getOrderIndex,
                 LessonSection::setOrderIndex
         );
 
-        List<LessonSection> saved = lessonSectionRepository.saveAll(currentSections);
-        lessonSectionRepository.flush();
+        // Ghi an toàn 2 pha (marker âm → 1..N), tránh UNIQUE conflict
+        OrderIndexResolver.persistSequential(
+                currentSections,
+                LessonSection::getId,
+                LessonSection::setOrderIndex,
+                lessonSectionRepository::flush
+        );
 
-        log.info("[SECTION] Bulk reordered {} section(s) in lesson id={}", saved.size(), lessonId);
-        return saved.stream()
+        log.info("[SECTION] Bulk reordered {} section(s) in lesson id={}", currentSections.size(), lessonId);
+        return currentSections.stream()
                 .map(lessonSectionMapper::toSectionResponse)
                 .toList();
     }

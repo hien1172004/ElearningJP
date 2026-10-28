@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Volume2, BookOpen } from 'lucide-react'
 import { playSmartAudio } from '@/utils'
 import { useGrammarItemDetail } from '@/hooks'
@@ -119,8 +119,8 @@ const GrammarStudyCard: React.FC<GrammarStudyCardProps> = ({ item }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <InfoRow
-            label="Cấp độ JLPT"
-            value={item.jlptLevel ? `JLPT ${item.jlptLevel}` : '—'}
+            label="Cấp độ"
+            value={item.jlptLevel ? `${item.jlptLevel}` : '—'}
           />
           <InfoRow label="Cấu trúc" value={displayStructure || '—'} />
           <InfoRow label="Nghĩa" value={displayMeaning || '—'} />

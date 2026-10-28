@@ -23,11 +23,23 @@ export const authService = {
 
   // ----------------------------------------------------------------
   // GOOGLE LOGIN
+  // - googleLogin: luồng chính. FE dùng Google Identity Services (GSI)
+  //   để lấy `idToken`, rồi POST idToken lên BE để đổi lấy access token.
+  // - getGoogleLoginUrl: luồng redirect OAuth2 (BE redirect user sang
+  //   Google rồi callback về FE). Chỉ dùng khi BE đã bật endpoint redirect.
   // ----------------------------------------------------------------
   googleLogin: async (
     idToken: string,
   ): Promise<ApiResponse<LoginResponse>> => {
     return axiosClient.post('/auth/google', { idToken })
+  },
+
+  getGoogleLoginUrl: (): string => {
+    const baseUrl =
+      import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
+    // Bỏ "/api/v1" để lấy root BE, vì OAuth endpoint thường mount ở root.
+    const root = baseUrl.replace(/\/api\/v\d+\/?$/, '')
+    return `${root}/auth/google`
   },
 
   // ----------------------------------------------------------------
