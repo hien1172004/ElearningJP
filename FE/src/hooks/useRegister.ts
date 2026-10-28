@@ -11,13 +11,20 @@ import type {
   User,
 } from '@/types'
 
+/**
+ * Payload register có thể kèm {@code __redirectTo} để override đích điều hướng
+ * sau khi đăng ký thành công (dùng khi register từ modal).
+ */
+type RegisterPayload = RegisterRequest & { __redirectTo?: string }
+
 export function useRegister() {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
 
   return useMutation({
-    mutationFn: async (payload: RegisterRequest) => {
-      return authService.register(payload)
+    mutationFn: async (payload: RegisterPayload) => {
+      const { __redirectTo, ...rest } = payload
+      return authService.register(rest as RegisterRequest)
     },
     onSuccess: (res, variables) => {
       const data: RegisterResponse | undefined = res?.data
@@ -50,7 +57,9 @@ export function useRegister() {
         description: 'Tài khoản của bạn đã sẵn sàng. Chúc bạn học vui!',
       })
 
-      navigate('/', { replace: true })
+      // Ưu tiên __redirectTo (từ modal) → fallback '/'
+      const redirectTo = variables.__redirectTo || '/'
+      navigate(redirectTo, { replace: true })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const code = error.response?.data?.code

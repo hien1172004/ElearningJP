@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" fill="none">
+  <title>Mèo maneki-neko — sắp chết đuối, chưa học gì</title>
+
+  <!-- Đuôi -->
+  <path d="M146 150c21-6 28-27 20-43" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round"/>
+  <path d="M146 150c21-6 28-27 20-43" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+
+  <!-- Tai -->
+  <path d="M66 48C60 40 57 27 60 17c2-6 7-5 11-1l19 18z" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M134 48c6-8 9-21 6-31-2-6-7-5-11-1l-19 18z" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M71 42c-3-6-4-13-2-19 1-2 3-2 5 0l11 11z" fill="#fbcfe8"/>
+  <path d="M129 42c3-6 4-13 2-19-1-2-3-2-5 0l-11 11z" fill="#fbcfe8"/>
+
+  <!-- Thân -->
+  <ellipse cx="100" cy="136" rx="45" ry="37" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+  <ellipse cx="100" cy="143" rx="25" ry="24" fill="#f1f5f9"/>
+
+  <!-- Bàn chân sau -->
+  <ellipse cx="85" cy="169" rx="14" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+  <ellipse cx="115" cy="169" rx="14" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+
+  <!-- Chân trước với lên (đang cố bơi) -->
+  <ellipse cx="59" cy="122" rx="12" ry="9" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5" transform="rotate(-26 59 122)"/>
+  <ellipse cx="141" cy="122" rx="12" ry="9" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5" transform="rotate(26 141 122)"/>
+
+  <!-- Cổ áo + chuông -->
+  <path d="M63 93q37 21 74 0l-2 12q-35 19-70 0z" fill="#ef4444"/>
+  <circle cx="100" cy="121" r="8.5" fill="#fbbf24"/>
+  <path d="M95 124h10" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- ===== ĐẦU ===== -->
+  <ellipse cx="100" cy="62" rx="42" ry="37" fill="#ffffff" stroke="#cbd5e1" stroke-width="2.5"/>
+
+  <!-- Má hồng -->
+  <ellipse cx="72" cy="72" rx="8" ry="5" fill="#fecdd3" opacity=".75"/>
+  <ellipse cx="128" cy="72" rx="8" ry="5" fill="#fecdd3" opacity=".75"/>
+
+  <!-- Mắt mở to, hoảng loạn -->
+  <ellipse cx="85" cy="57" rx="8.5" ry="10" fill="#1e293b"/>
+  <ellipse cx="115" cy="57" rx="8.5" ry="10" fill="#1e293b"/>
+  <circle cx="82.5" cy="53" r="3" fill="#ffffff"/>
+  <circle cx="112.5" cy="53" r="3" fill="#ffffff"/>
+  <circle cx="88" cy="61" r="1.3" fill="#ffffff" opacity=".7"/>
+  <circle cx="118" cy="61" r="1.3" fill="#ffffff" opacity=".7"/>
+
+  <!-- Lông mày nhíu cao (hoảng loạn) -->
+  <path d="M73 36l13 7M127 36l-13 7" stroke="#cbd5e1" stroke-width="2.8" stroke-linecap="round"/>
+
+  <!-- Mũi bo tròn, hơi to -->
+  <path d="M100 68.5q5.5 0 7 4.5 1 3.5-3 4.5h-8q-4-1-3-4.5 1.5-4.5 7-4.5z" fill="#fb7185"/>
+
+  <!-- Miệng há hoảng -->
+  <ellipse cx="100" cy="83" rx="9" ry="7.5" fill="#7c2d4b"/>
+  <ellipse cx="100" cy="85.5" rx="4.5" ry="3" fill="#fb7185"/>
+
+  <!-- Ria -->
+  <path d="M76 63 57 59M75 71 55 71M77 78 58 84" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M124 63 143 59M125 71 145 71M123 78 142 84" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Giọt mồ hôi -->
+  <path d="M156 22c5 8 7 11 7 14a7 7 0 0 1-14 0c0-3 2-6 7-14z" fill="#7dd3fc"/>
+</svg>

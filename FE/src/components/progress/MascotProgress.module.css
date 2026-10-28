@@ -1,0 +1,236 @@
+/* ==========================================================================
+ * MascotProgress — khung tròn 3 lớp: nền gradient → mèo → lớp nước đè lên mèo.
+ *
+ * Chỉ animate `transform` / `opacity` (không animate width/height/top...)
+ * để tránh reflow. Mực nước hạ bằng cách dịch chuyển lớp nước full-height
+ * xuống dưới bằng `translateY`, nên vẫn mượt trên mobile.
+ * ========================================================================== */
+
+.frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  isolation: isolate;
+  flex: none;
+}
+
+/* ---------- Lớp 1: nền gradient theo state ---------- */
+
+.bg {
+  position: absolute;
+  inset: 0;
+}
+
+.bgDrowning {
+  background-image: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 48%, #0c4a6e 100%);
+}
+
+.bgStanding {
+  background-image: linear-gradient(160deg, #0ea5e9 0%, #38bdf8 46%, #0369a1 100%);
+}
+
+.bgFire {
+  background-image: linear-gradient(160deg, #fbbf24 0%, #f97316 52%, #b91c1c 100%);
+}
+
+/* ---------- Lớp 2: ảnh mèo ---------- */
+
+.catLayer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7%;
+}
+
+.cat {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  animation: catFade 360ms ease-out both;
+  will-change: opacity;
+}
+
+/* Bồng bềnh nhẹ cho state "drowning" (đặt sau .cat để override animation). */
+.catBobble {
+  animation:
+    catFade 360ms ease-out both,
+    catBobble 3s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* ---------- Lớp 3: nước (đè lên mèo) ---------- */
+
+.water {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Cao full khung, hạ mực nước bằng translateY (không đổi height). */
+  height: 100%;
+  pointer-events: none;
+  transition:
+    transform 800ms cubic-bezier(0.33, 0.08, 0.24, 1),
+    opacity 600ms ease;
+  will-change: transform, opacity;
+}
+
+/* State "fire": nước về 0 và mờ dần. */
+.waterHidden {
+  opacity: 0;
+}
+
+/* Phần thân nước — clip bong bóng ở mặt nước. */
+.waterBody {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.waterBodyDrowning {
+  background-image: linear-gradient(
+    180deg,
+    rgba(59, 130, 246, 0.55) 0%,
+    rgba(23, 71, 158, 0.74) 100%
+  );
+}
+
+.waterBodyStanding {
+  background-image: linear-gradient(
+    180deg,
+    rgba(96, 190, 250, 0.5) 0%,
+    rgba(14, 116, 179, 0.68) 100%
+  );
+}
+
+.waterBodyFire {
+  background-image: linear-gradient(
+    180deg,
+    rgba(251, 146, 60, 0.5) 0%,
+    rgba(185, 28, 28, 0.6) 100%
+  );
+}
+
+/* ---------- Sóng ở mép trên (2 lớp trôi ngược chiều) ---------- */
+
+.waveLayer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 16px;
+  transform: translateY(-8px);
+}
+
+.wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Rộng gấp đôi, path lặp 2 chu kỳ → translateX(-50%) lặp liền mạch. */
+  width: 200%;
+  height: 100%;
+  display: block;
+  will-change: transform;
+}
+
+.waveSlow {
+  animation: waveSlide 12s linear infinite;
+}
+
+.waveFast {
+  animation: waveSlide 7.5s linear infinite reverse;
+  opacity: 0.7;
+}
+
+/* ---------- Bong bóng ---------- */
+
+.bubble {
+  position: absolute;
+  bottom: 3%;
+  border-radius: 9999px;
+  background-image: radial-gradient(
+    circle at 32% 28%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.4) 58%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  opacity: 0;
+  animation: bubbleRise var(--bubble-duration, 4.5s) ease-in infinite;
+  animation-delay: var(--bubble-delay, 0s);
+  will-change: transform, opacity;
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes catFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes catBobble {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-2.5deg);
+  }
+  50% {
+    transform: translate3d(0, -6%, 0) rotate(2.5deg);
+  }
+}
+
+@keyframes waveSlide {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes bubbleRise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.5);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(0, calc(-1 * var(--rise, 88px)), 0) scale(1);
+    opacity: 0;
+  }
+}
+
+/* ---------- Tôn trọng prefers-reduced-motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .waveSlow,
+  .waveFast,
+  .bubble {
+    animation: none;
+  }
+
+  /* Sóng đứng yên → thu về 1 khung hình sóng duy nhất. */
+  .waveFast {
+    display: none;
+  }
+
+  .bubble {
+    opacity: 0.5;
+  }
+
+  .cat,
+  .catBobble {
+    animation: none;
+  }
+}

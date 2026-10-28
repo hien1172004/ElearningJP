@@ -216,7 +216,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                 setEditingQuestion(null)
                 setQuestionFormOpen(true)
               }}
-              className="!rounded"
+              className="rounded!"
             >
               Thêm câu hỏi
             </Button>
@@ -228,7 +228,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
             </div>
           )}
 
-          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-105 overflow-y-auto pr-1">
             {questionsFull.map((q, idx) => {
               const qType = (q.questionType ?? 'MULTIPLE_CHOICE') as string
               const correctOpt = q.options?.find((o) => o.correct)
@@ -542,7 +542,7 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
                           className="grid grid-cols-2 hover:bg-indigo-50/40 transition"
                         >
                           {/* Left cell */}
-                          <div className="px-3 py-2 border-r border-indigo-100 flex items-center gap-2 min-h-[40px]">
+                          <div className="px-3 py-2 border-r border-indigo-100 flex items-center gap-2 min-h-10">
                             {/* <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold bg-indigo-100 text-indigo-600">
                               {l?.key ?? '—'}
                             </span> */}
@@ -553,7 +553,7 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
                             </span>
                           </div>
                           {/* Right cell */}
-                          <div className="px-3 py-2 flex items-center gap-2 min-h-[40px]">
+                          <div className="px-3 py-2 flex items-center gap-2 min-h-10">
                             {/* <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold bg-indigo-100 text-indigo-600">
                               {r?.key ?? '—'}
                             </span> */}
@@ -873,7 +873,6 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
       if (editing) {
         await updateQuizItem.mutateAsync({
           id: editing.id,
-          orderIndex: editing.orderIndex,
           payload,
         })
       } else {
@@ -951,7 +950,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
                 min={1}
                 value={orderIndex}
                 onChange={(v) => setOrderIndex(v ?? undefined)}
-                className="!w-full"
+                className="w-full!"
                 placeholder="Tự gán"
               />
             </div>
@@ -998,7 +997,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
                     )
                   }
                   placeholder={`Đáp án ${String.fromCharCode(65 + idx)}`}
-                  className="!flex-1"
+                  className="flex-1!"
                 />
                 {mcOptions.length > 2 && (
                   <button

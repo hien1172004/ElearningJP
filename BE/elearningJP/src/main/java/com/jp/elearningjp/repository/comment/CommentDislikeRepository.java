@@ -11,4 +11,6 @@ public interface CommentDislikeRepository extends JpaRepository<CommentDislike, 
     boolean existsByIdUserIdAndIdCommentId(Long userId, Long commentId);
 
     long deleteByIdUserIdAndIdCommentId(Long userId, Long commentId);
+
+    long countByIdCommentId(Long commentId);
 }

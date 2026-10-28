@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Search,
   X,
@@ -23,6 +24,9 @@ import type {
   DictionaryUnifiedSearch,
 } from '@/types'
 import { dictionaryService } from '@/services'
+import { CommentSection } from '@/components/comment'
+import { StudyTimerTracker } from '@/components/common'
+import { useRecordLookup } from '@/hooks/useRecordLookup'
 import {
   VocabDetailPanel,
   KanjiDetailPanel,
@@ -47,10 +51,28 @@ interface SearchHistoryItem {
 
 const STORAGE_KEY_HISTORY = 'elearning_dictionary_history'
 
+/** Query param mà các trang khác dùng để mở sẵn từ khóa (VD: từ đã tra ở trang Tiến độ). */
+const QP_KEYWORD = 'q'
+const QP_TAB = 'tab'
+
+const TAB_FROM_PARAM: Record<string, TabType> = {
+  vocab: 'vocab',
+  VOCAB: 'vocab',
+  kanji: 'kanji',
+  KANJI: 'kanji',
+  grammar: 'grammar',
+  GRAMMAR: 'grammar',
+}
+
 export const DictionaryPage: React.FC = () => {
-  const [keyword, setKeyword] = useState<string>('')
+  const [searchParams] = useSearchParams()
+  // Từ khóa mở sẵn từ URL (được set một lần khi vào trang).
+  const initialKeyword = searchParams.get(QP_KEYWORD) ?? ''
+  const initialTab = TAB_FROM_PARAM[searchParams.get(QP_TAB) ?? ''] ?? 'vocab'
+
+  const [keyword, setKeyword] = useState<string>(initialKeyword)
   const [debouncedKeyword, setDebouncedKeyword] = useState<string>('')
-  const [activeTab, setActiveTab] = useState<TabType>('vocab')
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | undefined>(undefined)
   const [isHandwritingOpen, setIsHandwritingOpen] = useState<boolean>(false)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
@@ -60,6 +82,8 @@ export const DictionaryPage: React.FC = () => {
   const [suggestions, setSuggestions] = useState<DictionaryUnifiedSearch | null>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
+  /** true khi từ khóa đến từ URL → không tự mở dropdown gợi ý. */
+  const suppressDropdownRef = useRef(true)
 
   // Lịch sử tra cứu gần đây từ localStorage
   const [history, setHistory] = useState<SearchHistoryItem[]>([])
@@ -67,6 +91,12 @@ export const DictionaryPage: React.FC = () => {
   // Mục đang được chọn để hiển thị chi tiết ở Cột Phải (chuẩn Mazii)
   const [selectedVocabId, setSelectedVocabId] = useState<number | null>(null)
   const [selectedKanjiChar, setSelectedKanjiChar] = useState<string | null>(null)
+  /**
+   * Id của chữ Hán (writing_characters.id).
+   * BE dùng id này làm targetId cho bình luận KANJI, nên cần resolve
+   * riêng từ KanjiDetailPanel (state hiện tại chỉ giữ ký tự).
+   */
+  const [selectedKanjiId, setSelectedKanjiId] = useState<number | null>(null)
   const [selectedGrammarId, setSelectedGrammarId] = useState<number | null>(null)
 
   // Dữ liệu phân trang cho Tab Từ vựng
@@ -95,6 +125,20 @@ export const DictionaryPage: React.FC = () => {
       // Bỏ qua lỗi parse
     }
   }, [])
+
+  // Đồng bộ lại khi URL có từ khóa mới (điều hướng từ trang khác sang).
+  useEffect(() => {
+    const q = searchParams.get(QP_KEYWORD)
+    if (q) {
+      // Đến từ URL (VD: bấm 1 từ ở trang Tiến độ) → không tự mở dropdown.
+      suppressDropdownRef.current = true
+      setIsDropdownOpen(false)
+      if (q !== keyword) setKeyword(q)
+    }
+    const t = TAB_FROM_PARAM[searchParams.get(QP_TAB) ?? '']
+    if (t) setActiveTab(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Đóng dropdown khi click ra ngoài ô tìm kiếm
   useEffect(() => {
@@ -163,7 +207,11 @@ export const DictionaryPage: React.FC = () => {
           .then((res) => {
             if (res.data) {
               setSuggestions(res.data)
-              setIsDropdownOpen(true)
+              // Dropdown gợi ý chỉ mở khi user TỰ gõ tay trong ô tìm kiếm.
+              // Khi mở sẵn từ URL (mọi từ khác điều hướng tới) thì để kết quả hiện thẳng.
+              if (!suppressDropdownRef.current) {
+                setIsDropdownOpen(true)
+              }
             }
           })
           .catch(() => {})
@@ -325,6 +373,12 @@ export const DictionaryPage: React.FC = () => {
     }
   }, [debouncedKeyword, selectedLevel, activeTab, grammarPageIndex, hasSearched])
 
+  // Mỗi lần đổi chữ Hán → reset id đã resolve (id mới sẽ được set lại
+  // bởi callback onIdResolved của KanjiDetailPanel).
+  useEffect(() => {
+    setSelectedKanjiId(null)
+  }, [selectedKanjiChar])
+
   // Cấu hình placeholder và gợi ý nhanh theo tab
   const tabConfig = {
     vocab: {
@@ -365,8 +419,39 @@ export const DictionaryPage: React.FC = () => {
     setKeyword(item.keyword)
   }
 
+  // =========================================================================
+  // Ghi nhận hoạt động học tập (Bước 2 & 3)
+  // =========================================================================
+
+  // Đếm thời gian học khi user đang ở trang tra từ điển.
+  // <StudyTimerTracker /> render null — chỉ bật hook.
+  const recordLookup = useRecordLookup()
+
+  // Mỗi lần mở chi tiết 1 từ vựng / chữ Hán / ngữ pháp → ghi 1 LƯỢT TRA.
+  // BE tự phân biệt "từ MỚI" (lần đầu) với "từ cũ" (đã học rồi) — mỗi lần tra
+  // đều được ghi, không dedupe ở client.
+  useEffect(() => {
+    if (selectedVocabId) {
+      recordLookup({ targetType: 'VOCAB', targetId: selectedVocabId })
+    }
+  }, [selectedVocabId, recordLookup])
+
+  useEffect(() => {
+    if (selectedKanjiChar) {
+      recordLookup({ targetType: 'KANJI', sourceRef: selectedKanjiChar })
+    }
+  }, [selectedKanjiChar, recordLookup])
+
+  useEffect(() => {
+    if (selectedGrammarId) {
+      recordLookup({ targetType: 'GRAMMAR', targetId: selectedGrammarId })
+    }
+  }, [selectedGrammarId, recordLookup])
+
   return (
     <div className="space-y-6 pb-16">
+      {/* Đếm thời gian học — component ẩn, không ảnh hưởng layout */}
+      <StudyTimerTracker />
       {/* =========================================================================
           1. HEADER TRA CỨU MAZII: Ô TÌM KIẾM TẬP TRUNG + DROPDOWN GỢI Ý TỨC THÌ
          ========================================================================= */}
@@ -389,9 +474,16 @@ export const DictionaryPage: React.FC = () => {
                 <input
                   type="text"
                   value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
+                  onChange={(e) => {
+                    // Gõ tay → cho phép dropdown gợi ý hoạt động trở lại.
+                    suppressDropdownRef.current = false
+                    setKeyword(e.target.value)
+                  }}
                   onFocus={() => {
-                    if (suggestions && keyword.trim().length > 0) setIsDropdownOpen(true)
+                    if (suggestions && keyword.trim().length > 0) {
+                      suppressDropdownRef.current = false
+                      setIsDropdownOpen(true)
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -943,6 +1035,7 @@ export const DictionaryPage: React.FC = () => {
                     setActiveTab('vocab')
                     setSelectedVocabId(vId)
                   }}
+                  onIdResolved={(id) => setSelectedKanjiId(id)}
                 />
               ) : (
                 <div className="bg-white rounded-md p-16 border border-gray-200 text-center text-gray-400 space-y-3">
@@ -962,6 +1055,27 @@ export const DictionaryPage: React.FC = () => {
                   <p className="font-medium text-base">Chọn một mẫu ngữ pháp bên trái để xem cấu trúc và ví dụ.</p>
                 </div>
               )
+            )}
+
+            {/* ===============================================================
+                4. BÌNH LUẬN (đặt ngay dưới panel chi tiết)
+               =============================================================== */}
+            {activeTab === 'vocab' && selectedVocabId && (
+              <div className="mt-6">
+                <CommentSection targetType="VOCABULARY" targetId={selectedVocabId} />
+              </div>
+            )}
+
+            {activeTab === 'kanji' && selectedKanjiId && (
+              <div className="mt-6">
+                <CommentSection targetType="KANJI" targetId={selectedKanjiId} />
+              </div>
+            )}
+
+            {activeTab === 'grammar' && selectedGrammarId && (
+              <div className="mt-6">
+                <CommentSection targetType="GRAMMAR" targetId={selectedGrammarId} />
+              </div>
             )}
           </div>
         </div>

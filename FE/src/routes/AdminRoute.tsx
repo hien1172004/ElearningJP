@@ -1,6 +1,7 @@
 import React from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/stores'
+import { isTeacherOrAdmin } from '@/utils/roles'
 
 export const AdminRoute: React.FC = () => {
   const { isAuthenticated, user } = useAuthStore()
@@ -9,9 +10,7 @@ export const AdminRoute: React.FC = () => {
     return <Navigate to="/login" replace />
   }
 
-  const role = user?.role || ''
-  const isAdminOrTeacher = role.includes('ADMIN') || role.includes('TEACHER')
-  if (!isAdminOrTeacher) {
+  if (!isTeacherOrAdmin(user)) {
     return <Navigate to="/" replace />
   }
 

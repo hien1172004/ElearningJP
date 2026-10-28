@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -107,17 +108,10 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
 
         assertNoDuplicateVocabulary(sectionId, vocab.getId());
 
-        // Nhận xét #2: xử lý orderIndex bằng ADJACENT SWAP (swap chain từng bước).
-        // Ví dụ chi tiết: xem comment trong LessonService.createLesson.
-        List<LessonVocabularyItem> existingItems = vocabItemRepository
-                .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-        int maxOrder = OrderIndexResolver.maxOrderIndex(existingItems, LessonVocabularyItem::getOrderIndex);
-        Integer requestedIndex = request.getOrderIndex();
-        boolean clientChoseIndex = requestedIndex != null && requestedIndex > 0
-                && requestedIndex <= maxOrder + 1;
-
-        int tempIndex = maxOrder + 1;
-        int finalIndex = clientChoseIndex ? requestedIndex : tempIndex;
+        // SEQUENTIAL RENUMBER: chèn item vào vị trí đích trong bộ nhớ, rồi
+        // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
+        List<LessonVocabularyItem> ordered = new ArrayList<>(
+                vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
 
         // Resolve các trường override: null = auto-fill từ từ điển, "" = xoá override
         String resolvedHiragana = resolveOverride(request.getCustomHiragana(), vocab.getHiragana());
@@ -128,7 +122,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         LessonVocabularyItem item = LessonVocabularyItem.builder()
                 .section(section)
                 .vocab(vocab)
-                .orderIndex(tempIndex)
+                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
                 .customHiragana(resolvedHiragana)
                 .customRomaji(resolvedRomaji)
                 .customAudioUrl(resolvedAudio)
@@ -143,28 +137,21 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         section.addVocabularyItem(item);
         LessonVocabularyItem saved = vocabItemRepository.save(item);
         vocabItemRepository.flush();
-        log.info("[VOCAB-ITEM] Added vocab id={} into section id={} at tempIndex={} (with {} examples)",
-                vocab.getId(), sectionId, tempIndex, totalExamples);
 
-        if (clientChoseIndex && finalIndex != tempIndex) {
-            Long newItemId = saved.getId();
-            int step = (finalIndex < tempIndex) ? -1 : 1;
-            int current = tempIndex;
-            int safetyCounter = 0;
-            final int MAX_SWAPS = tempIndex + 2;
-            while (current != finalIndex && safetyCounter++ < MAX_SWAPS) {
-                int nextIndex = current + step;
-                Long neighborId = vocabItemRepository.findIdBySectionIdAndOrderIndex(sectionId, nextIndex);
-                if (neighborId == null) break;
-                vocabItemRepository.swapOrderIndexes(newItemId, nextIndex, neighborId, current);
-                vocabItemRepository.flush();
-                current = nextIndex;
-            }
-            saved.setOrderIndex(finalIndex);
-            vocabItemRepository.flush();
-            log.info("[VOCAB-ITEM] Swapped new vocab item id={} from tempIndex={} to orderIndex={} (sectionId={})",
-                    newItemId, tempIndex, finalIndex, sectionId);
-        }
+        Integer requestedIndex = request.getOrderIndex();
+        int target = (requestedIndex != null && requestedIndex > 0)
+                ? Math.min(requestedIndex, ordered.size() + 1)
+                : ordered.size() + 1;
+        ordered.add(target - 1, saved);
+
+        OrderIndexResolver.persistSequential(
+                ordered,
+                LessonVocabularyItem::getId,
+                LessonVocabularyItem::setOrderIndex,
+                vocabItemRepository::flush
+        );
+        log.info("[VOCAB-ITEM] Added vocab id={} into section id={} at orderIndex={} (with {} examples)",
+                vocab.getId(), sectionId, saved.getOrderIndex(), totalExamples);
 
         return lessonSectionMapper.toVocabularyItemResponse(saved);
     }
@@ -212,29 +199,28 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         Integer newOrderIndex = request.getOrderIndex();
         Integer oldOrderIndex = item.getOrderIndex();
 
-        // Nhận xét #2: xử lý di chuyển orderIndex bằng ADJACENT SWAP (xem comment trong KanjiItemService)
+        // SEQUENTIAL RENUMBER: move item trong bộ nhớ rồi đánh số lại 1..N
+        // (không còn adjacent-swap nên không kẹt khi có lỗ hổng index do soft-delete).
         if (newOrderIndex != null && newOrderIndex > 0 && !newOrderIndex.equals(oldOrderIndex)) {
             Long sectionId = item.getSection().getId();
-            List<LessonVocabularyItem> allItems = vocabItemRepository
-                    .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-            int maxOrder = OrderIndexResolver.maxOrderIndex(allItems, LessonVocabularyItem::getOrderIndex);
-            int target = OrderIndexResolver.clampToMaxPlusOne(newOrderIndex, () -> maxOrder);
-            if (target != oldOrderIndex) {
-                log.info("[VOCAB-ITEM] Adjacent-swap: moving vocab item id={} from orderIndex={} → target={} (sectionId={})",
-                        itemId, oldOrderIndex, target, sectionId);
-                int step = (target < oldOrderIndex) ? -1 : 1;
-                int current = oldOrderIndex;
-                int safetyCounter = 0;
-                final int MAX_SWAPS = maxOrder + 2;
-                while (current != target && safetyCounter++ < MAX_SWAPS) {
-                    int nextIndex = current + step;
-                    Long neighborId = vocabItemRepository.findIdBySectionIdAndOrderIndex(sectionId, nextIndex);
-                    if (neighborId == null) break;
-                    vocabItemRepository.swapOrderIndexes(itemId, nextIndex, neighborId, current);
-                    vocabItemRepository.flush();
-                    current = nextIndex;
-                }
-                item.setOrderIndex(target);
+            List<LessonVocabularyItem> ordered = new ArrayList<>(
+                    vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
+
+            boolean moved = OrderIndexResolver.moveToPosition(
+                    ordered,
+                    item,
+                    newOrderIndex,
+                    LessonVocabularyItem::setOrderIndex
+            );
+            if (moved) {
+                log.info("[VOCAB-ITEM] Moving vocab item id={} from orderIndex={} → {} (sectionId={})",
+                        itemId, oldOrderIndex, newOrderIndex, sectionId);
+                OrderIndexResolver.persistSequential(
+                        ordered,
+                        LessonVocabularyItem::getId,
+                        LessonVocabularyItem::setOrderIndex,
+                        vocabItemRepository::flush
+                );
             }
         }
 
@@ -319,16 +305,19 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
                 currentItems,
                 request.getItemIds(),
                 LessonVocabularyItem::getId,
-                LessonVocabularyItem::getOrderIndex,
                 LessonVocabularyItem::setOrderIndex
         );
 
-        List<LessonVocabularyItem> saved = vocabItemRepository.saveAll(currentItems);
-        vocabItemRepository.flush();
+        OrderIndexResolver.persistSequential(
+                currentItems,
+                LessonVocabularyItem::getId,
+                LessonVocabularyItem::setOrderIndex,
+                vocabItemRepository::flush
+        );
 
-        log.info("[VOCAB-ITEM] Bulk reordered {} vocab item(s) in section id={}", saved.size(), sectionId);
+        log.info("[VOCAB-ITEM] Bulk reordered {} vocab item(s) in section id={}", currentItems.size(), sectionId);
         // Map sang response (examples đã load sẵn trong entity)
-        return saved.stream()
+        return currentItems.stream()
                 .map(lessonSectionMapper::toVocabularyItemResponse)
                 .filter(java.util.Objects::nonNull)
                 .toList();

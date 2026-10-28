@@ -3,7 +3,6 @@ package com.jp.elearningjp.repository.curriculum;
 import com.jp.elearningjp.entity.curriculum.LessonSection;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -17,20 +16,6 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
      * Lấy tất cả section (chưa xoá) của một lesson, sắp xếp theo orderIndex tăng dần.
      */
     List<LessonSection> findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(Long lessonId);
-
-    /**
-     * Tìm ID của section ACTIVE trong lesson tại orderIndex cụ thể.
-     */
-    @Query("""
-            SELECT s.id
-              FROM LessonSection s
-             WHERE s.lesson.id = :lessonId
-               AND s.orderIndex = :orderIndex
-               AND s.deleted = false
-            """)
-    Long findIdByLessonIdAndOrderIndex(
-            @Param("lessonId") Long lessonId,
-            @Param("orderIndex") Integer orderIndex);
 
     /**
      * Lấy section theo lesson + loại section (KANJI / VOCABULARY / GRAMMAR).
@@ -51,7 +36,7 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
      * Chỉ load section cơ bản + lesson. KHÔNG JOIN FETCH bất kỳ collection nào
      * ở đây — Hibernate cấm fetch nhiều {@code List<>} cùng lúc (MultipleBagFetchException).
      * <p>Thay vào đó, các collection được load tách riêng trong
-     * {@link com.jp.elearningjp.service.curriculum.LessonService#loadNestedCollections}
+     * {@link com.jp.elearningjp.service.curriculum.SectionService#loadNestedCollections}
      * qua các method batch trong {@link LessonKanjiItemRepository},
      * {@link LessonVocabularyItemRepository}, {@link LessonGrammarItemRepository},
      * {@link com.jp.elearningjp.repository.curriculum.QuizRepository}.
@@ -59,118 +44,4 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
      */
     @Query("SELECT DISTINCT s FROM LessonSection s WHERE s.lesson.id = :lessonId AND s.deleted = false ORDER BY s.orderIndex ASC")
     List<LessonSection> findByLessonIdWithAllItems(@Param("lessonId") Long lessonId);
-
-    // ========================================================================
-    // ORDER INDEX HELPERS — dùng để tránh trùng order_index (V19+)
-    // ========================================================================
-
-    /**
-     * Kiểm tra section khác (chưa xoá) trong cùng lesson có cùng orderIndex.
-     * Dùng trước khi insert/update để trả lỗi 409 LESSON_ORDER_CONFLICT
-     * thay vì để Postgres ném DataIntegrityViolationException.
-     */
-    @Query("""
-            SELECT COUNT(s) > 0 FROM LessonSection s
-            WHERE s.lesson.id = :lessonId
-              AND s.orderIndex = :orderIndex
-              AND s.deleted = false
-              AND (:excludeId IS NULL OR s.id <> :excludeId)
-            """)
-    boolean existsByLessonIdAndOrderIndexExcludingId(
-            @Param("lessonId") Long lessonId,
-            @Param("orderIndex") Integer orderIndex,
-            @Param("excludeId") Long excludeId);
-
-    /**
-     * Dời tất cả section có orderIndex >= fromIndex lên +1 trong 1 lesson.
-     * Chỉ ảnh hưởng bản ghi CHƯA xoá.
-     */
-    @Modifying
-    @Query("""
-            UPDATE LessonSection s
-               SET s.orderIndex = s.orderIndex + 1
-             WHERE s.lesson.id = :lessonId
-               AND s.orderIndex >= :fromIndex
-               AND s.deleted = false
-               AND (:excludeId IS NULL OR s.id <> :excludeId)
-            """)
-    int shiftOrderIndexesUp(
-            @Param("lessonId") Long lessonId,
-            @Param("fromIndex") Integer fromIndex,
-            @Param("excludeId") Long excludeId);
-
-    /**
-     * Dời tất cả section có orderIndex trong (lowerExclusive, upperInclusive]
-     * xuống -1. Dùng cho logic "move down" trong updateSection.
-     */
-    @Modifying
-    @Query("""
-            UPDATE LessonSection s
-               SET s.orderIndex = s.orderIndex - 1
-             WHERE s.lesson.id = :lessonId
-               AND s.orderIndex > :lowerExclusive
-               AND s.orderIndex <= :upperInclusive
-               AND s.deleted = false
-               AND (:excludeId IS NULL OR s.id <> :excludeId)
-            """)
-    int shiftOrderIndexesDownInRange(
-            @Param("lessonId") Long lessonId,
-            @Param("lowerExclusive") Integer lowerExclusive,
-            @Param("upperInclusive") Integer upperInclusive,
-            @Param("excludeId") Long excludeId);
-
-    /**
-     * Set orderIndex của section hiện tại về marker tạm (-|oldIndex|) bằng native SQL
-     * để bypass JPA dirty checking. Bắt buộc gọi TRƯỚC khi shift.
-     */
-    @Modifying
-    @Query(value = """
-            UPDATE lesson_sections
-               SET order_index = -ABS(order_index)
-             WHERE id = :sectionId
-            """, nativeQuery = true)
-    int setOrderIndexToNegativeMarker(@Param("sectionId") Long sectionId);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query(value = """
-            UPDATE lesson_sections
-               SET order_index = CASE id
-                   WHEN :idA THEN -99999
-                   WHEN :idB THEN -99998
-                   ELSE order_index
-               END
-             WHERE id IN (:idA, :idB)
-               AND deleted = false
-            """, nativeQuery = true)
-    int setSwapMarkers(
-            @Param("idA") Long idA,
-            @Param("idB") Long idB);
-
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query(value = """
-            UPDATE lesson_sections
-               SET order_index = CASE id
-                   WHEN :idA THEN :orderIndexA
-                   WHEN :idB THEN :orderIndexB
-                   ELSE order_index
-               END
-             WHERE id IN (:idA, :idB)
-               AND deleted = false
-            """, nativeQuery = true)
-    int setNewOrderIndexesAfterMarker(
-            @Param("idA") Long idA,
-            @Param("orderIndexA") Integer orderIndexA,
-            @Param("idB") Long idB,
-            @Param("orderIndexB") Integer orderIndexB);
-
-    /**
-     * Convenience: swap 2-STEP với marker tạm âm, an toàn với UNIQUE constraint.
-     * Xem comment chi tiết trong {@link LessonKanjiItemRepository#swapOrderIndexes}.
-     */
-    default int swapOrderIndexes(
-            Long idA, Integer orderIndexA,
-            Long idB, Integer orderIndexB) {
-        setSwapMarkers(idA, idB);
-        return setNewOrderIndexesAfterMarker(idA, orderIndexA, idB, orderIndexB);
-    }
 }

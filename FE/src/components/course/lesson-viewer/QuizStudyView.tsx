@@ -203,12 +203,6 @@ export const QuizStudyView: React.FC<QuizStudyViewProps> = ({ lessonId, onComple
 
   // Kết quả view
   if (result) {
-    // "Tiếp tục học" = đóng kết quả nhưng KHÔNG complete lesson.
-    // Nếu đã đạt, giữ nguyên kết quả để user có thể bấm "Hoàn thành bài học".
-    const handleContinue = () => {
-      if (result.passed) return // không cho đóng nếu đã đạt
-      setResult(null)
-    }
     return (
       <QuizResultView
         result={result}
@@ -217,7 +211,6 @@ export const QuizStudyView: React.FC<QuizStudyViewProps> = ({ lessonId, onComple
         matchingState={matchingState}
         onRetake={handleRetake}
         onComplete={onComplete}
-        onContinue={handleContinue}
         onSectionDone={onSectionDone}
       />
     )
@@ -736,8 +729,6 @@ interface QuizResultViewProps {
   matchingState: Record<number, Record<string, string>>
   onRetake: () => void
   onComplete?: () => void
-  /** Nút "Tiếp tục học" khi chưa đạt (chỉ đóng kết quả, không complete). */
-  onContinue?: () => void
   onSectionDone?: () => void
 }
 
@@ -885,7 +876,6 @@ const QuizResultView: React.FC<QuizResultViewProps> = ({
   matchingState,
   onRetake,
   onComplete,
-  onContinue,
   onSectionDone,
 }) => {
   // BE đang trả `details` (QuizDetailItemResponse) — chấp nhận cả 2 để tương thích
@@ -1099,14 +1089,14 @@ const QuizResultView: React.FC<QuizResultViewProps> = ({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
         {!passed && (
           <>
-            {onContinue && (
+            {/* {onContinue && (
               <AntdButton
                 onClick={onContinue}
                 className="!rounded-md !font-semibold"
               >
                 Tiếp tục học
               </AntdButton>
-            )}
+            )} */}
             <AntdButton
               icon={<RotateCcw className="w-4 h-4" />}
               onClick={onRetake}

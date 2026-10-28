@@ -232,11 +232,14 @@ public class QuizService {
 
         QuizQuestion savedQuestion = questionRepository.save(question);
 
-        // Swap chain nếu cần
+        // Swap chain nếu cần — dùng bulk shift an toàn (không gap) thay vì adjacent swap.
         if (needSwap) {
-            swapQuestionToTarget(savedQuestion.getId(), resolvedIndex, targetIdx);
-            // Refresh entity để khớp với DB (nếu có dùng sau)
+            int shifted = questionRepository.shiftOrderIndexesUpInRangeExcluding(
+                    quiz.getId(), targetIdx, max, savedQuestion.getId());
+            log.info("[QUIZ] addQuestion: shifted {} question(s) in [{}..{}] up +1 to make room",
+                    shifted, targetIdx, max);
             savedQuestion.setOrderIndex(targetIdx);
+            questionRepository.save(savedQuestion);
         }
 
         List<QuizOptionResponse> optionResponses = new ArrayList<>();
@@ -292,7 +295,7 @@ public class QuizService {
      */
     @Transactional
     public QuizQuestionResponse updateQuestion(Long questionId, QuizQuestionUpdateRequest request) {
-        QuizQuestion question = questionRepository.findByIdAndDeletedFalse(questionId)
+        QuizQuestion question = questionRepository.findByIdWithOptions(questionId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
         // Check quyền: admin pass, teacher chỉ update được câu hỏi thuộc course do mình tạo
         courseAccessGuard.requireOwnerOrAdmin(
@@ -315,16 +318,28 @@ public class QuizService {
                     && requestedTarget != currentOrderIndex;
 
             if (needSwapChain) {
-                if (questionRepository.existsByQuizIdAndOrderIndexExcludingId(quizId, requestedTarget)) {
-                    log.warn("[QUIZ] OrderIndex conflict at updateQuestion id={}, target={}",
-                            questionId, requestedTarget);
-                    throw new AppException(ErrorCode.QUESTION_ORDER_CONFLICT);
-                }
-                // Đặt về tempIndex (= max+1) trước, rồi swap chain về target
+                // Đặt question về tempIndex (= max+1) để giải phóng currentOrderIndex.
+                // Sau đó shift các câu trong [target..current-1] lên +1 (nếu move lên)
+                // hoặc [current+1..target] xuống -1 (nếu move xuống), rồi set question về target.
+                // Dùng bulk UPDATE để tránh vi phạm UNIQUE constraint và tránh gap nếu có.
+                int currentIdx = currentOrderIndex;
+                int targetIdx = requestedTarget;
                 question.setOrderIndex(newOrder);
                 QuizQuestion savedTemp = questionRepository.save(question);
                 questionRepository.flush();
-                swapQuestionToTarget(savedTemp.getId(), newOrder, requestedTarget);
+                if (targetIdx < currentIdx) {
+                    // Move lên: shift [target..current-1] lên +1 để giải phóng target
+                    int shifted = questionRepository.shiftOrderIndexesUpInRangeExcluding(
+                            quizId, targetIdx, currentIdx - 1, savedTemp.getId());
+                    log.info("[QUIZ] updateQuestion id={}: shifted {} question(s) in [{}..{}] up +1",
+                            savedTemp.getId(), shifted, targetIdx, currentIdx - 1);
+                } else if (targetIdx > currentIdx) {
+                    // Move xuống: shift [current+1..target] xuống -1
+                    int shifted = questionRepository.shiftOrderIndexesDownInRangeExcluding(
+                            quizId, currentIdx + 1, targetIdx, savedTemp.getId());
+                    log.info("[QUIZ] updateQuestion id={}: shifted {} question(s) in [{}..{}] down -1",
+                            savedTemp.getId(), shifted, currentIdx + 1, targetIdx);
+                }
                 question.setOrderIndex(requestedTarget);
             } else {
                 // target > max+1 (append) hoặc target = current (no-op) → chỉ set
@@ -430,10 +445,27 @@ public class QuizService {
                 question.getQuiz().getLesson().getCourse(),
                 ErrorCode.FORBIDDEN_LESSON_ACCESS
         );
-        question.softDelete();
-        questionRepository.save(question);
-        log.info("[QUIZ] Soft-deleted question id={} (quiz id={}, lesson id={})",
-                questionId, question.getQuiz().getId(), question.getQuiz().getLesson().getId());
+        Long quizId = question.getQuiz().getId();
+    Long lessonId = question.getQuiz().getLesson().getId();
+    // 1) Soft-delete + flush NGAY: partial unique index
+    //    (quiz_id, order_index) WHERE deleted = false chỉ tính row active,
+    //    flush để chắc chắn slot cũ đã được giải phóng trước khi đánh số lại.
+    question.softDelete();
+    questionRepository.save(question);
+    questionRepository.flush();
+    // 2) Renumber 1..N cho các câu còn active → không để lại gap
+    List<QuizQuestion> remaining = questionRepository
+            .findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quizId);
+    if (!remaining.isEmpty()) {
+        OrderIndexResolver.persistSequential(
+                remaining,
+                QuizQuestion::getId,
+                QuizQuestion::setOrderIndex,
+                questionRepository::flush
+        );
+    }
+    log.info("[QUIZ] Soft-deleted question id={} (quiz id={}, lesson id={}), renumbered {} remaining",
+            questionId, quizId, lessonId, remaining.size());
     }
 
     /**
@@ -476,20 +508,24 @@ public class QuizService {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
 
+        // 1) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
         OrderIndexResolver.bulkReorder(
                 currentQuestions,
                 request.getItemIds(),
                 QuizQuestion::getId,
-                QuizQuestion::getOrderIndex,
                 QuizQuestion::setOrderIndex
         );
-
-        List<QuizQuestion> saved = questionRepository.saveAll(currentQuestions);
-        questionRepository.flush();
+        // 2) Ghi an toàn 2 pha (marker âm → 1..N), tránh UNIQUE conflict
+        OrderIndexResolver.persistSequential(
+                currentQuestions,
+                QuizQuestion::getId,
+                QuizQuestion::setOrderIndex,
+                questionRepository::flush
+        );
 
         log.info("[QUIZ] Bulk reordered {} question(s) in quiz id={} (lesson id={})",
-                saved.size(), quiz.getId(), lessonId);
-        return saved.stream()
+                currentQuestions.size(), quiz.getId(), lessonId);
+        return currentQuestions.stream()
                 .map(q -> QuizQuestionResponse.builder()
                         .id(q.getId())
                         .questionText(q.getQuestionText())

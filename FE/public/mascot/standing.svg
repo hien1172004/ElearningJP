@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" fill="none">
+  <title>Mèo maneki-neko — tiến độ bình thường</title>
+
+  <!-- Đuôi -->
+  <path d="M146 150c21-6 28-27 20-43" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round"/>
+  <path d="M146 150c21-6 28-27 20-43" stroke="#ffffff" stroke-width="11" stroke-linecap="round"/>
+
+  <!-- Tai (sau đầu) -->
+  <path d="M66 48C60 40 57 27 60 17c2-6 7-5 11-1l19 18z" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M134 48c6-8 9-21 6-31-2-6-7-5-11-1l-19 18z" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M71 42c-3-6-4-13-2-19 1-2 3-2 5 0l11 11z" fill="#fbcfe8"/>
+  <path d="M129 42c3-6 4-13 2-19-1-2-3-2-5 0l-11 11z" fill="#fbcfe8"/>
+
+  <!-- Thân -->
+  <ellipse cx="100" cy="136" rx="45" ry="37" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+  <ellipse cx="100" cy="143" rx="25" ry="24" fill="#f1f5f9"/>
+
+  <!-- Bàn chân sau -->
+  <ellipse cx="85" cy="169" rx="14" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+  <ellipse cx="115" cy="169" rx="14" ry="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+
+  <!-- Chân trước -->
+  <ellipse cx="61" cy="130" rx="12" ry="9" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+  <ellipse cx="139" cy="130" rx="12" ry="9" fill="#ffffff" stroke="#e2e8f0" stroke-width="2.5"/>
+
+  <!-- Cổ áo + chuông -->
+  <path d="M63 93q37 21 74 0l-2 12q-35 19-70 0z" fill="#ef4444"/>
+  <circle cx="100" cy="121" r="8.5" fill="#fbbf24"/>
+  <path d="M95 124h10" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- ===== ĐẦU ===== -->
+  <ellipse cx="100" cy="62" rx="42" ry="37" fill="#ffffff" stroke="#cbd5e1" stroke-width="2.5"/>
+
+  <!-- Má hồng (vẽ trước mắt để nằm dưới) -->
+  <ellipse cx="72" cy="72" rx="8" ry="5" fill="#fecdd3" opacity=".75"/>
+  <ellipse cx="128" cy="72" rx="8" ry="5" fill="#fecdd3" opacity=".75"/>
+
+  <!-- Mắt: pupil đen trực tiếp + 2 điểm sáng -->
+  <ellipse cx="85" cy="58" rx="6" ry="7.5" fill="#1e293b"/>
+  <ellipse cx="115" cy="58" rx="6" ry="7.5" fill="#1e293b"/>
+  <circle cx="82.8" cy="55" r="2.4" fill="#ffffff"/>
+  <circle cx="112.8" cy="55" r="2.4" fill="#ffffff"/>
+  <circle cx="87" cy="61" r="1.1" fill="#ffffff" opacity=".7"/>
+  <circle cx="117" cy="61" r="1.1" fill="#ffffff" opacity=".7"/>
+
+  <!-- Mũi bo tròn, hơi to -->
+  <path d="M100 68.5q5.5 0 7 4.5 1 3.5-3 4.5h-8q-4-1-3-4.5 1.5-4.5 7-4.5z" fill="#fb7185"/>
+
+  <!-- Miệng kiểu ω (đặc trưng mèo Nhật) -->
+  <path d="M89 80q5 6 11 1 6 5 11-1" stroke="#64748b" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Ria (ngắn, nằm gọn trong viền đầu) -->
+  <path d="M76 63 57 59M75 71 55 71M77 78 58 84" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M124 63 143 59M125 71 145 71M123 78 142 84" stroke="#cbd5e1" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Lông mày -->
+  <path d="M74 42l12 4M126 42l-12 4" stroke="#cbd5e1" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

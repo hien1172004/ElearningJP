@@ -4,6 +4,7 @@ import { examService } from '@/services/exam.service'
 import type { JlptLevel, SessionType, CourseSummary } from '@/types'
 import { courseService } from '@/services/course.service'
 import { useAuthStore } from '@/stores'
+import { isAdmin as checkIsAdmin, isTeacher as checkIsTeacher } from '@/utils/roles'
 import {
   FileText,
   Sparkles,
@@ -121,8 +122,8 @@ export const AdminExamCreatePage: React.FC = () => {
     const fetchCourses = async () => {
       try {
         setLoadingCourses(true)
-        const isAdmin = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')
-        const isTeacher = user?.role === 'TEACHER' || user?.role === 'ROLE_TEACHER' || user?.roles?.includes('ROLE_TEACHER')
+        const isAdmin = checkIsAdmin(user)
+        const isTeacher = checkIsTeacher(user)
 
         let res
         try {
@@ -271,7 +272,7 @@ export const AdminExamCreatePage: React.FC = () => {
             {/* Cấp độ JLPT */}
             <div className="space-y-2.5">
               <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">
-                Cấp độ JLPT <span className="text-rose-500">*</span>
+                Cấp độ <span className="text-rose-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 {(['N5', 'N4', 'N3', 'N2', 'N1'] as JlptLevel[]).map((level) => {

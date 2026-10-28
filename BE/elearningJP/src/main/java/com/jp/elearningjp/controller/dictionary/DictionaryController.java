@@ -1,19 +1,27 @@
 package com.jp.elearningjp.controller.dictionary;
 
+import com.jp.elearningjp.dto.request.dictionary.DictionaryLookupRequest;
 import com.jp.elearningjp.dto.response.dictionary.*;
+import com.jp.elearningjp.entity.gamification.UserDailyStats;
 import com.jp.elearningjp.service.dictionary.DictionaryService;
+import com.jp.elearningjp.service.gamification.StudyTrackerService;
+import com.jp.elearningjp.service.gamification.XpService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.enums.CharacterType;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.response.ApiResponse;
 import com.jp.elearningjp.shared.response.PageResponse;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -24,6 +32,12 @@ import java.util.List;
 public class DictionaryController {
 
     DictionaryService dictionaryService;
+    CurrentUserService currentUserService;
+    StudyTrackerService studyTrackerService;
+    XpService xpService;
+
+    /** Múi giờ nghiệp vụ — xem {@link com.jp.elearningjp.config.TimeConfig}. */
+    Clock clock;
 
     @Operation(summary = "Tìm kiếm tổng hợp đa năng (Unified Search)", description = "Tìm nhanh top 5 Từ vựng, top 5 Hán tự, top 5 Ngữ pháp theo từ khóa để gợi ý ngay lập tức.")
     @GetMapping(ApiPaths.Dictionary.SEARCH)
@@ -132,6 +146,46 @@ public class DictionaryController {
         return ApiResponse.<List<VocabularySummaryResponse>>builder()
                 .success(true)
                 .data(dictionaryService.quickLookup(text))
+                .build();
+    }
+
+    // -------------------------------------------------------------------------
+    // Instrumented lookup — ghi sự kiện cho Progress page
+    // -------------------------------------------------------------------------
+
+    @Operation(
+            summary = "Ghi nhận 1 lần tra từ điển",
+            description = """
+                    Endpoint này KHÔNG trả dữ liệu từ điển — mục đích duy nhất là ghi nhận \
+                    sự kiện "người dùng đã tra 1 từ" để cập nhật tiến độ học tập.
+
+                    Định nghĩa nghiệp vụ:
+                    - **Mỗi lần tra** đều được ghi nhận vào `lookups` (tổng số lần tra từ).
+                    - Chỉ lần tra **đầu tiên** của một mục (từ vựng / ngữ pháp / Hán tự) mới
+                      được tính vào "từ đã học" (`new_items_learned`). Tra lại từ đã học
+                      **không** cộng dồn vào "từ đã học".
+
+                    FE gọi endpoint này (fire-and-forget) sau khi người dùng mở \
+                    chi tiết 1 từ vựng / chữ Hán / ngữ pháp.""")
+    @PostMapping(ApiPaths.Dictionary.LOOKUP)
+    public ApiResponse<DictionaryLookupResponse> recordLookup(
+            @Valid @RequestBody DictionaryLookupRequest request) {
+
+        Long userId = currentUserService.getCurrentUserId();
+        UserDailyStats stats = studyTrackerService.recordLookup(
+                userId, request.getTargetType(), request.getTargetId(), request.getSourceRef());
+
+        DictionaryLookupResponse data = DictionaryLookupResponse.builder()
+                .wordsLearnedToday(stats != null ? stats.getNewItemsLearned() : 0)
+                .goalWords(stats != null ? stats.getGoalWords() : XpService.DEFAULT_GOAL_WORDS)
+                .goalMet(stats != null ? Boolean.TRUE.equals(stats.getGoalMet()) : false)
+                .xpAwarded(xpService.getLookupXp())
+                .statDate(LocalDate.now(clock))
+                .build();
+
+        return ApiResponse.<DictionaryLookupResponse>builder()
+                .success(true)
+                .data(data)
                 .build();
     }
 }

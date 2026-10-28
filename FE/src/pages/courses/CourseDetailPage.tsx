@@ -94,7 +94,7 @@ export const CourseDetailPage: React.FC = () => {
         <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-black text-indigo-600">{course.jlptLevel}</p>
-            <p className="text-xs text-gray-500 mt-1">Cấp độ JLPT</p>
+            <p className="text-xs text-gray-500 mt-1">Cấp độ</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-black text-gray-900 flex items-center justify-center gap-1">

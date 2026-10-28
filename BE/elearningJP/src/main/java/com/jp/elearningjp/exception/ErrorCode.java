@@ -115,6 +115,15 @@ public enum ErrorCode {
     AI_SCENARIO_NOT_FOUND(6001, "Speaking scenario not found", HttpStatus.NOT_FOUND),
     AI_QUOTA_EXCEEDED(6002, "Daily speaking quota exceeded", HttpStatus.TOO_MANY_REQUESTS),
     AI_SESSION_FORBIDDEN(6003, "You do not have access to this session", HttpStatus.FORBIDDEN),
+
+    // LEADERBOARD / PROGRESS MODULE (5100 - 5199)
+    LEADERBOARD_INVALID_WEEK(5101, "Invalid week key. Expected format YYYY-Www (e.g. 2026-W42)", HttpStatus.BAD_REQUEST),
+    LEADERBOARD_WEEK_IN_FUTURE(5102, "The requested week is in the future", HttpStatus.BAD_REQUEST),
+    LEADERBOARD_REFRESH_TOO_FREQUENT(5103, "Too many refresh requests. Please try again in a few seconds", HttpStatus.TOO_MANY_REQUESTS),
+
+    // NOTIFICATION MODULE (6100 - 6199)
+    NOTIFICATION_NOT_FOUND(6100, "Notification not found", HttpStatus.NOT_FOUND),
+    NOTIFICATION_FORBIDDEN(6101, "You don't have permission to access this notification", HttpStatus.FORBIDDEN),
     ;
 
 

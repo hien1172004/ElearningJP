@@ -144,50 +144,37 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
 
         assertNoDuplicateKanji(sectionId, writingChar.getId());
 
-        // Nhận xét #2: xử lý orderIndex bằng ADJACENT SWAP (swap chain từng bước).
-        // Ví dụ chi tiết: xem comment trong LessonService.createLesson.
-        List<LessonKanjiItem> existingItems = kanjiItemRepository
-                .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-        int maxOrder = OrderIndexResolver.maxOrderIndex(existingItems, LessonKanjiItem::getOrderIndex);
-        Integer requestedIndex = request.getOrderIndex();
-        boolean clientChoseIndex = requestedIndex != null && requestedIndex > 0
-                && requestedIndex <= maxOrder + 1;
-
-        int tempIndex = maxOrder + 1;
-        int finalIndex = clientChoseIndex ? requestedIndex : tempIndex;
+        // SEQUENTIAL RENUMBER: chèn item vào vị trí đích trong bộ nhớ, rồi
+        // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
+        // Không phụ thuộc dãy index liên tục nên vẫn đúng khi có "lỗ hổng" do soft-delete.
+        List<LessonKanjiItem> ordered = new ArrayList<>(
+                kanjiItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
 
         LessonKanjiItem item = LessonKanjiItem.builder()
                 .section(section)
                 .character(writingChar)
-                .orderIndex(tempIndex)
+                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
                 .note(request.getNote())
                 .build();
 
         section.addKanjiItem(item);
         LessonKanjiItem saved = kanjiItemRepository.save(item);
         kanjiItemRepository.flush();
-        log.info("[KANJI-ITEM] Added character='{}' (id={}) into section id={} at tempIndex={}",
-                character, writingChar.getId(), sectionId, tempIndex);
 
-        if (clientChoseIndex && finalIndex != tempIndex) {
-            Long newItemId = saved.getId();
-            int step = (finalIndex < tempIndex) ? -1 : 1;
-            int current = tempIndex;
-            int safetyCounter = 0;
-            final int MAX_SWAPS = tempIndex + 2;
-            while (current != finalIndex && safetyCounter++ < MAX_SWAPS) {
-                int nextIndex = current + step;
-                Long neighborId = kanjiItemRepository.findIdBySectionIdAndOrderIndex(sectionId, nextIndex);
-                if (neighborId == null) break;
-                kanjiItemRepository.swapOrderIndexes(newItemId, nextIndex, neighborId, current);
-                kanjiItemRepository.flush();
-                current = nextIndex;
-            }
-            saved.setOrderIndex(finalIndex);
-            kanjiItemRepository.flush();
-            log.info("[KANJI-ITEM] Swapped new kanji item id={} from tempIndex={} to orderIndex={} (sectionId={})",
-                    newItemId, tempIndex, finalIndex, sectionId);
-        }
+        Integer requestedIndex = request.getOrderIndex();
+        int target = (requestedIndex != null && requestedIndex > 0)
+                ? Math.min(requestedIndex, ordered.size() + 1)
+                : ordered.size() + 1;
+        ordered.add(target - 1, saved);
+
+        OrderIndexResolver.persistSequential(
+                ordered,
+                LessonKanjiItem::getId,
+                LessonKanjiItem::setOrderIndex,
+                kanjiItemRepository::flush
+        );
+        log.info("[KANJI-ITEM] Added character='{}' (id={}) into section id={} at orderIndex={}",
+                character, writingChar.getId(), sectionId, saved.getOrderIndex());
 
         // V25+: tạo related vocab do giáo viên chọn (idempotent: nếu danh sách rỗng → không làm gì)
         int created = applyRelatedVocabCreate(saved, request.getRelatedVocabulary());
@@ -222,40 +209,28 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         Integer newOrderIndex = request.getOrderIndex();
         Integer oldOrderIndex = item.getOrderIndex();
 
-        // Nhận xét #2: xử lý di chuyển orderIndex bằng thuật toán ADJACENT SWAP.
-        // Thay vì shift nhiều row cùng lúc (gây UNIQUE conflict), ta hoán đổi item
-        // với hàng xóm liền kề nhiều lần cho đến khi đến đúng target.
-        // Ví dụ: items=[A(1),B(2),C(3),D(4)], move D(4) → 2:
-        //   - swap D↔C: [A(1),B(2),D(3),C(4)]
-        //   - swap D↔B: [A(1),D(2),B(3),C(4)] ✓
+        // SEQUENTIAL RENUMBER: move item trong bộ nhớ rồi đánh số lại 1..N.
+        // Không còn adjacent-swap nên không bị kẹt khi dãy index có lỗ hổng do soft-delete.
         if (newOrderIndex != null && newOrderIndex > 0 && !newOrderIndex.equals(oldOrderIndex)) {
             Long sectionId = item.getSection().getId();
-            List<LessonKanjiItem> allItems = kanjiItemRepository
-                    .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-            int maxOrder = OrderIndexResolver.maxOrderIndex(allItems, LessonKanjiItem::getOrderIndex);
-            int target = OrderIndexResolver.clampToMaxPlusOne(newOrderIndex, () -> maxOrder);
-            if (target != oldOrderIndex) {
-                log.info("[KANJI-ITEM] Adjacent-swap: moving kanji item id={} from orderIndex={} → target={} (sectionId={})",
-                        itemId, oldOrderIndex, target, sectionId);
-                int step = (target < oldOrderIndex) ? -1 : 1;
-                int current = oldOrderIndex;
-                int safetyCounter = 0;
-                final int MAX_SWAPS = maxOrder + 2; // an toàn chống vòng lặp vô hạn
-                while (current != target && safetyCounter++ < MAX_SWAPS) {
-                    int nextIndex = current + step;
-                    Long neighborId = kanjiItemRepository.findIdBySectionIdAndOrderIndex(sectionId, nextIndex);
-                    if (neighborId == null) {
-                        log.warn("[KANJI-ITEM] Adjacent-swap: không tìm thấy neighbor tại orderIndex={}", nextIndex);
-                        break;
-                    }
-                    // Swap trong 1 câu UPDATE: item@next ↔ neighbor@current
-                    kanjiItemRepository.swapOrderIndexes(itemId, nextIndex, neighborId, current);
-                    kanjiItemRepository.flush();
-                    log.debug("[KANJI-ITEM]   swap step: movingItem id={} {} ↔ neighbor id={} {}",
-                            itemId, current, neighborId, nextIndex);
-                    current = nextIndex;
-                }
-                item.setOrderIndex(target);
+            List<LessonKanjiItem> ordered = new ArrayList<>(
+                    kanjiItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
+
+            boolean moved = OrderIndexResolver.moveToPosition(
+                    ordered,
+                    item,
+                    newOrderIndex,
+                    LessonKanjiItem::setOrderIndex
+            );
+            if (moved) {
+                log.info("[KANJI-ITEM] Moving kanji item id={} from orderIndex={} → {} (sectionId={})",
+                        itemId, oldOrderIndex, newOrderIndex, sectionId);
+                OrderIndexResolver.persistSequential(
+                        ordered,
+                        LessonKanjiItem::getId,
+                        LessonKanjiItem::setOrderIndex,
+                        kanjiItemRepository::flush
+                );
             }
         }
 
@@ -333,15 +308,18 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
                 currentItems,
                 request.getItemIds(),
                 LessonKanjiItem::getId,
-                LessonKanjiItem::getOrderIndex,
                 LessonKanjiItem::setOrderIndex
         );
 
-        List<LessonKanjiItem> saved = kanjiItemRepository.saveAll(currentItems);
-        kanjiItemRepository.flush();
+        OrderIndexResolver.persistSequential(
+                currentItems,
+                LessonKanjiItem::getId,
+                LessonKanjiItem::setOrderIndex,
+                kanjiItemRepository::flush
+        );
 
-        log.info("[KANJI-ITEM] Bulk reordered {} kanji item(s) in section id={}", saved.size(), sectionId);
-        return saved.stream()
+        log.info("[KANJI-ITEM] Bulk reordered {} kanji item(s) in section id={}", currentItems.size(), sectionId);
+        return currentItems.stream()
                 .map(this::buildResponse)
                 .toList();
     }

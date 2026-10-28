@@ -32,7 +32,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-@Service
+@Service("curriculumProgressService")
 @Slf4j
 @RequiredArgsConstructor
 public class ProgressService {

@@ -65,7 +65,7 @@ app:
   frontend-url: http://localhost:3000
   ai-service-url: ${AI_SERVICE_URL:http://host.docker.internal:8000}
   google:
-    client-id: ${GOOGLE_CLIENT_ID:your-google-client-id.apps.googleusercontent.com}
+    client-id: ${GOOGLE_CLIENT_ID}
 
 springdoc:
   api-docs:

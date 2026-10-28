@@ -3,8 +3,6 @@ import { createBrowserRouter, Outlet, RouterProvider, Navigate } from 'react-rou
 import { MainLayout } from '@/layouts'
 import {
   HomePage,
-  LoginPage,
-  RegisterPage,
   ForgotPasswordPage,
   ResetPasswordPage,
   DictionaryPage,
@@ -13,6 +11,8 @@ import {
   TeacherCoursesPage,
   TeacherCourseEditorPage,
   LessonViewerPage,
+  ProgressPage,
+  GoogleCallbackPage,
   ExamLobbyPage,
   ExamRoomPage,
   ExamResultPage,
@@ -27,6 +27,7 @@ import {
   SpeakingFreeTalkPage,
   ProfilePage,
 } from '@/pages'
+import { AuthGatePage } from '@/pages/auth/AuthGatePage'
 import { ProtectedRoute } from './ProtectedRoute'
 
 // Wrapper để apply MainLayout cho protected routes
@@ -60,11 +61,13 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // Auth pages — không dùng MainLayout
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  // Auth: /login & /register nay chỉ là "cửa ngõ" mở AuthModal (không còn trang riêng)
+  { path: '/login', element: <AuthGatePage mode="login" /> },
+  { path: '/register', element: <AuthGatePage mode="register" /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
+  // OAuth callback từ Google — không dùng MainLayout
+  { path: '/auth/google/callback', element: <GoogleCallbackPage /> },
 
   // ====================================================================
   // Dedicated fullscreen routes (No header/footer distractions)
@@ -86,10 +89,13 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <WithMainLayout>
-          <ProfilePage />
+          <ProtectedOutlet />
         </WithMainLayout>
       </ProtectedRoute>
     ),
+    children: [
+      { index: true, element: <ProfilePage /> },
+    ],
   },
 
   // ====================================================================
@@ -128,6 +134,23 @@ export const router = createBrowserRouter([
     children: [
       { path: 'courses', element: <TeacherCoursesPage /> },
       { path: 'courses/:courseId', element: <TeacherCourseEditorPage /> },
+    ],
+  },
+
+  // ====================================================================
+  // Protected: Trang tiến độ học tập (BE yêu cầu auth cho /progress/**)
+  // ====================================================================
+  {
+    path: '/progress',
+    element: (
+      <ProtectedRoute>
+        <WithMainLayout>
+          <ProtectedOutlet />
+        </WithMainLayout>
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <ProgressPage /> },
     ],
   },
 

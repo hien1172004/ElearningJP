@@ -5,6 +5,7 @@ import com.jp.elearningjp.dto.request.comment.CommentReplyCreateRequest;
 import com.jp.elearningjp.dto.request.comment.CommentUpdateRequest;
 import com.jp.elearningjp.dto.response.comment.CommentDetailResponse;
 import com.jp.elearningjp.dto.response.comment.CommentListResponse;
+import com.jp.elearningjp.dto.response.comment.CommentReactionResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyListResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyResponse;
 import com.jp.elearningjp.dto.response.comment.CommentResponse;
@@ -32,11 +33,14 @@ import com.jp.elearningjp.repository.content.VocabularyRepository;
 import com.jp.elearningjp.repository.content.WritingCharacterRepository;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.shared.enums.CommentTargetType;
+import com.jp.elearningjp.shared.event.comment.CommentReactionEvent;
+import com.jp.elearningjp.shared.event.comment.CommentRepliedEvent;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -75,6 +79,7 @@ public class CommentService {
     GrammarPointRepository grammarPointRepository;
 
     CurrentUserService currentUserService;
+    ApplicationEventPublisher eventPublisher;
 
     // ============================================================
     // READ
@@ -215,6 +220,21 @@ public class CommentService {
         log.info("[COMMENT] Added reply id={} to commentId={} by userId={} parentReplyId={}",
                 saved.getId(), commentId, user.getId(), parent != null ? parent.getId() : null);
 
+        // Phát event cho module thông báo — listener chạy AFTER_COMMIT nên chỉ thông báo
+        // khi reply đã thực sự được commit. Mọi field phải resolve TRƯỚC khi publish vì
+        // lúc listener chạy, persistence context đã đóng (không lazy-load được nữa).
+        Long recipientId = comment.getUser() != null ? comment.getUser().getId() : null;
+        eventPublisher.publishEvent(CommentRepliedEvent.builder()
+                .recipientUserId(recipientId)
+                .replierUserId(user.getId())
+                .replierName(user.getFullName())
+                .commentId(comment.getId())
+                .replyId(saved.getId())
+                .targetType(comment.getTargetType())
+                .targetId(comment.getTargetId())
+                .replyContent(saved.getContent())
+                .build());
+
         return toReplyResponse(saved, user.getId());
     }
 
@@ -271,17 +291,17 @@ public class CommentService {
     // ============================================================
 
     @Transactional
-    public boolean toggleLike(Long commentId) {
+    public CommentReactionResponse toggleLike(Long commentId) {
         Comment comment = getActiveComment(commentId);
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
+        // Nếu đã like → unlike (không phát thông báo)
         if (commentLikeRepository.existsByIdUserIdAndIdCommentId(userId, commentId)) {
-            // Unlike
             commentLikeRepository.deleteByIdUserIdAndIdCommentId(userId, commentId);
             commentRepository.decrementLikeCount(commentId);
             log.info("[COMMENT] Unliked comment id={} by userId={}", commentId, userId);
-            return false;
+            return buildCommentReaction(comment, userId, false, false);
         }
 
         // Nếu đang dislike → bỏ dislike trước
@@ -299,20 +319,33 @@ public class CommentService {
         commentRepository.incrementLikeCount(commentId);
 
         log.info("[COMMENT] Liked comment id={} by userId={}", commentId, userId);
-        return true;
+
+        // Phát event cho module thông báo — listener chạy AFTER_COMMIT.
+        // Mọi field phải resolve TRƯỚC khi publish (không lazy-load được sau commit).
+        publishReactionEvent(
+                comment.getUser() != null ? comment.getUser().getId() : null,
+                user,
+                true,
+                CommentReactionEvent.ReactionScope.COMMENT,
+                comment.getId(),
+                null,
+                comment.getTargetType(),
+                comment.getTargetId());
+        return buildCommentReaction(comment, userId, true, false);
     }
 
     @Transactional
-    public boolean toggleDislike(Long commentId) {
+    public CommentReactionResponse toggleDislike(Long commentId) {
         Comment comment = getActiveComment(commentId);
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
+        // Nếu đã dislike → undislike (không phát thông báo)
         if (commentDislikeRepository.existsByIdUserIdAndIdCommentId(userId, commentId)) {
             commentDislikeRepository.deleteByIdUserIdAndIdCommentId(userId, commentId);
             commentRepository.decrementDislikeCount(commentId);
             log.info("[COMMENT] Undisliked comment id={} by userId={}", commentId, userId);
-            return false;
+            return buildCommentReaction(comment, userId, false, false);
         }
 
         // Nếu đang like → bỏ like trước
@@ -330,21 +363,32 @@ public class CommentService {
         commentRepository.incrementDislikeCount(commentId);
 
         log.info("[COMMENT] Disliked comment id={} by userId={}", commentId, userId);
-        return true;
+
+        publishReactionEvent(
+                comment.getUser() != null ? comment.getUser().getId() : null,
+                user,
+                false,
+                CommentReactionEvent.ReactionScope.COMMENT,
+                comment.getId(),
+                null,
+                comment.getTargetType(),
+                comment.getTargetId());
+        return buildCommentReaction(comment, userId, false, true);
     }
 
     @Transactional
-    public boolean toggleReplyLike(Long replyId) {
+    public CommentReactionResponse toggleReplyLike(Long replyId) {
         CommentReply reply = commentReplyRepository.findByIdAndDeletedFalse(replyId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_REPLY_NOT_FOUND));
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
+        // Nếu đã like → unlike (không phát thông báo)
         if (commentReplyLikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
             commentReplyLikeRepository.deleteByIdUserIdAndIdReplyId(userId, replyId);
             commentReplyRepository.decrementLikeCount(replyId);
             log.info("[COMMENT] Unliked reply id={} by userId={}", replyId, userId);
-            return false;
+            return buildReplyReaction(reply, userId, false, false);
         }
 
         if (commentReplyDislikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
@@ -361,21 +405,32 @@ public class CommentService {
         commentReplyRepository.incrementLikeCount(replyId);
 
         log.info("[COMMENT] Liked reply id={} by userId={}", replyId, userId);
-        return true;
+
+        publishReactionEvent(
+                reply.getUser() != null ? reply.getUser().getId() : null,
+                user,
+                true,
+                CommentReactionEvent.ReactionScope.REPLY,
+                reply.getComment().getId(),
+                reply.getId(),
+                reply.getComment().getTargetType(),
+                reply.getComment().getTargetId());
+        return buildReplyReaction(reply, userId, true, false);
     }
 
     @Transactional
-    public boolean toggleReplyDislike(Long replyId) {
+    public CommentReactionResponse toggleReplyDislike(Long replyId) {
         CommentReply reply = commentReplyRepository.findByIdAndDeletedFalse(replyId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_REPLY_NOT_FOUND));
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
+        // Nếu đã dislike → undislike (không phát thông báo)
         if (commentReplyDislikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
             commentReplyDislikeRepository.deleteByIdUserIdAndIdReplyId(userId, replyId);
             commentReplyRepository.decrementDislikeCount(replyId);
             log.info("[COMMENT] Undisliked reply id={} by userId={}", replyId, userId);
-            return false;
+            return buildReplyReaction(reply, userId, false, false);
         }
 
         if (commentReplyLikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
@@ -392,7 +447,17 @@ public class CommentService {
         commentReplyRepository.incrementDislikeCount(replyId);
 
         log.info("[COMMENT] Disliked reply id={} by userId={}", replyId, userId);
-        return true;
+
+        publishReactionEvent(
+                reply.getUser() != null ? reply.getUser().getId() : null,
+                user,
+                false,
+                CommentReactionEvent.ReactionScope.REPLY,
+                reply.getComment().getId(),
+                reply.getId(),
+                reply.getComment().getTargetType(),
+                reply.getComment().getTargetId());
+        return buildReplyReaction(reply, userId, false, true);
     }
 
     // ============================================================
@@ -471,9 +536,72 @@ public class CommentService {
     // HELPERS
     // ============================================================
 
+    /**
+     * Publish event like/dislike cho module thông báo.
+     *
+     * <p>Chạy trong transaction gốc: mọi lazy field (tên actor, target info)
+     * được resolve TRƯỚC khi publish — listener chạy AFTER_COMMIT không
+     * truy cập entity được nữa.</p>
+     */
+    private void publishReactionEvent(Long recipientUserId,
+                                      User actor,
+                                      boolean like,
+                                      CommentReactionEvent.ReactionScope scope,
+                                      Long commentId,
+                                      Long replyId,
+                                      CommentTargetType targetType,
+                                      Long targetId) {
+        // Tự tác động vào nội dung của chính mình → không thông báo.
+        if (recipientUserId == null || recipientUserId.equals(actor.getId())) {
+            return;
+        }
+        eventPublisher.publishEvent(CommentReactionEvent.builder()
+                .recipientUserId(recipientUserId)
+                .actorUserId(actor.getId())
+                .actorName(actor.getFullName())
+                .like(like)
+                .scope(scope)
+                .commentId(commentId)
+                .replyId(replyId)
+                .targetType(targetType)
+                .targetId(targetId)
+                .build());
+    }
+
     private Comment getActiveComment(Long commentId) {
         return commentRepository.findByIdAndDeletedFalse(commentId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
+    }
+
+    /**
+     * Đọc lại trạng thái reaction của comment từ DB (sau khi toggle).
+     *
+     * <p>Dùng {@code countBy...} trên bảng like/dislike (source of truth) thay vì
+     * {@code likeCount} trên entity trong bộ nhớ — vì các query {@code @Modifying}
+     * increment/decrement chạy thẳng trên DB, không sync lại entity đã load,
+     * nên {@code comment.getLikeCount()} sẽ sai lệch sau khi toggle.</p>
+     */
+    private CommentReactionResponse buildCommentReaction(Comment comment, Long userId,
+                                                         boolean liked, boolean disliked) {
+        return CommentReactionResponse.builder()
+                .liked(liked)
+                .disliked(disliked)
+                .likeCount((int) commentLikeRepository.countByIdCommentId(comment.getId()))
+                .dislikeCount((int) commentDislikeRepository.countByIdCommentId(comment.getId()))
+                .build();
+    }
+
+    /**
+     * Tương tự {@link #buildCommentReaction} nhưng cho reply.
+     */
+    private CommentReactionResponse buildReplyReaction(CommentReply reply, Long userId,
+                                                       boolean liked, boolean disliked) {
+        return CommentReactionResponse.builder()
+                .liked(liked)
+                .disliked(disliked)
+                .likeCount((int) commentReplyLikeRepository.countByIdReplyId(reply.getId()))
+                .dislikeCount((int) commentReplyDislikeRepository.countByIdReplyId(reply.getId()))
+                .build();
     }
 
     private void ensureOwner(User owner, Long currentUserId) {
