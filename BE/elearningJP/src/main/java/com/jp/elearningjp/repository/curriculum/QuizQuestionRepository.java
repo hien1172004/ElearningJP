@@ -15,6 +15,12 @@ public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long
 
     List<QuizQuestion> findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(Long quizId);
 
+    /**
+     * Fetch quiz question kèm options (1-N lazy) — dùng trong reorder để tránh LazyInitializationException.
+     */
+    @Query("SELECT qq FROM QuizQuestion qq LEFT JOIN FETCH qq.options WHERE qq.id = :id AND qq.deleted = false")
+    Optional<QuizQuestion> findByIdWithOptions(@Param("id") Long id);
+
     Optional<QuizQuestion> findByIdAndDeletedFalse(Long id);
 
     long countByQuizIdAndDeletedFalse(Long quizId);
@@ -80,4 +86,130 @@ public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long
     int shiftOrderIndexesUp(
             @Param("quizId") Long quizId,
             @Param("fromIndex") Integer fromIndex);
+
+    /**
+     * Dời tất cả câu hỏi có orderIndex trong [fromIndex, toIndex] lên +1.
+     * Dùng khi UPDATE câu hỏi di chuyển orderIndex để tạo chỗ trống tại fromIndex.
+     *
+     * <p>Ví dụ: có [Q1(1), Q2(2), Q3(3), Q4(4)], update Q4 dời về 2.
+     *   shiftRange(quizId, fromIndex=2, toIndex=3) → [Q1(1), Q2(3), Q3(4)]
+     *   set Q4.orderIndex=2 → [Q1(1), Q4(2), Q2(3), Q3(4)]   ✓</p>
+     *
+     * @return số bản ghi bị ảnh hưởng
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE QuizQuestion qq
+               SET qq.orderIndex = qq.orderIndex + 1
+             WHERE qq.quiz.id = :quizId
+               AND qq.orderIndex >= :fromIndex
+               AND qq.orderIndex <= :toIndex
+               AND qq.deleted = false
+               AND qq.id <> :excludeId
+            """)
+    int shiftOrderIndexesUpInRangeExcluding(
+            @Param("quizId") Long quizId,
+            @Param("fromIndex") Integer fromIndex,
+            @Param("toIndex") Integer toIndex,
+            @Param("excludeId") Long excludeId);
+
+    /**
+     * Dời tất cả câu hỏi có orderIndex trong [fromIndex, toIndex] xuống -1.
+     * Dùng khi UPDATE câu hỏi di chuyển orderIndex để tạo chỗ trống tại toIndex.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE QuizQuestion qq
+               SET qq.orderIndex = qq.orderIndex - 1
+             WHERE qq.quiz.id = :quizId
+               AND qq.orderIndex >= :fromIndex
+               AND qq.orderIndex <= :toIndex
+               AND qq.deleted = false
+               AND qq.id <> :excludeId
+            """)
+    int shiftOrderIndexesDownInRangeExcluding(
+            @Param("quizId") Long quizId,
+            @Param("fromIndex") Integer fromIndex,
+            @Param("toIndex") Integer toIndex,
+            @Param("excludeId") Long excludeId);
+
+    // ========================================================================
+    // ADJACENT SWAP HELPERS — tương tự các item repository khác
+    // (xem comment chi tiết trong LessonKanjiItemRepository#swapOrderIndexes)
+    // ========================================================================
+
+    /**
+     * Tìm ID của quiz question ACTIVE trong quiz tại orderIndex cụ thể.
+     * Dùng cho thuật toán adjacent-swap để biết neighbor id.
+     */
+    @Query("""
+            SELECT qq.id
+              FROM QuizQuestion qq
+             WHERE qq.quiz.id = :quizId
+               AND qq.orderIndex = :orderIndex
+               AND qq.deleted = false
+            """)
+    Long findIdByQuizIdAndOrderIndex(
+            @Param("quizId") Long quizId,
+            @Param("orderIndex") Integer orderIndex);
+
+    /**
+     * Set orderIndex của question hiện tại về marker tạm (-|oldIndex|) bằng
+     * native SQL để bypass JPA dirty checking.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE quiz_questions
+               SET order_index = -ABS(order_index)
+             WHERE id = :questionId
+            """, nativeQuery = true)
+    int setOrderIndexToNegativeMarker(@Param("questionId") Long questionId);
+
+    /**
+     * Bước 1 của swap 2-STEP: set marker tạm âm cho cả 2 question.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            UPDATE quiz_questions
+               SET order_index = CASE id
+                   WHEN :idA THEN -99999
+                   WHEN :idB THEN -99998
+                   ELSE order_index
+               END
+             WHERE id IN (:idA, :idB)
+               AND deleted = false
+            """, nativeQuery = true)
+    int setSwapMarkers(
+            @Param("idA") Long idA,
+            @Param("idB") Long idB);
+
+    /**
+     * Bước 2 của swap 2-STEP: set orderIndex mới (cả 2 đang ở marker âm).
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            UPDATE quiz_questions
+               SET order_index = CASE id
+                   WHEN :idA THEN :orderIndexA
+                   WHEN :idB THEN :orderIndexB
+                   ELSE order_index
+               END
+             WHERE id IN (:idA, :idB)
+               AND deleted = false
+            """, nativeQuery = true)
+    int setNewOrderIndexesAfterMarker(
+            @Param("idA") Long idA,
+            @Param("orderIndexA") Integer orderIndexA,
+            @Param("idB") Long idB,
+            @Param("orderIndexB") Integer orderIndexB);
+
+    /**
+     * Convenience: swap 2-STEP với marker tạm âm, an toàn với UNIQUE constraint.
+     */
+    default int swapOrderIndexes(
+            Long idA, Integer orderIndexA,
+            Long idB, Integer orderIndexB) {
+        setSwapMarkers(idA, idB);
+        return setNewOrderIndexesAfterMarker(idA, orderIndexA, idB, orderIndexB);
+    }
 }

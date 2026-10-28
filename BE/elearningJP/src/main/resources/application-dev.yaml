@@ -27,6 +27,7 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 0
+    validate-on-migrate: false
     locations: classpath:db/migration
 
   jpa:
@@ -62,6 +63,9 @@ server:
 
 app:
   frontend-url: http://localhost:3000
+  ai-service-url: ${AI_SERVICE_URL:http://host.docker.internal:8000}
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
 
 springdoc:
   api-docs:
@@ -84,3 +88,8 @@ management:
   health:
     mail:
       enabled: false
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
+

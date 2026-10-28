@@ -54,6 +54,9 @@ public enum ErrorCode {
     LESSON_VOCAB_EXAMPLE_NOT_FOUND(1215, "Ví dụ từ vựng không tồn tại", HttpStatus.NOT_FOUND),
     LESSON_GRAMMAR_EXAMPLE_DUPLICATED(1216, "Ví dụ trùng lặp trong cùng request", HttpStatus.CONFLICT),
     LESSON_GRAMMAR_EXAMPLE_NOT_FOUND(1217, "Ví dụ ngữ pháp không tồn tại", HttpStatus.NOT_FOUND),
+    LESSON_REORDER_LIST_EMPTY(1218, "Danh sách lesson cần reorder không được rỗng", HttpStatus.BAD_REQUEST),
+    LESSON_REORDER_LIST_INVALID(1219, "Danh sách lesson cần reorder chứa ID trùng lặp hoặc không hợp lệ", HttpStatus.BAD_REQUEST),
+    LESSON_REORDER_LIST_MISMATCH(1220, "Danh sách lesson cần reorder phải khớp 100% với tất cả lesson hiện có trong khóa học", HttpStatus.CONFLICT),
 
     // CURRICULUM MODULE — Enrollment (1300-1399)
     ENROLLMENT_NOT_FOUND(1300, "Enrollment not found", HttpStatus.NOT_FOUND),
@@ -95,6 +98,32 @@ public enum ErrorCode {
     COMMENT_REPLY_NOT_FOUND(4004, "Comment reply not found", HttpStatus.NOT_FOUND),
     COMMENT_REPLY_FORBIDDEN(4005, "You don't have permission to modify this reply", HttpStatus.FORBIDDEN),
     COMMENT_REPLY_INVALID_PARENT(4006, "Parent reply must belong to the same comment", HttpStatus.BAD_REQUEST),
+
+    // EXAM MODULE (5000 - 5099)
+    EXAM_NOT_FOUND(5000, "Exam not found", HttpStatus.NOT_FOUND),
+    EXAM_NOT_PUBLISHED(5001, "Exam is not published yet", HttpStatus.BAD_REQUEST),
+    EXAM_SECTION_NOT_FOUND(5002, "Exam section not found", HttpStatus.NOT_FOUND),
+    EXAM_ATTEMPT_NOT_FOUND(5003, "Exam attempt not found", HttpStatus.NOT_FOUND),
+    EXAM_ATTEMPT_ALREADY_SUBMITTED(5004, "Exam attempt has already been submitted", HttpStatus.BAD_REQUEST),
+    EXAM_ATTEMPT_FORBIDDEN(5005, "You don't have permission to access this exam attempt", HttpStatus.FORBIDDEN),
+    EXAM_QUESTION_NOT_FOUND(5006, "Exam question not found", HttpStatus.NOT_FOUND),
+    EXAM_OPTION_NOT_FOUND(5007, "Question option not found", HttpStatus.NOT_FOUND),
+    EXAM_HAS_IN_PROGRESS_ATTEMPTS(5008, "Không thể xóa câu hỏi hoặc đề thi khi đang có thí sinh làm bài trực tiếp", HttpStatus.CONFLICT),
+
+    // AI Speaking Practice (6000 - 6099)
+    AI_SESSION_NOT_FOUND(6000, "Speaking session not found", HttpStatus.NOT_FOUND),
+    AI_SCENARIO_NOT_FOUND(6001, "Speaking scenario not found", HttpStatus.NOT_FOUND),
+    AI_QUOTA_EXCEEDED(6002, "Daily speaking quota exceeded", HttpStatus.TOO_MANY_REQUESTS),
+    AI_SESSION_FORBIDDEN(6003, "You do not have access to this session", HttpStatus.FORBIDDEN),
+
+    // LEADERBOARD / PROGRESS MODULE (5100 - 5199)
+    LEADERBOARD_INVALID_WEEK(5101, "Invalid week key. Expected format YYYY-Www (e.g. 2026-W42)", HttpStatus.BAD_REQUEST),
+    LEADERBOARD_WEEK_IN_FUTURE(5102, "The requested week is in the future", HttpStatus.BAD_REQUEST),
+    LEADERBOARD_REFRESH_TOO_FREQUENT(5103, "Too many refresh requests. Please try again in a few seconds", HttpStatus.TOO_MANY_REQUESTS),
+
+    // NOTIFICATION MODULE (6100 - 6199)
+    NOTIFICATION_NOT_FOUND(6100, "Notification not found", HttpStatus.NOT_FOUND),
+    NOTIFICATION_FORBIDDEN(6101, "You don't have permission to access this notification", HttpStatus.FORBIDDEN),
     ;
 
 

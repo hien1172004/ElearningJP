@@ -1,71 +1,55 @@
 import React from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
-import { Search, LogIn } from 'lucide-react'
+import { Outlet } from 'react-router-dom'
+import { Sidebar, TopBar } from '@/components/layout'
+import { AuthModal } from '@/components/auth'
+import { useSidebarStore } from '@/stores'
+import { useNotificationSocket } from '@/hooks/useNotificationSocket'
+import { cn } from '@/utils/cn'
 
+/**
+ * MainLayout:
+ *  - <TopBar /> fixed top, `h-14` -> rộng full màn hình.
+ *  - <Sidebar /> fixed left, `top-14` -> bắt đầu dưới TopBar, không che header.
+ *  - <main /> có `md:ml-60|md:ml-16` chừa chỗ cho Sidebar, và `pt-14` chừa chỗ cho TopBar.
+ */
 export const MainLayout: React.FC = () => {
-  const location = useLocation()
+  const collapsed = useSidebarStore((s) => s.collapsed)
+
+  // Mount 1 lần ở cấp layout: mở kết nối STOMP để nhận thông báo real-time.
+  // Hook tự bỏ qua khi chưa đăng nhập và deactivate khi logout.
+  useNotificationSocket()
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-gray-900 font-sans">
-      <header className="bg-white/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200/80 px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link to="/" className="text-xl font-black text-indigo-600 flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-serif text-lg font-bold shadow-xs">
-              日
-            </span>
-            <span>ElearningJP</span>
-          </Link>
+    <div className="min-h-screen bg-slate-50 text-gray-900 font-sans">
+      {/* TopBar - full-width, fixed top */}
+      <TopBar />
 
-          <nav className="hidden md:flex items-center gap-1 text-sm font-semibold text-gray-600">
-            <Link
-              to="/"
-              className={`px-3 py-2 rounded-xl transition ${
-                location.pathname === '/'
-                  ? 'text-indigo-600 bg-indigo-50/80 font-bold'
-                  : 'hover:text-indigo-600 hover:bg-gray-50'
-              }`}
-            >
-              Trang chủ
-            </Link>
-            <Link
-              to="/dictionary"
-              className={`px-3 py-2 rounded-xl transition flex items-center gap-1.5 ${
-                location.pathname.startsWith('/dictionary')
-                  ? 'text-indigo-600 bg-indigo-50/80 font-bold'
-                  : 'hover:text-indigo-600 hover:bg-gray-50'
-              }`}
-            >
-              <Search className="w-4 h-4" />
-              <span>Tra từ điển</span>
-            </Link>
-          </nav>
-        </div>
+      {/* Sidebar - fixed left, dưới TopBar */}
+      <Sidebar />
 
-        <div className="flex items-center gap-3">
-          <Link
-            to="/dictionary"
-            className="md:hidden p-2 text-gray-600 hover:text-indigo-600 hover:bg-gray-100 rounded-xl"
-            title="Tra từ điển"
-          >
-            <Search className="w-5 h-5" />
-          </Link>
-          <Link
-            to="/login"
-            className="text-sm font-semibold px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-xs hover:shadow-sm active:scale-98 transition flex items-center gap-1.5"
-          >
-            <LogIn className="w-4 h-4" />
-            <span>Đăng nhập</span>
-          </Link>
-        </div>
-      </header>
+      {/* Main content - đẩy sang phải theo sidebar width, xuống dưới TopBar */}
+      <div
+        className={cn(
+          'flex flex-col min-w-0 min-h-screen',
+          'pt-14', // chừa chỗ cho TopBar (h-14 = 56px)
+          'transition-[margin] duration-300 ease-in-out',
+          // Trên desktop: đẩy nội dung sang phải theo width sidebar
+          collapsed ? 'md:ml-16' : 'md:ml-60',
+        )}
+      >
+        <main className="flex-1 w-full max-w-[1650px] mx-auto px-3 sm:px-4 lg:px-5 py-5">
+          <Outlet />
+        </main>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
-        <Outlet />
-      </main>
+        <footer className="bg-white border-t border-gray-200">
+          <div className="max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-5 py-6 text-center text-sm text-gray-500">
+            © 2026 ElearningJP - Hệ thống học tiếng Nhật trực tuyến thông minh (SRS &amp; Mazii Dictionary)
+          </div>
+        </footer>
+      </div>
 
-      <footer className="bg-white border-t border-gray-200 py-6 text-center text-sm text-gray-500">
-        © 2026 ElearningJP - Hệ thống học tiếng Nhật trực tuyến thông minh (SRS & Mazii Dictionary)
-      </footer>
+      {/* Mount AuthModal 1 lần ở layout root để mở từ bất kỳ đâu */}
+      <AuthModal />
     </div>
   )
 }

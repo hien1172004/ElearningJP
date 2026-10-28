@@ -10,6 +10,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-elearning_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
+            # Múi giờ nghiệp vụ — khớp với Clock bean phía app (Asia/Ho_Chi_Minh).
+      # Postgres mặc định là UTC → CURRENT_DATE lệch 7 giờ so với "hôm nay" của app.
+      TZ: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
+      PGTZ: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -59,12 +63,18 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-root}
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+      # Múi giờ nghiệp vụ — khớp Clock bean (Asia/Ho_Chi_Minh).
+      # Không set TZ thì JVM chạy UTC → stat_date lệch so với máy dev.
+      TZ: ${APP_TIMEZONE:-Asia/Ho_Chi_Minh}
       JWT_SIGNER_KEY: ${JWT_SIGNER_KEY}
       EMAIL_USERNAME: ${EMAIL_USERNAME}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD}
       CLOUD_NAME: ${CLOUD_NAME}
       CLOUD_API_KEY: ${CLOUD_API_KEY}
       CLOUD_API_SECRET: ${CLOUD_API_SECRET}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     depends_on:
       postgres:
         condition: service_healthy

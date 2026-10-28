@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { Volume2, BookmarkPlus, Check, BookOpen, Sparkles } from 'lucide-react'
 import type { VocabularyDetail } from '@/types'
 import { dictionaryService } from '@/services'
@@ -38,7 +38,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-3xl p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
+      <div className="bg-white rounded-md p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
         <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm font-medium">Đang tải chi tiết từ vựng kiểu Mazii...</p>
       </div>
@@ -47,7 +47,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
 
   if (!detail) {
     return (
-      <div className="bg-white rounded-3xl p-10 border border-gray-200 text-center text-gray-500">
+      <div className="bg-white rounded-md p-10 border border-gray-200 text-center text-gray-500">
         Không tìm thấy thông tin chi tiết từ vựng.
       </div>
     )
@@ -73,24 +73,24 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
+    <div className="bg-white rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
       {/* 1. Header từ vựng kiểu Mazii: Từ to bản, Furigana, Hán-Việt, Nút nghe, Nút lưu */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-gray-100 pb-6">
         <div className="space-y-2">
           {/* Badges: JLPT, Hán Việt, Từ loại */}
           <div className="flex items-center gap-2 flex-wrap">
             {detail.jlptLevel && (
-              <span className="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+              <span className="px-2.5 py-1 text-xs font-bold rounded bg-indigo-50 text-indigo-700 border border-indigo-200/80">
                 JLPT {detail.jlptLevel}
               </span>
             )}
             {detail.hanViet && (
-              <span className="px-3 py-1 text-xs font-extrabold rounded-lg bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
+              <span className="px-3 py-1 text-xs font-extrabold rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
                 {detail.hanViet}
               </span>
             )}
             {detail.partOfSpeech && (
-              <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-100 text-gray-600">
+              <span className="px-2.5 py-1 text-xs font-medium rounded bg-gray-100 text-gray-600">
                 {detail.partOfSpeech}
               </span>
             )}
@@ -123,7 +123,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
           <button
             type="button"
             onClick={handlePlayAudio}
-            className="p-3.5 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm"
+            className="p-3.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm"
             title="Nghe phát âm chuẩn"
           >
             <Volume2 className="w-5 h-5" />
@@ -134,7 +134,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
             type="button"
             onClick={handleAddToSrs}
             disabled={isAddedToSrs}
-            className={`px-4 py-3.5 rounded-2xl text-sm font-semibold flex items-center gap-2 transition ${
+            className={`px-4 py-3.5 rounded-md text-sm font-semibold flex items-center gap-2 transition ${
               isAddedToSrs
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
@@ -148,7 +148,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
 
       {/* 2. Mục Hán tự cấu thành (Đặc trưng Mazii - Tra chéo tức thì) */}
       {detail.kanjiComponents && detail.kanjiComponents.length > 0 && (
-        <div className="bg-slate-50/80 rounded-2xl p-4 border border-gray-200/80 space-y-3">
+        <div className="bg-slate-50/80 rounded-md p-4 border border-gray-200/80 space-y-3">
           <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-amber-500" /> Chữ Hán cấu thành (Bấm để xem nét vẽ)
           </h4>
@@ -159,9 +159,9 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
                 key={k.id}
                 type="button"
                 onClick={() => onSelectKanji?.(k.character)}
-                className="flex items-center gap-3 p-3 bg-white rounded-xl border border-gray-200/80 hover:border-indigo-400 hover:bg-indigo-50/40 hover:shadow-xs transition text-left group"
+                className="flex items-center gap-3 p-3 bg-white rounded-md border border-gray-200/80 hover:border-indigo-400 hover:bg-indigo-50/40 hover:shadow-xs transition text-left group"
               >
-                <div className="w-12 h-12 rounded-lg bg-indigo-50/80 border border-indigo-200/60 flex items-center justify-center text-2xl font-bold text-gray-900 font-serif group-hover:scale-105 group-hover:text-indigo-600 transition shrink-0">
+                <div className="w-12 h-12 rounded bg-indigo-50/80 border border-indigo-200/60 flex items-center justify-center text-2xl font-bold text-gray-900 font-serif group-hover:scale-105 group-hover:text-indigo-600 transition shrink-0">
                   {k.character}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -193,7 +193,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
 
           <div className="space-y-2.5">
             {detail.senses.map((sense, idx) => (
-              <div key={idx} className="bg-white p-4 rounded-2xl border border-gray-200/80 space-y-1">
+              <div key={idx} className="bg-white p-4 rounded-md border border-gray-200/80 space-y-1">
                 <div className="flex items-baseline gap-2.5">
                   <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
                     {sense.senseNo || idx + 1}
@@ -224,7 +224,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
               detail.examples.map((ex, idx) => (
                 <div
                   key={idx}
-                  className="bg-slate-50/60 p-4 rounded-2xl border border-gray-200/70 flex items-start justify-between gap-3 hover:bg-indigo-50/30 transition group"
+                  className="bg-slate-50/60 p-4 rounded-md border border-gray-200/70 flex items-start justify-between gap-3 hover:bg-indigo-50/30 transition group"
                 >
                   <div className="space-y-1">
                     <p className="text-base font-bold text-gray-900 group-hover:text-indigo-600 transition">
@@ -244,7 +244,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
                         audioUrl: ex.audioUrl,
                       })
                     }
-                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-xl transition shrink-0"
+                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-md transition shrink-0"
                     title="Nghe phát âm câu ví dụ"
                   >
                     <Volume2 className="w-5 h-5" />
@@ -252,7 +252,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
                 </div>
               ))
             ) : (
-              <div className="bg-slate-50/60 p-4 rounded-2xl border border-gray-200/70 flex items-start justify-between gap-3">
+              <div className="bg-slate-50/60 p-4 rounded-md border border-gray-200/70 flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-base font-bold text-gray-900">{detail.exampleJp}</p>
                   <p className="text-sm text-gray-700">{detail.exampleVi}</p>
@@ -264,7 +264,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
                       text: detail.exampleJp || '',
                     })
                   }
-                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-xl transition shrink-0"
+                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-md transition shrink-0"
                   title="Nghe câu ví dụ"
                 >
                   <Volume2 className="w-5 h-5" />

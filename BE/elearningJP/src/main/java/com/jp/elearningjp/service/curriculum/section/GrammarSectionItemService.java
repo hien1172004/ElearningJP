@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleUpsertRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarItemCreateRequest;
@@ -17,12 +18,14 @@ import com.jp.elearningjp.repository.curriculum.LessonGrammarExampleRepository;
 import com.jp.elearningjp.repository.curriculum.LessonGrammarItemRepository;
 import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -48,19 +51,22 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     private final LessonGrammarExampleRepository grammarExampleRepository;
     private final GrammarPointRepository grammarPointRepository;
     private final LessonSectionMapper lessonSectionMapper;
+    private final CourseAccessGuard courseAccessGuard;
 
     public GrammarSectionItemService(
             LessonSectionRepository lessonSectionRepository,
             LessonGrammarItemRepository grammarItemRepository,
             LessonGrammarExampleRepository grammarExampleRepository,
             GrammarPointRepository grammarPointRepository,
-            LessonSectionMapper lessonSectionMapper
+            LessonSectionMapper lessonSectionMapper,
+            CourseAccessGuard courseAccessGuard
     ) {
         super(lessonSectionRepository);
         this.grammarItemRepository = grammarItemRepository;
         this.grammarExampleRepository = grammarExampleRepository;
         this.grammarPointRepository = grammarPointRepository;
         this.lessonSectionMapper = lessonSectionMapper;
+        this.courseAccessGuard = courseAccessGuard;
     }
 
     // ============================================================
@@ -94,20 +100,10 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
 
         assertNoDuplicateGrammar(sectionId, grammar.getId());
 
-        // Nhận xét #2: xử lý orderIndex đúng cách
-        List<LessonGrammarItem> existingItems = grammarItemRepository
-                .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-        int maxOrder = OrderIndexResolver.maxOrderIndex(existingItems, LessonGrammarItem::getOrderIndex);
-        int resolvedIndex = OrderIndexResolver.resolveForCreate(request.getOrderIndex(), () -> maxOrder);
-        boolean clientChoseIndex = request.getOrderIndex() != null && request.getOrderIndex() > 0
-                && resolvedIndex == request.getOrderIndex();
-        if (clientChoseIndex) {
-            OrderIndexResolver.shiftUpInCollection(
-                    existingItems, resolvedIndex,
-                    LessonGrammarItem::getOrderIndex, LessonGrammarItem::setOrderIndex
-            );
-            log.info("[GRAMMAR-ITEM] Shifted up items in section id={} with orderIndex >= {}", sectionId, resolvedIndex);
-        }
+        // SEQUENTIAL RENUMBER: chèn item vào vị trí đích trong bộ nhớ, rồi
+        // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
+        List<LessonGrammarItem> ordered = new ArrayList<>(
+                grammarItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
 
         // Resolve các trường override: null = auto-fill từ từ điển, "" = xoá override
         String resolvedMeaning   = resolveOverride(request.getCustomMeaning(), grammar.getMeaningVi());
@@ -116,7 +112,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         LessonGrammarItem item = LessonGrammarItem.builder()
                 .section(section)
                 .grammar(grammar)
-                .orderIndex(resolvedIndex)
+                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
                 .customMeaning(resolvedMeaning)
                 .customStructure(resolvedStructure)
                 .note(request.getNote())
@@ -126,8 +122,21 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         int totalExamples = applyExamplesOnCreate(item, grammar, request.getExamples());
 
         section.addGrammarItem(item);
-        grammarItemRepository.saveAll(existingItems);
         LessonGrammarItem saved = grammarItemRepository.save(item);
+        grammarItemRepository.flush();
+
+        Integer requestedIndex = request.getOrderIndex();
+        int target = (requestedIndex != null && requestedIndex > 0)
+                ? Math.min(requestedIndex, ordered.size() + 1)
+                : ordered.size() + 1;
+        ordered.add(target - 1, saved);
+
+        OrderIndexResolver.persistSequential(
+                ordered,
+                LessonGrammarItem::getId,
+                LessonGrammarItem::setOrderIndex,
+                grammarItemRepository::flush
+        );
         log.info("[GRAMMAR-ITEM] Added grammar id={} into section id={} at orderIndex={} (with {} examples)",
                 grammar.getId(), sectionId, saved.getOrderIndex(), totalExamples);
 
@@ -177,32 +186,28 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         Integer newOrderIndex = request.getOrderIndex();
         Integer oldOrderIndex = item.getOrderIndex();
 
-        // Nhận xét #2: xử lý di chuyển orderIndex
+        // SEQUENTIAL RENUMBER: move item trong bộ nhớ rồi đánh số lại 1..N
+        // (không còn adjacent-swap nên không kẹt khi có lỗ hổng index do soft-delete).
         if (newOrderIndex != null && newOrderIndex > 0 && !newOrderIndex.equals(oldOrderIndex)) {
             Long sectionId = item.getSection().getId();
-            List<LessonGrammarItem> allItems = grammarItemRepository
-                    .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-            int maxOrder = OrderIndexResolver.maxOrderIndex(allItems, LessonGrammarItem::getOrderIndex);
-            int target = OrderIndexResolver.clampToMaxPlusOne(newOrderIndex, () -> maxOrder);
-            if (target != oldOrderIndex) {
-                allItems = allItems.stream().filter(i -> !i.getId().equals(itemId)).toList();
-                if (target < oldOrderIndex) {
-                    OrderIndexResolver.shiftUpInCollection(
-                            allItems, target,
-                            LessonGrammarItem::getOrderIndex, LessonGrammarItem::setOrderIndex
-                    );
-                    log.info("[GRAMMAR-ITEM] Move-up: shifted items in [{}, {}] for grammar item id={}",
-                            target, oldOrderIndex - 1, itemId);
-                } else {
-                    OrderIndexResolver.shiftDownInCollection(
-                            allItems, oldOrderIndex, target,
-                            LessonGrammarItem::getOrderIndex, LessonGrammarItem::setOrderIndex
-                    );
-                    log.info("[GRAMMAR-ITEM] Move-down: shifted items in ({}, {}] for grammar item id={}",
-                            oldOrderIndex, target, itemId);
-                }
-                grammarItemRepository.saveAll(allItems);
-                item.setOrderIndex(target);
+            List<LessonGrammarItem> ordered = new ArrayList<>(
+                    grammarItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
+
+            boolean moved = OrderIndexResolver.moveToPosition(
+                    ordered,
+                    item,
+                    newOrderIndex,
+                    LessonGrammarItem::setOrderIndex
+            );
+            if (moved) {
+                log.info("[GRAMMAR-ITEM] Moving grammar item id={} from orderIndex={} → {} (sectionId={})",
+                        itemId, oldOrderIndex, newOrderIndex, sectionId);
+                OrderIndexResolver.persistSequential(
+                        ordered,
+                        LessonGrammarItem::getId,
+                        LessonGrammarItem::setOrderIndex,
+                        grammarItemRepository::flush
+                );
             }
         }
 
@@ -239,6 +244,57 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         grammarItemRepository.save(item);
         log.info("[GRAMMAR-ITEM] Soft-deleted grammar item id={} (cascaded {} examples)",
                 itemId, cascadeCount);
+    }
+
+    /**
+     * Sắp xếp lại thứ tự hàng loạt các grammar item trong 1 section (drag-drop UI).
+     *
+     * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> grammar item active
+     * của section hiện tại (không thiếu, không thừa, không trùng).</p>
+     *
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     */
+    @Transactional
+    public List<LessonGrammarItemResponse> reorderGrammarItems(Long sectionId, ItemBulkReorderRequest request) {
+        LessonSection section = getActiveSection(sectionId, LessonSectionType.GRAMMAR);
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+
+        if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
+        }
+
+        List<LessonGrammarItem> currentItems = grammarItemRepository
+                .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
+        Set<Long> currentIds = new HashSet<>();
+        for (LessonGrammarItem i : currentItems) currentIds.add(i.getId());
+
+        Set<Long> requestedIds = new HashSet<>(request.getItemIds());
+        if (requestedIds.size() != request.getItemIds().size()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_INVALID);
+        }
+        if (!requestedIds.equals(currentIds)) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
+        }
+
+        OrderIndexResolver.bulkReorder(
+                currentItems,
+                request.getItemIds(),
+                LessonGrammarItem::getId,
+                LessonGrammarItem::setOrderIndex
+        );
+
+        OrderIndexResolver.persistSequential(
+                currentItems,
+                LessonGrammarItem::getId,
+                LessonGrammarItem::setOrderIndex,
+                grammarItemRepository::flush
+        );
+
+        log.info("[GRAMMAR-ITEM] Bulk reordered {} grammar item(s) in section id={}", currentItems.size(), sectionId);
+        return currentItems.stream()
+                .map(lessonSectionMapper::toGrammarItemResponse)
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
     // ============================================================
@@ -395,6 +451,14 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         int updated = 0;
         int deleted = 0;
 
+        // Track orderIndex đã dùng (existing + vừa tạo trong loop) để chống trùng
+        Set<Integer> usedOrderIndexes = new HashSet<>();
+        for (LessonGrammarExample ex : existing) {
+            if (ex.getOrderIndex() != null && ex.getOrderIndex() > 0) {
+                usedOrderIndexes.add(ex.getOrderIndex());
+            }
+        }
+
         for (LessonGrammarExampleUpsertRequest req : teacherExamples) {
             if (req == null) continue;
             if (req.getId() != null) {
@@ -411,10 +475,16 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
                 // Validate duplicate (ngoại trừ chính nó - nhưng ở đây là tạo mới nên exclude null)
                 assertNoDuplicateExampleInItem(item, req.getExampleJp(), req.getExampleVi(), null);
 
-                int exOrderIndex = req.getOrderIndex() != null && req.getOrderIndex() > 0
-                        ? req.getOrderIndex()
-                        : OrderIndexResolver.nextOrderIndexIncludingDeleted(
-                                item.getExamples(), LessonGrammarExample::getOrderIndex);
+                // Resolve orderIndex chống trùng (xem VocabularySectionItemService để biết chi tiết)
+                Integer requested = req.getOrderIndex();
+                int exOrderIndex;
+                if (requested != null && requested > 0 && usedOrderIndexes.add(requested)) {
+                    exOrderIndex = requested;
+                } else {
+                    exOrderIndex = OrderIndexResolver.nextOrderIndexIncludingDeleted(
+                            item.getExamples(), LessonGrammarExample::getOrderIndex);
+                    usedOrderIndexes.add(exOrderIndex);
+                }
                 LessonGrammarExample ex = LessonGrammarExample.builder()
                         .grammarItem(item)
                         .exampleJp(req.getExampleJp())

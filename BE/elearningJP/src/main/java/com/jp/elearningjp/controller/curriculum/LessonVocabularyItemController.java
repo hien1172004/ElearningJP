@@ -1,5 +1,6 @@
 package com.jp.elearningjp.controller.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyItemUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonVocabularyItemResponse;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "Lesson Vocabulary Items", description = "Quản lý từ vựng trong section VOCABULARY. "
         + "Examples do giáo viên cấu hình được nhúng trong payload create/update của vocab item "
@@ -83,6 +86,21 @@ public class LessonVocabularyItemController {
         return ApiResponse.<Void>builder()
                 .success(true)
                 .message("Đã xoá từ vựng (kèm examples)")
+                .build();
+    }
+
+    @Operation(summary = "[GV/Admin] Sắp xếp lại thứ tự hàng loạt các vocabulary item trong section (drag-drop)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.VOCABULARY_ITEMS_REORDER)
+    public ApiResponse<List<LessonVocabularyItemResponse>> reorderVocabularyItems(
+            @PathVariable Long sectionId,
+            @Valid @RequestBody ItemBulkReorderRequest request
+    ) {
+        return ApiResponse.<List<LessonVocabularyItemResponse>>builder()
+                .success(true)
+                .message("Sắp xếp lại thứ tự vocabulary item thành công")
+                .data(vocabularySectionItemService.reorderVocabularyItems(sectionId, request))
                 .build();
     }
 }

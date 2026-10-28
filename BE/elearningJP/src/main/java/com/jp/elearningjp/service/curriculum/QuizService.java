@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.QuizAnswerItem;
 import com.jp.elearningjp.dto.request.curriculum.QuizSubmitRequest;
 import com.jp.elearningjp.dto.response.curriculum.*;
@@ -18,6 +19,8 @@ import com.jp.elearningjp.shared.enums.SrsRating;
 import com.jp.elearningjp.shared.enums.SrsStatus;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
+import com.jp.elearningjp.shared.util.OrderIndexResolver;
+import com.jp.elearningjp.dto.request.curriculum.QuizQuestionUpdateRequest;
 import com.jp.elearningjp.entity.content.Vocabulary;
 import com.jp.elearningjp.entity.content.WritingCharacter;
 import com.jp.elearningjp.dto.request.curriculum.QuizOptionRequest;
@@ -110,6 +113,40 @@ public class QuizService {
     }
 
     // =========================================================
+    // READ (MANAGE) — Admin/Teacher xem đề kèm đáp án đúng
+    // =========================================================
+
+    /**
+     * Lấy đề quiz của lesson kèm <b>đầy đủ đáp án đúng</b> — chỉ dành cho
+     * Admin/Teacher dùng trong trang quản lý (sửa / xoá / xem cấu trúc).
+     *
+     * <p>Khác với {@link #getLessonQuiz(Long)} (ẩn hoàn toàn isCorrect để bảo
+     * mật cho học viên), endpoint này trả thêm:</p>
+     * <ul>
+     *   <li>MCQ: {@code correct}, {@code correctOptionId} cho mỗi option.</li>
+     *   <li>FILL_IN_THE_BLANK: {@code correctTextAnswer} (chuỗi đáp án đúng).</li>
+     *   <li>MATCHING: {@code correctMatchingAnswers} (map slotKey -> correctText)
+     *       + {@code matchKey} của từng option.</li>
+     *   <li>Explanation của mỗi câu hỏi (để teacher review).</li>
+     * </ul>
+     *
+     * <p><b>Quyền:</b> Admin hoặc Teacher (chỉ trong course do mình tạo).
+     * Nếu teacher khác cố truy cập → 403 {@code FORBIDDEN_LESSON_ACCESS}.</p>
+     */
+    @Transactional(readOnly = true)
+    public LessonQuizManageResponse getLessonQuizManage(Long lessonId) {
+        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        // Check quyền teacher-owner hoặc admin
+        courseAccessGuard.requireOwnerOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+
+        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+
+        return buildLessonQuizManageResponse(quiz, lesson);
+    }
+
+    // =========================================================
     // SUBMIT
     // =========================================================
 
@@ -155,18 +192,32 @@ public class QuizService {
                     return quizRepository.save(newQuiz);
                 });
 
-        Integer orderIndex = resolveOrderIndex(quiz.getId(), request.getOrderIndex());
-        if (questionRepository.existsByQuizIdAndOrderIndexExcludingId(quiz.getId(), orderIndex)) {
-            log.warn("[QUIZ] OrderIndex conflict detected at addQuestionToLesson for quiz id={}, orderIndex={}",
-                    quiz.getId(), orderIndex);
-            throw new AppException(ErrorCode.QUESTION_ORDER_CONFLICT);
+        // Tính orderIndex. Nếu client gửi target nằm trong khoảng hiện có
+        // (1..max), resolveOrderIndex sẽ trả về tempIndex = max+1. Caller sẽ
+        // save với orderIndex = tempIndex, rồi gọi swapQuestionToTarget() để
+        // dời về target qua thuật toán adjacent swap chain (an toàn UNIQUE).
+        Integer resolvedIndex = resolveOrderIndex(quiz.getId(), request.getOrderIndex());
+        Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quiz.getId());
+        int max = (maxOrder != null ? maxOrder : 0);
+        Integer requestedIdx = request.getOrderIndex();
+        int targetIdx = (requestedIdx != null && requestedIdx > 0)
+                ? Math.min(requestedIdx, max + 1) : -1;
+        boolean needSwap = targetIdx > 0 && targetIdx <= max;  // target nằm trong khoảng hiện có
+
+        if (needSwap) {
+            // Kiểm tra trước: target phải trống
+            if (questionRepository.existsByQuizIdAndOrderIndexExcludingId(quiz.getId(), targetIdx)) {
+                log.warn("[QUIZ] OrderIndex conflict at addQuestionToLesson for quiz id={}, target={}",
+                        quiz.getId(), targetIdx);
+                throw new AppException(ErrorCode.QUESTION_ORDER_CONFLICT);
+            }
         }
 
         QuizQuestion question = QuizQuestion.builder()
                 .quiz(quiz)
                 .questionText(request.getQuestionText())
                 .explanation(request.getExplanation())
-                .orderIndex(orderIndex)
+                .orderIndex(resolvedIndex)
                 .questionType(request.getQuestionType() != null ? request.getQuestionType() : QuizQuestionType.MULTIPLE_CHOICE)
                 .correctTextAnswer(request.getCorrectTextAnswer())
                 .matchingData(request.getMatchingData())
@@ -180,6 +231,16 @@ public class QuizService {
         }
 
         QuizQuestion savedQuestion = questionRepository.save(question);
+
+        // Swap chain nếu cần — dùng bulk shift an toàn (không gap) thay vì adjacent swap.
+        if (needSwap) {
+            int shifted = questionRepository.shiftOrderIndexesUpInRangeExcluding(
+                    quiz.getId(), targetIdx, max, savedQuestion.getId());
+            log.info("[QUIZ] addQuestion: shifted {} question(s) in [{}..{}] up +1 to make room",
+                    shifted, targetIdx, max);
+            savedQuestion.setOrderIndex(targetIdx);
+            questionRepository.save(savedQuestion);
+        }
 
         List<QuizOptionResponse> optionResponses = new ArrayList<>();
         if (request.getOptions() != null) {
@@ -213,6 +274,161 @@ public class QuizService {
     }
 
     // =========================================================
+    // UPDATE QUESTION (Admin/Teacher)
+    // =========================================================
+
+    /**
+     * Cập nhật 1 câu hỏi quiz đã tồn tại. Hỗ trợ partial update:
+     *
+     * <ul>
+     *   <li>Các field text/null → chỉ update khi request gửi giá trị (kể cả null).</li>
+     *   <li>{@code orderIndex}: nếu khác giá trị hiện tại → resolve lại vị trí
+     *       (giống {@code addQuestionToLesson}) để đảm bảo không trùng và
+     *       shift các câu khác nếu cần.</li>
+     *   <li>{@code options}: nếu gửi (kể cả mảng rỗng) sẽ <b>THAY THẾ</b>
+     *       toàn bộ options hiện tại (xoá cũ + tạo mới). Nếu null → giữ nguyên.</li>
+     *   <li>{@code vocabId} / {@code characterId}: truyền rõ ràng {@code null}
+     *       để xoá liên kết SRS; truyền số để đổi sang vocab/kanji khác.</li>
+     * </ul>
+     *
+     * <p>Quyền: Admin hoặc Teacher (chỉ trong course do mình tạo).</p>
+     */
+    @Transactional
+    public QuizQuestionResponse updateQuestion(Long questionId, QuizQuestionUpdateRequest request) {
+        QuizQuestion question = questionRepository.findByIdWithOptions(questionId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
+        // Check quyền: admin pass, teacher chỉ update được câu hỏi thuộc course do mình tạo
+        courseAccessGuard.requireOwnerOrAdmin(
+                question.getQuiz().getLesson().getCourse(),
+                ErrorCode.FORBIDDEN_LESSON_ACCESS
+        );
+
+        Long quizId = question.getQuiz().getId();
+        Integer currentOrderIndex = question.getOrderIndex();
+
+        // ----- 1. Update orderIndex (nếu gửi và khác giá trị hiện tại) -----
+        if (request.getOrderIndex() != null && request.getOrderIndex() > 0
+                && !request.getOrderIndex().equals(question.getOrderIndex())) {
+            Integer newOrder = resolveOrderIndex(quizId, request.getOrderIndex());
+            // newOrder = tempIndex (max+1) nếu cần swap chain; = target nếu append
+            Integer maxOrderForUpdate = questionRepository.findMaxOrderIndexByQuizId(quizId);
+            int maxForUpdate = (maxOrderForUpdate != null ? maxOrderForUpdate : 0);
+            int requestedTarget = Math.min(request.getOrderIndex(), maxForUpdate + 1);
+            boolean needSwapChain = requestedTarget > 0 && requestedTarget <= maxForUpdate
+                    && requestedTarget != currentOrderIndex;
+
+            if (needSwapChain) {
+                // Đặt question về tempIndex (= max+1) để giải phóng currentOrderIndex.
+                // Sau đó shift các câu trong [target..current-1] lên +1 (nếu move lên)
+                // hoặc [current+1..target] xuống -1 (nếu move xuống), rồi set question về target.
+                // Dùng bulk UPDATE để tránh vi phạm UNIQUE constraint và tránh gap nếu có.
+                int currentIdx = currentOrderIndex;
+                int targetIdx = requestedTarget;
+                question.setOrderIndex(newOrder);
+                QuizQuestion savedTemp = questionRepository.save(question);
+                questionRepository.flush();
+                if (targetIdx < currentIdx) {
+                    // Move lên: shift [target..current-1] lên +1 để giải phóng target
+                    int shifted = questionRepository.shiftOrderIndexesUpInRangeExcluding(
+                            quizId, targetIdx, currentIdx - 1, savedTemp.getId());
+                    log.info("[QUIZ] updateQuestion id={}: shifted {} question(s) in [{}..{}] up +1",
+                            savedTemp.getId(), shifted, targetIdx, currentIdx - 1);
+                } else if (targetIdx > currentIdx) {
+                    // Move xuống: shift [current+1..target] xuống -1
+                    int shifted = questionRepository.shiftOrderIndexesDownInRangeExcluding(
+                            quizId, currentIdx + 1, targetIdx, savedTemp.getId());
+                    log.info("[QUIZ] updateQuestion id={}: shifted {} question(s) in [{}..{}] down -1",
+                            savedTemp.getId(), shifted, currentIdx + 1, targetIdx);
+                }
+                question.setOrderIndex(requestedTarget);
+            } else {
+                // target > max+1 (append) hoặc target = current (no-op) → chỉ set
+                if (requestedTarget > 0) {
+                    question.setOrderIndex(requestedTarget);
+                }
+            }
+        }
+
+        // ----- 2. Update các field text/enum -----
+        if (request.getQuestionText() != null && !request.getQuestionText().isBlank()) {
+            question.setQuestionText(request.getQuestionText());
+        }
+        if (request.getExplanation() != null) {
+            // Cho phép truyền "" để xoá giải thích
+            question.setExplanation(request.getExplanation().isBlank() ? null : request.getExplanation());
+        }
+        if (request.getQuestionType() != null) {
+            question.setQuestionType(request.getQuestionType());
+        }
+        if (request.getCorrectTextAnswer() != null) {
+            question.setCorrectTextAnswer(
+                    request.getCorrectTextAnswer().isBlank() ? null : request.getCorrectTextAnswer());
+        }
+        if (request.getMatchingData() != null) {
+            question.setMatchingData(request.getMatchingData());
+        }
+
+        // ----- 3. Update liên kết vocab / kanji -----
+        // Truyền rõ ràng -1 (sentinel) để xoá; truyền số > 0 để đổi.
+        // Dùng wrapper để phân biệt "không gửi" (null) vs "gửi null" (xoá).
+        if (request.getVocabId() != null) {
+            if (request.getVocabId() <= 0) {
+                question.setVocab(null);
+            } else {
+                question.setVocab(entityManager.getReference(Vocabulary.class, request.getVocabId()));
+            }
+        }
+        if (request.getCharacterId() != null) {
+            if (request.getCharacterId() <= 0) {
+                question.setCharacter(null);
+            } else {
+                question.setCharacter(entityManager.getReference(WritingCharacter.class, request.getCharacterId()));
+            }
+        }
+
+        // ----- 4. Replace options nếu có gửi -----
+        if (request.getOptions() != null) {
+            // Xoá options cũ (orphanRemoval = true sẽ xoá DB row khi flush)
+            question.getOptions().clear();
+            // Tạo options mới vào collection hiện tại (giữ reference PersistentBag)
+            for (QuizOptionRequest optReq : request.getOptions()) {
+                QuizOption option = QuizOption.builder()
+                        .question(question)
+                        .optionKey(optReq.getOptionKey())
+                        .optionText(optReq.getOptionText())
+                        .correct(optReq.isCorrect())
+                        .matchKey(optReq.getMatchKey())
+                        .build();
+                question.getOptions().add(option);
+            }
+        }
+
+        QuizQuestion saved = questionRepository.save(question);
+
+        log.info("[QUIZ] Updated question id={} (quiz id={}, lesson id={})",
+                questionId, quizId, question.getQuiz().getLesson().getId());
+
+        // ----- 5. Build response -----
+        List<QuizOptionResponse> optionResponses = saved.getOptions().stream()
+                .filter(o -> !o.isDeleted())
+                .map(opt -> QuizOptionResponse.builder()
+                        .id(opt.getId())
+                        .optionKey(opt.getOptionKey())
+                        .optionText(opt.getOptionText())
+                        .build())
+                .toList();
+
+        return QuizQuestionResponse.builder()
+                .id(saved.getId())
+                .questionText(saved.getQuestionText())
+                .orderIndex(saved.getOrderIndex())
+                .questionType(saved.getQuestionType())
+                .matchingData(saved.getMatchingData())
+                .options(optionResponses)
+                .build();
+    }
+
+    // =========================================================
     // DELETE
     // =========================================================
 
@@ -229,10 +445,95 @@ public class QuizService {
                 question.getQuiz().getLesson().getCourse(),
                 ErrorCode.FORBIDDEN_LESSON_ACCESS
         );
-        question.softDelete();
-        questionRepository.save(question);
-        log.info("[QUIZ] Soft-deleted question id={} (quiz id={}, lesson id={})",
-                questionId, question.getQuiz().getId(), question.getQuiz().getLesson().getId());
+        Long quizId = question.getQuiz().getId();
+    Long lessonId = question.getQuiz().getLesson().getId();
+    // 1) Soft-delete + flush NGAY: partial unique index
+    //    (quiz_id, order_index) WHERE deleted = false chỉ tính row active,
+    //    flush để chắc chắn slot cũ đã được giải phóng trước khi đánh số lại.
+    question.softDelete();
+    questionRepository.save(question);
+    questionRepository.flush();
+    // 2) Renumber 1..N cho các câu còn active → không để lại gap
+    List<QuizQuestion> remaining = questionRepository
+            .findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quizId);
+    if (!remaining.isEmpty()) {
+        OrderIndexResolver.persistSequential(
+                remaining,
+                QuizQuestion::getId,
+                QuizQuestion::setOrderIndex,
+                questionRepository::flush
+        );
+    }
+    log.info("[QUIZ] Soft-deleted question id={} (quiz id={}, lesson id={}), renumbered {} remaining",
+            questionId, quizId, lessonId, remaining.size());
+    }
+
+    /**
+     * Sắp xếp lại thứ tự hàng loạt các câu hỏi trong quiz của 1 lesson (drag-drop UI).
+     *
+     * <p>Quy tắc: list {@code questionIds} phải chứa <b>đúng tất cả</b> câu hỏi active
+     * của quiz hiện tại (không thiếu, không thừa, không trùng).</p>
+     *
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     *
+     * @param lessonId lesson cần reorder câu hỏi
+     * @param request  danh sách question ID theo thứ tự MỚI
+     * @return danh sách câu hỏi sau khi reorder
+     */
+    @Transactional
+    public List<QuizQuestionResponse> reorderQuizQuestions(Long lessonId, ItemBulkReorderRequest request) {
+        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+
+        // Check quyền: admin pass, teacher chỉ reorder câu hỏi trong course do mình tạo
+        courseAccessGuard.requireOwnerOrAdmin(
+                quiz.getLesson().getCourse(),
+                ErrorCode.FORBIDDEN_LESSON_ACCESS
+        );
+
+        if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
+        }
+
+        List<QuizQuestion> currentQuestions = questionRepository
+                .findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId());
+        Set<Long> currentIds = new HashSet<>();
+        for (QuizQuestion q : currentQuestions) currentIds.add(q.getId());
+
+        Set<Long> requestedIds = new HashSet<>(request.getItemIds());
+        if (requestedIds.size() != request.getItemIds().size()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_INVALID);
+        }
+        if (!requestedIds.equals(currentIds)) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
+        }
+
+        // 1) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
+        OrderIndexResolver.bulkReorder(
+                currentQuestions,
+                request.getItemIds(),
+                QuizQuestion::getId,
+                QuizQuestion::setOrderIndex
+        );
+        // 2) Ghi an toàn 2 pha (marker âm → 1..N), tránh UNIQUE conflict
+        OrderIndexResolver.persistSequential(
+                currentQuestions,
+                QuizQuestion::getId,
+                QuizQuestion::setOrderIndex,
+                questionRepository::flush
+        );
+
+        log.info("[QUIZ] Bulk reordered {} question(s) in quiz id={} (lesson id={})",
+                currentQuestions.size(), quiz.getId(), lessonId);
+        return currentQuestions.stream()
+                .map(q -> QuizQuestionResponse.builder()
+                        .id(q.getId())
+                        .questionText(q.getQuestionText())
+                        .orderIndex(q.getOrderIndex())
+                        .questionType(q.getQuestionType())
+                        .matchingData(q.getMatchingData())
+                        .build())
+                .toList();
     }
 
     // =========================================================
@@ -244,43 +545,128 @@ public class QuizService {
      *
      * <p><b>Quy ước:</b></p>
      * <ul>
-     *   <li>Client gửi orderIndex hợp lệ (1..MAX+1): dời tất cả câu có orderIndex
-     *       &gt;= target lên +1 (dùng marker tạm) để chèn vào giữa.</li>
-     *   <li>Client không gửi (null hoặc &lt;= 0): fill gap nhỏ nhất; nếu không có
-     *       gap thì lấy MAX + 1. Mục đích: tái sử dụng slot trống do xoá mềm
-     *       thay vì luôn tăng dần vô tận.</li>
+     *   <li>Client gửi orderIndex hợp lệ (1..MAX+1): dùng thuật toán
+     *       <b>ADJACENT SWAP CHAIN</b> — tạo với orderIndex tạm = MAX+1, rồi
+     *       swap từng bước về target (xem chi tiết trong
+     *       {@code KanjiSectionItemService.createKanjiItem}).</li>
+     *   <li>Client không gửi (null hoặc &lt;= 0): luôn lấy <b>MAX + 1</b>
+     *       (giống pattern của các service khác — không fill gap).</li>
      *   <li>orderIndex &gt; MAX+1: clamp về MAX+1 (giống pattern của Lesson).</li>
      * </ul>
      *
-     * <p>Sau khi resolve, method {@code existsByQuizIdAndOrderIndexExcludingId}
-     * nên được gọi ở caller để báo lỗi 409 sớm trước khi insert.</p>
+     * <p>Trước khi insert, method {@code existsByQuizIdAndOrderIndexExcludingId}
+     * nên được gọi ở caller để báo lỗi 409 sớm.</p>
      */
     private Integer resolveOrderIndex(Long quizId, Integer requestedIndex) {
         Integer maxOrder = questionRepository.findMaxOrderIndexByQuizId(quizId);
         int max = (maxOrder != null ? maxOrder : 0);
 
-        // Case 1: client không gửi orderIndex -> fill gap nhỏ nhất
+        // Case 1: client không gửi orderIndex -> luôn lấy MAX + 1
         if (requestedIndex == null || requestedIndex <= 0) {
-            Integer firstAvailable = questionRepository.findFirstAvailableOrderIndex(quizId);
-            return (firstAvailable != null ? firstAvailable : max + 1);
+            return max + 1;
         }
 
         // Case 2: client gửi orderIndex vượt quá max+1 -> clamp
         int target = Math.min(requestedIndex, max + 1);
         if (target < 1) target = 1;
 
-        // Nếu target > max+1 đã bị clamp, không cần shift
+        // Không cần shift: target > max (sẽ làm tempIndex = max+1 luôn)
         if (target > max) {
             return target;
         }
 
-        // Case 3: target nằm trong khoảng hiện có (1..max) -> shift UP các câu >= target
-        // Vì chưa có câu nào ở target (giả định caller đã check exists trước),
-        // shift an toàn không cần marker tạm.
-        int shifted = questionRepository.shiftOrderIndexesUp(quizId, target);
-        log.info("[QUIZ] Shifted {} question(s) with orderIndex >= {} in quiz id={}",
-                shifted, target, quizId);
-        return target;
+        // Case 3: target nằm trong khoảng hiện có (1..max)
+        // Dùng ADJACENT SWAP CHAIN (giống các service khác):
+        //   - Caller sẽ save question với orderIndex = max+1 (tempIndex)
+        //   - Sau đó swap chain từng bước từ max+1 về target
+        //   - Mỗi swap dùng marker tạm âm nên không gây UNIQUE conflict
+        // Trả về tempIndex, caller lưu với giá trị này, rồi gọi
+        // swapQuestionToTarget(...) để dời về target.
+        return max + 1;
+    }
+
+    /**
+     * Dời 1 quiz question vừa tạo từ tempIndex (= max+1) về targetIndex bằng
+     * thuật toán <b>ADJACENT SWAP CHAIN</b>. Mỗi bước swap đều dùng marker tạm
+     * âm để không vi phạm UNIQUE constraint.
+     *
+     * <p>Ví dụ: hiện có [Q1(1), Q2(2), Q3(3), Q4(4)], vừa tạo mới Q5 tại tempIndex=5,
+     * client muốn đặt vào orderIndex=2:</p>
+     * <pre>
+     *   DB: [Q1(1), Q2(2), Q3(3), Q4(4), Q5(5)]
+     *   swap Q5@5 ↔ Q4@4 → [Q1(1), Q2(2), Q3(3), Q5(4), Q4(5)]
+     *   swap Q5@4 ↔ Q3@3 → [Q1(1), Q2(2), Q5(3), Q3(4), Q4(5)]
+     *   swap Q5@3 ↔ Q2@2 → [Q1(1), Q5(2), Q2(3), Q3(4), Q4(5)]   ✓
+     * </pre>
+     *
+     * <p>Được gọi SAU khi đã save question với orderIndex = tempIndex.</p>
+     */
+    private void swapQuestionToTarget(Long questionId, int tempIndex, int targetIndex) {
+        if (targetIndex == tempIndex) {
+            log.info("[QUIZ] No swap needed for question id={} (already at target={})",
+                    questionId, targetIndex);
+            return;
+        }
+        Long quizIdOfQuestion = questionRepository.findById(questionId)
+                .map(qq -> qq.getQuiz().getId())
+                .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
+
+        int step = (targetIndex < tempIndex) ? -1 : 1;
+        int current = tempIndex;
+        int safetyCounter = 0;
+        final int MAX_SWAPS = tempIndex + 2;
+        while (current != targetIndex && safetyCounter++ < MAX_SWAPS) {
+            int nextIndex = current + step;
+            Long neighborId = questionRepository.findIdByQuizIdAndOrderIndex(quizIdOfQuestion, nextIndex);
+            if (neighborId == null) {
+                log.warn("[QUIZ] Cannot find neighbor at orderIndex={} for swap chain (quizId={}, questionId={})",
+                        nextIndex, quizIdOfQuestion, questionId);
+                break;
+            }
+            questionRepository.swapOrderIndexes(questionId, nextIndex, neighborId, current);
+            questionRepository.flush();
+            current = nextIndex;
+        }
+        log.info("[QUIZ] Swapped question id={} from tempIndex={} to orderIndex={} (quizId={})",
+                questionId, tempIndex, current, quizIdOfQuestion);
+    }
+
+    /**
+     * Comparator sort matchKey cho MATCHING theo dạng "L{i}=R{j}".
+     * <p>Parse số từ "L&lt;n&gt;" và "R&lt;m&gt;", so sánh theo (n, m).
+     * Nếu matchKey không khớp format thì fallback alphabetical.</p>
+     *
+     * <p>Đảm bảo thứ tự JSON trả về là L1=R1, L1=R2, L2=R1, L2=R2, ...
+     * → dễ debug, dễ test, không phụ thuộc thứ tự insert vào Map.</p>
+     */
+    private static final Comparator<String> MATCHING_KEY_ORDER = (a, b) -> {
+        int[] pa = parseMatchingKey(a);
+        int[] pb = parseMatchingKey(b);
+        if (pa != null && pb != null) {
+            if (pa[0] != pb[0]) return Integer.compare(pa[0], pb[0]);
+            return Integer.compare(pa[1], pb[1]);
+        }
+        // Fallback alphabetical nếu 1 trong 2 không khớp format
+        if (pa == null && pb == null) return a.compareTo(b);
+        return pa == null ? -1 : 1;
+    };
+
+    /**
+     * Parse matchKey dạng "L&lt;n&gt;=R&lt;m&gt;" (hoặc "L&lt;n&gt;+R&lt;m&gt;" cũ)
+     * → trả về int[]{n, m}. Trả về null nếu không khớp.
+     */
+    private static int[] parseMatchingKey(String key) {
+        if (key == null) return null;
+        // Hỗ trợ cả format mới "L{n}=R{m}" và cũ "L{n}→R{m}" / "L{n}+R{m}"
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("^L(\\d+)\\s*[=→+]\\s*R(\\d+)$")
+                .matcher(key.trim());
+        if (!m.matches()) return null;
+        try {
+            return new int[]{ Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)) };
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**
@@ -317,6 +703,77 @@ public class QuizService {
                 .toList();
 
         return LessonQuizResponse.builder()
+                .quizId(quiz.getId())
+                .lessonId(lesson.getId())
+                .title(quiz.getTitle())
+                .description(quiz.getDescription())
+                .passingScorePercent(quiz.getPassingScorePercent())
+                .totalQuestions(questionResponses.size())
+                .questions(questionResponses)
+                .build();
+    }
+
+    /**
+     * Build {@link LessonQuizManageResponse} từ entity + lesson (đã load questions + options).
+     *
+     * <p>Khác {@code buildLessonQuizResponse} ở chỗ trả <b>đầy đủ đáp án đúng</b>
+     * để Admin/Teacher review và edit. Map đáp án cho MATCHING được dựng từ
+     * options có {@code matchKey} (giống cách {@code gradeQuiz} dựng).</p>
+     */
+    private LessonQuizManageResponse buildLessonQuizManageResponse(Quiz quiz, Lesson lesson) {
+        List<QuizQuestion> questions = (quiz.getQuestions() == null || quiz.getQuestions().isEmpty())
+                ? questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId())
+                : new ArrayList<>(quiz.getQuestions());
+
+        List<QuizQuestionWithAnswerResponse> questionResponses = questions.stream()
+                .filter(q -> !q.isDeleted())
+                .map(q -> {
+                    List<QuizOption> options = (q.getOptions() == null || q.getOptions().isEmpty())
+                            ? optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(q.getId())
+                            : new ArrayList<>(q.getOptions());
+
+                    List<QuizQuestionWithAnswerResponse.QuizOptionWithAnswer> optionResponses =
+                            options.stream()
+                                    .filter(o -> !o.isDeleted())
+                                    .map(opt -> QuizQuestionWithAnswerResponse.QuizOptionWithAnswer.builder()
+                                            .id(opt.getId())
+                                            .optionKey(opt.getOptionKey())
+                                            .optionText(opt.getOptionText())
+                                            .correct(opt.isCorrect())
+                                            .matchKey(opt.getMatchKey())
+                                            .build())
+                                    .toList();
+
+                    // Dựng map slotKey -> correctText cho MATCHING.
+                    // Dùng TreeMap với comparator sort matchKey theo dạng "L{i}=R{j}"
+                    // (vd "L1=R1", "L1=R2", "L2=R1", ...) để JSON trả về có thứ tự
+                    // nhất quán — dễ debug, dễ test, không phụ thuộc vào thứ tự
+                    // optionKey do FE gửi lên. Nếu matchKey không khớp format
+                    // "L<num>=R<num>" thì fallback alphabetical.
+                    Map<String, String> correctMatching = new TreeMap<>(MATCHING_KEY_ORDER);
+                    if (q.getQuestionType() == QuizQuestionType.MATCHING) {
+                        for (QuizOption opt : options) {
+                            if (opt.getMatchKey() != null && !opt.getMatchKey().isBlank()) {
+                                correctMatching.put(opt.getMatchKey(), opt.getOptionText());
+                            }
+                        }
+                    }
+
+                    return QuizQuestionWithAnswerResponse.builder()
+                            .id(q.getId())
+                            .questionText(q.getQuestionText())
+                            .orderIndex(q.getOrderIndex())
+                            .questionType(q.getQuestionType())
+                            .explanation(q.getExplanation())
+                            .matchingData(q.getMatchingData())
+                            .correctTextAnswer(q.getCorrectTextAnswer())
+                            .correctMatchingAnswers(correctMatching)
+                            .options(optionResponses)
+                            .build();
+                })
+                .toList();
+
+        return LessonQuizManageResponse.builder()
                 .quizId(quiz.getId())
                 .lessonId(lesson.getId())
                 .title(quiz.getTitle())
@@ -404,7 +861,12 @@ public class QuizService {
                         ? answerItem.getMatchingAnswers()
                         : Collections.emptyMap();
 
-                Map<String, String> correctPairs = new HashMap<>();
+                // Dùng TreeMap với comparator sort matchKey theo "L{i}=R{j}"
+                // (vd "L1=R1", "L1=R2", "L2=R1", "L2=R2", ...) để JSON trả về
+                // có thứ tự nhất quán — dễ debug, dễ test, không phụ thuộc
+                // thứ tự optionKey do FE gửi lên. Nếu matchKey không khớp format
+                // thì fallback alphabetical.
+                Map<String, String> correctPairs = new TreeMap<>(MATCHING_KEY_ORDER);
                 int validOptionsCount = 0;
                 int matchedCorrectCount = 0;
                 for (QuizOption opt : options) {
@@ -418,6 +880,19 @@ public class QuizService {
                     }
                 }
 
+                // Cũng sort userPairs theo cùng thứ tự với correctPairs (L1=R1, L2=R2, ...)
+                // để JSON trả về có key ordering nhất quán → dễ debug, dễ test.
+                Map<String, String> sortedUserPairs = new LinkedHashMap<>();
+                for (String key : correctPairs.keySet()) {
+                    if (userPairs.containsKey(key)) {
+                        sortedUserPairs.put(key, userPairs.get(key));
+                    }
+                }
+                // Bổ sung các key user nhập thừa (không nằm trong correctPairs — nếu có)
+                for (Map.Entry<String, String> e : userPairs.entrySet()) {
+                    sortedUserPairs.putIfAbsent(e.getKey(), e.getValue());
+                }
+
                 double accuracy = validOptionsCount > 0 ? ((double) matchedCorrectCount / validOptionsCount * 100.0) : 0.0;
                 isCorrect = (validOptionsCount > 0 && matchedCorrectCount == validOptionsCount);
 
@@ -425,7 +900,7 @@ public class QuizService {
                         .accuracyPercent(Math.round(accuracy * 10.0) / 10.0)
                         .responseTimeMs(responseTimeMs)
                         .matchingData(question.getMatchingData())
-                        .userMatchingAnswers(userPairs)
+                        .userMatchingAnswers(sortedUserPairs)
                         .correctMatchingAnswers(correctPairs)
                         .correctTextAnswer("Số ô ghép chính xác: " + matchedCorrectCount + "/" + validOptionsCount
                                 + " (" + Math.round(accuracy) + "%)");

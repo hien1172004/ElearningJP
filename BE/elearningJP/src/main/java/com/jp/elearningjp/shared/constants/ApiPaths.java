@@ -13,6 +13,7 @@ public final class ApiPaths {
         public static final String INTROSPECT = "/introspect";
         public static final String FORGOT_PASSWORD = "/forgot-password";
         public static final String RESET_PASSWORD = "/reset-password";
+        public static final String GOOGLE = "/google";
     }
 
     public static final class User {
@@ -49,21 +50,27 @@ public final class ApiPaths {
         public static final String BY_ID = "/{id}";
         public static final String COMPLETE = "/{id}/complete";
         public static final String QUIZ = "/{id}/quiz";
+        public static final String QUIZ_MANAGE = "/{id}/quiz/manage";
         public static final String QUIZ_SUBMIT = "/{id}/quiz/submit";
         public static final String QUIZ_QUESTIONS = "/{id}/quiz/questions";
+        public static final String QUIZ_QUESTIONS_REORDER = "/{id}/quiz/questions/reorder";
 
         // ===== Section endpoints =====
         public static final String SECTIONS = "/{id}/sections";
         public static final String SECTION_BY_ID = "/{id}/sections/{sectionId}";
+        public static final String SECTIONS_REORDER = "/{id}/sections/reorder";
 
         // ===== Lesson Items endpoints (controller riêng, root path: /lesson-sections) =====
         public static final String LESSON_SECTIONS = "/lesson-sections";
         public static final String KANJI_ITEMS = "/{sectionId}/kanji-items";
         public static final String KANJI_ITEM_BY_ID = "/kanji-items/{itemId}";
+        public static final String KANJI_ITEMS_REORDER = "/{sectionId}/kanji-items/reorder";
         public static final String VOCABULARY_ITEMS = "/{sectionId}/vocabulary-items";
         public static final String VOCABULARY_ITEM_BY_ID = "/vocabulary-items/{itemId}";
+        public static final String VOCABULARY_ITEMS_REORDER = "/{sectionId}/vocabulary-items/reorder";
         public static final String GRAMMAR_ITEMS = "/{sectionId}/grammar-items";
         public static final String GRAMMAR_ITEM_BY_ID = "/grammar-items/{itemId}";
+        public static final String GRAMMAR_ITEMS_REORDER = "/{sectionId}/grammar-items/reorder";
 
         // ===== Lesson examples endpoints (controller riêng) =====
         public static final String LESSON_VOCABULARY_ITEMS = "/lesson-vocabulary-items";
@@ -119,6 +126,42 @@ public final class ApiPaths {
         public static final String KANA = "/kana";
         public static final String KANA_DETAIL = "/kana/{character}";
         public static final String QUICK_LOOKUP = "/quick-lookup";
+
+        /** Ghi nhận 1 lần tra từ điển (instrumented lookup — cho Progress page). */
+        public static final String LOOKUP = "/lookup";
+    }
+
+    public static final class Study {
+        public static final String BASE = "/study";
+        /** Heartbeat thời gian học từ FE. */
+        public static final String HEARTBEAT = "/heartbeat";
+    }
+
+    /** Trang "Tiến độ học tập" — 5 khối (Mazii-style). */
+    public static final class LearningProgress {
+        public static final String BASE = "/progress";
+        /** Khối 1 — tổng hợp theo kỳ. */
+        public static final String SUMMARY = "/summary";
+        /** Khối 2 — lịch + streak. */
+        public static final String CALENDAR = "/calendar";
+        /** Khối 3 — biểu đồ time-series (Bước 6). */
+        public static final String CHART = "/chart";
+        /** Khối 4 — top 30 từ tra nhiều nhất (Bước 7). */
+        public static final String TOP_LOOKUPS = "/top-lookups";
+        /** Khối 5 — bảng xếp hạng (Bước 8). */
+        public static final String LEADERBOARD = "/leaderboard";
+        /** Hạng cá nhân của user hiện tại. */
+        public static final String LEADERBOARD_ME = "/leaderboard/me";
+        /** Force refresh leaderboard — đọc DB rồi ghi lại Redis Sorted Set. */
+        public static final String LEADERBOARD_REFRESH = "/leaderboard/refresh";
+        /**
+         * Hard refresh leaderboard — XOÁ key Redis rồi dựng lại từ đầu.
+         *
+         * <p>Tách riêng endpoint (không phải query param {@code ?hard=true}) để
+         * {@code @PreAuthorize} cấp quyền theo method — không để quyền bị điều
+         * khiển bằng query string.</p>
+         */
+        public static final String LEADERBOARD_REFRESH_HARD = "/leaderboard/refresh/hard";
     }
 
     /**
@@ -140,5 +183,61 @@ public final class ApiPaths {
         public static final String BY_ID = "/comment-replies/{id}";
         public static final String LIKE = "/comment-replies/{id}/like";
         public static final String DISLIKE = "/comment-replies/{id}/dislike";
+    }
+
+    /**
+     * Thông báo trong ứng dụng (in-app notifications).
+     *
+     * <p>Snapshot đọc qua REST; bản real-time được đẩy qua WebSocket STOMP tới
+     * {@code /user/queue/notifications} (endpoint handshake {@code /ws}).</p>
+     */
+    public static final class Notification {
+        public static final String BASE = "/notifications";
+        public static final String UNREAD_COUNT = "/unread-count";
+        public static final String RECENT = "/recent";
+        public static final String READ = "/{id}/read";
+        public static final String READ_ALL = "/read-all";
+    }
+
+    public static final class Exam {
+        public static final String BASE = "/exams";
+        public static final String BY_ID = "/{id}";
+        public static final String START = "/{id}/attempts";
+    }
+
+    public static final class ExamAttempt {
+        public static final String BASE = "/exam-attempts";
+        public static final String BY_ID = "/{id}";
+        public static final String SAVE_ANSWER = "/{id}/answers";
+        public static final String SUBMIT = "/{id}/submit";
+        public static final String RESULT = "/{id}/result";
+        public static final String REVIEW = "/{id}/review";
+        public static final String MY_HISTORY = "/my-history";
+    }
+
+    public static final class AdminExam {
+        public static final String BASE = "/admin/exams";
+        public static final String BY_ID = "/{id}";
+        public static final String AI_EXTRACT = "/ai-extract";
+        public static final String PREVIEW = "/{id}/preview";
+        public static final String UPDATE_QUESTION = "/{id}/questions/{questionId}";
+        public static final String ADD_QUESTION = "/{id}/sections/{sectionId}/questions";
+        public static final String DELETE_QUESTION = "/{id}/questions/{questionId}";
+        public static final String BY_COURSE = "/by-course/{courseId}";
+        public static final String PUBLISH = "/{id}/publish";
+    }
+
+    public static final class AiSpeaking {
+        public static final String BASE = "/ai/sessions";
+        public static final String BY_ID = "/{id}";
+        public static final String MESSAGES = "/{id}/messages";
+        public static final String TTS = "/ai/tts";
+        public static final String TRANSLATE = "/ai/translate";
+        public static final String FURIGANA = "/ai/furigana";
+    }
+
+    public static final class AiScenario {
+        public static final String BASE = "/ai/scenarios";
+        public static final String BY_ID = "/{id}";
     }
 }

@@ -52,6 +52,15 @@ public class AuthenticationController {
                 .data(authService.loginUser(loginRequest)).build();
     }
 
+    @Operation(summary = "Đăng nhập bằng Google", description = "Xác thực Google ID Token và trả về access token hệ thống.", security = {})
+    @PostMapping(ApiPaths.Auth.GOOGLE)
+    public ApiResponse<LoginResponse> loginWithGoogle(@RequestBody @Valid GoogleLoginRequest request) {
+        return ApiResponse.<LoginResponse>builder()
+                .success(true)
+                .data(authService.loginWithGoogle(request))
+                .build();
+    }
+
     @Operation(summary = "Đăng xuất", description = "Thu hồi refresh token của người dùng để đăng xuất.")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping(ApiPaths.Auth.LOGOUT)

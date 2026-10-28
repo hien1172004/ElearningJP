@@ -10,7 +10,9 @@ import java.util.List;
 
 @Repository
 public interface LessonVocabularyItemRepository extends JpaRepository<LessonVocabularyItem, Long> {
+
     List<LessonVocabularyItem> findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(Long sectionId);
+
     List<LessonVocabularyItem> findBySectionLessonIdAndDeletedFalseOrderByOrderIndexAsc(Long lessonId);
 
     /** Batch fetch VOCAB items kèm vocab (many-to-1) — KHÔNG fetch examples (Bag). */

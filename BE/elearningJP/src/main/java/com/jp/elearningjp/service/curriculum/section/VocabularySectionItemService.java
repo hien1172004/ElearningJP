@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyExampleCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyExampleUpsertRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyItemCreateRequest;
@@ -18,12 +19,14 @@ import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.repository.curriculum.LessonVocabularyExampleRepository;
 import com.jp.elearningjp.repository.curriculum.LessonVocabularyItemRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,19 +51,22 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     private final LessonVocabularyExampleRepository vocabExampleRepository;
     private final VocabularyRepository vocabularyRepository;
     private final LessonSectionMapper lessonSectionMapper;
+    private final CourseAccessGuard courseAccessGuard;
 
     public VocabularySectionItemService(
             LessonSectionRepository lessonSectionRepository,
             LessonVocabularyItemRepository vocabItemRepository,
             LessonVocabularyExampleRepository vocabExampleRepository,
             VocabularyRepository vocabularyRepository,
-            LessonSectionMapper lessonSectionMapper
+            LessonSectionMapper lessonSectionMapper,
+            CourseAccessGuard courseAccessGuard
     ) {
         super(lessonSectionRepository);
         this.vocabItemRepository = vocabItemRepository;
         this.vocabExampleRepository = vocabExampleRepository;
         this.vocabularyRepository = vocabularyRepository;
         this.lessonSectionMapper = lessonSectionMapper;
+        this.courseAccessGuard = courseAccessGuard;
     }
 
     // ============================================================
@@ -102,20 +108,10 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
 
         assertNoDuplicateVocabulary(sectionId, vocab.getId());
 
-        // Nhận xét #2: xử lý orderIndex đúng cách (shift các item có index >= target lên +1)
-        List<LessonVocabularyItem> existingItems = vocabItemRepository
-                .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-        int maxOrder = OrderIndexResolver.maxOrderIndex(existingItems, LessonVocabularyItem::getOrderIndex);
-        int resolvedIndex = OrderIndexResolver.resolveForCreate(request.getOrderIndex(), () -> maxOrder);
-        boolean clientChoseIndex = request.getOrderIndex() != null && request.getOrderIndex() > 0
-                && resolvedIndex == request.getOrderIndex();
-        if (clientChoseIndex) {
-            OrderIndexResolver.shiftUpInCollection(
-                    existingItems, resolvedIndex,
-                    LessonVocabularyItem::getOrderIndex, LessonVocabularyItem::setOrderIndex
-            );
-            log.info("[VOCAB-ITEM] Shifted up items in section id={} with orderIndex >= {}", sectionId, resolvedIndex);
-        }
+        // SEQUENTIAL RENUMBER: chèn item vào vị trí đích trong bộ nhớ, rồi
+        // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
+        List<LessonVocabularyItem> ordered = new ArrayList<>(
+                vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
 
         // Resolve các trường override: null = auto-fill từ từ điển, "" = xoá override
         String resolvedHiragana = resolveOverride(request.getCustomHiragana(), vocab.getHiragana());
@@ -126,7 +122,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         LessonVocabularyItem item = LessonVocabularyItem.builder()
                 .section(section)
                 .vocab(vocab)
-                .orderIndex(resolvedIndex)
+                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
                 .customHiragana(resolvedHiragana)
                 .customRomaji(resolvedRomaji)
                 .customAudioUrl(resolvedAudio)
@@ -139,9 +135,21 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         int totalExamples = applyExamplesOnCreate(item, vocab, request.getExamples());
 
         section.addVocabularyItem(item);
-        // Save tất cả vocab items (kể cả shifted)
-        vocabItemRepository.saveAll(existingItems);
         LessonVocabularyItem saved = vocabItemRepository.save(item);
+        vocabItemRepository.flush();
+
+        Integer requestedIndex = request.getOrderIndex();
+        int target = (requestedIndex != null && requestedIndex > 0)
+                ? Math.min(requestedIndex, ordered.size() + 1)
+                : ordered.size() + 1;
+        ordered.add(target - 1, saved);
+
+        OrderIndexResolver.persistSequential(
+                ordered,
+                LessonVocabularyItem::getId,
+                LessonVocabularyItem::setOrderIndex,
+                vocabItemRepository::flush
+        );
         log.info("[VOCAB-ITEM] Added vocab id={} into section id={} at orderIndex={} (with {} examples)",
                 vocab.getId(), sectionId, saved.getOrderIndex(), totalExamples);
 
@@ -191,32 +199,28 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         Integer newOrderIndex = request.getOrderIndex();
         Integer oldOrderIndex = item.getOrderIndex();
 
-        // Nhận xét #2: xử lý di chuyển orderIndex
+        // SEQUENTIAL RENUMBER: move item trong bộ nhớ rồi đánh số lại 1..N
+        // (không còn adjacent-swap nên không kẹt khi có lỗ hổng index do soft-delete).
         if (newOrderIndex != null && newOrderIndex > 0 && !newOrderIndex.equals(oldOrderIndex)) {
             Long sectionId = item.getSection().getId();
-            List<LessonVocabularyItem> allItems = vocabItemRepository
-                    .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
-            int maxOrder = OrderIndexResolver.maxOrderIndex(allItems, LessonVocabularyItem::getOrderIndex);
-            int target = OrderIndexResolver.clampToMaxPlusOne(newOrderIndex, () -> maxOrder);
-            if (target != oldOrderIndex) {
-                allItems = allItems.stream().filter(i -> !i.getId().equals(itemId)).toList();
-                if (target < oldOrderIndex) {
-                    OrderIndexResolver.shiftUpInCollection(
-                            allItems, target,
-                            LessonVocabularyItem::getOrderIndex, LessonVocabularyItem::setOrderIndex
-                    );
-                    log.info("[VOCAB-ITEM] Move-up: shifted items in [{}, {}] for vocab item id={}",
-                            target, oldOrderIndex - 1, itemId);
-                } else {
-                    OrderIndexResolver.shiftDownInCollection(
-                            allItems, oldOrderIndex, target,
-                            LessonVocabularyItem::getOrderIndex, LessonVocabularyItem::setOrderIndex
-                    );
-                    log.info("[VOCAB-ITEM] Move-down: shifted items in ({}, {}] for vocab item id={}",
-                            oldOrderIndex, target, itemId);
-                }
-                vocabItemRepository.saveAll(allItems);
-                item.setOrderIndex(target);
+            List<LessonVocabularyItem> ordered = new ArrayList<>(
+                    vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId));
+
+            boolean moved = OrderIndexResolver.moveToPosition(
+                    ordered,
+                    item,
+                    newOrderIndex,
+                    LessonVocabularyItem::setOrderIndex
+            );
+            if (moved) {
+                log.info("[VOCAB-ITEM] Moving vocab item id={} from orderIndex={} → {} (sectionId={})",
+                        itemId, oldOrderIndex, newOrderIndex, sectionId);
+                OrderIndexResolver.persistSequential(
+                        ordered,
+                        LessonVocabularyItem::getId,
+                        LessonVocabularyItem::setOrderIndex,
+                        vocabItemRepository::flush
+                );
             }
         }
 
@@ -265,6 +269,58 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         vocabItemRepository.save(item);
         log.info("[VOCAB-ITEM] Soft-deleted vocab item id={} (cascaded {} examples)",
                 itemId, cascadeCount);
+    }
+
+    /**
+     * Sắp xếp lại thứ tự hàng loạt các vocab item trong 1 section (drag-drop UI).
+     *
+     * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> vocab item active
+     * của section hiện tại (không thiếu, không thừa, không trùng).</p>
+     *
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     */
+    @Transactional
+    public List<LessonVocabularyItemResponse> reorderVocabularyItems(Long sectionId, ItemBulkReorderRequest request) {
+        LessonSection section = getActiveSection(sectionId, LessonSectionType.VOCABULARY);
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+
+        if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
+        }
+
+        List<LessonVocabularyItem> currentItems = vocabItemRepository
+                .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId);
+        Set<Long> currentIds = new HashSet<>();
+        for (LessonVocabularyItem i : currentItems) currentIds.add(i.getId());
+
+        Set<Long> requestedIds = new HashSet<>(request.getItemIds());
+        if (requestedIds.size() != request.getItemIds().size()) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_INVALID);
+        }
+        if (!requestedIds.equals(currentIds)) {
+            throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
+        }
+
+        OrderIndexResolver.bulkReorder(
+                currentItems,
+                request.getItemIds(),
+                LessonVocabularyItem::getId,
+                LessonVocabularyItem::setOrderIndex
+        );
+
+        OrderIndexResolver.persistSequential(
+                currentItems,
+                LessonVocabularyItem::getId,
+                LessonVocabularyItem::setOrderIndex,
+                vocabItemRepository::flush
+        );
+
+        log.info("[VOCAB-ITEM] Bulk reordered {} vocab item(s) in section id={}", currentItems.size(), sectionId);
+        // Map sang response (examples đã load sẵn trong entity)
+        return currentItems.stream()
+                .map(lessonSectionMapper::toVocabularyItemResponse)
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
     // ============================================================
@@ -340,12 +396,29 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         }
         int count = 0;
         boolean firstPrimaryApplied = false;
+
+        // Track orderIndex đã dùng (existing trong item + vừa tạo) để chống trùng
+        Set<Integer> usedOrderIndexes = new HashSet<>();
+        if (item.getExamples() != null) {
+            for (LessonVocabularyExample ex : item.getExamples()) {
+                if (!ex.isDeleted() && ex.getOrderIndex() != null && ex.getOrderIndex() > 0) {
+                    usedOrderIndexes.add(ex.getOrderIndex());
+                }
+            }
+        }
+
         for (LessonVocabularyExampleCreateRequest req : teacherExamples) {
             if (req == null) continue;
-            int exOrderIndex = req.getOrderIndex() != null && req.getOrderIndex() > 0
-                    ? req.getOrderIndex()
-                    : OrderIndexResolver.nextOrderIndexIncludingDeleted(
-                            item.getExamples(), LessonVocabularyExample::getOrderIndex);
+            // Resolve orderIndex chống trùng
+            Integer requested = req.getOrderIndex();
+            int exOrderIndex;
+            if (requested != null && requested > 0 && usedOrderIndexes.add(requested)) {
+                exOrderIndex = requested;
+            } else {
+                exOrderIndex = OrderIndexResolver.nextOrderIndexIncludingDeleted(
+                        item.getExamples(), LessonVocabularyExample::getOrderIndex);
+                usedOrderIndexes.add(exOrderIndex);
+            }
             // Primary rule: nếu có nhiều entry primary=true → chỉ giữ entry đầu tiên
             boolean wantPrimary = Boolean.TRUE.equals(req.getIsPrimary()) && !firstPrimaryApplied;
             if (Boolean.TRUE.equals(req.getIsPrimary())) {
@@ -436,6 +509,16 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         int updated = 0;
         int deleted = 0;
 
+        // Track các orderIndex đã dùng trong request này (để tránh duplicate nếu user
+        // gửi 2 example mới cùng orderIndex, hoặc gửi orderIndex trùng với existing).
+        // Lưu cả existing (active) + các example mới vừa tạo trong loop này.
+        Set<Integer> usedOrderIndexes = new HashSet<>();
+        for (LessonVocabularyExample ex : existing) {
+            if (ex.getOrderIndex() != null && ex.getOrderIndex() > 0) {
+                usedOrderIndexes.add(ex.getOrderIndex());
+            }
+        }
+
         // Quy tắc primary:
         // - Nếu user set primary=true cho ÍT NHẤT 1 example (qua upsert) → những example đó là primary,
         //   các example còn lại (kể cả existing) sẽ bị set primary=false.
@@ -461,10 +544,21 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
                 updated++;
             } else {
                 // Create new
-                int exOrderIndex = req.getOrderIndex() != null && req.getOrderIndex() > 0
-                        ? req.getOrderIndex()
-                        : OrderIndexResolver.nextOrderIndexIncludingDeleted(
-                                item.getExamples(), LessonVocabularyExample::getOrderIndex);
+                // Resolve orderIndex chống trùng:
+                //  Ưu tiên 1: dùng giá trị client gửi (nếu > 0 và chưa bị chiếm)
+                //  Ưu tiên 2: nếu client gửi trùng → fallback max+1
+                //  Ưu tiên 3: nếu client không gửi → max+1
+                // Mục đích: tránh duplicate orderIndex khi insert vào giữa.
+                Integer requested = req.getOrderIndex();
+                int exOrderIndex;
+                if (requested != null && requested > 0 && usedOrderIndexes.add(requested)) {
+                    exOrderIndex = requested;
+                } else {
+                    exOrderIndex = OrderIndexResolver.nextOrderIndexIncludingDeleted(
+                            item.getExamples(), LessonVocabularyExample::getOrderIndex);
+                    // Cộng dồn vào cả tập usedOrderIndexes để lần lặp sau không trùng
+                    usedOrderIndexes.add(exOrderIndex);
+                }
                 boolean wantPrimary = Boolean.TRUE.equals(req.getIsPrimary())
                         && (userSetAnyPrimary ? !hasPrimary : !hasPrimary);
                 // Logic: nếu user set primary=true cho entry này VÀ chưa có primary nào → primary

@@ -14,6 +14,9 @@ import java.math.BigDecimal;
 
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import java.util.List;
 
 /** Ánh xạ bảng {@code student_answers}. */
 @Entity
@@ -42,6 +45,10 @@ public class StudentAnswer extends SoftDeletableEntity {
     @JoinColumn(name = "selected_option_id")
     private QuestionOption selectedOption;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ordered_options_json", columnDefinition = "jsonb")
+    private List<Long> orderedOptionIds;
+
     @Builder.Default
     @Column(name = "is_correct", nullable = false)
     private boolean correct = false;
@@ -49,5 +56,9 @@ public class StudentAnswer extends SoftDeletableEntity {
     @Builder.Default
     @Column(name = "points_earned", nullable = false, precision = 5, scale = 2)
     private BigDecimal pointsEarned = new BigDecimal("0");
+
+    @Builder.Default
+    @Column(name = "audio_play_count", nullable = false)
+    private Integer audioPlayCount = 0;
 
 }

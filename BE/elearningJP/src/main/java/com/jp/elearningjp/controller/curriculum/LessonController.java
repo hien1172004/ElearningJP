@@ -1,9 +1,11 @@
 package com.jp.elearningjp.controller.curriculum;
 
 import com.jp.elearningjp.dto.request.curriculum.LessonCreateRequest;
+import com.jp.elearningjp.dto.request.curriculum.LessonReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.LessonDetailResponse;
+import com.jp.elearningjp.dto.response.curriculum.LessonOutlineResponse;
 import com.jp.elearningjp.service.curriculum.LessonService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
@@ -17,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(name = "Lessons", description = "Quản lý bài học, xem nội dung bài giảng và theo dõi tiến độ")
 @RestController
@@ -76,6 +80,24 @@ public class LessonController {
         return ApiResponse.<Void>builder()
                 .success(true)
                 .message("Đã xóa bài học thành công")
+                .build();
+    }
+
+    @Operation(summary = "[Admin/Teacher] Sắp xếp lại thứ tự hàng loạt các bài học",
+            description = "Reorder nhiều lesson cùng lúc (drag-drop). Body chứa danh sách lessonId theo thứ tự MỚI (index 0 = orderIndex 1). " +
+                    "Danh sách phải chứa đúng tất cả lesson active của course. (Teacher chỉ reorder được lesson trong course do mình tạo)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Course.BASE + ApiPaths.Course.LESSON_REORDER)
+    public ApiResponse<List<LessonOutlineResponse>> reorderLessons(
+            @Parameter(description = "ID của khóa học", example = "1", required = true)
+            @PathVariable("courseId") Long courseId,
+            @Valid @RequestBody LessonReorderRequest request
+    ) {
+        return ApiResponse.<List<LessonOutlineResponse>>builder()
+                .success(true)
+                .message("Sắp xếp lại thứ tự bài học thành công")
+                .data(lessonService.reorderLessons(courseId, request))
                 .build();
     }
 

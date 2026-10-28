@@ -19,11 +19,13 @@ FE/**/node_modules/
 FE/**/.next/
 FE/**/dist/
 FE/**/build/
+FE/**/.env
 FE/**/.env.local
 FE/**/.env.development.local
 FE/**/.env.test.local
 FE/**/.env.production.local
 FE/**/.cache/
+FE/scripts/
 
 # ------------------------------------------
 # Operating System & IDE Files
@@ -41,6 +43,8 @@ BE/**/src/main/resources/static/audio/
 BE/**/tools/
 AGENTS.md
 **/AGENTS.md
+.agents/
+**/.agents/
 
 
 #HTTP-TEST
@@ -55,4 +59,18 @@ AI/**/venv/
 AI/**/.venv/
 AI/**/.env
 AI/**/.pytest_cache/
-AI/**/test/
+AI/**/test/
+AI/data/ETL9G_IMG/
+AI/data/ETL9G_IMG/**
+AI/data/cache/
+AI/data/cache/**
+AI/data/*.zip
+AI/data/*.tar*
+AI/checkpoints/
+
+AI/**/extracted_images/
+AI/**/extracted_audio/
+AI/**/scratch/
+test_crop_output/
+crop_jlpt.py
+__pycache__/

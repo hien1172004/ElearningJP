@@ -11,4 +11,6 @@ public interface CommentReplyLikeRepository extends JpaRepository<CommentReplyLi
     boolean existsByIdUserIdAndIdReplyId(Long userId, Long replyId);
 
     long deleteByIdUserIdAndIdReplyId(Long userId, Long replyId);
+
+    long countByIdReplyId(Long replyId);
 }

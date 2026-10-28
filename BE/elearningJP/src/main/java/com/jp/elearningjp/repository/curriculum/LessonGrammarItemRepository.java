@@ -10,7 +10,9 @@ import java.util.List;
 
 @Repository
 public interface LessonGrammarItemRepository extends JpaRepository<LessonGrammarItem, Long> {
+
     List<LessonGrammarItem> findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(Long sectionId);
+
     List<LessonGrammarItem> findBySectionLessonIdAndDeletedFalseOrderByOrderIndexAsc(Long lessonId);
 
     /** Batch fetch GRAMMAR items kèm grammar (many-to-1) — KHÔNG fetch examples (Bag). */

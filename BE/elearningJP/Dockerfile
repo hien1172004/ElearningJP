@@ -16,7 +16,7 @@ COPY src ./src
 RUN ./mvnw clean package -DskipTests
 
 # Stage 2: Production Runtime Stage
-FROM eclipse-temurin:21-jre-alpine AS runner
+FROM eclipse-temurin:21-jdk-alpine AS runner
 
 WORKDIR /app
 

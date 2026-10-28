@@ -16,7 +16,7 @@ import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.response.PageResponse;
-import com.jp.elearningjp.shared.utils.SlugUtils;
+import com.jp.elearningjp.shared.util.SlugUtils;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.AccessLevel;

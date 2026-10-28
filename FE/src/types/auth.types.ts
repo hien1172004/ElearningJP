@@ -1,30 +1,92 @@
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BANNED' | 'PENDING'
+
 export interface User {
   id: number
   email: string
   fullName: string
   avatarUrl?: string
   role: string
+  roles?: string[]
+  status?: UserStatus
+  phone?: string
 }
 
+export interface UserInfo {
+  fullName: string
+  email: string
+  status: UserStatus
+}
+
+// ============================================================================
+// LOGIN
+// ============================================================================
 export interface LoginRequest {
   email: string
-  passwordHash: string
+  password: string
 }
 
 export interface LoginResponse {
-  token: string
-  authenticated: boolean
-  user?: User
+  accessToken: string
+  error?: string
+  success: boolean
 }
 
+// ============================================================================
+// REGISTER
+// ============================================================================
 export interface RegisterRequest {
-  email: string
-  password: string
   fullName: string
+  email: string
+  phone: string
+  password: string
+  confirmPassword: string
 }
 
 export interface RegisterResponse {
-  id: number
+  token: string
+  userInfoResponse: UserInfo
+  error?: string
+  success: boolean
+}
+
+// ============================================================================
+// REFRESH
+// ============================================================================
+export interface RefreshRequest {
+  token: string
+}
+
+export interface RefreshResponse {
+  token: string
+}
+
+// ============================================================================
+// INTROSPECT
+// ============================================================================
+export interface IntrospectRequest {
+  token: string
+}
+
+export interface IntrospectResponse {
+  valid: boolean
+}
+
+// ============================================================================
+// LOGOUT
+// ============================================================================
+export interface LogoutRequest {
+  token: string
+}
+
+// ============================================================================
+// FORGOT / RESET PASSWORD
+// ============================================================================
+export interface ForgotPasswordRequest {
   email: string
-  fullName: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  newPassword: string
+  confirmPassword: string
 }
