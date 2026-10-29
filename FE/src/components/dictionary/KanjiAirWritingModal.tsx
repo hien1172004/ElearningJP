@@ -50,7 +50,7 @@ const DEFAULT_HAND_CONNECTIONS: Array<[number, number]> = [
   [13, 17], [0, 17], [17, 18], [18, 19], [19, 20] // Ngón út (Pinky)
 ]
 
-export type AirGestureType = 'NONE' | 'PINCH' | 'PEACE_UNDO' | 'PALM_CLEAR' | 'THUMBS_SEARCH'
+export type AirGestureType = 'NONE' | 'FIST_CLEAR' | 'SELECT' | 'PEACE_UNDO' | 'THUMBS_SEARCH'
 
 // Helper tính khoảng cách Euclidean giữa 2 landmarks
 const getDistance = (p1: NormalizedLandmark, p2: NormalizedLandmark) =>
@@ -104,13 +104,8 @@ const isStrictPointing = (lm: NormalizedLandmark[]) => {
   return indexExt && middleFolded && ringFolded && pinkyFolded
 }
 
-// Nhận diện cử chỉ tay tĩnh chuẩn xác từ 21 điểm mốc
-const detectStaticGesture = (
-  lm: NormalizedLandmark[],
-  isPinching: boolean
-): AirGestureType => {
-  if (isPinching) return 'PINCH'
-
+// Nhận diện các cử chỉ tay tĩnh điều khiển (không bao gồm tư thế vẽ 1 ngón trỏ)
+const detectStaticGesture = (lm: NormalizedLandmark[]): AirGestureType => {
   const wrist = lm[0]
   const thumbTip = lm[4]
   const thumbMcp = lm[2]
@@ -129,28 +124,26 @@ const detectStaticGesture = (
 
   const indexExt = isFingerExtended(indexTip, indexPip, indexMcp, wrist)
   const middleExt = isFingerExtended(middleTip, middlePip, middleMcp, wrist)
-  const ringExt = isFingerExtended(ringTip, ringPip, ringMcp, wrist)
-  const pinkyExt = isFingerExtended(pinkyTip, pinkyPip, pinkyMcp, wrist)
+  const indexFolded = isFingerFolded(indexTip, indexPip, indexMcp, wrist)
+  const middleFolded = isFingerFolded(middleTip, middlePip, middleMcp, wrist)
+  const ringFolded = isFingerFolded(ringTip, ringPip, ringMcp, wrist)
+  const pinkyFolded = isFingerFolded(pinkyTip, pinkyPip, pinkyMcp, wrist)
 
-  // 1. CỬ CHỈ CHỮ V ✌️ (UNDO): Ngón trỏ + ngón giữa duỗi, áp út + út gập
-  if (indexExt && middleExt && !ringExt && !pinkyExt) {
-    if (getDistance(indexTip, middleTip) > 0.035 && indexTip.y < wrist.y && middleTip.y < wrist.y) {
-      return 'PEACE_UNDO'
-    }
-  }
+  const allFolded = indexFolded && middleFolded && ringFolded && pinkyFolded
+  const thumbUp = thumbTip.y < thumbMcp.y - 0.02
 
-  // 2. CỬ CHỈ XÒE BÀN TAY ✋ (CLEAR ALL): Cả 4 ngón chính đều duỗi rộng
-  if (indexExt && middleExt && ringExt && pinkyExt) {
-    if (getDistance(thumbTip, pinkyTip) > 0.14) {
-      return 'PALM_CLEAR'
-    }
-  }
+  // 1. NẮM ĐẤM ✊ (XÓA HẾT): cả 4 ngón gập + ngón cái gập (không chỉ lên)
+  if (allFolded && !thumbUp) return 'FIST_CLEAR'
 
-  // 3. CỬ CHỈ NGÓN CÁI 👍 (THUMBS UP / SEARCH): Ngón cái chỉ lên trên, 4 ngón kia gập
-  if (!indexExt && !middleExt && !ringExt && !pinkyExt) {
-    if (thumbTip.y < thumbMcp.y && thumbTip.y < indexMcp.y - 0.02) {
-      return 'THUMBS_SEARCH'
-    }
+  // 2. NGÓN CÁI 👍 (TRA TỪ): cả 4 ngón gập + ngón cái chỉ lên
+  if (allFolded && thumbUp) return 'THUMBS_SEARCH'
+
+  // 3. TRỎ + GIỮA duỗi, áp út + út gập -> phân biệt SELECT (chụm) vs UNDO (tách)
+  if (indexExt && middleExt && ringFolded && pinkyFolded) {
+    const dist = getDistance(indexTip, middleTip)
+    if (dist < 0.05) return 'SELECT' // chụm sát = chọn thẻ gợi ý
+    if (dist > 0.08) return 'PEACE_UNDO' // tách xa = hoàn tác ✌️
+    return 'NONE' // vùng chuyển tiếp -> bỏ qua
   }
 
   return 'NONE'
@@ -250,9 +243,9 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
   // --- QUẢN LÝ NÉT VẼ & CỬ CHỈ (PHASE 2) ---
   const strokesRef = useRef<Point[][]>([]) // Lưu các nét vẽ hoàn chỉnh
   const currentStrokeRef = useRef<Point[]>([]) // Nét đang vẽ
-  const isPinchingRef = useRef<boolean>(false) // Trạng thái chụm ngón (Hysteresis)
+  const isPinchingRef = useRef<boolean>(false) // Trạng thái đang vẽ nét (Hysteresis)
   const lastSmoothedPointRef = useRef<Point | null>(null) // Điểm mượt cuối cùng (1-Euro / EMA)
-  const pinchFramesCountRef = useRef<number>(0) // Bộ đệm xác thực chụm ngón liên tiếp (Debounce)
+  const pinchFramesCountRef = useRef<number>(0) // Bộ đệm xác thực tư thế vẽ liên tiếp (Debounce)
   const recentPointsWindowRef = useRef<Point[]>([]) // Cửa sổ trượt lọc rung tay thích ứng
 
   const [isDrawing, setIsDrawing] = useState<boolean>(false)
@@ -286,9 +279,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
   const gestureStartTimeRef = useRef<number | null>(null)
   const gestureCooldownRef = useRef<number>(0)
 
-  const hoverStartTimeRef = useRef<number | null>(null)
   const hoverTargetRef = useRef<string | null>(null)
-  const hoverCooldownRef = useRef<number>(0)
 
   // Đồng bộ state vào refs
   useEffect(() => {
@@ -711,7 +702,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
         drawStroke(currentStrokeRef.current, true)
       }
 
-      // 3. XỬ LÝ NHẬN DIỆN BÀN TAY & CỬ CHỈ CHỤM NGÓN (PINCH)
+      // 3. XỬ LÝ NHẬN DIỆN BÀN TAY & CỬ CHỈ (1 NGÓN TRỎ = VẼ)
       if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         setHandDetected(true)
         const landmarks = results.multiHandLandmarks[0]
@@ -746,65 +737,25 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
           }
         }
 
-        // 3.2. Lấy tọa độ và chuẩn hóa tỷ lệ bàn tay
-        const wrist = landmarks[0]
-        const middleMcp = landmarks[9]
-        const handScale = Math.max(0.08, getDistance(wrist, middleMcp))
-
+        // 3.2. LẤY TỌA ĐỘ ĐẦU NGÓN TRỎ (BÚT VẼ) VÀ NHẬN DIỆN CỬ CHỈ
         const indexTip = landmarks[8]
-        const indexPip = landmarks[6]
-        const indexMcp = landmarks[5]
-        const thumbTip = landmarks[4]
-        const thumbMcp = landmarks[2]
 
-        if (indexTip && thumbTip) {
+        if (indexTip) {
           const rawIndexX = (1 - indexTip.x) * canvas.width
           const rawIndexY = indexTip.y * canvas.height
-          const rawThumbX = (1 - thumbTip.x) * canvas.width
-          const rawThumbY = thumbTip.y * canvas.height
 
-          // Khoảng cách chụm ngón chuẩn hóa theo kích thước bàn tay & pixel
-          const normPinchDistance = getDistance(indexTip, thumbTip) / handScale
-          const pixelPinchDistance = Math.hypot(rawIndexX - rawThumbX, rawIndexY - rawThumbY)
+          // Tư thế VẼ: chỉ duy nhất 1 ngón trỏ duỗi (Strict Pointing 👆)
+          const isDrawingPose = isStrictPointing(landmarks)
+          // Cử chỉ tĩnh điều khiển (nắm đấm / chọn / undo / tra từ)
+          const staticGesture = detectStaticGesture(landmarks)
 
-          // 1. Chống nắm đấm (ngón trỏ và ngón cái phải vươn ra khỏi khớp MCP)
-          const indexExtension = getDistance(indexTip, indexMcp) / handScale
-          const thumbExtension = getDistance(thumbTip, thumbMcp) / handScale
-          const isNotFist = indexExtension > 0.38 && thumbExtension > 0.28
-
-          // 2. Chống xòe cả bàn tay (nếu cả 4 ngón chính đều xòe thì không phải vẽ)
-          const middleTip = landmarks[12]
-          const middlePip = landmarks[10]
-          const ringTip = landmarks[16]
-          const ringPip = landmarks[14]
-          const ringMcp = landmarks[13]
-          const pinkyTip = landmarks[20]
-          const pinkyPip = landmarks[18]
-          const pinkyMcp = landmarks[17]
-
-          const indexExt = isFingerExtended(indexTip, indexPip, indexMcp, wrist)
-          const middleExt = isFingerExtended(middleTip, middlePip, middleMcp, wrist)
-          const ringExt = isFingerExtended(ringTip, ringPip, ringMcp, wrist)
-          const pinkyExt = isFingerExtended(pinkyTip, pinkyPip, pinkyMcp, wrist)
-          const isAllOpen = indexExt && middleExt && ringExt && pinkyExt
-
-          // Tư thế chụm ngón hợp lệ
-          const isPinchPostureValid = isNotFist && !isAllOpen
-
-          // 3.3. TỌA ĐỘ BÚT VẼ VÀ BỘ LỌC CHỐNG RUNG TAY
-          // Khi vẽ: lấy trung điểm giữa ngón cái và ngón trỏ để cực kỳ ổn định
-          // Khi di chuyển: lấy đầu ngón trỏ
-          const rawMidX = (rawIndexX + rawThumbX) / 2
-          const rawMidY = (rawIndexY + rawThumbY) / 2
-          const targetRawX = isPinchingRef.current ? rawMidX : rawIndexX
-          const targetRawY = isPinchingRef.current ? rawMidY : rawIndexY
-
-          let smoothedX = targetRawX
-          let smoothedY = targetRawY
+          // 3.3. BỘ LỌC CHỐNG RUNG TAY (EMA + Trung bình trượt 3 điểm)
+          let smoothedX = rawIndexX
+          let smoothedY = rawIndexY
           if (lastSmoothedPointRef.current) {
-            const alpha = 0.35 // Tinh chỉnh hệ số làm mượt chống rung tay
-            smoothedX = alpha * targetRawX + (1 - alpha) * lastSmoothedPointRef.current.x
-            smoothedY = alpha * targetRawY + (1 - alpha) * lastSmoothedPointRef.current.y
+            const alpha = 0.4 // cân bằng giữa độ mượt và độ nhạy bám theo tay
+            smoothedX = alpha * rawIndexX + (1 - alpha) * lastSmoothedPointRef.current.x
+            smoothedY = alpha * rawIndexY + (1 - alpha) * lastSmoothedPointRef.current.y
           }
           lastSmoothedPointRef.current = { x: smoothedX, y: smoothedY }
 
@@ -820,15 +771,9 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             recentPointsWindowRef.current.length
           const smoothedPoint: Point = { x: finalX, y: finalY }
 
-          // 3.4. THUẬT TOÁN HYSTERESIS & DEBOUNCE (PEN_DOWN VÀ PEN_UP)
-          const PINCH_RATIO_DOWN = 0.25
-          const PINCH_RATIO_UP = 0.34
-
-          const isRawPinching =
-            isPinchPostureValid &&
-            (normPinchDistance < PINCH_RATIO_DOWN || pixelPinchDistance < 36)
-
-          if (isRawPinching) {
+          // 3.4. MÁY TRẠNG THÁI VẼ NÉT (Pen Down / Move / Up) + DEBOUNCE
+          // Debounce: yêu cầu tư thế vẽ ổn định liên tiếp 2 frame trước khi hạ bút
+          if (isDrawingPose) {
             pinchFramesCountRef.current = (pinchFramesCountRef.current || 0) + 1
           } else {
             pinchFramesCountRef.current = 0
@@ -836,59 +781,34 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
           if (!isPinchingRef.current) {
             // BẮT ĐẦU VẼ NÉT MỚI (Pen Down)
-            // Yêu cầu tư thế hợp lệ và duy trì chụm ổn định liên tiếp >= 3 frames (~70ms)
-            if (isPinchPostureValid && pinchFramesCountRef.current >= 3) {
+            if (isDrawingPose && pinchFramesCountRef.current >= 2) {
               isPinchingRef.current = true
               setIsDrawing(true)
               currentStrokeRef.current = [smoothedPoint]
             }
-          } else {
-            // ĐANG TRONG TRẠNG THÁI VẼ (Pen Down)
-            // KẾT THÚC NÉT (Pen Up) khi ngón tay tách ra hoặc tư thế bị phá vỡ
-            if (
-              !isPinchPostureValid ||
-              (normPinchDistance > PINCH_RATIO_UP && pixelPinchDistance > 46)
-            ) {
-              isPinchingRef.current = false
-              setIsDrawing(false)
-              pinchFramesCountRef.current = 0
-
-              // TAIL PRUNING: Cắt tỉa 2 điểm cuối ghi nhận trong pha tách ngón để loại bỏ triệt để móc câu
-              if (currentStrokeRef.current.length > 4) {
-                currentStrokeRef.current.splice(-2)
-              }
-
-              if (currentStrokeRef.current.length >= 2) {
-                strokesRef.current.push([...currentStrokeRef.current])
-                setStrokesCount(strokesRef.current.length)
-                schedulePredictionRef.current()
-              }
-              currentStrokeRef.current = []
-            } else {
-              // Tiếp tục vẽ nét
-              const lastPt =
-                currentStrokeRef.current[currentStrokeRef.current.length - 1]
-              if (
-                !lastPt ||
-                Math.hypot(smoothedPoint.x - lastPt.x, smoothedPoint.y - lastPt.y) >= 2.0
-              ) {
-                currentStrokeRef.current.push(smoothedPoint)
-              }
+          } else if (isDrawingPose) {
+            // ĐANG VẼ: thêm điểm mới (bỏ qua điểm trùng để nét không bị gợn)
+            const lastPt = currentStrokeRef.current[currentStrokeRef.current.length - 1]
+            if (!lastPt || Math.hypot(smoothedPoint.x - lastPt.x, smoothedPoint.y - lastPt.y) >= 2.0) {
+              currentStrokeRef.current.push(smoothedPoint)
             }
-          }
+          } else {
+            // KẾT THÚC NÉT VẼ (Pen Up): ngón trỏ gập lại hoặc chuyển sang cử chỉ khác
+            isPinchingRef.current = false
+            setIsDrawing(false)
+            pinchFramesCountRef.current = 0
 
-          // 3.5. ĐƯỜNG NỐI ĐO KHOẢNG CÁCH CHỤM NGÓN (Visual Distance Gauge)
-          if (pixelPinchDistance < 90) {
-            ctx.strokeStyle = isPinchingRef.current
-              ? 'rgba(56, 189, 248, 0.9)'
-              : 'rgba(255, 255, 255, 0.4)'
-            ctx.lineWidth = isPinchingRef.current ? 2.5 : 1
-            ctx.setLineDash(isPinchingRef.current ? [] : [4, 4])
-            ctx.beginPath()
-            ctx.moveTo(rawIndexX, rawIndexY)
-            ctx.lineTo(rawThumbX, rawThumbY)
-            ctx.stroke()
-            ctx.setLineDash([])
+            // TAIL PRUNING: cắt 1 điểm cuối nhiễu khi vừa nhấc bút để loại bỏ móc câu
+            if (currentStrokeRef.current.length > 3) {
+              currentStrokeRef.current.splice(-1)
+            }
+
+            if (currentStrokeRef.current.length >= 2) {
+              strokesRef.current.push([...currentStrokeRef.current])
+              setStrokesCount(strokesRef.current.length)
+              schedulePredictionRef.current()
+            }
+            currentStrokeRef.current = []
           }
 
           // 3.6. RENDER CON TRỎ LASER ẢO TẠI ĐẦU NGÓN TRỎ HOẶC ĐIỂM VẼ
@@ -936,7 +856,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
           ctx.fillText(statusText, pointerX, pointerY - 18)
 
           // =========================================================================
-          // 4. CỬ CHỈ ĐIỀU KHIỂN KHÔNG CHẠM & AIR HOVER / DWELL CLICK (PHASE 4)
+          // 4. CỬ CHỈ ĐIỀU KHIỂN KHÔNG CHẠM (PHASE 4): ✊ Xóa, 🤏 Chọn, ✌️ Undo, 👍 Tra từ
           // =========================================================================
           const now = performance.now()
 
@@ -973,9 +893,9 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
           ctx.fill()
           ctx.stroke()
           ctx.fillStyle = '#f8fafc'
-          ctx.fillText('✋ Xóa bảng', clearBtnRect.x + clearBtnRect.w / 2, clearBtnRect.y + 20)
+          ctx.fillText('✊ Xóa bảng', clearBtnRect.x + clearBtnRect.w / 2, clearBtnRect.y + 20)
 
-          // Vẽ Top 3 thẻ gợi ý AI trên góc trên phải Canvas (để Air Hover chọn nhanh)
+          // Vẽ Top 3 thẻ gợi ý AI trên góc trên phải Canvas (để cử chỉ Chọn 🤏 kích hoạt nhanh)
           const preds = predictionsRef.current
           const candidateRects: Array<{ x: number; y: number; w: number; h: number; char: string; key: string }> = []
           if (preds && preds.length > 0) {
@@ -1019,15 +939,72 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             }
           }
 
-          // 4.2. XỬ LÝ CỬ CHỈ TAY TĨNH (✌️ Undo, ✋ Clear, 👍 Search)
-          if (!isPinchingRef.current) {
-            const staticGesture = detectStaticGesture(landmarks, false)
+          // 4.2. XÁC ĐỊNH ĐỐI TƯỢNG ĐANG TRỎ TỚI (Hover) dựa trên vị trí con trỏ laser
+          let hoveredKey: string | null = null
+          let hoveredAction: (() => void) | null = null
 
+          // Trỏ vào nút Undo
+          if (
+            pointerX >= undoBtnRect.x &&
+            pointerX <= undoBtnRect.x + undoBtnRect.w &&
+            pointerY >= undoBtnRect.y &&
+            pointerY <= undoBtnRect.y + undoBtnRect.h
+          ) {
+            hoveredKey = 'CANVAS_UNDO'
+            hoveredAction = () => {
+              handleUndoRef.current()
+              playFeedbackSound('swoosh', soundEnabledRef.current)
+            }
+          }
+          // Trỏ vào nút Xóa bảng
+          else if (
+            pointerX >= clearBtnRect.x &&
+            pointerX <= clearBtnRect.x + clearBtnRect.w &&
+            pointerY >= clearBtnRect.y &&
+            pointerY <= clearBtnRect.y + clearBtnRect.h
+          ) {
+            hoveredKey = 'CANVAS_CLEAR'
+            hoveredAction = () => {
+              handleClearAllRef.current()
+              playFeedbackSound('swoosh', soundEnabledRef.current)
+            }
+          } else {
+            // Trỏ vào các thẻ gợi ý AI
+            for (const c of candidateRects) {
+              if (
+                pointerX >= c.x &&
+                pointerX <= c.x + c.w &&
+                pointerY >= c.y &&
+                pointerY <= c.y + c.h
+              ) {
+                hoveredKey = c.key
+                hoveredAction = () => {
+                  handleAppendToWordBufferRef.current(c.char)
+                }
+                break
+              }
+            }
+          }
+
+          // Cập nhật trạng thái highlight cho đối tượng đang trỏ tới
+          if (hoveredKey) {
+            if (hoverTargetRef.current !== hoveredKey) {
+              hoverTargetRef.current = hoveredKey
+              setHoverTargetKey(hoveredKey)
+            }
+          } else {
+            hoverTargetRef.current = null
+            setHoverTargetKey(null)
+          }
+
+          // 4.3. XỬ LÝ CÁC CỬ CHỈ TĨNH (giữ theo thời gian để kích hoạt)
+          if (!isPinchingRef.current) {
             if (now < gestureCooldownRef.current) {
+              // Đang trong giai đoạn cooldown -> bỏ qua
               gestureTypeRef.current = 'NONE'
               gestureStartTimeRef.current = null
               setGestureOverlay(null)
-            } else if (staticGesture !== 'NONE' && staticGesture !== 'PINCH') {
+            } else if (staticGesture !== 'NONE') {
               if (gestureTypeRef.current !== staticGesture) {
                 gestureTypeRef.current = staticGesture
                 gestureStartTimeRef.current = now
@@ -1035,14 +1012,22 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
               const elapsed = now - (gestureStartTimeRef.current || now)
               const targetDuration =
-                staticGesture === 'PEACE_UNDO' ? 600 : staticGesture === 'PALM_CLEAR' ? 1200 : 1000
+                staticGesture === 'PEACE_UNDO'
+                  ? 600
+                  : staticGesture === 'FIST_CLEAR'
+                  ? 1200
+                  : staticGesture === 'SELECT'
+                  ? 500
+                  : 1000 // THUMBS_SEARCH
 
               const progress = Math.min(1, elapsed / targetDuration)
               const label =
                 staticGesture === 'PEACE_UNDO'
                   ? '✌️ Giữ 0.6s để Hoàn tác nét'
-                  : staticGesture === 'PALM_CLEAR'
-                  ? '✋ Giữ 1.2s để Xóa toàn bộ bảng'
+                  : staticGesture === 'FIST_CLEAR'
+                  ? '✊ Giữ 1.2s để Xóa toàn bộ bảng'
+                  : staticGesture === 'SELECT'
+                  ? '🤏 Giữ 0.5s để Chọn thẻ'
                   : '👍 Giữ 1.0s để Tra từ điển'
 
               setGestureOverlay({ type: staticGesture, progress, label })
@@ -1052,10 +1037,16 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                   handleUndoRef.current()
                   playFeedbackSound('swoosh', soundEnabledRef.current)
                   gestureCooldownRef.current = now + 900
-                } else if (staticGesture === 'PALM_CLEAR') {
+                } else if (staticGesture === 'FIST_CLEAR') {
                   handleClearAllRef.current()
                   playFeedbackSound('swoosh', soundEnabledRef.current)
                   gestureCooldownRef.current = now + 1200
+                } else if (staticGesture === 'SELECT') {
+                  if (hoveredAction) {
+                    hoveredAction()
+                    playFeedbackSound('ting', soundEnabledRef.current)
+                    gestureCooldownRef.current = now + 1200
+                  }
                 } else if (staticGesture === 'THUMBS_SEARCH') {
                   playFeedbackSound('ting', soundEnabledRef.current)
                   handleSearchFinalRef.current()
@@ -1064,6 +1055,8 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                 gestureTypeRef.current = 'NONE'
                 gestureStartTimeRef.current = null
                 setGestureOverlay(null)
+                hoverTargetRef.current = null
+                setHoverTargetKey(null)
               }
             } else {
               if (gestureTypeRef.current !== 'NONE') {
@@ -1071,102 +1064,13 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                 gestureStartTimeRef.current = null
                 setGestureOverlay(null)
               }
-
-              // 4.3. XỬ LÝ AIR HOVER / DWELL CLICK (Chỉ khi ở tư thế trỏ 1 ngón Strict Pointing 👉)
-              const isStrictPoint = isStrictPointing(landmarks)
-              let hoveredKey: string | null = null
-              let hoveredAction: (() => void) | null = null
-
-              if (isStrictPoint) {
-                // Kiểm tra hover nút Undo
-                if (
-                  pointerX >= undoBtnRect.x &&
-                  pointerX <= undoBtnRect.x + undoBtnRect.w &&
-                  pointerY >= undoBtnRect.y &&
-                  pointerY <= undoBtnRect.y + undoBtnRect.h
-                ) {
-                  hoveredKey = 'CANVAS_UNDO'
-                  hoveredAction = () => {
-                    handleUndoRef.current()
-                    playFeedbackSound('swoosh', soundEnabledRef.current)
-                  }
-                }
-                // Kiểm tra hover nút Clear
-                else if (
-                  pointerX >= clearBtnRect.x &&
-                  pointerX <= clearBtnRect.x + clearBtnRect.w &&
-                  pointerY >= clearBtnRect.y &&
-                  pointerY <= clearBtnRect.y + clearBtnRect.h
-                ) {
-                  hoveredKey = 'CANVAS_CLEAR'
-                  hoveredAction = () => {
-                    handleClearAllRef.current()
-                    playFeedbackSound('swoosh', soundEnabledRef.current)
-                  }
-                } else {
-                  // Kiểm tra hover các thẻ gợi ý
-                  for (const c of candidateRects) {
-                    if (
-                      pointerX >= c.x &&
-                      pointerX <= c.x + c.w &&
-                      pointerY >= c.y &&
-                      pointerY <= c.y + c.h
-                    ) {
-                      hoveredKey = c.key
-                      hoveredAction = () => {
-                        handleAppendToWordBufferRef.current(c.char)
-                      }
-                      break
-                    }
-                  }
-                }
-              }
-
-              if (hoveredKey && hoveredAction) {
-                if (hoverTargetRef.current !== hoveredKey) {
-                  hoverTargetRef.current = hoveredKey
-                  hoverStartTimeRef.current = now
-                  setHoverTargetKey(hoveredKey)
-                }
-
-                const dwellElapsed = now - (hoverStartTimeRef.current || now)
-                const dwellProgress = Math.min(1, dwellElapsed / 800) // 0.8s để kích hoạt
-
-                // Render vòng tròn đếm ngược Dwell xung quanh con trỏ laser
-                if (dwellProgress > 0) {
-                  ctx.strokeStyle = '#38bdf8'
-                  ctx.lineWidth = 3.5
-                  ctx.beginPath()
-                  ctx.arc(
-                    pointerX,
-                    pointerY,
-                    22,
-                    -Math.PI / 2,
-                    -Math.PI / 2 + dwellProgress * 2 * Math.PI
-                  )
-                  ctx.stroke()
-                }
-
-                if (dwellProgress >= 1.0 && now >= hoverCooldownRef.current) {
-                  hoveredAction()
-                  hoverCooldownRef.current = now + 1200
-                  hoverTargetRef.current = null
-                  hoverStartTimeRef.current = null
-                  setHoverTargetKey(null)
-                }
-              } else {
-                hoverTargetRef.current = null
-                hoverStartTimeRef.current = null
-                setHoverTargetKey(null)
-              }
             }
           } else {
-            // Đang vẽ nét -> Tạm ngắt cử chỉ và Dwell
+            // Đang vẽ nét -> Tạm ngắt cử chỉ và hover
             gestureTypeRef.current = 'NONE'
             gestureStartTimeRef.current = null
             setGestureOverlay(null)
             hoverTargetRef.current = null
-            hoverStartTimeRef.current = null
             setHoverTargetKey(null)
           }
         }
@@ -1179,7 +1083,6 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
         gestureStartTimeRef.current = null
         setGestureOverlay(null)
         hoverTargetRef.current = null
-        hoverStartTimeRef.current = null
         setHoverTargetKey(null)
 
         if (isPinchingRef.current) {
@@ -1402,7 +1305,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-400">
-                Điều khiển 100% không chạm (✌️ Undo, ✋ Xóa bảng, 👍 Tra từ) • Ghép cụm từ Kanji
+                Điều khiển 100% không chạm (👆 Vẽ, ✊ Xóa, 🤏 Chọn, ✌️ Undo, 👍 Tra từ) • Ghép cụm từ Kanji
               </p>
             </div>
           </div>
@@ -1474,7 +1377,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             </span>
             {wordBuffer.length === 0 ? (
               <span className="text-xs text-slate-500 italic">
-                (Chưa ghép chữ nào — Nhấp &quot;+ Ghép&quot; hoặc Air Hover để ghép thành từ hoàn chỉnh)
+                (Chưa ghép chữ nào — Nhấp &quot;+ Ghép&quot; hoặc chụm 2 ngón 🤏 để ghép thành từ hoàn chỉnh)
               </span>
             ) : (
               <div className="flex items-center gap-1.5">
@@ -1643,14 +1546,15 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                 <span className="flex items-center gap-1 font-semibold text-white">
                   <Sparkles className="w-3.5 h-3.5 text-sky-400" /> Cử chỉ:
                 </span>
+                <span className="text-sky-300">👆 1 ngón trỏ (Vẽ)</span>
                 <span className="text-sky-300">✌️ Chữ V (Undo 0.6s)</span>
-                <span className="text-rose-300">✋ Xòe tay (Xóa 1.2s)</span>
+                <span className="text-rose-300">✊ Nắm đấm (Xóa 1.2s)</span>
                 <span className="text-emerald-300">👍 Ngón cái (Tra từ 1.0s)</span>
-                <span className="text-amber-300">🎯 Dừng ngón 0.8s (Chọn thẻ)</span>
+                <span className="text-amber-300">🤏 Chụm 2 ngón (Chọn thẻ)</span>
               </div>
               {hoverTargetKey && (
                 <div className="text-[11px] font-semibold text-sky-400 animate-pulse">
-                  Đang dừng trên: {hoverTargetKey}
+                  Đang trỏ vào: {hoverTargetKey}
                 </div>
               )}
             </div>
@@ -1700,7 +1604,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                   </div>
                   <p className="text-sm font-semibold text-slate-200">Bắt đầu vẽ nét</p>
                   <p className="text-xs text-slate-400 max-w-[210px] mt-1 leading-relaxed">
-                    Chụm ngón tay trước camera để vẽ chữ Kanji. AI sẽ tự động phân tích và đưa ra gợi ý tức thì!
+                    Duỗi 1 ngón trỏ trước camera để vẽ chữ Kanji. AI sẽ tự động phân tích và đưa ra gợi ý tức thì!
                   </p>
                 </div>
               )}
@@ -1838,7 +1742,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                 <span className="text-[10px] text-indigo-400 font-semibold">3.170 lớp nhãn</span>
               </div>
               <p className="text-[10px] text-slate-500">
-                100% Không chạm: ✌️ Undo • ✋ Xóa • 👍 Tra từ • Dừng 0.8s
+                100% Không chạm: 👆 Vẽ • ✊ Xóa • 🤏 Chọn • ✌️ Undo • 👍 Tra từ
               </p>
             </div>
           </div>
@@ -1862,10 +1766,10 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
               onClick={handleClearAll}
               disabled={strokesCount === 0}
               className="px-3.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
-              title="Xóa toàn bộ các nét (Hoặc xòe bàn tay ✋)"
+              title="Xóa toàn bộ các nét (Hoặc nắm đấm ✊)"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Xóa tất cả (✋)</span>
+              <span>Xóa tất cả (✊)</span>
             </button>
           </div>
 
