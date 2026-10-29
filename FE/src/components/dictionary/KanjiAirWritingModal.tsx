@@ -80,28 +80,29 @@ const isFingerFolded = (
   return distTipWrist <= distPipWrist || tip.y >= pip.y - 0.02
 }
 
-// Kiểm tra tư thế chỉ trỏ chuẩn (Strict Pointing Pose 👉 - chỉ duy nhất ngón trỏ vươn ra)
+// Kiểm tra tư thế VẼ (1 ngón trỏ) - bản NỚI: chấp nhận ngón trỏ cong nhẹ, các ngón khác hơi nhích.
+// Chỉ dùng tỷ lệ khoảng cách (bỏ so tọa độ Y) để không bị rớt nét khi ngón cong.
 const isStrictPointing = (lm: NormalizedLandmark[]) => {
   const wrist = lm[0]
   const indexTip = lm[8]
   const indexPip = lm[6]
-  const indexMcp = lm[5]
   const middleTip = lm[12]
   const middlePip = lm[10]
-  const middleMcp = lm[9]
   const ringTip = lm[16]
   const ringPip = lm[14]
-  const ringMcp = lm[13]
   const pinkyTip = lm[20]
   const pinkyPip = lm[18]
-  const pinkyMcp = lm[17]
 
-  const indexExt = isFingerExtended(indexTip, indexPip, indexMcp, wrist)
-  const middleFolded = isFingerFolded(middleTip, middlePip, middleMcp, wrist)
-  const ringFolded = isFingerFolded(ringTip, ringPip, ringMcp, wrist)
-  const pinkyFolded = isFingerFolded(pinkyTip, pinkyPip, pinkyMcp, wrist)
+  // Ngón trỏ "vươn ra": đầu ngón xa cổ tay hơn hẳn khớp PIP (tỷ lệ > 1.15 -> nới lỏng)
+  const indexExtended =
+    getDistance(indexTip, wrist) > getDistance(indexPip, wrist) * 1.15
 
-  return indexExt && middleFolded && ringFolded && pinkyFolded
+  // Các ngón khác "chưa vươn rõ": đầu ngón không xa cổ tay hơn PIP quá 1.3 lần
+  const middleNotExtended = getDistance(middleTip, wrist) < getDistance(middlePip, wrist) * 1.3
+  const ringNotExtended = getDistance(ringTip, wrist) < getDistance(ringPip, wrist) * 1.3
+  const pinkyNotExtended = getDistance(pinkyTip, wrist) < getDistance(pinkyPip, wrist) * 1.3
+
+  return indexExtended && middleNotExtended && ringNotExtended && pinkyNotExtended
 }
 
 // Nhận diện các cử chỉ tay tĩnh điều khiển (không bao gồm tư thế vẽ 1 ngón trỏ)
@@ -130,7 +131,11 @@ const detectStaticGesture = (lm: NormalizedLandmark[]): AirGestureType => {
   const pinkyFolded = isFingerFolded(pinkyTip, pinkyPip, pinkyMcp, wrist)
 
   const allFolded = indexFolded && middleFolded && ringFolded && pinkyFolded
-  const thumbUp = thumbTip.y < thumbMcp.y - 0.02
+  // 👍 Ngón cái DUỖI ra xa bàn tay (khoảng cách đầu ngón cái tới gốc ngón trỏ lớn hơn
+  // rõ rệt khoảng cách chuẩn giữa 2 gốc ngón). Tránh dùng so sánh Y vì nắm đấm có ngón
+  // cái gập vòng lên trên cũng làm thumbTip.y < thumbMcp.y -> gây nhầm sang Tra cứu.
+  const thumbUp =
+    getDistance(thumbTip, indexMcp) > getDistance(thumbMcp, indexMcp) * 1.5
 
   // 1. NẮM ĐẤM ✊ (XÓA HẾT): cả 4 ngón gập + ngón cái gập (không chỉ lên)
   if (allFolded && !thumbUp) return 'FIST_CLEAR'
