@@ -137,6 +137,9 @@ public class SectionService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
+        // Teacher chỉ được tạo section trong course do mình làm chủ (admin bypass).
+        courseAccessGuard.requireOwnerOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+
         // SEQUENTIAL RENUMBER: chèn section vào vị trí đích trong bộ nhớ, rồi
         // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
         List<LessonSection> ordered = new ArrayList<>(
@@ -185,6 +188,7 @@ public class SectionService {
         if (section.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
         }
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         if (title != null) {
             section.setTitle(title);
@@ -234,6 +238,7 @@ public class SectionService {
         if (section.isDeleted()) {
             return; // đã xoá rồi, idempotent
         }
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         section.softDelete();
         lessonSectionRepository.save(section);
         log.info("[SECTION] Soft-deleted section id={}", sectionId);

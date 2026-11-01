@@ -53,6 +53,18 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
     setEditingQuestion(null)
   }
 
+  /**
+   * Bấm vào thẻ "Bài kiểm tra" → mở modal quản lý câu hỏi.
+   * Nếu chưa có quiz (404) → mở form tạo câu hỏi đầu tiên.
+   */
+  const handleCardClick = () => {
+    if (isNotFound) {
+      openCreate()
+      return
+    }
+    openEditor()
+  }
+
   const openCreate = () => setIsCreateOpen(true)
   const closeCreate = () => setIsCreateOpen(false)
 
@@ -119,74 +131,85 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
   }
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-md border border-cyan-200/80 bg-cyan-50/40 hover:border-cyan-300 transition">
-      {/* Icon ? */}
-      <div className="shrink-0 w-9 h-9 rounded-sm bg-cyan-600 text-white font-bold text-base flex items-center justify-center">
-        <BookOpen className="w-5 h-5" />
-      </div>
+    <>
+      <div
+        onClick={handleCardClick}
+        className="flex items-center gap-3 p-3 rounded-md border border-cyan-200/80 bg-cyan-50/40 hover:border-cyan-300 hover:bg-cyan-50/70 transition cursor-pointer"
+      >
+        {/* Icon ? */}
+        <div className="shrink-0 w-9 h-9 rounded-sm bg-cyan-600 text-white font-bold text-base flex items-center justify-center">
+          <BookOpen className="w-5 h-5" />
+        </div>
 
-      {/* Title */}
-      <div className="flex-1 min-w-0">
-        {isLoading ? (
-          <p className="text-xs text-gray-400">Đang tải quiz...</p>
-        ) : isNotFound ? (
-          <p className="text-sm font-semibold text-gray-500 italic">(Chưa có quiz)</p>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <p className="font-semibold text-sm text-gray-900 truncate">
-              {quizTitle || 'Bài kiểm tra'}
-            </p>
-            {quiz && (
-              <button
-                type="button"
-                onClick={openRename}
-                className="p-0.5 text-gray-400 hover:text-cyan-600 rounded shrink-0"
-                title="Đổi tiêu đề"
-              >
-                <Pencil className="w-3 h-3" />
-              </button>
-            )}
-            {total > 0 && (
-              <span className="text-[10px] font-bold text-cyan-700 bg-cyan-100 px-1.5 py-0.5 rounded">
-                {total} câu
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+        {/* Title */}
+        <div className="flex-1 min-w-0">
+          {isLoading ? (
+            <p className="text-xs text-gray-400">Đang tải quiz...</p>
+          ) : isNotFound ? (
+            <p className="text-sm font-semibold text-gray-500 italic">(Chưa có quiz)</p>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-sm text-gray-900 truncate">
+                {quizTitle || 'Bài kiểm tra'}
+              </p>
+              {quiz && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openRename()
+                  }}
+                  className="p-0.5 text-gray-400 hover:text-cyan-600 rounded shrink-0"
+                  title="Đổi tiêu đề"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              )}
+              {total > 0 && (
+                <span className="text-[10px] font-bold text-cyan-700 bg-cyan-100 px-1.5 py-0.5 rounded">
+                  {total} câu
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {isNotFound ? (
-          <button
-            type="button"
-            onClick={openCreate}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-600 text-white text-xs font-bold hover:bg-cyan-700 transition"
-          >
-            <Plus className="w-3.5 h-3.5" /> Tạo câu hỏi đầu tiên
-          </button>
-        ) : (
-          <>
+        {/* Actions — stopPropagation để không mở editor 2 lần khi bấm nút */}
+        <div
+          className="flex items-center gap-1.5 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {isNotFound ? (
             <button
               type="button"
-              onClick={openEditor}
-              disabled={isLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-600 text-white text-xs font-bold hover:bg-cyan-700 transition disabled:opacity-50"
+              onClick={openCreate}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-600 text-white text-xs font-bold hover:bg-cyan-700 transition"
             >
-              <Pencil className="w-3.5 h-3.5" /> Quản lý câu hỏi
+              <Plus className="w-3.5 h-3.5" /> Tạo câu hỏi đầu tiên
             </button>
-            {quiz && total > 0 && (
-              <button
+          ) : (
+            <>
+              {/* <button
                 type="button"
-                onClick={handleDeleteAll}
-                className="p-1.5 text-gray-400 hover:text-rose-600 rounded shrink-0"
-                title="Xoá toàn bộ câu hỏi"
+                onClick={openEditor}
+                disabled={isLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-600 text-white text-xs font-bold hover:bg-cyan-700 transition disabled:opacity-50"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </>
-        )}
+                <Pencil className="w-3.5 h-3.5" /> Quản lý câu hỏi
+              </button> */}
+              {quiz && total > 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteAll}
+                  className="p-1.5 text-gray-400 hover:text-rose-600 rounded shrink-0"
+                  title="Xoá toàn bộ câu hỏi"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* ============== Modal: quản lý câu hỏi (CRUD inline) ============== */}
@@ -240,7 +263,8 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
               return (
                 <div
                   key={q.id}
-                  className="flex items-start gap-2 p-2.5 bg-white rounded-md border border-gray-200 hover:border-cyan-300 transition group"
+                  onClick={() => setViewingQuestion(q)}
+                  className="flex items-start gap-2 p-2.5 bg-white rounded-md border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 transition group cursor-pointer"
                 >
                   <div className="shrink-0 w-7 h-7 rounded bg-cyan-50 text-cyan-700 font-bold text-xs flex items-center justify-center">
                     #{q.orderIndex ?? '?'}
@@ -265,7 +289,10 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                   </div>
                   {/* Nút ↑/↓ reorder — luôn hiển thị để dễ thao tác.
                       Enable/disable theo vị trí đầu/cuối. */}
-                  <div className="flex flex-col gap-0.5 shrink-0">
+                  <div
+                    className="flex flex-col gap-0.5 shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <button
                       type="button"
                       onClick={() => handleReorderQuestion('up', q.id)}
@@ -285,15 +312,18 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                       <ChevronDown className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0">
-                    <button
+                  <div
+                    className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* <button
                       type="button"
                       onClick={() => setViewingQuestion(q)}
                       className="p-1 text-gray-400 hover:text-cyan-600 rounded"
                       title="Xem chi tiết"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                    </button>
+                    </button> */}
                     <button
                       type="button"
                       onClick={() => {
@@ -373,12 +403,12 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
             placeholder="VD: Bài kiểm tra cuối khóa"
             size="large"
           />
-          <p className="text-[11px] text-amber-600">
+          {/* <p className="text-[11px] text-amber-600">
             ⚠ Tính năng này cần BE hỗ trợ PUT /lessons/{'{id}'}/quiz
-          </p>
+          </p> */}
         </div>
       </Modal>
-    </div>
+    </>
   )
 }
 
