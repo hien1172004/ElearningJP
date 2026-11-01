@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { examService } from '@/services'
@@ -69,7 +70,7 @@ export const ExamLobbyPage: React.FC = () => {
         setSelectedSectionId(null)
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Lỗi khi tải chi tiết đề thi')
+      toast.error(err?.response?.data?.message || 'Lỗi khi tải chi tiết đề thi')
     } finally {
       setLoadingDetailId(null)
     }
@@ -78,7 +79,7 @@ export const ExamLobbyPage: React.FC = () => {
   const handleStartExam = async () => {
     if (!selectedExam) return
     if (attemptType === 'PRACTICE_SECTION' && !selectedSectionId) {
-      alert('Vui lòng chọn phần thi bạn muốn luyện tập!')
+      toast.warning('Vui lòng chọn phần thi bạn muốn luyện tập!')
       return
     }
 
@@ -94,7 +95,7 @@ export const ExamLobbyPage: React.FC = () => {
         })
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Không thể bắt đầu bài thi')
+      toast.error(err?.response?.data?.message || 'Không thể bắt đầu bài thi')
     } finally {
       setStarting(false)
     }

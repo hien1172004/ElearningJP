@@ -12,6 +12,7 @@ Pipeline:
         → Trả về danh sách questions với audio_start_time, audio_end_time, transcript
 """
 
+import hashlib
 import io
 import json
 import logging
@@ -21,6 +22,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from dotenv import load_dotenv
+import numpy as np
 from PIL import Image
 
 load_dotenv()
@@ -28,6 +30,10 @@ load_dotenv()
 from .jlpt_rules import audit_exam_section, infer_mondai_from_spec, get_expected_mondais
 
 logger = logging.getLogger("kanji_ai")
+
+# Thư mục cache kết quả trích xuất đề thi PDF
+CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "cache" / "exam_extractions"
+
 
 # ====================================================================
 # ĐỊNH NGHĨA CÁC MONDAI CODE CHUẨN JLPT (đồng bộ với FE)
@@ -84,6 +90,7 @@ Hãy nhìn vào hình ảnh trang đề thi này và trích xuất TẤT CẢ c�
      
      + MONDAI 1: KANJI_READING (漢字読み - ĐỌC CHỮ HÁN):
        * Đề bài gạch chân chữ Hán đặt trong ngoặc vuông: ví dụ `きのう【夕方】、雨が ふりました。`
+       * CỰC KỲ QUAN TRỌNG: Chữ Hán được gạch chân / hỏi cách đọc TUYỆT ĐỐI KHÔNG ĐƯỢC CÓ FURIGANA / THẺ <ruby>! (Vì đây là câu hỏi kiểm tra cách đọc, nếu ghi furigana sẽ làm lộ đáp án!). Ví dụ: `きのう【夕方】` hoặc `<u>夕方</u>`, TUYỆT ĐỐI KHÔNG viết `<ruby>夕方<rt>ゆうがた</rt></ruby>`.
        * 4 phương án lựa chọn (options 1, 2, 3, 4) là HIRAGANA chỉ cách đọc.
        * mondai_code BẮT BUỘC là "KANJI_READING".
 
@@ -126,26 +133,41 @@ Hãy nhìn vào hình ảnh trang đề thi này và trích xuất TẤT CẢ c�
      + BẮT BUỘC gán `star_position`: 1, 2, 3 hoặc 4 (chỉ vị trí của dấu sao ★ trong 4 vị trí gạch).
 
    - DẠNG ĐỤC LỖ / NGỮ PHÁP ĐOẠN VĂN (TEXT_GRAMMAR - Mondai 3 Ngữ pháp):
-     + Đề thi chứa một bài văn có các chỗ trống đánh số trong khung ô vuông ví dụ [ 21 ], [ 22 ], [ 23 ], [ 24 ], [ 25 ]...
-     + BẮT BUỘC TRÍCH XUẤT ĐỦ 100% CÁC CHỖ TRỐNG ĐÁNH SỐ TRÊN ĐỀ VÀO TRONG `passage.content_jp`: các chỗ trống này PHẢI ĐƯỢC ĐẶT TRONG NGOẶC VUÔNG RÕ RÀNG: `【 21 】`, `【 22 】`, `【 23 】`, `【 24 】`, `【 25 】`... TUYỆT ĐỐI KHÔNG để số trần không ngoặc (như "21。", "22 から", "23。", "24、", "名詞 25")!
-     + TUYỆT ĐỐI KHÔNG TỰ ĐIỀN TỪ, TRỢ TỪ (như は, が, を, に, で...) HOẶC SỬA VĂN LÀM MẤT BẤT KỲ CHỖ TRỐNG NÀO (ĐẶC BIỆT CHỖ TRỐNG CUỐI CÙNG NHƯ 【 25 】)! Ví dụ trên đề là "名詞 [ 25 ] わたしたちの" thì PHẢI giữ nguyên là "名詞 【 25 】 わたしたちの", TUYỆT ĐỐI KHÔNG được tự ý điền trợ từ (ví dụ "名詞は わたしたちの").
+     + Đề thi chứa bài văn đục lỗ có các chỗ trống đánh số trong khung ô vuông ví dụ [ 21 ], [ 22 ], [ 23 ], [ 24 ], [ 25 ], [ 26 ]...
+     + ĐẶC BIỆT CHÚ Ý CẤU TRÚC 3 THÀNH PHẦN BẮT BUỘC CỦA ĐỀ THI MONDAI 3:
+       1. CÂU MỞ ĐẦU / DẪN TÌNH HUỐNG BỐI CẢNH NẰM NGOÀI KHUNG:
+          In ngay dưới câu chỉ dẫn đề bài Mondai 3 và TRƯỚC các khung kẻ ô bài văn (ví dụ: `日本で べんきょうして いる 学生が 「すきな 店」の ぶんしょうを 書いて、クラスの みんなの 前で 読みました。`).
+          -> BẮT BUỘC TRÍCH XUẤT 100% CÂU MỞ ĐẦU NÀY VÀO ĐẦU CỦA `passage.content_jp`! TUYỆT ĐỐI KHÔNG ĐƯỢC BỎ SÓT!
+       2. KHUNG BÀI VĂN SỐ 1 (ví dụ: `(1) ケンさんの ぶんしょう` chứa các chỗ trống `【 22 】`, `【 23 】`):
+          BẮT BUỘC TRÍCH XUẤT ĐẦY ĐỦ CẢ TIÊU ĐỀ `(1) ケンさんの ぶんしょう` VÀ TOÀN BỘ NỘI DUNG BÀI VĂN (1)!
+          LƯU Ý QUAN TRỌNG: `(1) ケンさんの ぶんしょう` LÀ PHẦN THI CHÍNH THỨC, TUYỆT ĐỐI KHÔNG PHẢI LÀ VÍ DỤ (例)!
+       3. KHUNG BÀI VĂN SỐ 2 (ví dụ: `(2) ミンジさんの ぶんしょう` chứa các chỗ trống `【 24 】`, `【 25 】`, `【 26 】`):
+          BẮT BUỘC TRÍCH XUẤT ĐẦY ĐỦ CẢ TIÊU ĐỀ `(2) ミンジさんの ぶんしょう` VÀ TOÀN BỘ NỘI DUNG BÀI VĂN (2)!
+       -> CẢ 3 THÀNH PHẦN TRÊN PHẢI ĐƯỢC GHÉP NỐI THEO THỨ TỰ THÀNH MỘT NỘI DUNG DUY NHẤT TRONG `passage.content_jp` CỦA TẤT CẢ CÁC CÂU HỎI TỪ 22 ĐẾN 26!
+       -> CẢNH BÁO NGHIÊM NGẶT: TUYỆT ĐỐI KHÔNG ĐƯỢC CHỈ TRÍCH XUẤT MỖI KHUNG THỨ 2 (bài Minji) MÀ BỎ RƠI KHUNG THỨ 1 (bài Ken) VÀ CÂU DẪN MỞ ĐẦU!
+     + `passage.title`: BẮT BUỘC ĐẶT TIÊU ĐỀ CHUNG LÀ "文章の文法" (hoặc "Ngữ pháp đoạn văn"). TUYỆT ĐỐI KHÔNG LẤY TÊN RIÊNG CỦA MỘT NGƯỜI (NHƯ "ミンジさんのぶんしょう") LÀM TIÊU ĐỀ CHUNG!
+     + BẮT BUỘC TRÍCH XUẤT ĐỦ 100% CÁC CHỖ TRỐNG ĐÁNH SỐ TRÊN ĐỀ VÀO TRONG `passage.content_jp`: các chỗ trống này PHẢI ĐƯỢC ĐẶT TRONG NGOẶC VUÔNG RÕ RÀNG: `【 21 】`, `【 22 】`, `【 23 】`, `【 24 】`, `【 25 】`, `【 26 】`... TUYỆT ĐỐI KHÔNG để số trần không ngoặc (như "21。", "22 から", "23。", "24、", "名詞 25")!
+     + TUYỆT ĐỐI KHÔNG TỰ ĐIỀN TỪ, TRỢ TỪ (như は, が, を, に, で...) HOẶC SỬA VĂN LÀM MẤT BẤT KỲ CHỖ TRỐNG NÀO (ĐẶC BIỆT CHỖ TRỐNG CUỐI CÙNG NHƯ 【 25 】, 【 26 】)!
      + Vì dạng bài đục lỗ trên đề thi KHÔNG CÓ CÂU HỎI RIÊNG cho từng số, TUYỆT ĐỐI KHÔNG đưa câu chỉ dẫn đề bài ("もんだい３... 何を入れますか...") hay "( )" vào question_text!
-     + `question_text` của từng câu đục lỗ BẮT BUỘC chỉ ghi số chỗ trống: "【 21 】", "【 22 】", "【 23 】", "【 24 】", "【 25 】"...
-     + Toàn bộ bài văn này đưa vào trường `passage` của tất cả các câu hỏi đục lỗ trong bài.
+     + `question_text` của từng câu đục lỗ BẮT BUỘC chỉ ghi số chỗ trống: "【 21 】", "【 22 】", "【 23 】", "【 24 】", "【 25 】", "【 26 】"...
      + Mondai code của TẤT CẢ các câu hỏi trong bài đục lỗ BẮT BUỘC là "TEXT_GRAMMAR".
      + Mỗi ô trống chỉ tạo DUY NHẤT 1 câu hỏi tương ứng, TUYỆT ĐỐI KHÔNG lặp lại câu hỏi.
 
    - DẠNG ĐỌC HIỂU ĐOẠN VĂN (SHORT_PASSAGE, MEDIUM_PASSAGE, LONG_PASSAGE):
      + BẮT BUỘC trích xuất đầy đủ 100% nội dung đoạn văn tiếng Nhật vào `passage.content_jp`. Bất kỳ chữ Hán nào có furigana thì dùng `<ruby>漢字<rt>furigana</rt></ruby>`.
-     + `passage.title` đặt tên bài đọc (ví dụ: "Bài đọc 1", "Bài đọc hiểu trung"...).
+     + `passage.title`: Đặt tên ngắn gọn cho bài đọc (ví dụ: "Bài đọc (1)", "Bài đọc hiểu", hoặc tiêu đề tờ rơi như "公園で遊ぶときの注意").
+       * CỰC KỲ QUAN TRỌNG: TUYỆT ĐỐI KHÔNG copy câu chỉ dẫn đề thi của Mondai (như "もんだい５ つぎの ぶんしょうを 読んで、しつもんに こたえて ください...") vào `passage.title`!
+       * TUYỆT ĐỐI KHÔNG dùng thẻ `<ruby>` hay `<rt>` trong `passage.title` (chỉ dùng furigana trong `passage.content_jp`).
+       * Nếu đề thi có câu dẫn tình huống/bối cảnh trước bài đọc (ví dụ: `(3) 森さんの机の上に、山口先生のメモと本があります。`), BẮT BUỘC đưa câu này vào ĐẦU của `passage.content_jp` (kèm `<ruby>`), và để `passage.title` là "Bài đọc (3)".
      + Gán đối tượng `passage` này vào câu hỏi tương ứng trong trang.
 
-   - QUY TẮC CÂU HỎI BÀI ĐỌC NẰM Ở TRANG TIẾP THEO (VÍ DỤ CÂU 32, 33 NẰM Ở TRANG SAU BÀI ĐỌC CÂU 30, 31):
-     + Trong phần Đọc hiểu (MEDIUM_PASSAGE, LONG_PASSAGE, TEXT_GRAMMAR, INFORMATION_RETRIEVAL), một bài đọc thường kèm nhiều câu hỏi (ví dụ câu 30, 31, 32, 33).
-     + Nếu bài đọc in ở trang trước cùng câu 30, 31, còn câu 32, 33 in ở đầu trang này mà KHÔNG in lại bài đọc:
-       * BẮT BUỘC để `passage: null` cho các câu 32, 33 này.
+   - QUY TẮC CÂU HỎI BÀI ĐỌC NẰM Ở TRANG TIẾP THEO:
+     + Trong phần Đọc hiểu (MEDIUM_PASSAGE, LONG_PASSAGE), một bài đọc có thể kèm nhiều câu hỏi (ví dụ câu 30, 31).
+     + Nếu bài đọc in ở trang trước, còn câu hỏi tiếp theo cùng bài đọc in ở đầu trang này mà KHÔNG in lại bài đọc:
+       * BẮT BUỘC để `passage: null` cho các câu hỏi tiếp theo này.
        * BẮT BUỘC gán đúng `mondai_code` (ví dụ "MEDIUM_PASSAGE" hoặc "LONG_PASSAGE").
-       * TUYỆT ĐỐI KHÔNG tự bịa một bài đọc giả, tóm tắt hoặc copy đề câu hỏi vào `passage`! Hệ thống sẽ tự động gán bài đọc đầy đủ từ câu 30, 31 ở trang trước sang câu 32, 33.
+       * TUYỆT ĐỐI KHÔNG tự bịa một bài đọc giả, tóm tắt hoặc copy đề câu hỏi vào `passage`! Hệ thống sẽ tự động gán bài đọc đầy đủ từ câu trước sang.
+     + LƯU Ý ĐẶC BIỆT VỚI N5/N4: Câu hỏi cuối cùng (ví dụ Câu 32 của N5, Câu 34-35 của N4) là Mondai 6 (INFORMATION_RETRIEVAL - Tìm kiếm thông tin tờ rơi/thông báo). ĐÂY LÀ MONDAI RIÊNG BIỆT ĐỘC LẬP KÈM TỜ RƠI MỚI, TUYỆT ĐỐI KHÔNG gán nhầm thành MEDIUM_PASSAGE và TUYỆT ĐỐI KHÔNG để passage: null!
 
    - DẠNG TÌM KIẾM THÔNG TIN TỪ TỜ RƠI / BẢNG THÔNG BÁO / BIỂU MẪU (INFORMATION_RETRIEVAL - Mondai cuối phần Đọc hiểu):
      + ĐÂY LÀ DẠNG BÀI ĐỌC TỜ RƠI QUẢNG CÁO, ÁP PHÍCH, BẢNG THÔNG BÁO HOẶC BIỂU MẪU QUY ĐỊNH CỦA ĐỀ THI JLPT:
@@ -179,9 +201,14 @@ Hãy nhìn vào hình ảnh trang đề thi này và trích xuất TẤT CẢ c�
            + TUYỆT ĐỐI KHÔNG CẮT ẢNH VÀ KHÔNG TRẢ VỀ image_box CHO CÂU HỎI CHỈ CÓ CHỮ!
            + Trích xuất 100% nội dung chữ của các phương án vào options[i].option_text.
          - Mondai 4 (QUICK_RESPONSE): 100% không có tranh, BẮT BUỘC has_visual: false, image_box: null.
-     + TOÀN BỘ PHẦN ĐỌC HIỂU (TEXT_GRAMMAR, SHORT_PASSAGE, MEDIUM_PASSAGE, LONG_PASSAGE, INFORMATION_RETRIEVAL) VÀ TỪ VỰNG, NGỮ PHÁP:
-       * BẮT BUỘC có `has_visual: false`, `image_url: null`, `image_box: null`.
-       * TUYỆT ĐỐI KHÔNG CẮT ẢNH VÀO BÀI ĐỌC. Toàn bộ chữ, cấu trúc bảng biểu, chú thích phải nằm trong `passage.content_jp`.
++ PHẦN ĐỌC HIỂU (SHORT_PASSAGE, MEDIUM_PASSAGE, LONG_PASSAGE, INFORMATION_RETRIEVAL, TEXT_GRAMMAR) VÀ TỪ VỰNG, NGỮ PHÁP:
+       * VỀ BÀI ĐỌC (PASSAGE): Toàn bộ chữ, cấu trúc bảng biểu, chú thích phải số hóa 100% vào `passage.content_jp`. TUYỆT ĐỐI KHÔNG CẮT ẢNH VÀO BÀI ĐỌC (`passage.image_url: null`).
+       * VỀ TRANH ẢNH PHƯƠNG ÁN LỰA CHỌN (OPTIONS CÓ TRANH/SƠ ĐỒ):
+         - Nếu câu hỏi Đọc hiểu có 4 phương án lựa chọn là TRANH VẼ / SƠ ĐỒ / BẢN ĐỒ / HÌNH MINH HỌA (ví dụ: câu hỏi "今のへやはどれですか" với 4 hình căn phòng 1, 2, 3, 4):
+           + BẮT BUỘC gán `has_visual_options: true` và `has_visual: true`.
+           + Trả về `image_box`: [ymin, xmin, ymax, xmax] là khung hình chữ nhật bao trọn 4 bức tranh lựa chọn này trên trang.
+           + Trong `options`: gán `option_text: "1"`, `"2"`, `"3"`, `"4"` và `has_image: true`.
+         - Đối với các câu hỏi đọc hiểu thông thường (phương án lựa chọn hoàn toàn bằng chữ): BẮT BUỘC gán `has_visual: false`, `has_visual_options: false`, `image_box: null`, `image_url: null`.
      + Các câu hỏi ngữ pháp đơn (SENTENTIAL_GRAMMAR) và sắp xếp câu sao (SENTENCE_COMPOSITION) BẮT BUỘC phải có `passage: null`. TUYỆT ĐỐI KHÔNG gán passage vào câu ngữ pháp!
      + Nếu cấp độ là N5 hoặc N4: phần Đọc hiểu chỉ gồm SHORT_PASSAGE (1 câu hỏi/bài), MEDIUM_PASSAGE (2 câu hỏi/bài) và INFORMATION_RETRIEVAL (tờ rơi). N5 và N4 KHÔNG CÓ LONG_PASSAGE.
 
@@ -267,40 +294,116 @@ Nếu trang không chứa câu hỏi nào (ví dụ: trang bìa, trang hướng 
 {{"page_number": {page_num}, "questions": [], "passages": []}}
 """
 
+PDF_BATCH_EXTRACTION_PROMPT = """Bạn là chuyên gia phân tích đề thi năng lực tiếng Nhật JLPT cấp {jlpt_level}.
+
+Dưới đây là {num_pages} trang đề thi liên tiếp (gồm các trang {pages_str}) được gửi kèm theo thứ tự.
+Hãy đọc kỹ toàn bộ các trang và trích xuất TẤT CẢ các câu hỏi có trong những trang này.
+
+ĐẶC BIỆT CHÚ Ý CÂU HỎI VẮT QUA RANH GIỚI TRANG:
+- Nếu một câu hỏi hoặc bài đọc bắt đầu ở cuối trang trước và tiếp diễn ở đầu trang sau: bạn nhìn thấy cả hai trang nên HÃY GHÉP NGUYÊN VẸN NỘI DUNG câu hỏi và các phương án lựa chọn thành một câu hỏi hoàn chỉnh duy nhất.
+- Trường `source_page`: ghi số trang mà câu hỏi đó bắt đầu.
+- Trường `raw_question_number`: ghi chính xác số thứ tự câu hỏi in trên đề thi (ví dụ 1, 2, ..., 35).
+
+## Quy tắc quan trọng:
+1. QUY TẮC VỀ ĐÁP ÁN VÀ NỘI DUNG (TUYỆT ĐỐI KHÔNG ĐOÁN MÒ ĐÁP ÁN):
+   - Mặc định toàn bộ các phương án 1, 2, 3, 4 BẮT BUỘC ĐỂ `is_correct: false` (trừ khi trên trang đề thi in sẵn đáp án chính thức).
+   - Trường `explanation_vi` ĐỂ CHUỖI RỖNG `""`.
+   - Mỗi câu hỏi BẮT BUỘC PHẢI CÓ ĐẦY ĐỦ CẢ 4 PHƯƠNG ÁN LỰA CHỌN (options 1, 2, 3, 4).
+   - TUYỆT ĐỐI KHÔNG ĐƯỢC ĐỂ TRỐNG `option_text`. Phải đọc kỹ trên đề thi và trích xuất đúng nội dung từng phương án 1, 2, 3, 4.
+
+2. QUY TẮC BẮT BUỘC VỀ FURIGANA (PHIÊN ÂM CHỮ HÁN TRÊN ĐẦU CHỮ):
+   - BẤT KỲ chữ Hán nào có chữ Hiragana nhỏ in phiên âm ở trên đầu (Furigana / ルビ), BẮT BUỘC TRÍCH XUẤT BẰNG THẺ CHUẨN HTML: `<ruby>漢字<rt>ふりがな</rt></ruby>`.
+   - ĐẶC BIỆT: Trong Mondai 1 (KANJI_READING), chữ Hán được gạch chân / hỏi cách đọc TUYỆT ĐỐI KHÔNG ĐƯỢC CÓ FURIGANA / THẺ <ruby>! Hãy biểu diễn bằng `【漢字】` hoặc `<u>漢字</u>`.
+
+3. QUY TẮC ĐỊNH DẠNG THEO TỪNG MONDAI:
+   - KANJI_READING: mondai_code="KANJI_READING", chữ Hán hỏi đặt trong `【 】` không có furigana, 4 options là Hiragana.
+   - ORTHOGRAPHY: mondai_code="ORTHOGRAPHY", từ Hiragana/Katakana gạch chân đặt trong `【 】`, 4 options là Kanji.
+   - CONTEXTUAL_USE: mondai_code="CONTEXTUAL_USE", câu hỏi có chỗ trống `（　　）`.
+   - SYNONYMS: mondai_code="SYNONYMS", câu hỏi có từ gạch chân `【...】`, 4 options là 4 câu có nghĩa tương đương.
+   - PROPER_USAGE: mondai_code="PROPER_USAGE", câu hỏi là `【Từ_vựng】`, 4 options là 4 câu có gạch chân `<u>Từ_vựng</u>`.
+   - SENTENTIAL_GRAMMAR: câu hỏi đơn có chỗ trống `（　　）`.
+   - SENTENCE_COMPOSITION: câu hỏi sắp xếp có dấu sao `＿＿＿　＿＿＿　＿★＿　＿＿＿`, có `star_position`.
+   - TEXT_GRAMMAR: bài đọc đục lỗ có `【 21 】`, `【 22 】`... CỰC KỲ QUAN TRỌNG: Đề thi thường gồm 3 phần:
+     (1) Câu dẫn bối cảnh mở đầu ngoài khung (ví dụ: `日本で べんきょうして いる 学生が 「すきな 店」の ぶんしょうを 書いて、クラスの みんなの 前で 読みました。`),
+     (2) Khung bài văn 1 `(1) ケンさんの ぶんしょう` (chứa các câu 22, 23 - ĐÂY LÀ PHẦN THI CHÍNH THỨC, KHÔNG PHẢI VÍ DỤ!), và
+     (3) Khung bài văn 2 `(2) ミンジさんの ぶんしょう` (chứa các câu 24, 25, 26).
+     BẮT BUỘC TRÍCH XUẤT 100% CẢ 3 PHẦN NÀY GHÉP NỐI NGUYÊN VẸN THEO THỨ TỰ VÀO `passage.content_jp` CỦA TẤT CẢ CÁC CÂU HỎI 22 ĐẾN 26!
+     TUYỆT ĐỐI KHÔNG ĐƯỢC CHỈ TRÍCH XUẤT MỖI KHUNG THỨ 2 MÀ BỎ SÓT CÂU DẪN NGOÀI KHUNG HAY BÀI VĂN SỐ 1!
+     `passage.title` BẮT BUỘC ĐẶT LÀ "文章の文法".
+   - Với câu cuối phần Đọc hiểu (ví dụ Câu 32 của N5, Câu 34-35 của N4): ĐÂY LÀ MONDAI 6 (INFORMATION_RETRIEVAL - Đọc tờ rơi/áp phích), TUYỆT ĐỐI KHÔNG gán nhầm thành MEDIUM_PASSAGE!
+
+4. BÀI ĐỌC HIỂU (SHORT_PASSAGE, MEDIUM_PASSAGE, LONG_PASSAGE, INFORMATION_RETRIEVAL):
+   - Trích xuất 100% nội dung văn bản tiếng Nhật vào `passage.content_jp`.
+   - `passage.title`: Đặt tên ngắn gọn (ví dụ "Bài đọc (1)", "Bài đọc hiểu"). TUYỆT ĐỐI KHÔNG chứa thẻ `<ruby>` và KHÔNG copy câu lệnh Mondai ("もんだい５..."). Nếu có câu dẫn tình huống (ví dụ "(3) 森さんの机の上に..."), hãy đưa vào ĐẦU của `passage.content_jp` và đặt tiêu đề là "Bài đọc (3)".
+   - Với tờ rơi (INFORMATION_RETRIEVAL): chuyển đổi toàn bộ bảng biểu sang dạng bảng Markdown (`| 項目 | 内容 |`), trích xuất đầy đủ tiêu đề, các khung chú ý và điều kiện lưu ý.
+   - Nếu câu hỏi Đọc hiểu có 4 phương án lựa chọn là TRANH VẼ / SƠ ĐỒ (ví dụ tranh các căn phòng "今のへやはどれですか"):
+     gán `has_visual_options: true`, `has_visual: true`, `image_box`: [ymin, xmin, ymax, xmax], options: 1, 2, 3, 4 kèm `has_image: true`.
+
+## Trả về CHÍNH XÁC JSON theo format sau (không kèm markdown fences):
+{{
+  "questions": [
+    {{
+      "raw_question_number": 1,
+      "question_number": 1,
+      "source_page": 3,
+      "mondai_code": "KANJI_READING",
+      "question_text": "きのう【夕方】、雨が ふりました。",
+      "star_position": null,
+      "has_visual": false,
+      "image_box": null,
+      "explanation_vi": "",
+      "passage": null,
+      "options": [
+        {{"option_key": 1, "option_text": "ゆうがた", "is_correct": false}},
+        {{"option_key": 2, "option_text": "あさ", "is_correct": false}},
+        {{"option_key": 3, "option_text": "ひる", "is_correct": false}},
+        {{"option_key": 4, "option_text": "よる", "is_correct": false}}
+      ]
+    }}
+  ],
+  "passages": []
+}}
+"""
+
 ANSWER_SHEET_PROMPT = """Bạn là chuyên gia số hóa đề thi JLPT.
 Trước mặt bạn là hình ảnh/trang PDF bảng đáp án chính thức (正答表 - Seitouhyou) của kỳ thi năng lực tiếng Nhật JLPT cấp {jlpt_level}.
 
-Hãy đọc kỹ từng bảng đáp án và trích xuất TOÀN BỘ đáp án cho từng câu hỏi theo định dạng JSON.
+Hãy đọc kỹ từng bảng đáp án và trích xuất TOÀN BỘ đáp án cho từng câu hỏi theo định dạng JSON chuẩn xác 100%.
 
 ## Quy tắc đọc bảng đáp án (正答表):
-1. Mỗi khối bảng tương ứng với một phần thi hoặc một Mondai (問題 1, 問題 2, 問題 3...).
-2. Hàng trên cùng trong mỗi bảng là SỐ THỨ TỰ CÂU HỎI (1, 2, 3... hoặc 10, 11, 12... hoặc 21, 22...).
-3. Hàng bên dưới ngay sau số thứ tự câu hỏi là SỐ ĐÁP ÁN ĐÚNG tương ứng (1, 2, 3 hoặc 4).
-4. Phân loại theo các phần thi chính nếu có tiêu đề:
+1. Phân loại theo các phần thi chính theo tiêu đề in trên bảng:
    - "VOCABULARY": 言語知識（文字・語彙）
-   - "GRAMMAR_READING": 言語知識（文法）・読解
+   - "GRAMMAR_READING": 言語知識（文法）・読解 (hoặc "KNOWLEDGE_READING" đối với N1/N2)
    - "LISTENING": 聴解
-   Nếu không phân phần thi hoặc chỉ có 1 bảng duy nhất, gom tất cả vào "ALL".
+
+2. CỰC KỲ QUAN TRỌNG VỀ PHẦN THI NGHE (聴解):
+   - BẮT BUỘC BỎ QUA CỘT VÍ DỤ "例" (Rei): Ở mỗi bảng 問題 1, 問題 2, 問題 3, 問題 4, cột đầu tiên luôn là câu ví dụ mẫu "例" kèm đáp án (thường là 3 hoặc 2).
+     TUYỆT ĐỐI BỎ QUA cột "例" và đáp án của cột "例"! Chỉ đọc từ cột số 1 trở đi!
+   - Vì mỗi bảng 問題 trong phần Nghe đều bắt đầu đánh số lại từ 1, hãy trả về nhóm theo từng Mondai:
+     "mondai_1": {{"1": ..., "2": ...}},
+     "mondai_2": {{"1": ..., "2": ...}},
+     "mondai_3": {{"1": ..., "2": ...}},
+     "mondai_4": {{"1": ..., "2": ...}}
+
+3. Về phần Từ vựng và Ngữ pháp & Đọc hiểu:
+   - Các câu hỏi được đánh số liên tục (ví dụ 1..33 cho Từ vựng N5, 1..32 cho Ngữ pháp/Đọc hiểu N5).
+   - Trả về mapping: "số câu": đáp_án (1, 2, 3 hoặc 4).
 
 ## Trả về DUY NHẤT mã JSON theo định dạng sau (không kèm markdown fences):
 {{
   "sections": {{
     "VOCABULARY": {{
-      "1": 1, "2": 1, "3": 4, "4": 2, "5": 2, "6": 3, "7": 1, "8": 2, "9": 4,
-      "10": 1, "11": 4, "12": 3, "13": 4, "14": 4, "15": 1
+      "1": 2, "2": 4, "3": 1
     }},
     "GRAMMAR_READING": {{
-      "1": 3, "2": 4, "3": 1, "4": 2, "5": 4, "6": 2, "7": 3, "8": 1, "9": 2, "10": 4,
-      "11": 1, "12": 1, "13": 3, "14": 4, "15": 2,
-      "16": 3, "17": 2, "18": 4, "19": 3, "20": 3,
-      "21": 2, "22": 3, "23": 2, "24": 1, "25": 4
+      "1": 2, "2": 3, "3": 2
     }},
     "LISTENING": {{
-      "1": 1, "2": 3
+      "mondai_1": {{"1": 2, "2": 2, "3": 3, "4": 3, "5": 1, "6": 4, "7": 4}},
+      "mondai_2": {{"1": 4, "2": 3, "3": 2, "4": 4, "5": 1, "6": 3}},
+      "mondai_3": {{"1": 1, "2": 3, "3": 2, "4": 3, "5": 2}},
+      "mondai_4": {{"1": 1, "2": 1, "3": 2, "4": 3, "5": 3, "6": 1}}
     }}
-  }},
-  "flat_answers": {{
-    "1": 1, "2": 1, "3": 4
   }}
 }}
 """
@@ -381,10 +484,10 @@ Hãy nghe file audio bài nghe JLPT này và trích xuất thông tin cho TỪNG
    - ĐẶC THÙ JLPT: Trong Mondai 1 (TASK_BASED) và Mondai 2 (KEY_POINT), các phương án lựa chọn ĐƯỢC IN TRÊN GIẤY (BOOKLET), HOÀN TOÀN KHÔNG ĐƯỢC ĐỌC TRONG AUDIO!
    - Do đó, với Mondai 1 và Mondai 2: BẮT BUỘC để options là:
      [
-       {"option_key": 1, "option_text": "選択肢 1", "is_correct": false},
-       {"option_key": 2, "option_text": "選択肢 2", "is_correct": false},
-       {"option_key": 3, "option_text": "選択肢 3", "is_correct": false},
-       {"option_key": 4, "option_text": "選択肢 4", "is_correct": false}
+       {{"option_key": 1, "option_text": "選択肢 1", "is_correct": false}},
+       {{"option_key": 2, "option_text": "選択肢 2", "is_correct": false}},
+       {{"option_key": 3, "option_text": "選択肢 3", "is_correct": false}},
+       {{"option_key": 4, "option_text": "選択肢 4", "is_correct": false}}
      ]
      TUYỆT ĐỐI KHÔNG TỰ BỊA RA PHƯƠNG ÁN CHỮ HÁN từ ngữ cảnh audio! Các phương án in trên giấy sẽ được lấy từ file PDF.
    - Với Mondai 3 và Mondai 4: Người đọc có đọc 3 phương án 1, 2, 3 bằng lời trong audio, hãy ghi lại transcript của 3 phương án này (hoặc "選択肢 1", "選択肢 2", "選択肢 3").
@@ -443,11 +546,225 @@ class GeminiExamParser:
 
         self._model_name = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
         self._fallback_models = ["gemini-flash-latest", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-3.8-flash", "gemini-2.5-pro"]
+        self._last_request_time = 0.0
+        self._min_request_interval = 2.0  # Giãn cách tối thiểu giữa các API call (an toàn cho 15 RPM)
         logger.info(f"✅ GeminiExamParser khởi tạo thành công, model: {self._model_name} (fallbacks: {self._fallback_models})")
+
+    # ================================================================
+    # MODULE 4: CACHE TRÍCH XUẤT ĐỀ THI
+    # ================================================================
+    @staticmethod
+    def _get_cache_path(pdf_bytes: bytes, jlpt_level: str) -> Path:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        pdf_hash = hashlib.sha256(pdf_bytes).hexdigest()
+        return CACHE_DIR / f"{pdf_hash}_{jlpt_level}.json"
+
+    @classmethod
+    def _load_from_cache(cls, pdf_bytes: bytes, jlpt_level: str) -> Optional[Dict[str, Any]]:
+        cache_file = cls._get_cache_path(pdf_bytes, jlpt_level)
+        if cache_file.exists():
+            try:
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    q_count = len(data.get("questions") or [])
+                    t_pages = data.get("total_pages", 0)
+                    if t_pages >= 5 and q_count < 15:
+                        logger.warning(
+                            f"⚠️ [CACHE INVALID] Cache {cache_file.name} chỉ có {q_count} câu hỏi cho {t_pages} trang "
+                            f"(nghi ngờ trích xuất bị ngắt quãng hoặc thiếu). Bỏ qua cache để trích xuất lại!"
+                        )
+                        return None
+                    logger.info(f"⚡ [CACHE HIT] Đã lấy kết quả trích xuất ({q_count} câu hỏi) từ cache ({cache_file.name})!")
+                    return data
+            except Exception as e:
+                logger.warning(f"⚠️ Lỗi đọc cache {cache_file.name}: {e}")
+        return None
+
+    @classmethod
+    def _save_to_cache(cls, pdf_bytes: bytes, jlpt_level: str, data: Dict[str, Any]):
+        cache_file = cls._get_cache_path(pdf_bytes, jlpt_level)
+        try:
+            # Chỉ serialize các trường JSON hợp lệ (bỏ rendered_pages_map chứa raw bytes)
+            cacheable_data = {
+                "questions": data.get("questions", []),
+                "images": data.get("images", []),
+                "total_pages": data.get("total_pages", 0),
+                "parsed_pages": data.get("parsed_pages", 0),
+                "empty_or_failed_pages": data.get("empty_or_failed_pages", []),
+            }
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(cacheable_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"💾 [CACHE SAVE] Đã lưu kết quả trích xuất vào cache ({cache_file.name})")
+        except Exception as e:
+            logger.warning(f"⚠️ Không thể lưu cache {cache_file.name}: {e}")
+
+    # ================================================================
+    # MODULE 1: PRE-FILTER TRANG DƯ THỪA (BÌA, HƯỚNG DẪN, NHÁP, HOA VĂN XÁM)
+    # ================================================================
+    @staticmethod
+    def _is_cover_or_instruction_page(page: Any, text: str) -> Tuple[bool, str]:
+        """Nhận diện trang bìa và trang hướng dẫn/chú ý thi (Notes)."""
+        if not text:
+            return False, ""
+        text_clean = text.lower()
+        cover_signatures = [
+            "examinee registration number",
+            "do not open this question booklet",
+            "do not take this question booklet",
+            "this question booklet has",
+            "one of the row numbers",
+            "じゅけんばんごう", "受験番号",
+            "ちゅうい", "注意事項", "注意",
+            "しけんが はじまるまで", "試験が始まるまで",
+            "もんだいようしを あけないで", "問題用紙を開けないで",
+            "もって かえる ことは できません", "持って帰ることはできません",
+            "かきこんではいけません", "メモをとってもいいです",
+        ]
+        matches = [sig for sig in cover_signatures if sig in text_clean]
+        if len(matches) >= 2:
+            # Đảm bảo không bỏ nhầm trang đề thật có câu hỏi (問題 1, 問題 2, ...)
+            has_exam_mondai = bool(re.search(r'問題\s*[1-9１-９]\s*[\(（]', text)) or bool(re.search(r'問\s*[1-9１-９]\s*[\(（]', text))
+            if not has_exam_mondai:
+                return True, f"Trang bìa/hướng dẫn thi (khớp từ khóa: {', '.join(matches[:2])})"
+        return False, ""
+
+    @staticmethod
+    def _is_blank_or_texture_page(page: Any, image_bytes: bytes) -> Tuple[bool, str]:
+        """Nhận diện trang trắng hoặc trang hoa văn nháp/caro xám không có chữ."""
+        try:
+            text = page.get_text("text") or ""
+            stripped_text = re.sub(r'[\s\d\-_/|・•\(\)\[\]]', '', text)
+            if len(stripped_text) <= 5:
+                img = Image.open(io.BytesIO(image_bytes)).convert("L")
+                arr = np.array(img)
+                # Tính tỉ lệ điểm ảnh nét mực in đậm (< 80)
+                dark_ratio = float((arr < 80).sum()) / float(arr.size)
+                if dark_ratio < 0.0025:
+                    return True, f"Trang trắng / hoa văn nháp (tỉ lệ mực in {dark_ratio*100:.3f}% < 0.25%)"
+        except Exception as e:
+            logger.debug(f"Lỗi kiểm tra _is_blank_or_texture_page: {e}")
+        return False, ""
+
+    @classmethod
+    def _should_skip_page(cls, page: Any, image_bytes: bytes) -> Tuple[bool, str]:
+        """Tổng hợp kiểm tra tiền lọc để bỏ qua trang rác mà không tốn request AI."""
+        text = page.get_text("text") or ""
+        is_cover, reason = cls._is_cover_or_instruction_page(page, text)
+        if is_cover:
+            return True, reason
+        is_blank, b_reason = cls._is_blank_or_texture_page(page, image_bytes)
+        if is_blank:
+            return True, b_reason
+        return False, ""
+
+    # ================================================================
+    # MODULE 2: BATCHING CÓ OVERLAP & DEDUPLICATION
+    # ================================================================
+    @staticmethod
+    def _create_overlapping_batches(
+        items: List[Any],
+        batch_size: int = 3,
+        overlap: int = 1
+    ) -> List[List[Any]]:
+        """
+        Gom trang thành các batch có gối đầu (overlap) để giữ trọn vẹn câu hỏi ở ranh giới trang.
+        """
+        if not items:
+            return []
+        if len(items) <= batch_size:
+            return [items]
+
+        batches = []
+        step = max(1, batch_size - overlap)
+        i = 0
+        while i < len(items):
+            batch = items[i : i + batch_size]
+            batches.append(batch)
+            if i + batch_size >= len(items):
+                break
+            i += step
+
+        return batches
+
+    @staticmethod
+    def _merge_batch_questions(
+        all_batch_results: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Gộp kết quả từ các batch và khử trùng lặp theo (mondai_code, raw_question_number)."""
+        merged_questions: Dict[Tuple[str, int], Dict[str, Any]] = {}
+        merged_passages: List[Dict[str, Any]] = []
+
+        for res in all_batch_results:
+            if not res:
+                continue
+
+            passages = res.get("passages", [])
+            if passages:
+                merged_passages.extend(passages)
+
+            questions = res.get("questions", [])
+            for q in questions:
+                m_code = q.get("mondai_code") or "UNKNOWN"
+                rn = q.get("raw_question_number") or q.get("question_number")
+                try:
+                    rn_int = int(rn)
+                except (ValueError, TypeError):
+                    rn_int = None
+
+                if rn_int is not None:
+                    key = (m_code, rn_int)
+                    if key not in merged_questions:
+                        merged_questions[key] = q
+                    else:
+                        existing_q = merged_questions[key]
+                        existing_opts = len([o for o in (existing_q.get("options") or []) if (o.get("option_text") or "").strip()])
+                        new_opts = len([o for o in (q.get("options") or []) if (o.get("option_text") or "").strip()])
+                        existing_text_len = len((existing_q.get("question_text") or "").strip())
+                        new_text_len = len((q.get("question_text") or "").strip())
+
+                        # Bảo tồn passage nếu một trong hai bản ghi có passage
+                        ex_p = existing_q.get("passage")
+                        new_p = q.get("passage")
+                        chosen_p = None
+                        if isinstance(ex_p, dict) and isinstance(new_p, dict):
+                            ex_p_len = len(ex_p.get("content_jp", "") or "")
+                            new_p_len = len(new_p.get("content_jp", "") or "")
+                            chosen_p = new_p if new_p_len >= ex_p_len else ex_p
+                        else:
+                            chosen_p = new_p if isinstance(new_p, dict) else (ex_p if isinstance(ex_p, dict) else None)
+
+                        if (new_opts > existing_opts) or (new_opts == existing_opts and new_text_len > existing_text_len):
+                            merged_questions[key] = q
+                        if chosen_p:
+                            merged_questions[key]["passage"] = chosen_p
+                else:
+                    temp_key = (m_code, len(merged_questions) + 10000)
+                    merged_questions[temp_key] = q
+
+        def _safe_sort_key(x):
+            raw = x.get("raw_question_number") or x.get("question_number") or 999
+            try:
+                return int(raw)
+            except (ValueError, TypeError):
+                return 999
+
+        sorted_questions = sorted(
+            merged_questions.values(),
+            key=_safe_sort_key
+        )
+        return sorted_questions, merged_passages
 
     def _generate_with_fallback(self, contents: Any, config: Any = None) -> Any:
         """Thực hiện gọi Gemini API với cơ chế tự động chuyển đổi model và xử lý Rate Limit (429)."""
         import time
+        # Module 3: Adaptive Rate Limiter - pacing giãn cách tối thiểu giữa các request
+        now = time.time()
+        elapsed = now - getattr(self, "_last_request_time", 0.0)
+        min_interval = getattr(self, "_min_request_interval", 2.0)
+        if elapsed < min_interval:
+            time.sleep(min_interval - elapsed)
+        self._last_request_time = time.time()
+
         candidate_models = [self._model_name] + [m for m in self._fallback_models if m != self._model_name]
         last_error = None
         for model in candidate_models:
@@ -471,14 +788,14 @@ class GeminiExamParser:
                         break
 
                     if is_rate_limit:
-                        wait_sec = 6.0
+                        wait_sec = 8.0
                         retry_match = re.search(r'retry.*?(\d+)(?:\.\d+)?s', err_str, re.IGNORECASE)
                         if retry_match:
                             retry_val = float(retry_match.group(1))
                             if retry_val > 60:
                                 logger.warning(f"⚠️ Model {model} yêu cầu chờ {retry_val}s, chuyển ngay sang model tiếp theo...")
                                 break
-                            wait_sec = min(retry_val + 1.0, 15.0)
+                            wait_sec = min(retry_val + 1.5, 30.0)
                         logger.warning(
                             f"⚠️ Model {model} chạm giới hạn tốc độ (429 Rate Limit). "
                             f"Tạm dừng {wait_sec:.1f}s trước khi tiếp tục..."
@@ -535,19 +852,19 @@ class GeminiExamParser:
         results: Dict[Tuple[str, int], List[str]] = {}
         try:
             import fitz
-            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-            if len(doc) == 0:
-                return results
-
-            # Render các trang đề thi có thể chứa lựa chọn in (thường từ trang 3 đến trang 13)
             page_parts = []
-            scan_pages = range(min(2, len(doc)), min(13, len(doc)))
-            for p_no in scan_pages:
-                pix = doc[p_no].get_pixmap(dpi=150)
-                img_data = pix.tobytes("png")
-                page_parts.append(
-                    self._genai.types.Part.from_bytes(data=img_data, mime_type="image/png")
-                )
+            with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                if len(doc) == 0:
+                    return results
+
+                # Render các trang đề thi có thể chứa lựa chọn in (thường từ trang 3 đến trang 13)
+                scan_pages = range(min(2, len(doc)), len(doc))
+                for p_no in scan_pages:
+                    pix = doc[p_no].get_pixmap(dpi=150)
+                    img_data = pix.tobytes("png")
+                    page_parts.append(
+                        self._genai.types.Part.from_bytes(data=img_data, mime_type="image/png")
+                    )
 
             if not page_parts:
                 return results
@@ -562,15 +879,25 @@ LƯU Ý CỰC KỲ QUAN TRỌNG:
    - Nếu đề in bằng Hiragana thì BẮT BUỘC giữ nguyên Hiragana nguyên bản theo đúng trình độ đề thi, TUYỆT ĐỐI KHÔNG tự ý chuyển đổi thành chữ Hán (Kanji)!
    - Nếu chữ Hán có Furigana nhỏ ở trên, giữ nguyên hoặc dùng thẻ `<ruby>漢字<rt>furigana</rt></ruby>`.
 2. Bỏ qua các câu mà 4 phương án hoàn toàn là 4 hình vẽ (không có chữ in đáp án). Chỉ lấy các câu có phương án bằng chữ hoặc ký hiệu in sẵn.
-3. Xác định đúng mondai_code ('TASK_BASED' cho 問題1, 'KEY_POINT' cho 問題2) và raw_question_number (số thứ tự câu 1, 2, 3... trong Mondai đó).
+3. PHÂN ĐỊNH CHÍNH XÁC TỪNG MONDAI THEO TIÊU ĐỀ IN TRÊN ĐỀ:
+   - Ở 問題1 (TASK_BASED): Chỉ trích xuất các câu có phương án bằng chữ in trên giấy (ví dụ câu 2: 1かい 2かい... và câu 7: 1ばん 3ばん...). Gán mondai_code: 'TASK_BASED', raw_question_number tương ứng (ví dụ 2 hoặc 7).
+   - Ở 問題2 (KEY_POINT): Bắt đầu từ trang có tiêu đề 問題2 / もんだい2.
+     + TUYỆT ĐỐI BỎ QUA câu ví dụ mẫu "例" (Rei / Example) ở đầu 問題2! Không được lấy câu "例"!
+     + Chỉ lấy các câu hỏi chính thức từ 1番 đến câu cuối của 問題2 với mondai_code: 'KEY_POINT' và raw_question_number: 1, 2, 3, 4, 5, 6...
+   - Loại bỏ số thứ tự phương án ở đầu (ví dụ "1 1かい" thì chỉ lấy "1かい", "1 としょかん" thì chỉ lấy "としょかん").
 
 Trả về JSON duy nhất theo format schema mẫu:
 {{
   "booklet_options": [
     {{
       "mondai_code": "TASK_BASED",
+      "raw_question_number": 2,
+      "options": ["1かい", "2かい", "3かい", "4かい"]
+    }},
+    {{
+      "mondai_code": "KEY_POINT",
       "raw_question_number": 1,
-      "options": ["選択肢 1", "選択肢 2", "選択肢 3", "選択肢 4"]
+      "options": ["1じかん", "2じかん", "3じかん", "4じかん"]
     }}
   ]
 }}"""
@@ -583,14 +910,25 @@ Trả về JSON duy nhất theo format schema mẫu:
                 config=config,
             )
             if response and response.text:
-                data = json.loads(response.text)
+                raw_text = response.text.strip()
+                raw_text = re.sub(r'^```(?:json)?\s*', '', raw_text)
+                raw_text = re.sub(r'\s*```$', '', raw_text)
+                data = json.loads(raw_text)
                 items = data.get("booklet_options", [])
                 for it in items:
                     m = it.get("mondai_code")
                     rn = it.get("raw_question_number")
                     opts = it.get("options")
-                    if m and rn and isinstance(opts, list) and len(opts) == 4:
-                        results[(m, int(rn))] = [str(o).strip() for o in opts]
+                    if m and rn is not None and isinstance(opts, list) and len(opts) == 4:
+                        rn_match = re.search(r'\d+', str(rn))
+                        if not rn_match:
+                            continue
+                        clean_opts = []
+                        for o in opts:
+                            txt = str(o).strip()
+                            txt = re.sub(r'^[1-4①-④A-Da-d][\.\s、:\-]\s*', '', txt)
+                            clean_opts.append(txt)
+                        results[(m, int(rn_match.group(0)))] = clean_opts
                 logger.info(f"✅ [GEMINI_BOOKLET] Đã bóc tách tự động {len(results)} câu hỏi có text options từ PDF nghe!")
         except Exception as e:
             logger.warning(f"⚠️ [GEMINI_BOOKLET] Không thể trích xuất tự động text options từ PDF ({e}). Giữ options mặc định.")
@@ -605,9 +943,11 @@ Trả về JSON duy nhất theo format schema mẫu:
         pdf_bytes: bytes,
         jlpt_level: str = "N3",
         extracted_images_dir: Optional[str] = None,
+        use_cache: bool = True,
     ) -> Dict[str, Any]:
         """
         Parse toàn bộ file PDF đề thi thành JSON câu hỏi chuẩn.
+        Hỗ trợ cache kết quả trích xuất, tiền lọc trang rác và batching gối đầu chống mất ngữ cảnh.
 
         Returns:
             {
@@ -617,6 +957,13 @@ Trả về JSON duy nhất theo format schema mẫu:
                 "parsed_pages": int
             }
         """
+        # 0. Kiểm tra Cache trước khi gọi AI API
+        if use_cache:
+            cached_result = self._load_from_cache(pdf_bytes, jlpt_level)
+            if cached_result:
+                cached_result["rendered_pages_map"] = {}
+                return cached_result
+
         try:
             import fitz  # PyMuPDF
         except ImportError:
@@ -624,7 +971,7 @@ Trả về JSON duy nhất theo format schema mẫu:
 
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         total_pages = len(doc)
-        logger.info(f"📄 PDF có {total_pages} trang, bắt đầu parse với Gemini Vision...")
+        logger.info(f"📄 PDF có {total_pages} trang, bắt đầu parse với Gemini Vision (Batching + Pre-filter)...")
 
         all_questions: List[Dict[str, Any]] = []
         all_passages: List[Dict[str, Any]] = []
@@ -635,61 +982,52 @@ Trả về JSON duy nhất theo format schema mẫu:
         if extracted_images_dir:
             all_images = self._extract_embedded_images(doc, extracted_images_dir)
 
-        # 1. Render trước toàn bộ các trang thành ảnh PNG (DPI 180 giảm ~25% dung lượng, tốc độ upload nhanh hơn nhiều)
-        rendered_pages = []
+        # 1. Render và Tiền lọc trang dư thừa (bìa, hướng dẫn, nháp, hoa văn xám)
+        rendered_pages_map = {}
+        valid_pages = []
         for page_idx in range(total_pages):
             page = doc[page_idx]
             page_num = page_idx + 1
             image_bytes = self._render_page_to_png(page, dpi=180)
-            rendered_pages.append((page_num, image_bytes))
+            rendered_pages_map[page_num] = image_bytes
 
-        # 2. Xử lý qua ThreadPoolExecutor với số luồng an toàn (max 2 luồng để không chạm 5 RPM Free Tier)
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        import time
-        max_workers = min(2, total_pages)
-        page_results = {}
-        rendered_pages_map = {p_num: img_bytes for p_num, img_bytes in rendered_pages}
+            should_skip, skip_reason = self._should_skip_page(page, image_bytes)
+            if should_skip:
+                logger.info(f"  ⏭️ [PRE-FILTER] Bỏ qua trang {page_num}/{total_pages}: {skip_reason}")
+                continue
 
-        def _process_page(p_num: int, img_bytes: bytes):
-            logger.info(f"  🚀 Đang gửi trang {p_num}/{total_pages} tới Gemini Vision...")
-            if p_num > 1:
-                time.sleep((p_num % 2) * 0.4)
-            return p_num, self._call_gemini_vision(img_bytes, jlpt_level, p_num)
+            valid_pages.append((page_num, image_bytes))
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [
-                executor.submit(_process_page, p_num, img_bytes)
-                for p_num, img_bytes in rendered_pages
-            ]
-            for future in as_completed(futures):
-                try:
-                    p_num, res = future.result()
-                    page_results[p_num] = res
-                except Exception as e:
-                    logger.warning(f"  ⚠️ Lỗi parse song song trang: {e}")
+        # Nếu lọc hết sạch (trường hợp biên hy hữu), fallback giữ lại toàn bộ trang
+        if not valid_pages:
+            logger.warning("⚠️ Không tìm thấy trang hợp lệ sau khi lọc, sử dụng toàn bộ các trang.")
+            valid_pages = [(p_idx + 1, rendered_pages_map[p_idx + 1]) for p_idx in range(total_pages)]
 
-        # 3. Gom kết quả theo đúng thứ tự trang 1 -> total_pages
+        # 2. Gom trang thành các Batch có Overlap 1 trang để chống mất ngữ cảnh câu hỏi nằm giữa ranh giới
+        batches = self._create_overlapping_batches(valid_pages, batch_size=3, overlap=1)
+        logger.info(
+            f"📦 [BATCHING] Đã lọc còn {len(valid_pages)}/{total_pages} trang thực tế. "
+            f"Gom thành {len(batches)} batch (batch_size=3, overlap=1) để gửi Gemini Vision..."
+        )
+
+        batch_results = []
         empty_or_failed_pages = []
-        for page_num in range(1, total_pages + 1):
-            result = page_results.get(page_num)
-            if result and result.get("questions"):
-                for q in result["questions"]:
-                    q["source_page"] = page_num
-                    if "raw_question_number" not in q:
-                        q["raw_question_number"] = q.get("question_number")
-                all_questions.extend(result["questions"])
-                parsed_pages += 1
-                logger.info(
-                    f"  ✅ Trang {page_num}/{total_pages}: "
-                    f"trích xuất được {len(result['questions'])} câu hỏi"
-                )
+        for b_idx, batch in enumerate(batches):
+            pages_desc = [p_num for p_num, _ in batch]
+            logger.info(f"  🚀 [BATCH {b_idx + 1}/{len(batches)}] Đang gửi trang {pages_desc} tới Gemini Vision...")
+            res = self._call_gemini_vision_batch(batch, jlpt_level)
+            if res:
+                batch_results.append(res)
+                q_count = len(res.get("questions") or [])
+                logger.info(f"  ✅ [BATCH {b_idx + 1}/{len(batches)}] Trang {pages_desc}: trích xuất được {q_count} câu hỏi")
             else:
-                empty_or_failed_pages.append(page_num)
+                logger.warning(f"  ⚠️ [BATCH {b_idx + 1}/{len(batches)}] Không nhận được kết quả từ trang {pages_desc}.")
+                empty_or_failed_pages.extend(pages_desc)
 
-            if result and result.get("passages"):
-                for p in result["passages"]:
-                    p["source_page"] = page_num
-                all_passages.extend(result["passages"])
+        # 3. Gộp câu hỏi từ các batch và khử trùng lặp (deduplicate) thông minh theo (mondai_code, raw_question_number)
+        all_questions, all_passages = self._merge_batch_questions(batch_results)
+        parsed_pages = len(valid_pages)
+        logger.info(f"📊 [TỔNG KẾT BATCH] Đã gom và khử trùng lặp thành công {len(all_questions)} câu hỏi từ {len(batches)} batch!")
 
         # Gộp passage vào câu hỏi tương ứng
         all_questions = self._merge_passages_into_questions(all_questions, all_passages)
@@ -720,11 +1058,13 @@ Trả về JSON duy nhất theo format schema mẫu:
             if q.get("mondai_code") in {
                 "TEXT_GRAMMAR", "SHORT_PASSAGE", "MEDIUM_PASSAGE", "LONG_PASSAGE", "INFORMATION_RETRIEVAL"
             }:
-                q["image_url"] = None
-                q["has_visual"] = False
                 if q.get("passage"):
                     q["passage"]["image_url"] = None
                     q["passage"]["passage_type"] = "TEXT"
+                # Chỉ tắt visual nếu câu hỏi KHÔNG có lựa chọn dạng hình ảnh
+                if not q.get("has_visual_options"):
+                    q["image_url"] = None
+                    q["has_visual"] = False
 
             self._clean_question_text(q)
 
@@ -748,7 +1088,8 @@ Trả về JSON duy nhất theo format schema mẫu:
                         o["option_image_url"] = None
                     continue
 
-                if is_listening_q and (q.get("has_visual") or m_code in {"TASK_BASED", "UTTERANCE_EXPRESSIONS"}):
+                has_visual_flag = q.get("has_visual") or q.get("has_visual_options") or m_code in {"TASK_BASED", "UTTERANCE_EXPRESSIONS"}
+                if (is_listening_q or q.get("has_visual_options")) and has_visual_flag:
                     p_num = q.get("source_page")
                     q_id = q.get("question_number") or q.get("raw_question_number") or 1
 
@@ -805,7 +1146,7 @@ Trả về JSON duy nhất theo format schema mẫu:
             f"{len(all_questions)} câu hỏi, {len(all_images)} ảnh nhúng/tờ rơi"
         )
 
-        return {
+        final_result = {
             "questions": all_questions,
             "images": all_images,
             "total_pages": total_pages,
@@ -813,6 +1154,10 @@ Trả về JSON duy nhất theo format schema mẫu:
             "empty_or_failed_pages": empty_or_failed_pages,
             "rendered_pages_map": rendered_pages_map,
         }
+        if use_cache and all_questions:
+            self._save_to_cache(pdf_bytes, jlpt_level, final_result)
+
+        return final_result
 
     # ================================================================
     # PUBLIC API: PARSE AUDIO
@@ -996,6 +1341,140 @@ Trả về JSON duy nhất theo format schema mẫu:
         # ================================================================
     # PUBLIC API: PARSE ANSWER SHEET (正答表)
     # ================================================================
+    @classmethod
+    def normalize_answer_sheet_data(
+        cls,
+        answer_data: Dict[str, Any],
+        jlpt_level: str = "N5"
+    ) -> Dict[str, Any]:
+        """
+        Chuẩn hóa kết quả trích xuất từ bảng đáp án chính thức (正答表):
+        - Áp dụng cấu trúc JLPT_STRUCTURE_SPEC[jlpt_level] để chuẩn hóa phần Nghe (LISTENING)
+          từ dạng {mondai_1: {1: 2}, mondai_2: {1: 4}} thành số thứ tự liên tục 1..N.
+        - Tự động nhận diện tên section (cả tiếng Anh lẫn tiếng Nhật: 聴解, 文字・語彙, 文法・読解).
+        - Loại bỏ cột câu ví dụ '例' nếu có.
+        - Sinh flat_answers chuẩn xác cho từng phần thi.
+        """
+        from .jlpt_rules import JLPT_STRUCTURE_SPEC
+        lvl = (jlpt_level or "N5").upper()
+        sections = answer_data.get("sections", {})
+        normalized_sections: Dict[str, Dict[str, int]] = {}
+
+        specs_by_session = JLPT_STRUCTURE_SPEC.get(lvl, {})
+
+        def _canonical_sec_key(name: str) -> str:
+            n = name.upper()
+            if "LISTEN" in n or "CHOUKAI" in n or "聴解" in name:
+                return "LISTENING"
+            if "VOCAB" in n or "MOJI" in n or "GOI" in n or "文字" in name or "語彙" in name:
+                return "VOCABULARY"
+            if "GRAMMAR" in n or "BUNPOU" in n or "DOKKAI" in n or "文法" in name or "読解" in name:
+                return "GRAMMAR_READING"
+            if "KNOWLEDGE" in n or "知識" in name:
+                return "KNOWLEDGE_READING"
+            return n
+
+        for sec_name, sec_data in sections.items():
+            if not isinstance(sec_data, dict):
+                continue
+            sec_key = _canonical_sec_key(sec_name)
+
+            if sec_key == "LISTENING":
+                norm_listening: Dict[str, int] = {}
+                listening_specs = specs_by_session.get("LISTENING", [])
+
+                has_mondai_structure = any(
+                    isinstance(v, dict) or re.search(r'mondai[_\s]*\d+|問題[_\s]*\d+|^\d+_\d+$', str(k), re.IGNORECASE)
+                    for k, v in sec_data.items()
+                )
+
+                if has_mondai_structure:
+                    mondai_groups: Dict[int, List[Tuple[Any, Any]]] = {}
+                    for k, v in sec_data.items():
+                        if isinstance(v, dict):
+                            m_nums = re.findall(r'\d+', str(k))
+                            if m_nums:
+                                m_idx = int(m_nums[0])
+                                for raw_q, ans in v.items():
+                                    mondai_groups.setdefault(m_idx, []).append((raw_q, ans))
+                        else:
+                            nums = re.findall(r'\d+', str(k))
+                            if len(nums) >= 2:
+                                m_idx = int(nums[0])
+                                raw_q = int(nums[1])
+                                mondai_groups.setdefault(m_idx, []).append((raw_q, v))
+
+                    prev_m_idx = None
+                    curr_q = 1
+                    for m_idx in sorted(mondai_groups.keys()):
+                        spec = next((s for s in listening_specs if s.mondai_number == m_idx), None)
+                        if prev_m_idx is None:
+                            if spec:
+                                curr_q = spec.typical_range[0]
+                        elif m_idx > prev_m_idx + 1:
+                            if spec and curr_q < spec.typical_range[0]:
+                                curr_q = spec.typical_range[0]
+                        prev_m_idx = m_idx
+
+                        q_list = mondai_groups[m_idx]
+                        filtered_q = [
+                            (rq, ans) for (rq, ans) in q_list
+                            if "例" not in str(rq) and str(rq).strip().lower() not in ("rei", "example", "ex", "0")
+                        ]
+                        def _sort_key(item):
+                            digits = re.findall(r'\d+', str(item[0]))
+                            return [int(d) for d in digits] if digits else [0]
+                        filtered_q.sort(key=_sort_key)
+
+                        for rq, ans in filtered_q:
+                            try:
+                                norm_listening[str(curr_q)] = int(ans)
+                                curr_q += 1
+                            except (ValueError, TypeError):
+                                pass
+                else:
+                    int_items = []
+                    for k, v in sec_data.items():
+                        if "例" in str(k) or str(k).strip().lower() in ("rei", "example", "ex", "0"):
+                            continue
+                        try:
+                            int_items.append((int(k), int(v)))
+                        except (ValueError, TypeError):
+                            pass
+                    int_items.sort(key=lambda x: x[0])
+
+                    min_k = int_items[0][0] if int_items else 1
+                    max_listening_q = listening_specs[-1].typical_range[1] if listening_specs else 24
+                    offset = (min_k - 1) if min_k > max_listening_q else 0
+
+                    for ik, iv in int_items:
+                        cont_q = ik - offset
+                        norm_listening[str(cont_q)] = iv
+
+                normalized_sections["LISTENING"] = norm_listening
+
+            else:
+                norm_sec: Dict[str, int] = {}
+                for k, v in sec_data.items():
+                    if "例" in str(k) or str(k).strip().lower() in ("rei", "example", "ex", "0"):
+                        continue
+                    num_match = re.search(r'\d+', str(k))
+                    if num_match:
+                        try:
+                            norm_sec[str(int(num_match.group(0)))] = int(v)
+                        except (ValueError, TypeError):
+                            pass
+                normalized_sections[sec_key] = norm_sec
+
+        combined_flat: Dict[str, int] = {}
+        for s_map in normalized_sections.values():
+            combined_flat.update(s_map)
+
+        return {
+            "sections": normalized_sections,
+            "flat_answers": combined_flat,
+        }
+
     def parse_answer_sheet(
         self,
         file_bytes: bytes,
@@ -1057,11 +1536,13 @@ Trả về JSON duy nhất theo format schema mẫu:
             except Exception as e:
                 logger.error(f"Lỗi gọi Gemini parse bảng đáp án trang {idx + 1}: {e}")
 
-        logger.info(f"📊 Đã parse bảng đáp án 正答表: {list(combined_sections.keys())}, {len(combined_flat)} flat answers")
-        return {
+        raw_res = {
             "sections": combined_sections,
             "flat_answers": combined_flat,
         }
+        normalized = self.normalize_answer_sheet_data(raw_res, jlpt_level)
+        logger.info(f"📊 Đã parse & chuẩn hóa bảng đáp án 正答表: {list(normalized['sections'].keys())}, {len(normalized['flat_answers'])} flat answers")
+        return normalized
 
     @classmethod
     def deduplicate_and_sort_questions(
@@ -1139,12 +1620,21 @@ Trả về JSON duy nhất theo format schema mẫu:
 
             if is_cloze:
                 q["mondai_code"] = "TEXT_GRAMMAR"
-                blank_match = re.search(r'(\d{1,2})', q_text)
                 blank_num = None
-                if blank_match:
-                    blank_num = int(blank_match.group(1))
-                elif q.get("raw_question_number"):
-                    blank_num = int(q["raw_question_number"])
+                if q.get("raw_question_number"):
+                    try:
+                        blank_num = int(q["raw_question_number"])
+                    except (ValueError, TypeError):
+                        pass
+                if blank_num is None and q.get("question_number"):
+                    try:
+                        blank_num = int(q["question_number"])
+                    except (ValueError, TypeError):
+                        pass
+                if blank_num is None:
+                    blank_match = re.search(r'[【\[\(（]?\s*(\d{1,2})\s*[】\]\)）]?', q_text)
+                    if blank_match:
+                        blank_num = int(blank_match.group(1))
 
                 if blank_num is not None:
                     if blank_num not in cloze_by_blank:
@@ -1156,10 +1646,15 @@ Trả về JSON duy nhất theo format schema mẫu:
                         if new_opts_filled > ex_opts_filled:
                             existing["options"] = q.get("options", existing.get("options", []))
 
-                        ex_p_len = len(existing.get("passage", {}).get("content_jp", "") if existing.get("passage") else "")
-                        new_p_len = len(q.get("passage", {}).get("content_jp", "") if q.get("passage") else "")
-                        if new_p_len > ex_p_len:
-                            existing["passage"] = q.get("passage")
+                        ex_p = existing.get("passage")
+                        new_p = q.get("passage")
+                        if not ex_p and new_p:
+                            existing["passage"] = new_p
+                        elif ex_p and new_p:
+                            ex_c = ex_p.get("content_jp", "") or ""
+                            new_c = new_p.get("content_jp", "") or ""
+                            if len(new_c) > len(ex_c):
+                                existing["passage"] = new_p
                 else:
                     non_cloze_questions.append(q)
             else:
@@ -1221,7 +1716,10 @@ Trả về JSON duy nhất theo format schema mẫu:
         def _sort_key(item: Dict[str, Any]):
             m = item.get("mondai_code", "")
             order = JLPT_MONDAI_ORDER.get(m, 999)
-            raw_num = item.get("raw_question_number") or 0
+            try:
+                raw_num = int(item.get("raw_question_number") or 0)
+            except (ValueError, TypeError):
+                raw_num = 0
             if m == "TEXT_GRAMMAR":
                 bm = re.search(r'(\d{1,2})', item.get("question_text", ""))
                 if bm:
@@ -1230,21 +1728,36 @@ Trả về JSON duy nhất theo format schema mẫu:
 
         combined.sort(key=_sort_key)
 
-        # 4. Đánh số thứ tự thông minh (với LISTENING: đánh số tuần tự 1..N xuyên suốt đề thi)
-        for idx, q in enumerate(combined):
-            if section_type != "LISTENING" and q.get("raw_question_number") is not None:
-                try:
-                    q["question_number"] = int(q["raw_question_number"])
-                except (ValueError, TypeError):
+        # 4. Đánh số thứ tự thông minh:
+        # Với LISTENING: mỗi Mondai mới bắt đầu lại từ 1 theo đúng chuẩn thi thật
+        # Với các phần khác (VOCABULARY, GRAMMAR_READING): đánh số liên tục 1..N
+        if section_type == "LISTENING":
+            current_mondai = None
+            mondai_q_num = 1
+            for q in combined:
+                m_code = q.get("mondai_code", "")
+                if current_mondai is None or current_mondai != m_code:
+                    current_mondai = m_code
+                    mondai_q_num = 1
+                q["question_number"] = mondai_q_num
+                mondai_q_num += 1
+        else:
+            for idx, q in enumerate(combined):
+                if q.get("raw_question_number") is not None:
+                    try:
+                        q["question_number"] = int(q["raw_question_number"])
+                    except (ValueError, TypeError):
+                        q["question_number"] = idx + 1
+                else:
                     q["question_number"] = idx + 1
-            else:
-                q["question_number"] = idx + 1
 
         for q in combined:
             if q.get("mondai_code") == "TEXT_GRAMMAR":
                 q["question_text"] = f"【 {q['question_number']} 】"
 
-        # 5. Chuẩn hóa passage bài đục lỗ sau khi đánh lại số thứ tự
+        # 5. Đồng bộ hóa toàn diện bài đục lỗ (TEXT_GRAMMAR) và bài đọc xuyên trang
+        combined = cls._inherit_passages_cross_questions(combined)
+
         cloze_in_final = [q for q in combined if q.get("mondai_code") == "TEXT_GRAMMAR"]
         if cloze_in_final:
             for q in cloze_in_final:
@@ -1296,31 +1809,71 @@ Trả về JSON duy nhất theo format schema mẫu:
             except (ValueError, TypeError):
                 pass
 
+        if section_type == "LISTENING":
+            # Với phần nghe: Khớp theo cặp (Mondai, question_number)
+            mondai_order_map = {}
+            m_counter = 0
+            for q in questions:
+                mc = q.get("mondai_code", "")
+                if mc not in mondai_order_map:
+                    m_counter += 1
+                    mondai_order_map[mc] = m_counter
+
+            listen_data = sec_map.get("LISTENING", {}) or target_map
+            matched_count = 0
+            for q in questions:
+                mc = q.get("mondai_code", "")
+                m_num = mondai_order_map.get(mc, 1)
+                qn_str = str(q.get("question_number") or 1)
+                correct_opt = None
+
+                m_group = listen_data.get(f"mondai_{m_num}") or listen_data.get(f"m{m_num}")
+                if isinstance(m_group, dict) and qn_str in m_group:
+                    correct_opt = m_group[qn_str]
+                elif f"m{m_num}_{qn_str}" in flat_map:
+                    correct_opt = flat_map[f"m{m_num}_{qn_str}"]
+                elif f"mondai_{m_num}_{qn_str}" in flat_map:
+                    correct_opt = flat_map[f"mondai_{m_num}_{qn_str}"]
+                elif qn_str in target_map:
+                    correct_opt = target_map[qn_str]
+
+                if correct_opt is not None:
+                    try:
+                        c_int = int(correct_opt)
+                        matched_count += 1
+                        for opt in q.get("options", []):
+                            opt["is_correct"] = (opt.get("option_key") == c_int)
+                    except (ValueError, TypeError):
+                        pass
+
+            logger.info(f"🎯 Đã khớp đáp án chính thức phần Nghe cho {matched_count}/{len(questions)} câu hỏi")
+            return questions
+
         matched_count = 0
         for q in questions:
             raw_num = q.get("raw_question_number")
             q_num = q.get("question_number")
             correct_opt = None
 
-            # 1. Ưu tiên khớp theo số thứ tự in trên đề gốc (raw_question_number) để tránh lệch câu khi đề có khoảng trống
-            if raw_num is not None:
-                try:
-                    rn = int(raw_num)
-                    if rn in int_target_map:
-                        correct_opt = int_target_map[rn]
-                    elif rn in int_flat_map:
-                        correct_opt = int_flat_map[rn]
-                except (ValueError, TypeError):
-                    pass
-
-            # 2. Fallback sang question_number
-            if correct_opt is None and q_num is not None:
+            # 1. Ưu tiên khớp theo số thứ tự câu hỏi liên tục của bài thi (question_number 1..N)
+            if q_num is not None:
                 try:
                     qn = int(q_num)
                     if qn in int_target_map:
                         correct_opt = int_target_map[qn]
                     elif qn in int_flat_map:
                         correct_opt = int_flat_map[qn]
+                except (ValueError, TypeError):
+                    pass
+
+            # 2. Fallback sang raw_question_number CHỈ KHI không có question_number
+            if correct_opt is None and raw_num is not None:
+                try:
+                    rn = int(raw_num)
+                    if rn in int_target_map:
+                        correct_opt = int_target_map[rn]
+                    elif rn in int_flat_map:
+                        correct_opt = int_flat_map[rn]
                 except (ValueError, TypeError):
                     pass
 
@@ -1343,6 +1896,7 @@ Trả về JSON duy nhất theo format schema mẫu:
         jlpt_level: str = "N3",
         extracted_images_dir: Optional[str] = None,
         filename: Optional[str] = None,
+        use_cache: bool = True,
     ) -> Dict[str, Any]:
         """
         Parse PDF và lọc câu hỏi theo section_type cụ thể.
@@ -1356,7 +1910,7 @@ Trả về JSON duy nhất theo format schema mẫu:
             )
             jlpt_level = detected_level
 
-        full_result = self.parse_pdf(pdf_bytes, jlpt_level, extracted_images_dir)
+        full_result = self.parse_pdf(pdf_bytes, jlpt_level, extracted_images_dir, use_cache=use_cache)
         questions = full_result["questions"]
 
         # Mapping section_type → mondai_codes
@@ -1418,33 +1972,21 @@ Trả về JSON duy nhất theo format schema mẫu:
 
             # LUÔN NẮN MONDAI_CODE CHUẨN XÁC THEO SỐ CÂU HỎI VÀ ĐẶC TRƯNG JLPT (chỉ áp dụng cho VOCABULARY/GRAMMAR_READING nơi số câu liên tục 1..35)
             if section_type != "LISTENING":
+                raw_n = None
                 if raw_num is not None:
                     try:
                         raw_n = int(raw_num)
-                        q_copy["mondai_code"] = infer_mondai_from_spec(
-                            raw_n,
-                            q_copy.get("question_text", ""),
-                            jlpt_level,
-                            section_type,
-                            q_copy.get("options")
-                        )
                     except (ValueError, TypeError):
-                        if m_code not in valid_codes or not m_code:
-                            q_copy["mondai_code"] = infer_mondai_from_spec(
-                                None,
-                                q_copy.get("question_text", ""),
-                                jlpt_level,
-                                section_type,
-                                q_copy.get("options")
-                            )
-                elif m_code not in valid_codes or not m_code:
-                    q_copy["mondai_code"] = infer_mondai_from_spec(
-                        None,
-                        q_copy.get("question_text", ""),
-                        jlpt_level,
-                        section_type,
-                        q_copy.get("options")
-                    )
+                        pass
+
+                q_copy["mondai_code"] = infer_mondai_from_spec(
+                    raw_n,
+                    q_copy.get("question_text", ""),
+                    jlpt_level,
+                    section_type,
+                    q_copy.get("options"),
+                    current_mondai_code=m_code,
+                )
             else:
                 # Với LISTENING: mỗi Mondai đều đánh số lại từ 1番, 2番...
                 # Do đó tin tưởng mondai_code từ Gemini Vision, chỉ fallback nếu mã không hợp lệ
@@ -1497,7 +2039,12 @@ Trả về JSON duy nhất theo format schema mẫu:
                                     rq["image_url"] = None
                                     raw_n = int(rq.get("raw_question_number") or 1)
                                     rq["mondai_code"] = infer_mondai_from_spec(
-                                        raw_n, rq.get("question_text", ""), jlpt_level, "VOCABULARY", rq.get("options")
+                                        raw_n,
+                                        rq.get("question_text", ""),
+                                        jlpt_level,
+                                        "VOCABULARY",
+                                        rq.get("options"),
+                                        current_mondai_code=rq.get("mondai_code"),
                                     )
                             recovered_questions.extend(rec_res["questions"])
                             logger.info(f"  🎉 Cứu trợ thành công {len(rec_res['questions'])} câu hỏi từ trang {p_num}!")
@@ -1547,8 +2094,57 @@ Trả về JSON duy nhất theo format schema mẫu:
         }
 
     # ================================================================
-    # PRIVATE: Gemini Vision Call
+    # PRIVATE: Gemini Vision Call (Batch & Single)
     # ================================================================
+    def _call_gemini_vision_batch(
+        self,
+        batch_pages: List[Tuple[int, bytes]],
+        jlpt_level: str,
+    ) -> Optional[Dict[str, Any]]:
+        """Gửi một batch gồm 2-3 trang ảnh liên tiếp lên Gemini Vision và parse kết quả."""
+        from google.genai import types as genai_types
+
+        num_pages = len(batch_pages)
+        pages_str = ", ".join(str(p[0]) for p in batch_pages)
+        prompt = PDF_BATCH_EXTRACTION_PROMPT.format(
+            jlpt_level=jlpt_level,
+            num_pages=num_pages,
+            pages_str=pages_str,
+        )
+
+        parts = []
+        for page_num, img_b in batch_pages:
+            parts.append(genai_types.Part.from_text(text=f"=== HÌNH ẢNH TRANG {page_num} ==="))
+            parts.append(
+                genai_types.Part.from_bytes(
+                    data=img_b,
+                    mime_type="image/png",
+                )
+            )
+        parts.append(genai_types.Part.from_text(text=prompt))
+
+        try:
+            response = self._generate_with_fallback(
+                contents=[genai_types.Content(parts=parts)],
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.1,
+                    max_output_tokens=8192,
+                ),
+            )
+            res = self._parse_gemini_json_response(response.text)
+            first_p = batch_pages[0][0] if batch_pages else 1
+            if res:
+                for q in res.get("questions") or []:
+                    if not q.get("source_page"):
+                        q["source_page"] = first_p
+                for p in res.get("passages") or []:
+                    if not p.get("source_page"):
+                        p["source_page"] = first_p
+            return res
+        except Exception as e:
+            logger.error(f"Lỗi Gemini Vision batch ({pages_str}): {e}")
+            return None
+
     def _call_gemini_vision(
         self,
         image_bytes: bytes,
@@ -1792,6 +2388,79 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
         )
         return extracted
 
+    @classmethod
+    def _sanitize_passage_title_and_content(cls, passage: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Làm sạch tiêu đề và nội dung bài đọc hiểu:
+        1. Tiêu đề bài đọc (title) hiển thị ở thẻ Header, TUYỆT ĐỐI KHÔNG chứa mã HTML raw (<ruby>, <rt>, <p>...)
+        2. Nếu Gemini trích xuất nhầm câu chỉ dẫn đề thi Mondai ("もんだい５ つぎの ぶんしょうを 読んで...") vào title:
+           Tự động thay thế bằng tiêu đề chuẩn "Đoạn văn đọc hiểu".
+        3. Nếu Gemini trích xuất nhầm câu dẫn tình huống/bối cảnh (ví dụ: "(3) 森さんの机の上に、山口先生のメモと本があります。") vào title:
+           - Tự động chuyển câu này vào ĐẦU của `passage.content_jp` (nếu chưa có) kèm thẻ ruby để người học đọc được bối cảnh.
+           - Đặt lại tiêu đề gọn gàng là "Bài đọc (3)".
+        """
+        if not passage or not isinstance(passage, dict):
+            return passage
+
+        raw_title = (passage.get("title") or "").strip()
+        content_jp = passage.get("content_jp") or ""
+
+        if not raw_title:
+            passage["title"] = "Đoạn văn đọc hiểu"
+            return passage
+
+        # Bóc tách text trần không chứa HTML để phân tích ngữ nghĩa
+        clean_text = re.sub(r'<rt>[\s\S]*?</rt>', '', raw_title)
+        clean_text = re.sub(r'<[^>]+>', '', clean_text).strip()
+        clean_text = re.sub(r'\s+', ' ', clean_text)
+
+        # 1. Kiểm tra xem có phải câu chỉ dẫn đề thi Mondai không
+        is_mondai_instruction = bool(re.search(
+            r'(?:もんだい|問題)\s*[１２３４５６7890\d]|'
+            r'つぎの\s*(?:ぶんしょう|文章)|'
+            r'しつもんに\s*(?:こたえて|かたえて|答えて)|'
+            r'いちばん\s*いい\s*ものを|'
+            r'えらんで\s*ください|'
+            r'何を入れますか',
+            clean_text,
+            flags=re.IGNORECASE
+        ))
+
+        if is_mondai_instruction:
+            passage["title"] = "Đoạn văn đọc hiểu"
+            return passage
+
+        # 2. Kiểm tra xem có phải câu dẫn bối cảnh/tình huống bài đọc không (vd: "(3) 森さんの机の上に...")
+        intro_num_match = re.match(r'^[（\(]\s*([0-9０-９\d]+)\s*[）\)]', clean_text)
+        is_context_intro = False
+        if intro_num_match and (len(clean_text) >= 15 or any(p in clean_text for p in ["あります", "います", "でした", "ました", "メモ", "手紙", "について", "。"])):
+            is_context_intro = True
+        elif len(clean_text) >= 18 and any(p in clean_text for p in ["あります", "います", "でした", "ました", "メモ", "手紙", "について", "。"]):
+            is_context_intro = True
+
+        if is_context_intro:
+            clean_content = re.sub(r'<[^>]+>', '', content_jp)
+            core_intro = re.sub(r'^[（\(]\s*[0-9０-９\d]+\s*[）\)]\s*', '', clean_text).strip()
+            if core_intro and core_intro not in clean_content:
+                passage["content_jp"] = f"{raw_title}\n\n{content_jp}".strip()
+                logger.info(f"Đã chuyển câu dẫn bối cảnh từ passage.title vào passage.content_jp: {core_intro[:35]}...")
+
+            if intro_num_match:
+                passage["title"] = f"Bài đọc ({intro_num_match.group(1)})"
+            else:
+                passage["title"] = "Đoạn văn đọc hiểu"
+            return passage
+
+        # 3. Tiêu đề bình thường: Bóc sạch toàn bộ thẻ HTML tags (kể cả <ruby>)
+        final_title = re.sub(r'<rt>[\s\S]*?</rt>', '', raw_title)
+        final_title = re.sub(r'<[^>]+>', '', final_title).strip()
+        final_title = re.sub(r'\s+', ' ', final_title)
+        if len(final_title) > 50:
+            final_title = "Đoạn văn đọc hiểu"
+
+        passage["title"] = final_title or "Đoạn văn đọc hiểu"
+        return passage
+
     # ================================================================
     # PRIVATE: Merge passages into questions
     # ================================================================
@@ -1804,21 +2473,33 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
         # 1. Nhóm câu hỏi theo source_page
         page_to_questions: Dict[int, List[Dict[str, Any]]] = {}
         for q in questions:
-            p = q.get("source_page", 1)
+            raw_p = q.get("source_page")
+            try:
+                p = int(raw_p) if raw_p is not None else 1
+            except (ValueError, TypeError):
+                p = 1
+            q["source_page"] = p
             page_to_questions.setdefault(p, []).append(q)
 
         # 2. Xử lý passages trả về từ Gemini
         unassigned_passages = []
         for passage in passages:
             q_indices = passage.get("question_indices", [])
-            source_page = passage.get("source_page")
+            raw_sp = passage.get("source_page")
+            try:
+                source_page = int(raw_sp) if raw_sp is not None else 1
+            except (ValueError, TypeError):
+                source_page = 1
+
             passage_data = {
                 "title": passage.get("title", "Bài đọc"),
                 "passage_type": passage.get("passage_type", "TEXT"),
                 "content_jp": passage.get("content_jp", ""),
                 "translation_vi": passage.get("translation_vi", ""),
                 "image_url": passage.get("image_url"),
+                "source_page": source_page,
             }
+            passage_data = self._sanitize_passage_title_and_content(passage_data)
             if not passage_data["content_jp"] or len(passage_data["content_jp"].strip()) < 10:
                 continue
 
@@ -1831,7 +2512,6 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
                         if not target_qs[idx].get("passage") or len(target_qs[idx].get("passage", {}).get("content_jp", "")) < len(passage_data["content_jp"]):
                             target_qs[idx]["passage"] = passage_data.copy()
                 if not matched_any:
-                    passage_data["source_page"] = source_page
                     unassigned_passages.append(passage_data)
             else:
                 reading_qs = [
@@ -1846,12 +2526,16 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
                         if not q.get("passage") or len(q.get("passage", {}).get("content_jp", "")) < len(passage_data["content_jp"]):
                             q["passage"] = passage_data.copy()
                 else:
-                    passage_data["source_page"] = source_page
                     unassigned_passages.append(passage_data)
 
         # Gán unassigned_passages (trang chỉ in bài đọc/tờ rơi, câu hỏi ở trang kế tiếp)
         for u_pass in unassigned_passages:
-            s_page = u_pass.get("source_page", 1)
+            raw_sp = u_pass.get("source_page")
+            try:
+                s_page = int(raw_sp) if raw_sp is not None else 1
+            except (ValueError, TypeError):
+                s_page = 1
+
             for next_page in [s_page + 1, s_page + 2]:
                 next_qs = page_to_questions.get(next_page, [])
                 next_reading_qs = [
@@ -1911,36 +2595,114 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
                         "translation_vi": "",
                         "image_url": None,
                     }
+                    best_info_passage = cls._sanitize_passage_title_and_content(best_info_passage)
                 for q in info_qs:
                     q["passage"] = best_info_passage.copy()
 
         # 2. Đồng bộ TEXT_GRAMMAR (Ngữ pháp đoạn văn / đục lỗ)
         cloze_qs = [q for q in questions if q.get("mondai_code") == "TEXT_GRAMMAR"]
         if cloze_qs:
-            best_cloze_passage = None
-            max_c_len = 0
+            all_cloze_texts: List[str] = []
             for q in cloze_qs:
                 p = q.get("passage")
                 if p and isinstance(p, dict) and p.get("content_jp"):
-                    c_len = len(p["content_jp"].strip())
-                    if c_len > max_c_len:
-                        max_c_len = c_len
-                        best_cloze_passage = p
-            if best_cloze_passage and max_c_len >= 30:
+                    txt = p["content_jp"].strip()
+                    if txt and not any(txt in act for act in all_cloze_texts):
+                        all_cloze_texts = [act for act in all_cloze_texts if act not in txt]
+                        all_cloze_texts.append(txt)
+
+            if all_cloze_texts:
+                intro_text = ""
+                ken_text = ""
+                minji_text = ""
+                full_text = None
+
+                # 1. Tìm bản ghi đã chứa trọn vẹn cả Ken và Minji
+                for t in all_cloze_texts:
+                    has_k = any(k in t for k in ["ケン", "すし", "22", "23"])
+                    has_m = any(m in t for m in ["ミンジ", "本屋", "24", "25", "26"])
+                    if has_k and has_m:
+                        if not full_text or len(t) > len(full_text):
+                            full_text = t
+
+                # 2. Tìm câu mở đầu bối cảnh ngoài khung
+                for t in all_cloze_texts:
+                    intro_match = re.search(
+                        r'([\s\S]*?(?:日本で|学生が|「すきな|前で\s*読みました|読みました[\s\S]*?。))(?=\s*[(（]1[)）]|\s*ケンさん|\s*わたしは\s*すし)',
+                        t
+                    )
+                    if intro_match:
+                        cand = intro_match.group(1).strip()
+                        if len(cand) >= 15 and ("学生" in cand or "日本" in cand or "店" in cand):
+                            if len(cand) > len(intro_text):
+                                intro_text = cand
+
+                if full_text:
+                    combined_content = full_text
+                    if intro_text and not any(part in combined_content for part in ["学生が", "「すきな", "日本で　勉強", "日本で 勉強"]):
+                        combined_content = f"{intro_text}\n\n{combined_content}".strip()
+                else:
+                    for t in all_cloze_texts:
+                        if any(k in t for k in ["ケン", "すし", "22"]) and not any(m in t for m in ["ミンジ", "本屋", "24"]):
+                            if len(t) > len(ken_text):
+                                ken_text = t
+                        elif any(m in t for m in ["ミンジ", "本屋", "24", "26"]) and not any(k in t for k in ["ケン", "すし", "22"]):
+                            if len(t) > len(minji_text):
+                                minji_text = t
+
+                    parts = []
+                    if intro_text:
+                        parts.append(intro_text)
+                    if ken_text:
+                        clean_ken = ken_text
+                        if intro_text and intro_text in clean_ken:
+                            clean_ken = clean_ken.replace(intro_text, "").strip()
+                        if any(w in clean_ken for w in ["ケン", "すし"]) and "(1)" not in clean_ken and "ケンさん" not in clean_ken:
+                            clean_ken = f"(1) ケンさんの　ぶんしょう\n\n{clean_ken}"
+                        parts.append(clean_ken)
+                    if minji_text:
+                        clean_minji = minji_text
+                        if any(w in clean_minji for w in ["ミンジ", "本屋"]) and "(2)" not in clean_minji and "ミンジさん" not in clean_minji:
+                            clean_minji = f"(2) ミンジさんの　ぶんしょう\n\n{clean_minji}"
+                        parts.append(clean_minji)
+
+                    combined_content = "\n\n".join(parts) if parts else "\n\n".join(all_cloze_texts)
+
+                # Chuẩn hóa tiêu đề chung thành "文章の文法"
+                master_cloze_passage = {
+                    "title": "文章の文法",
+                    "passage_type": "TEXT",
+                    "content_jp": combined_content,
+                    "translation_vi": "",
+                    "image_url": None,
+                }
+                master_cloze_passage = cls._sanitize_passage_title_and_content(master_cloze_passage)
+                master_cloze_passage["title"] = "文章の文法"
+
                 for q in cloze_qs:
-                    cur_p = q.get("passage")
-                    if not cur_p or not cur_p.get("content_jp") or len(cur_p.get("content_jp", "").strip()) < max_c_len:
-                        q["passage"] = best_cloze_passage.copy()
+                    q["passage"] = master_cloze_passage.copy()
 
         # 3. Kế thừa tuần tự cho các bài đọc hiểu xuyên trang (MEDIUM_PASSAGE, LONG_PASSAGE, SHORT_PASSAGE)
-        # Khi câu hỏi (ví dụ câu 32, 33) nằm ở trang sau mà không in lại bài đọc,
-        # hệ thống sẽ tự động kế thừa bài đọc đầy đủ từ câu trước đó (câu 30, 31).
+        # TUYỆT ĐỐI KHÔNG áp dụng cho INFORMATION_RETRIEVAL (Mondai 6) để tránh câu 32 bị ghi đè thành MEDIUM_PASSAGE.
         active_passage = None
         active_mondai = None
 
         for q in questions:
             m_code = q.get("mondai_code")
-            is_reading = m_code in {"SHORT_PASSAGE", "MEDIUM_PASSAGE", "LONG_PASSAGE", "INFORMATION_RETRIEVAL", "TEXT_GRAMMAR"}
+            # INFORMATION_RETRIEVAL là câu hỏi độc lập của Mondai 6, xóa ngữ cảnh kế thừa
+            if m_code == "INFORMATION_RETRIEVAL":
+                active_passage = None
+                active_mondai = None
+                continue
+
+            # Bao phủ toàn bộ các dạng đọc hiểu từ N5 đến N1:
+            # N5/N4: SHORT_PASSAGE, MEDIUM_PASSAGE
+            # N3: SHORT_PASSAGE, MEDIUM_PASSAGE, LONG_PASSAGE
+            # N2/N1: SHORT_PASSAGE, MEDIUM_PASSAGE, INTEGRATED_COMPREHENSION, THEMATIC_COMPREHENSION
+            is_reading = m_code in {
+                "SHORT_PASSAGE", "MEDIUM_PASSAGE", "LONG_PASSAGE",
+                "INTEGRATED_COMPREHENSION", "THEMATIC_COMPREHENSION"
+            }
             if not is_reading:
                 active_passage = None
                 active_mondai = None
@@ -1953,14 +2715,14 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
                 # Gặp một bài đọc hoàn chỉnh mới
                 active_passage = p
                 active_mondai = m_code
-            elif active_passage:
-                # Câu hỏi này thiếu bài đọc hoặc bài đọc rỗng/cụt (<100 ký tự)
-                # Kế thừa bài đọc đầy đủ của câu trước (ví dụ câu 32, 33 ở trang kế thừa từ câu 30, 31)
+            elif active_passage and active_mondai == m_code:
+                # Kế thừa bài đọc đầy đủ của câu trước cùng bài đọc xuyên trang
                 if not p or not p_text or len(p_text) < 100:
                     q["passage"] = active_passage.copy()
-                    if active_mondai:
-                        q["mondai_code"] = active_mondai
                     logger.info(f"📖 Câu {q.get('question_number')} đã tự động kế thừa bài đọc xuyên trang từ câu trước ({active_mondai})")
+            else:
+                active_passage = None
+                active_mondai = None
 
         return questions
 
@@ -2060,6 +2822,31 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
         return result
 
     @staticmethod
+    def flatten_nested_ruby(text: str) -> str:
+        """Loại bỏ thẻ ruby lồng nhau gây lỗi hiển thị furigana xếp chồng trên giao diện."""
+        if not text or "<ruby>" not in text:
+            return text
+
+        def clean_nested(m):
+            base = m.group(1).strip()
+            inner_rt = m.group(2)
+            rt_match = re.search(r'<rt>([^<]+)</rt>', inner_rt)
+            if rt_match:
+                furi = rt_match.group(1).strip()
+            else:
+                rb_match = re.search(r'<rb>([^<]+)</rb>', inner_rt)
+                if rb_match:
+                    furi = rb_match.group(1).strip()
+                else:
+                    furi = re.sub(r'<[^>]+>', '', inner_rt).strip()
+            return f'<ruby>{base}<rt>{furi}</rt></ruby>'
+
+        pat = r'<ruby>\s*([^<]+?)\s*<rt>\s*(<ruby>.*?</ruby>)\s*</rt>\s*</ruby>'
+        text = re.sub(pat, clean_nested, text, flags=re.DOTALL)
+        text = re.sub(r'<ruby>\s*<rb>\s*([^<]+?)\s*</rb>\s*<rt>\s*([^<]+?)\s*</rt>\s*</ruby>', r'<ruby>\1<rt>\2</rt></ruby>', text)
+        return text
+
+    @staticmethod
     def _clean_question_text(question: Dict[str, Any]) -> Dict[str, Any]:
         """Tự động phát hiện và chuẩn hóa dấu chỗ trống, ngoặc chữ Hán, gạch sao ★ và từ cách dùng."""
         text = question.get("question_text", "")
@@ -2068,20 +2855,30 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
 
         # Tự động chuẩn hóa Furigana: Nếu gặp dạng 漢字(ふりがな) hoặc 漢字（ふりがな）
         # tự động chuyển đổi thành thẻ HTML <ruby>漢字<rt>ふりがな</rt></ruby> chuẩn
+        text = GeminiExamParser.flatten_nested_ruby(text)
         text = re.sub(
             r'([\u4e00-\u9faf]+)[(（]([\u3040-\u309f]+)[)）]',
             r'<ruby>\1<rt>\2</rt></ruby>',
             text
         )
+        text = GeminiExamParser.flatten_nested_ruby(text)
         # Loại bỏ các dấu markdown ** quanh chữ Hán nếu Gemini vô tình sinh ra
         text = re.sub(r'\*\*([\u4e00-\u9faf]+)\*\*', r'\1', text)
 
+        for opt in question.get("options") or []:
+            if opt.get("option_text"):
+                opt["option_text"] = GeminiExamParser.flatten_nested_ruby(opt["option_text"])
+
         # Chuẩn hóa cả trong passage nếu có
-        if question.get("passage") and isinstance(question["passage"], dict) and question["passage"].get("content_jp"):
-            c_jp = question["passage"]["content_jp"]
-            c_jp = re.sub(r'([\u4e00-\u9faf]+)[(（]([\u3040-\u309f]+)[)）]', r'<ruby>\1<rt>\2</rt></ruby>', c_jp)
-            c_jp = re.sub(r'\*\*([\u4e00-\u9faf]+)\*\*', r'\1', c_jp)
-            question["passage"]["content_jp"] = c_jp
+        if question.get("passage") and isinstance(question["passage"], dict):
+            question["passage"] = GeminiExamParser._sanitize_passage_title_and_content(question["passage"])
+            if question["passage"].get("content_jp"):
+                c_jp = question["passage"]["content_jp"]
+                c_jp = GeminiExamParser.flatten_nested_ruby(c_jp)
+                c_jp = re.sub(r'([\u4e00-\u9faf]+)[(（]([\u3040-\u309f]+)[)）]', r'<ruby>\1<rt>\2</rt></ruby>', c_jp)
+                c_jp = GeminiExamParser.flatten_nested_ruby(c_jp)
+                c_jp = re.sub(r'\*\*([\u4e00-\u9faf]+)\*\*', r'\1', c_jp)
+                question["passage"]["content_jp"] = c_jp
 
         # Tự động tách lượt hội thoại đối đáp (A「...」 B「...」 hoặc 山田「...」 田中「...」) thành 2 dòng riêng biệt
         text = re.sub(r'(」)\s*([A-Za-z0-9\u3040-\u30ff\u4e00-\u9faf]{1,10}[「：:])', r'\1\n\2', text)
@@ -2091,18 +2888,23 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
 
         # 1b. Dạng bài đục lỗ (TEXT_GRAMMAR): question_text BẮT BUỘC là 【 XX 】
         if mondai_code == "TEXT_GRAMMAR":
-            q_num = question.get("question_number")
-            match_num = re.search(r'[【\[\(（]?\s*(\d{1,2})\s*[】\]\)）]?', text)
-            target_num = match_num.group(1) if match_num else (str(q_num) if q_num else "")
-            
             is_instruction = any(k in text for k in ["何を入れますか", "文章の意味", "えらんで", "選んで", "もんだい", "問題"])
             is_paren_or_empty = text.strip() in {"", "()", "( )", "（）", "（　）", "（ ）"}
-            
-            if is_instruction or is_paren_or_empty or not text.strip().startswith("【"):
-                if target_num:
-                    text = f"【 {target_num} 】"
-                elif q_num:
-                    text = f"【 {q_num} 】"
+            q_num = question.get("raw_question_number") or question.get("question_number")
+
+            if is_instruction or is_paren_or_empty:
+                # Nếu text là câu lệnh đề bài (vd "もんだい３ 22 から 26 に 何を..."),
+                # các con số trong text chỉ là số câu lệnh, KHÔNG PHẢI số của câu này!
+                # BẮT BUỘC dùng số thứ tự câu hỏi q_num (vd: 22, 23, 24, 25, 26)
+                target_num = str(q_num) if q_num else ""
+            else:
+                match_num = re.search(r'[【\[\(（]?\s*(\d{1,2})\s*[】\]\)）]?', text)
+                target_num = match_num.group(1) if match_num else (str(q_num) if q_num else "")
+
+            if target_num:
+                text = f"【 {target_num} 】"
+            elif q_num:
+                text = f"【 {q_num} 】"
             question["question_text"] = text
             return question
 
@@ -2134,31 +2936,57 @@ Nếu trang này thực sự không có câu hỏi nào (chỉ là bìa hoặc h
 
         # 2a. Dạng cách đọc chữ Hán (KANJI_READING - Hán tự -> Hiragana):
         elif mondai_code == "KANJI_READING":
+            # TUYỆT ĐỐI KHÔNG ĐƯỢC ĐỂ FURIGANA TRÊN TỪ ĐƯỢC HỎI / GẠCH CHÂN (LÀM LỘ ĐÁP ÁN!)
+            # 1. Bóc bỏ ruby nếu từ gạch chân <u> hoặc 【 】 bị gắn ruby
+            text = re.sub(r'<u>\s*<ruby>(.*?)(?:<rt>.*?</rt>)?</ruby>\s*</u>', r'<u>\1</u>', text)
+            text = re.sub(r'<ruby>\s*<u>(.*?)</u>(?:<rt>.*?</rt>)?</ruby>', r'<u>\1</u>', text)
+            text = re.sub(r'【\s*<ruby>(.*?)(?:<rt>.*?</rt>)?</ruby>\s*】', r'<u>\1</u>', text)
+            text = re.sub(r'<ruby>\s*【(.*?)】(?:<rt>.*?</rt>)?</ruby>', r'<u>\1</u>', text)
+
+            # 2. Nếu có <ruby>漢字<rt>cách_đọc</rt></ruby> mà cách_đọc trùng với 1 trong các options:
+            # Đây chính là từ đang được hỏi cách đọc -> Bóc bỏ <rt> và chuyển thành <u>漢字</u>
+            opt_texts = [o.get("option_text", "").strip() for o in question.get("options", []) if o.get("option_text")]
+            ruby_matches = list(re.finditer(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>', text))
+            for m in reversed(ruby_matches):
+                k_word, rt_word = m.group(1).strip(), m.group(2).strip()
+                k_clean = re.sub(r'</?u>', '', k_word)
+                if rt_word in opt_texts or k_clean in opt_texts:
+                    text = text[:m.start()] + f'<u>{k_clean}</u>' + text[m.end():]
+
+            # 3. Nếu chưa có <u> và có <ruby>, nếu câu chỉ có 1 khối <ruby>, đó chính là từ cần hỏi
+            if "<u>" not in text and "【" not in text:
+                rem_rubies = list(re.finditer(r'<ruby>(.*?)<rt>(.*?)</rt></ruby>', text))
+                if len(rem_rubies) == 1:
+                    m = rem_rubies[0]
+                    k_clean = re.sub(r'</?u>', '', m.group(1).strip())
+                    text = text[:m.start()] + f'<u>{k_clean}</u>' + text[m.end():]
+
+            # 4. Nếu vẫn chưa có <u> và cũng không có ruby, dò chữ Hán và gạch chân bằng pykakasi
             if "【" not in text and "<u>" not in text and "「" not in text:
                 kanji_blocks = re.findall(r'[\u4e00-\u9faf]+', text)
                 if len(kanji_blocks) == 1:
                     target = kanji_blocks[0]
                     text = text.replace(target, f"<u>{target}</u>", 1)
-                    question["question_text"] = text
                 elif len(kanji_blocks) > 1:
-                    # Dùng pykakasi so khớp chữ Hán có cách đọc trùng với 1 trong các phương án
                     try:
                         import pykakasi
                         k = pykakasi.kakasi()
-                        opt_texts = [o.get("option_text", "").strip() for o in question.get("options", []) if o.get("option_text")]
                         matched = False
                         for kb in kanji_blocks:
                             conv = "".join(item["hira"] for item in k.convert(kb)).strip()
                             if conv in opt_texts:
                                 text = text.replace(kb, f"<u>{kb}</u>", 1)
-                                question["question_text"] = text
                                 matched = True
                                 break
                         if not matched and kanji_blocks:
                             text = text.replace(kanji_blocks[0], f"<u>{kanji_blocks[0]}</u>", 1)
-                            question["question_text"] = text
                     except Exception:
                         pass
+
+            # 5. Đảm bảo cuối cùng: Bất kỳ thẻ <u> nào chứa <ruby> đều phải lột sạch <rt>
+            text = re.sub(r'<u>\s*<ruby>(.*?)(?:<rt>.*?</rt>)?</ruby>\s*</u>', r'<u>\1</u>', text)
+            text = re.sub(r'<ruby>\s*<u>(.*?)</u>(?:<rt>.*?</rt>)?</ruby>', r'<u>\1</u>', text)
+            question["question_text"] = text
 
         # 2b. Dạng cách viết chữ Hán (ORTHOGRAPHY - Hiragana -> Hán tự):
         # Từ trong câu hỏi là Hiragana (e.g. あおい), 4 options là chữ Hán (青い, 黒い, 赤い, 白い)

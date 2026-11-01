@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import React, { useEffect, useState, useRef } from 'react'
 import {
   Card,
@@ -71,12 +72,12 @@ export const ProfilePage: React.FC = () => {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      alert('Vui lòng chọn tệp hình ảnh!')
+      toast.error('Vui lòng chọn tệp hình ảnh!')
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Kích thước ảnh tối đa là 5MB!')
+      toast.error('Kích thước ảnh tối đa là 5MB!')
       return
     }
 

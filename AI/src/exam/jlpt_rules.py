@@ -41,7 +41,7 @@ JLPT_STRUCTURE_SPEC: Dict[str, Dict[str, List[MondaiSpec]]] = {
                        "Đề bài có Hiragana gạch chân 【ひらがな】, 4 lựa chọn là chữ Hán/Katakana."),
             MondaiSpec(3, "CONTEXTUAL_USE", "問題3 文脈規定", "Điền từ vào câu", 8, 11, 10, (21, 30),
                        "Câu văn đơn có chỗ trống （　　）, 4 lựa chọn là từ vựng phù hợp ngữ cảnh."),
-            MondaiSpec(4, "SYNONYMS", "問題4 言い換え類義", "Từ đồng nghĩa / Cách diễn đạt tương đương", 4, 6, 5, (31, 35),
+            MondaiSpec(4, "SYNONYMS", "問題4 言い換え類義", "Từ đồng nghĩa / Cách diễn đạt tương đương", 3, 6, 5, (31, 35),
                        "Câu văn có cụm từ gạch chân, chọn câu có nghĩa gần nhất."),
         ],
         "GRAMMAR_READING": [
@@ -395,69 +395,123 @@ def infer_mondai_from_spec(
     jlpt_level: str,
     section_type: str,
     options: Optional[List[Dict[str, Any]]] = None,
+    current_mondai_code: Optional[str] = None,
 ) -> str:
     """
     Suy luận mondai_code chuẩn xác nhất:
-    1. Ưu tiên số thứ tự in trên đề gốc (raw_question_number) đối chiếu với dải câu chuẩn của JLPT.
-    2. Phân tích đặc trưng ngôn ngữ của câu hỏi và 4 lựa chọn.
+    1. Ưu tiên đặc trưng ngôn ngữ và cấu trúc hiển nhiên của câu hỏi:
+       - Có dấu sao ★ -> SENTENCE_COMPOSITION.
+       - Bài đục lỗ -> TEXT_GRAMMAR.
+       - Có chỗ trống （　） trong Từ vựng -> Chắc chắn là CONTEXTUAL_USE (Mondai 3).
+       - Đề bài là Hiragana (e.g. しゃわー, のみました) và options là Katakana/Kanji -> ORTHOGRAPHY (Mondai 2).
+       - Đề bài là Kanji và options là Hiragana -> KANJI_READING (Mondai 1).
+    2. Nếu Gemini Vision đã đọc được mã hợp lệ từ tiêu đề trên trang PDF và không mâu thuẫn đặc trưng: giữ nguyên.
+    3. Cuối cùng mới dùng dải câu hỏi chuẩn (typical_range) làm fallback khi không có bất kỳ tín hiệu nào khác.
     """
     q_text = (question_text or "").strip()
     opts = options or []
+    valid_specs = get_expected_mondais(jlpt_level, section_type)
+    valid_codes = {s.mondai_code for s in valid_specs}
 
-    # 1. NẾU CÓ SỐ THỨ TỰ IN TRÊN ĐỀ: Đây là căn cứ chuẩn xác 100% của đề thi JLPT
+    # =============================================================
+    # 1. ĐẶC TRƯNG NGÔN NGỮ & CẤU TRÚC RÕ RÀNG (ĐỘ ƯU TIÊN CAO NHẤT)
+    # =============================================================
+    # A. Câu sắp xếp có dấu sao ★ (SENTENCE_COMPOSITION - Ngữ pháp Mondai 2)
+    if "★" in q_text or re.search(r'[_＿]{2,}.*?★', q_text):
+        return "SENTENCE_COMPOSITION"
+
+    # B. Bài đục lỗ (TEXT_GRAMMAR - Ngữ pháp Mondai 3)
+    if re.match(r'^[【\[\(（]?\s*\d+\s*[】\]\)）]?$', q_text):
+        return "TEXT_GRAMMAR"
+
+    # C. Phân tích ngữ cảnh Từ vựng (VOCABULARY)
+    if section_type == "VOCABULARY":
+        # C1. Điền từ vào chỗ trống: Chắc chắn 100% là Mondai 3 (CONTEXTUAL_USE)!
+        # Trong JLPT, Mondai 1 (漢字読み) và Mondai 2 (表記) TUYỆT ĐỐI không có chỗ trống （　）.
+        if "（" in q_text or "(" in q_text or "＿＿" in q_text or "___" in q_text:
+            return "CONTEXTUAL_USE"
+
+        # C2. Dạng cách dùng từ (PROPER_USAGE - Mondai 5 ở N4..N1)
+        is_isolated_word = bool(re.match(r'^[【\[「]([^\s】」]+)[】\]」]$', q_text)) or (
+            len(q_text) <= 8 and not any(p in q_text for p in ["は", "が", "を", "に", "で", "。", "、"])
+        )
+        has_sentence_options = opts and any(len(opt.get("option_text", "")) >= 8 for opt in opts)
+        if is_isolated_word and has_sentence_options and "PROPER_USAGE" in valid_codes:
+            return "PROPER_USAGE"
+
+        # C3. Phân biệt rõ ràng Mondai 1 (KANJI_READING) và Mondai 2 (ORTHOGRAPHY)
+        opt_texts = [opt.get("option_text", "").strip() for opt in opts if opt.get("option_text")]
+        has_katakana_opt = any(re.search(r'[\u30a0-\u30ff]', t) for t in opt_texts)
+        has_kanji_opt = any(re.search(r'[\u4e00-\u9faf]', t) for t in opt_texts)
+        all_kana_opts = bool(opt_texts and all(re.match(r'^[\u3040-\u309f\u30a0-\u30ff\s・~～ー-]+$', t) for t in opt_texts))
+
+        # Tìm từ mục tiêu được gạch chân / đóng ngoặc trên đề
+        target_match = re.search(r'【(.*?)】|<u>(.*?)</u>|「(.*?)」', q_text)
+        target_word = (target_match.group(1) or target_match.group(2) or target_match.group(3)).strip() if target_match else ""
+
+        # Trường hợp 1: Các lựa chọn là Katakana (e.g. 1. シャワー 2. シャワー...)
+        # Trong JLPT N5, dạng bài chọn chữ Katakana tương ứng với từ Hiragana trên đề 100% là ORTHOGRAPHY!
+        if has_katakana_opt and "ORTHOGRAPHY" in valid_codes:
+            return "ORTHOGRAPHY"
+
+        if target_word:
+            target_has_kanji = bool(re.search(r'[\u4e00-\u9faf]', target_word))
+            target_all_kana = bool(re.match(r'^[\u3040-\u309f\u30a0-\u30ff\s・~～ー-]+$', target_word))
+
+            # Nếu từ trong đề là Kanji (e.g. 【夕方】) và các phương án là Hiragana -> KANJI_READING
+            if target_has_kanji and all_kana_opts and "KANJI_READING" in valid_codes:
+                return "KANJI_READING"
+
+            # Nếu từ trong đề là Hiragana (e.g. 【しゃわー】, 【のみました】) và các phương án có Kanji/Katakana -> ORTHOGRAPHY
+            if target_all_kana and (has_kanji_opt or has_katakana_opt) and "ORTHOGRAPHY" in valid_codes:
+                return "ORTHOGRAPHY"
+
+        # Trường hợp 2: Options có chữ Hán (như 飲みました, 車, 1000円) và câu đề bài chứa Hiragana
+        if has_kanji_opt and "ORTHOGRAPHY" in valid_codes:
+            if current_mondai_code == "ORTHOGRAPHY":
+                return "ORTHOGRAPHY"
+
+        # C4. Dạng từ đồng nghĩa (SYNONYMS - Mondai 4)
+        if "同じ" in q_text or "おなじ" in q_text or "最も近い" in q_text:
+            return "SYNONYMS"
+
+    # =============================================================
+    # 2. PHÂN BIỆT RÕ RÀNG CÁC MONDAI ĐỌC HIỂU (SHORT vs MEDIUM vs INFO)
+    # Trong JLPT, số thứ tự câu hỏi Đọc hiểu (từ SHORT_PASSAGE trở đi) là cố định tuyệt đối theo dải chuẩn.
+    # Ngăn chặn trường hợp Gemini hallucinate câu 29 thành Mondai 5 (MEDIUM_PASSAGE) hoặc câu 32 thành MEDIUM.
+    if section_type == "GRAMMAR_READING" and raw_question_number is not None:
+        try:
+            rn = int(raw_question_number)
+            for spec in valid_specs:
+                start, end = spec.typical_range
+                if start <= rn <= end and spec.mondai_code in {
+                    "SHORT_PASSAGE", "MEDIUM_PASSAGE", "LONG_PASSAGE",
+                    "INTEGRATED_COMPREHENSION", "THEMATIC_COMPREHENSION", "INFORMATION_RETRIEVAL"
+                }:
+                    return spec.mondai_code
+        except (ValueError, TypeError):
+            pass
+
+    # =============================================================
+    # 3. ƯU TIÊN MONDAI_CODE DO GEMINI VISION ĐỌC TỪ TIÊU ĐỀ TRANG
+    # =============================================================
+    if current_mondai_code and current_mondai_code in valid_codes:
+        # Đảm bảo không gán nhầm câu có chỗ trống vào Kanji Reading/Orthography
+        if current_mondai_code in ("KANJI_READING", "ORTHOGRAPHY") and ("（" in q_text or "(" in q_text):
+            return "CONTEXTUAL_USE" if section_type == "VOCABULARY" else "SENTENTIAL_GRAMMAR"
+        return current_mondai_code
+
+    # =============================================================
+    # 3. FALLBACK DỰA VÀO SỐ THỨ TỰ CÂU TRÊN ĐỀ (TYPICAL_RANGE)
+    # =============================================================
     if raw_question_number is not None:
         try:
             rn = int(raw_question_number)
-            specs = get_expected_mondais(jlpt_level, section_type)
-            for spec in specs:
+            for spec in valid_specs:
                 start, end = spec.typical_range
                 if start <= rn <= end:
                     return spec.mondai_code
         except (ValueError, TypeError):
             pass
-
-    # 2. PHÂN TÍCH ĐẶC TRƯNG NGÔN NGỮ NẾU KHÔNG CÓ SỐ THỨ TỰ:
-    # Đặc trưng A: Câu sắp xếp có dấu sao ★
-    if "★" in q_text or re.search(r'[_＿]{2,}.*?★', q_text):
-        return "SENTENCE_COMPOSITION"
-
-    # Đặc trưng B: Bài đục lỗ (TEXT_GRAMMAR)
-    if re.match(r'^[【\[\(（]?\s*\d+\s*[】\]\)）]?$', q_text):
-        return "TEXT_GRAMMAR"
-
-    # Đặc trưng C: Dạng cách dùng từ (PROPER_USAGE - Mondai 5)
-    # Câu hỏi CHỈ LÀ 1 TỪ DUY NHẤT trong ngoặc vuông (như 【案内】, 【るす】, 【しんせつ】)
-    # và 4 options là 4 câu văn dài
-    is_isolated_word = bool(re.match(r'^[【\[「]([^\s】」]+)[】\]」]$', q_text)) or (
-        len(q_text) <= 8 and not any(p in q_text for p in ["は", "が", "を", "に", "で", "。", "、"])
-    )
-    has_sentence_options = opts and any(len(opt.get("option_text", "")) >= 8 for opt in opts)
-    if is_isolated_word and has_sentence_options and section_type == "VOCABULARY":
-        return "PROPER_USAGE"
-
-    # Đặc trưng D: Từ vựng (VOCABULARY)
-    if section_type == "VOCABULARY":
-        kanji_in_bracket = bool(re.search(r'【[\u4e00-\u9faf]+】', q_text))
-        kana_in_bracket = bool(re.search(r'【[\u3040-\u309f]+】', q_text))
-        opt_has_kanji = any(re.search(r'[\u4e00-\u9faf]', opt.get("option_text", "")) for opt in opts)
-        opt_all_kana = all(re.match(r'^[\u3040-\u309f\u30a0-\u30ff\s]+$', opt.get("option_text", "").strip())
-                           for opt in opts if opt.get("option_text"))
-
-        if kana_in_bracket and opt_has_kanji:
-            return "ORTHOGRAPHY"
-        if kanji_in_bracket and opt_all_kana:
-            return "KANJI_READING"
-        if kana_in_bracket:
-            return "ORTHOGRAPHY"
-        if kanji_in_bracket:
-            return "KANJI_READING"
-
-    # Đặc trưng E: Điền từ vào chỗ trống
-    if "（" in q_text or "(" in q_text or "＿＿" in q_text:
-        return "CONTEXTUAL_USE" if section_type == "VOCABULARY" else "SENTENTIAL_GRAMMAR"
-
-    # Đặc trưng F: Từ đồng nghĩa (SYNONYMS)
-    if "同じ" in q_text or "おなじ" in q_text or "最も近い" in q_text:
-        return "SYNONYMS"
 
     return "CONTEXTUAL_USE" if section_type == "VOCABULARY" else "SENTENTIAL_GRAMMAR"
