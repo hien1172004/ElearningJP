@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, BookOpen, Eye, EyeOff, Trash2, Clock, Edit3 } from 'lucide-react'
 import { Tabs, Button as AntdButton, Modal } from 'antd'
@@ -175,18 +175,21 @@ export const TeacherCourseEditorPage: React.FC = () => {
               label: 'Tổng quan',
               children: (
                 <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6 space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-                    <div className="p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div
+                      onClick={() => setActiveTab('lessons')}
+                      className="p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50 transition cursor-pointer"
+                    >
                       <p className="text-2xl font-black text-indigo-600">{lessons.length}</p>
                       <p className="text-xs text-gray-500 mt-1">Bài học</p>
                     </div>
-                    <div
+                    {/* <div
                       onClick={() => setActiveTab('exams')}
                       className="p-3.5 rounded-xl bg-purple-50/50 border border-purple-100 hover:border-purple-300 transition cursor-pointer"
                     >
                       <p className="text-2xl font-black text-purple-600">{courseExams.length}</p>
                       <p className="text-xs text-gray-500 mt-1">Bài kiểm tra</p>
-                    </div>
+                    </div> */}
                     <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100">
                       <p className="text-2xl font-black text-emerald-600">{course.totalEnrollments ?? 0}</p>
                       <p className="text-xs text-gray-500 mt-1">Học viên</p>
@@ -204,9 +207,9 @@ export const TeacherCourseEditorPage: React.FC = () => {
                   </div>
                   <div className="pt-2 border-t border-gray-100">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600">
+                      {/* <p className="text-sm text-gray-600">
                         <strong>Slug:</strong> /courses/{course.slug}
-                      </p>
+                      </p> */}
                       <AntdButton
                         size="small"
                         icon={<Pencil className="w-3.5 h-3.5" />}
@@ -323,7 +326,8 @@ export const TeacherCourseEditorPage: React.FC = () => {
                         return (
                           <div
                             key={exam.id}
-                            className="bg-white rounded-xl border border-gray-200/80 hover:border-indigo-300 p-4 shadow-xs transition flex flex-col justify-between gap-3"
+                            onClick={() => navigate(`/admin/exams/${exam.id}/preview`)}
+                            className="bg-white rounded-xl border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm p-4 shadow-xs transition flex flex-col justify-between gap-3 cursor-pointer"
                           >
                             <div className="space-y-2">
                               <div className="flex items-center justify-between gap-2">
@@ -353,7 +357,10 @@ export const TeacherCourseEditorPage: React.FC = () => {
                               </p>
                             </div>
 
-                            <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+                            <div
+                              className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <div className="flex items-center gap-1.5">
                                 <Link to={`/admin/exams/${exam.id}/preview`}>
                                   <AntdButton size="small" icon={<Edit3 className="w-3.5 h-3.5" />} className="!rounded-md">

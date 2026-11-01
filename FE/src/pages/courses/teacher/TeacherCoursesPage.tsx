@@ -64,7 +64,7 @@ export const TeacherCoursesPage: React.FC = () => {
           </div>
           <div>
             <p className="font-semibold text-sm text-gray-900">{record.title}</p>
-            <p className="text-xs text-gray-400">/{record.slug}</p>
+            {/* <p className="text-xs text-gray-400">/{record.slug}</p> */}
           </div>
         </div>
       ),
@@ -93,7 +93,9 @@ export const TeacherCoursesPage: React.FC = () => {
       key: 'actions',
       width: 220,
       render: (_, record) => (
-        <div className="flex items-center gap-1.5 flex-wrap">
+        // stopPropagation: bấm nút hành động không được kích hoạt click của row
+        // (row click → mở trang quản lý khóa học).
+        <div className="flex items-center gap-1.5 flex-wrap" onClick={(e) => e.stopPropagation()}>
           <Tooltip title="Sửa khóa học">
             <AntdButton
               size="small"
@@ -112,7 +114,7 @@ export const TeacherCoursesPage: React.FC = () => {
               onClick={() => handlePublish(record, !record.published)}
             />
           </Tooltip>
-          <Tooltip title="Quản lý bài học">
+          {/* <Tooltip title="Quản lý bài học">
             <AntdButton
               size="small"
               type="primary"
@@ -120,7 +122,7 @@ export const TeacherCoursesPage: React.FC = () => {
             >
               Quản lý
             </AntdButton>
-          </Tooltip>
+          </Tooltip> */}
           <Tooltip title="Xóa">
             <AntdButton
               size="small"
@@ -186,6 +188,12 @@ export const TeacherCoursesPage: React.FC = () => {
             rowKey="id"
             pagination={{ pageSize: 10, showSizeChanger: false }}
             columns={columns}
+            // Bấm vào bất kỳ đâu trên row (trừ cột "Hành động") → mở trang quản lý khóa học.
+            // Cột hành động đã stopPropagation nên các nút bấm được vẫn hoạt động bình thường.
+            onRow={(record) => ({
+              onClick: () => navigate(`/teacher/courses/${record.id}`),
+              style: { cursor: 'pointer' },
+            })}
           />
         )}
       </div>

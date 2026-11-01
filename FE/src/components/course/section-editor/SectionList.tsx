@@ -100,7 +100,7 @@ export const SectionList: React.FC<SectionListProps> = ({
     const newOrder = [...arr]
     ;[newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]]
     await reorderSections.mutateAsync({
-      sectionIds: newOrder.map((s) => s.id),
+      itemIds: newOrder.map((s) => s.id),
     })
   }
 
@@ -136,13 +136,13 @@ export const SectionList: React.FC<SectionListProps> = ({
           onClick={openCreate}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition"
         >
-          <Plus className="w-4 h-4" /> Thêm section
+          <Plus className="w-4 h-4" /> Thêm mục
         </button>
       </div>
 
       {sorted.length === 0 && (
         <div className="py-6 text-center text-sm text-gray-400 rounded-md border border-dashed border-gray-200">
-          Chưa có section nào. Bấm "Thêm section" để tạo.
+          Chưa có mục nào. Bấm "Thêm mục" để tạo.
         </div>
       )}
 
@@ -150,7 +150,8 @@ export const SectionList: React.FC<SectionListProps> = ({
         {sorted.map((section, idx) => (
           <div
             key={section.id}
-            className="flex items-center gap-3 p-3 bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 transition group"
+            onClick={() => onManageItems?.(section)}
+            className="flex items-center gap-3 p-3 bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:bg-indigo-50/30 transition group cursor-pointer"
           >
             <div className="shrink-0 w-8 h-8 rounded bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center">
               {section.orderIndex}
@@ -163,8 +164,11 @@ export const SectionList: React.FC<SectionListProps> = ({
                 {section.grammarItems?.length ?? 0} ngữ pháp
               </p>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-              {onManageItems && (
+            <div
+              className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* {onManageItems && (
                 <button
                   type="button"
                   onClick={() => onManageItems(section)}
@@ -173,7 +177,7 @@ export const SectionList: React.FC<SectionListProps> = ({
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-              )}
+              )} */}
               {/* ===== TEMP: disabled reorder up/down ===== */}
               {false && (
                 <button type="button" onClick={() => handleReorder('up', idx)} disabled={idx === 0} className="p-1 text-gray-400 hover:text-indigo-600 rounded transition disabled:opacity-30">
@@ -203,7 +207,7 @@ export const SectionList: React.FC<SectionListProps> = ({
         title={
           <div className="flex items-center gap-2 font-bold text-gray-900">
             <BookOpen className="w-5 h-5 text-indigo-600" />
-            {editingSection ? 'Chỉnh sửa Section' : 'Thêm Section mới'}
+            {editingSection ? 'Chỉnh sửa mục' : 'Thêm mục mới'}
           </div>
         }
         okText={editingSection ? 'Lưu' : 'Thêm'}
@@ -216,10 +220,10 @@ export const SectionList: React.FC<SectionListProps> = ({
           {!editingSection && (
             <Form.Item
               name="sectionType"
-              label="Loại section"
+              label="Loại mục"
               rules={[{ required: true, message: 'Vui lòng chọn loại' }]}
             >
-              <Select size="large" placeholder="Chọn loại section">
+              <Select size="large" placeholder="Chọn loại mục">
                 {SECTION_TYPES.map((t) => (
                   <Select.Option key={t.value} value={t.value}>
                     {t.label}
@@ -230,7 +234,7 @@ export const SectionList: React.FC<SectionListProps> = ({
           )}
           <Form.Item
             name="title"
-            label="Tiêu đề section"
+            label="Tiêu đề mục"
             rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
           >
             <Input size="large" placeholder="VD: Từ vựng chủ đề Gia đình" />

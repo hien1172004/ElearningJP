@@ -56,9 +56,12 @@ public final class ApiPaths {
         public static final String QUIZ_QUESTIONS_REORDER = "/{id}/quiz/questions/reorder";
 
         // ===== Section endpoints =====
-        public static final String SECTIONS = "/{id}/sections";
-        public static final String SECTION_BY_ID = "/{id}/sections/{sectionId}";
-        public static final String SECTIONS_REORDER = "/{id}/sections/reorder";
+        // Lưu ý: phải có prefix BASE ("/lessons") để path đầy đủ là
+        // /api/v1/lessons/{id}/sections — khớp FE + docs/course-lesson-module.md.
+        public static final String SECTIONS = "/lessons/{id}/sections";
+        /** PUT/DELETE theo id section (không cần lessonId — service tự tra lesson). */
+        public static final String SECTION_BY_ID = "/lessons/sections/{sectionId}";
+        public static final String SECTIONS_REORDER = "/lessons/{id}/sections/reorder";
 
         // ===== Lesson Items endpoints (controller riêng, root path: /lesson-sections) =====
         public static final String LESSON_SECTIONS = "/lesson-sections";

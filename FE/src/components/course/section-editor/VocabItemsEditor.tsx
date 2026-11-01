@@ -761,7 +761,8 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
         {sorted.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-emerald-300 transition group"
+            onClick={() => setViewingItem(item)}
+            className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 transition group cursor-pointer"
           >
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-gray-900">{item.word}</p>
@@ -777,15 +778,19 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
                 </p>
               )}
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-              <button
+            {/* stopPropagation: bấm nút hành động không mở modal xem chi tiết */}
+            <div
+              className="flex gap-1 opacity-0 group-hover:opacity-100 transition"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* <button
                 type="button"
                 onClick={() => setViewingItem(item)}
                 className="p-1 text-gray-400 hover:text-emerald-600 rounded transition"
                 title="Xem chi tiết"
               >
                 <Eye className="w-3.5 h-3.5" />
-              </button>
+              </button> */}
               <button
                 type="button"
                 onClick={() => openEdit(item)}
