@@ -72,8 +72,6 @@ public class LessonSectionController {
     })
     @GetMapping(ApiPaths.API_V1 + ApiPaths.Lesson.SECTION_BY_ID)
     public ApiResponse<LessonSectionResponse> getSection(
-            @Parameter(description = "ID của bài học", example = "1", required = true)
-            @PathVariable("id") Long lessonId,
             @Parameter(description = "ID của section", example = "5", required = true)
             @PathVariable("sectionId") Long sectionId
     ) {
@@ -123,8 +121,6 @@ public class LessonSectionController {
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @PutMapping(ApiPaths.API_V1 + ApiPaths.Lesson.SECTION_BY_ID)
     public ApiResponse<LessonSectionResponse> updateSection(
-            @Parameter(description = "ID của bài học", example = "1", required = true)
-            @PathVariable("id") Long lessonId,
             @Parameter(description = "ID của section", example = "5", required = true)
             @PathVariable("sectionId") Long sectionId,
             @Valid @RequestBody LessonSectionUpdateRequest request
@@ -148,8 +144,6 @@ public class LessonSectionController {
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @DeleteMapping(ApiPaths.API_V1 + ApiPaths.Lesson.SECTION_BY_ID)
     public ApiResponse<Void> deleteSection(
-            @Parameter(description = "ID của bài học", example = "1", required = true)
-            @PathVariable("id") Long lessonId,
             @Parameter(description = "ID của section", example = "5", required = true)
             @PathVariable("sectionId") Long sectionId
     ) {

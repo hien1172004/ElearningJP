@@ -143,8 +143,12 @@ export interface LessonSectionUpdateRequest {
   orderIndex?: number
 }
 
+/**
+ * Body cho POST /lessons/{id}/sections/reorder.
+ * BE dùng chung DTO `ItemBulkReorderRequest` → field là `itemIds` (không phải sectionIds).
+ */
 export interface LessonSectionReorderRequest {
-  sectionIds: number[]
+  itemIds: number[]
 }
 
 // ============================================================================

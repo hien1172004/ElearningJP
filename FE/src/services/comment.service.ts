@@ -24,7 +24,7 @@ export const commentService = {
     targetType: CommentTargetType,
     targetId: number,
     page = 0,
-    size = 20,
+    size = 5,
   ): Promise<ApiResponse<CommentListResponse>> => {
     return axiosClient.get(`/${targetType}/${targetId}/comments`, {
       params: { page, size },

@@ -13,6 +13,14 @@ interface LessonCardProps {
   onOpenSectionEditor?: () => void
 }
 
+/**
+ * Thẻ bài học trong trang quản lý khóa học (giáo viên).
+ *
+ * <p>Bấm vào vùng nội dung thẻ (tiêu đề / số thứ tự) sẽ mở trực tiếp
+ * Section Editor của bài học đó — không cần bấm icon sách.
+ * Các nút hành động bên phải vẫn hoạt động độc lập vì
+ * {@link React.MouseEvent#stopPropagation} được gọi trong từng nút.</p>
+ */
 export const LessonCard: React.FC<LessonCardProps> = ({
   lesson,
   index,
@@ -23,15 +31,25 @@ export const LessonCard: React.FC<LessonCardProps> = ({
   onMoveDown,
   onOpenSectionEditor,
 }) => {
+  /** Click vào nội dung thẻ → mở Section Editor (nếu có handler). */
+  const handleCardClick = () => {
+    onOpenSectionEditor?.()
+  }
+
   return (
-    <div className="group flex items-center gap-3 p-3.5 bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm transition">
+    <div
+      onClick={handleCardClick}
+      className={`group flex items-center gap-3 p-3.5 bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm transition ${
+        onOpenSectionEditor ? 'cursor-pointer' : ''
+      }`}
+    >
       <div className="shrink-0 w-10 h-10 rounded-md bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center justify-center border border-indigo-200/60">
         {String(index + 1).padStart(2, '0')}
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <h4 className="font-semibold text-sm text-gray-900 truncate">
+          <h4 className="font-semibold text-sm text-gray-900 truncate group-hover:text-indigo-700 transition">
             {lesson.title}
           </h4>
           {lesson.hasQuiz && (
@@ -45,7 +63,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
         </p>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
         {/* ===== TEMP: disabled reorder up/down ===== */}
         {false && onMoveUp && (
           <button
@@ -69,7 +87,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
             <ChevronDown className="w-4 h-4" />
           </button>
         )}
-        {onOpenSectionEditor && (
+        {/* {onOpenSectionEditor && (
           <button
             type="button"
             onClick={onOpenSectionEditor}
@@ -78,7 +96,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
           >
             <BookOpen className="w-4 h-4" />
           </button>
-        )}
+        )} */}
         {onEdit && (
           <button
             type="button"

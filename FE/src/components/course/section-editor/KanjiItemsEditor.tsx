@@ -535,7 +535,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         {sorted.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-amber-300 transition group"
+            onClick={() => setViewingId(item.id)}
+            className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-amber-300 hover:bg-amber-50/30 transition group cursor-pointer"
           >
             <div className="w-10 h-10 rounded bg-amber-50 text-amber-900 font-serif font-bold text-lg flex items-center justify-center border border-amber-200 shrink-0">
               {item.character ?? '?'}
@@ -562,15 +563,19 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
                 </p>
               )}
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-              <button
+            {/* stopPropagation: bấm nút hành động không mở modal xem chi tiết */}
+            <div
+              className="flex gap-1 opacity-0 group-hover:opacity-100 transition"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* <button
                 type="button"
                 onClick={() => setViewingId(item.id)}
                 className="p-1 text-gray-400 hover:text-amber-600 rounded transition"
                 title="Xem chi tiết"
               >
                 <Eye className="w-3.5 h-3.5" />
-              </button>
+              </button> */}
               <button
                 type="button"
                 onClick={() => openEdit(item)}

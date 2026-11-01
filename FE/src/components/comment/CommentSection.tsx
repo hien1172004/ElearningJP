@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Button } from 'antd'
+import { Button, Pagination } from 'antd'
 import { MessageSquare, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useComments, useCreateComment, extractErrorMessage } from '@/hooks/useComments'
@@ -33,7 +33,7 @@ interface CommentSectionProps {
 export const CommentSection: React.FC<CommentSectionProps> = ({
   targetType,
   targetId,
-  pageSize = 20,
+  pageSize = 5,
   title = 'Bình luận',
   className,
 }) => {
@@ -159,30 +159,37 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
       {/* ---------------- Phân trang ---------------- */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-100">
-          <Button
+        <div className="flex items-center justify-center gap-3 mt-4 pt-3 border-t border-gray-100">
+          <Pagination
             size="small"
-            icon={<ChevronLeft className="w-3.5 h-3.5" />}
-            disabled={page <= 0 || isFetching}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            className="!rounded-md !font-semibold"
-          >
-            Trước
-          </Button>
-
-          <span className="text-xs text-gray-500">
-            Trang {page + 1} / {totalPages}
-          </span>
-
-          <Button
-            size="small"
-            disabled={page >= totalPages - 1 || isFetching}
-            onClick={() => setPage((p) => p + 1)}
-            className="!rounded-md !font-semibold"
-          >
-            Sau
-            <ChevronRight className="w-3.5 h-3.5 ml-1" />
-          </Button>
+            current={page + 1}
+            total={total}
+            pageSize={pageSize}
+            onChange={(next) => setPage(next - 1)}
+            showSizeChanger={false}
+            hideOnSinglePage
+            itemRender={(_current, type, originalElement) => {
+              if (type === 'prev' || type === 'next') {
+                return (
+                  <Button
+                    size="small"
+                    icon={
+                      type === 'prev' ? (
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      )
+                    }
+                    loading={isFetching}
+                    className="!rounded-md !font-semibold"
+                  >
+                    {type === 'prev' ? 'Trước' : 'Sau'}
+                  </Button>
+                )
+              }
+              return originalElement
+            }}
+          />
         </div>
       )}
     </section>

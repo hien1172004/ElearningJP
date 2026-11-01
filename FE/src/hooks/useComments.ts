@@ -37,7 +37,7 @@ export function useComments(
   options?: { enabled?: boolean; size?: number },
 ) {
   const safeId = targetId ?? 0
-  const size = options?.size ?? 20
+  const size = options?.size ?? 5
   const enabled =
     (options?.enabled ?? true) && safeId > 0 && !Number.isNaN(safeId)
 

@@ -90,6 +90,29 @@ function removeItemCache(
 // ============================================================================
 // SECTION CRUD (lesson-level)
 // ============================================================================
+
+/**
+ * Patch mảng `sections` NESTED trong cache lesson detail.
+ *
+ * <p>Không có query riêng cho sections — BE trả sections lồng trong
+ * `LessonDetail.sections`. Vì vậy phải patch vào `['lessons','detail',lessonId]`
+ * thay vì tạo query key `['sections','lesson',lessonId]` (key này không tồn tại
+ * nên `setQueryData` trước đây là no-op → UI không cập nhật ngay).</p>
+ */
+function patchSectionsCache(
+  qc: ReturnType<typeof useQueryClient>,
+  lessonId: number,
+  updater: (sections: LessonSection[]) => LessonSection[],
+) {
+  qc.setQueryData<any>(
+    QUERY_KEYS.lesson.detail(lessonId),
+    (old: any) => {
+      if (!old?.sections) return old
+      return { ...old, sections: updater(old.sections) }
+    },
+  )
+}
+
 export function useSectionMutations(lessonId: number) {
   const qc = useQueryClient()
   const invalidate = () => invalidateLesson(qc, lessonId)
@@ -98,36 +121,31 @@ export function useSectionMutations(lessonId: number) {
     mutationFn: async (payload: LessonSectionCreateRequest) =>
       sectionService.createSection(lessonId, payload),
     onSuccess: (res) => {
-      toast.success('Đã thêm section mới')
-      // Update cache trực tiếp: BE trả về section mới trong res.data
+      toast.success('Đã thêm mục mới')
+      // BE trả về section mới trong res.data → patch thẳng vào cache lesson detail
+      // (sections nằm NESTED trong lesson.sections, không có query 'sections' riêng).
       const newSection: LessonSection | undefined = (res as any)?.data
       if (newSection?.id) {
-        qc.setQueryData<LessonSection[] | undefined>(
-          ['sections', 'lesson', lessonId],
-          (old) => (old ? [...old, newSection] : [newSection]),
-        )
+        patchSectionsCache(qc, lessonId, (sections) => [...sections, newSection])
       }
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
-      toast.error('Thêm section thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
+      toast.error('Thêm mục thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
 
   const updateSection = useMutation({
     mutationFn: async (params: { id: number; payload: LessonSectionUpdateRequest }) =>
       sectionService.updateSection(params.id, params.payload),
-    onSuccess: (res, vars) => {
-      toast.success('Đã cập nhật section')
+    onSuccess: (res) => {
+      toast.success('Đã cập nhật mục')
       const updated: LessonSection | undefined = (res as any)?.data
       if (updated?.id) {
-        // Patch trực tiếp vào cache sections (nếu có)
-        qc.setQueryData<LessonSection[] | undefined>(
-          ['sections', 'lesson', lessonId],
-          (old) => old?.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)),
+        patchSectionsCache(qc, lessonId, (sections) =>
+          sections.map((s) => (s.id === updated.id ? { ...s, ...updated } : s)),
         )
       }
-      void vars
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
@@ -139,11 +157,8 @@ export function useSectionMutations(lessonId: number) {
     mutationFn: async (id: number) => sectionService.deleteSection(id),
     onSuccess: (_res, id) => {
       toast.success('Đã xoá section')
-      // Xoá khỏi cache sections
-      qc.setQueryData<LessonSection[] | undefined>(
-        ['sections', 'lesson', lessonId],
-        (old) => old?.filter((s) => s.id !== id),
-      )
+      // Xoá khỏi cache lesson detail
+      patchSectionsCache(qc, lessonId, (sections) => sections.filter((s) => s.id !== id))
       // Xoá tất cả item cache thuộc section này (vì chúng bị cascade delete)
       qc.removeQueries({ queryKey: ['lessons', 'kanji-item'], type: 'active' as any })
       qc.removeQueries({ queryKey: ['lessons', 'vocab-item'], type: 'active' as any })
