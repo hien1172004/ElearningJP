@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -129,7 +130,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Lỗi khởi tạo phiên trò chuyện tự do:', err)
-      alert('Không thể kết nối với AI. Vui lòng thử lại!')
+      toast.error('Không thể kết nối với AI. Vui lòng thử lại!')
     } finally {
       setIsStartingSession(false)
       isStartingRef.current = false
@@ -280,7 +281,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                   <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                     <button
                       type="button"
-                      onClick={() => alert('Cảm ơn bạn! Đội ngũ sẽ tiếp nhận góp ý.')}
+                      onClick={() => toast.success('Cảm ơn bạn! Đội ngũ sẽ tiếp nhận góp ý.')}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[11px] font-semibold text-slate-700 transition"
                     >
                       <AlertTriangle className="w-3.5 h-3.5 text-slate-500" />

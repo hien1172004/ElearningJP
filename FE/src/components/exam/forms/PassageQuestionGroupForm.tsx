@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { BookOpen, Link2 } from 'lucide-react'
 import type { TakingPassage } from '@/types'
+import { cleanPassageTitle } from '@/utils/format'
 
 export interface PassageOptionItem {
   id?: number
@@ -140,7 +141,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
               <option value="">-- Chọn bài đọc đang có trong đề --</option>
               {existingPassages.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.title} ({p.contentJp ? p.contentJp.slice(0, 45) + '...' : 'Tài liệu ảnh'})
+                  {cleanPassageTitle(p.title)} ({p.contentJp ? p.contentJp.slice(0, 45) + '...' : 'Tài liệu ảnh'})
                 </option>
               ))}
             </select>

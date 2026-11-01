@@ -1,3 +1,4 @@
+import { confirmDialog } from '@/components/common/ConfirmModal'
 import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Pencil, Plus, BookOpen, Eye, EyeOff, Trash2, Clock, Edit3 } from 'lucide-react'
@@ -76,9 +77,14 @@ export const TeacherCourseEditorPage: React.FC = () => {
   }
 
   const handleDeleteExam = async (examId: number, examTitle: string) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa đề thi "${examTitle}"? Thao tác này không thể hoàn tác.`)) {
-      return
-    }
+    const confirmed = await confirmDialog({
+      title: `Xóa đề thi "${examTitle}"?`,
+      content: 'Thao tác này không thể hoàn tác. Toàn bộ câu hỏi và kết quả thi liên quan sẽ bị xóa vĩnh viễn.',
+      okText: 'Xóa đề thi',
+      cancelText: 'Hủy',
+      danger: true,
+    })
+    if (!confirmed) return
     try {
       await examService.deleteExam(examId)
       toast.success('Đã xóa đề thi thành công')
@@ -422,8 +428,15 @@ export const TeacherCourseEditorPage: React.FC = () => {
                       <AntdButton
                         danger
                         icon={<Trash2 className="w-4 h-4" />}
-                        onClick={() => {
-                          if (window.confirm(`Xóa khóa học "${course.title}"?`)) {
+                        onClick={async () => {
+                          const ok = await confirmDialog({
+                            title: `Xóa khóa học "${course.title}"?`,
+                            content: 'Toàn bộ bài học và nội dung trong khóa học này sẽ bị xóa vĩnh viễn.',
+                            okText: 'Xóa khóa học',
+                            cancelText: 'Hủy',
+                            danger: true,
+                          })
+                          if (ok) {
                             deleteCourse.mutate(id, {
                               onSuccess: () => navigate('/teacher/courses'),
                             })

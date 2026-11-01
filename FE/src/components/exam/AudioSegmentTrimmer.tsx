@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Play,
   Pause,
@@ -10,7 +10,6 @@ import {
   MapPin,
   Flag,
   Headphones,
-  Sliders,
 } from 'lucide-react'
 
 interface AudioSegmentTrimmerProps {

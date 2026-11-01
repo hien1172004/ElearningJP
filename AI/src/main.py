@@ -473,7 +473,7 @@ async def extract_section_endpoint(
                     manifest_data = extract_images_from_pdf(
                         pdf_input=p_bytes,
                         output_dir=str(EXTRACTED_IMAGES_DIR),
-                        threshold=160,
+                        threshold=0,
                         margin=0.005,
                     )
                     if manifest_data:
@@ -602,10 +602,12 @@ async def extract_section_endpoint(
             tb_audio = audio_by_mondai.get("TASK_BASED", [])
             if tb_audio:
                 last_tb = tb_audio[-1]
+                t = str(last_tb.get("transcript_jp", ""))
                 # Phát hiện ranh giới chuyển sang Mondai 2 dựa trên cấu trúc chuẩn JLPT (chữ 問題2 / もんだい2 / tín hiệu đọc đề giấy)
                 m2_pattern = r'(?:そのあと|その後)\s*問題用紙|問題\s*[2２二]|もんだい\s*[2２二に]|(?:それでは|では|つぎは|次は)\s*問題'
+                m = re.search(m2_pattern, t)
                 if m:
-                    logger.info(f"🔍 [AUTO-HEAL] Phát hiện câu 8 Mondai 1 bị dính nội dung Mondai 2 tại vị trí {m.start()}! Đang phân tách...")
+                    logger.info(f"🔍 [AUTO-HEAL] Phát hiện câu cuối Mondai 1 bị dính nội dung Mondai 2 tại vị trí {m.start()}! Đang phân tách...")
                     last_tb["transcript_jp"] = t[:m.start()].strip()
                     st = float(last_tb.get("audio_start_time", 0))
                     et = float(last_tb.get("audio_end_time", st + 70))
@@ -747,7 +749,35 @@ async def extract_section_endpoint(
                     q["audio_start_time"] = idx * 45
                     q["audio_end_time"] = (idx + 1) * 45
 
-        # Tự động gán toàn bộ ảnh tranh vẽ (choices 2x2 & tranh tình huống single) từ crop_jlpt vào câu hỏi
+        # BƯỚC 1: Bóc tách 100% các lựa chọn in trên đề thi giấy (PDF Booklet) để đưa vào options
+        # Làm trước để các câu thuần chữ (Mondai 1 Q2, Q7 và Mondai 2) có nội dung chữ, tránh bị gán nhầm tranh vẽ
+        if target_pdf_files and use_gemini and final_questions and 'cached_pdf_bytes' in locals() and cached_pdf_bytes:
+            try:
+                parser = get_gemini_parser()
+                for p_bytes in cached_pdf_bytes:
+                    dynamic_opts = parser.extract_listening_booklet_text(p_bytes, jlpt_level=jlpt_level)
+                    if dynamic_opts:
+                        m_counters: Dict[str, int] = {}
+                        for q in final_questions:
+                            m_code = q.get("mondai_code")
+                            m_counters[m_code] = m_counters.get(m_code, 0) + 1
+                            rel_idx = m_counters[m_code]
+                            raw_q = q.get("raw_question_number")
+
+                            # Thử cả (m_code, raw_q) và (m_code, rel_idx)
+                            texts = dynamic_opts.get((m_code, raw_q)) or dynamic_opts.get((m_code, rel_idx))
+                            if texts:
+                                if not q.get("options") or len(q["options"]) < len(texts):
+                                    q["options"] = [{"option_key": i+1, "option_text": t, "is_correct": False} for i, t in enumerate(texts)]
+                                else:
+                                    for i, t in enumerate(texts):
+                                        if i < len(q["options"]):
+                                            q["options"][i]["option_text"] = t
+                                logger.info(f"📖 [BOOKLET_FILL] Đã điền text options cho câu {q.get('question_number')} ({m_code} Q{raw_q or rel_idx}): {texts}")
+            except Exception as e:
+                logger.warning(f"Lỗi khi trích xuất booklet text options từ PDF: {e}")
+
+        # BƯỚC 2: Tự động gán toàn bộ ảnh tranh vẽ (choices 2x2 & tranh tình huống single) từ crop_jlpt vào câu hỏi
         if listening_pdf_manifest and final_questions:
             try:
                 from .exam.crop_jlpt import apply_manifest_to_questions
@@ -761,24 +791,15 @@ async def extract_section_endpoint(
             )
             logger.info(f"🎨 [CROP_JLPT] Đã tự động gán ảnh đáp án (choices) và ảnh đề bài (single) vào {len(final_questions)} câu hỏi nghe!")
 
-        # Bóc tách 100% các lựa chọn in trên đề thi giấy (PDF Booklet) để đưa vào options
-        if target_pdf_files and use_gemini and final_questions and 'cached_pdf_bytes' in locals() and cached_pdf_bytes:
-            try:
-                parser = get_gemini_parser()
-                for p_bytes in cached_pdf_bytes:
-                    dynamic_opts = parser.extract_listening_booklet_text(p_bytes, jlpt_level=jlpt_level)
-                    if dynamic_opts:
-                        for q in final_questions:
-                            m_code = q.get("mondai_code")
-                            raw_q = q.get("raw_question_number")
-                            key = (m_code, raw_q)
-                            if key in dynamic_opts:
-                                texts = dynamic_opts[key]
-                                for i, t in enumerate(texts):
-                                    if i < len(q.get("options") or []):
-                                        q["options"][i]["option_text"] = t
-            except Exception as e:
-                logger.warning(f"Lỗi khi trích xuất booklet text options từ PDF: {e}")
+        # Mondai 3 (UTTERANCE_EXPRESSIONS) và Mondai 4 (QUICK_RESPONSE):
+        # Phương án lựa chọn chỉ được đọc trong audio, KHÔNG in trên đề giấy.
+        # Tuyệt đối không để lộ lời đọc thoại vào option_text trên giao diện thi!
+        for q in final_questions:
+            if q.get("mondai_code") in {"UTTERANCE_EXPRESSIONS", "QUICK_RESPONSE"}:
+                for opt in q.get("options") or []:
+                    opt_text = (opt.get("option_text") or "").strip()
+                    if opt_text and opt_text not in {"1", "2", "3"}:
+                        opt["option_text"] = "" 
 
         # Đảm bảo các câu hỏi thuộc mondai thuần chữ (KEY_POINT, QUICK_RESPONSE) không gán nhầm ảnh
         for q in final_questions:
@@ -840,7 +861,7 @@ async def extract_section_endpoint(
             except Exception as e:
                 logger.error(f"Lỗi khi nạp file đáp án nghe: {e}")
 
-        d_min = 35 if jlpt_level in ["N5", "N4"] else (40 if jlpt_level == "N3" else 50)
+        d_min = 35 if jlpt_level in ["N5", "N4"] else (40 if jlpt_level == "N3" else (60 if jlpt_level == "N1" else 50))
         return {
             "success": True,
             "section_type": "LISTENING",
@@ -858,12 +879,39 @@ async def extract_section_endpoint(
             parser = get_gemini_parser()
             combined_questions: list[dict] = []
             combined_passage = None
+            pdf_manifest: list[dict] = []
 
             for p_file in target_pdf_files:
                 pdf_bytes = await p_file.read()
                 if not pdf_bytes:
                     continue
                 logger.info(f"📄 Đang xử lý file PDF: {p_file.filename} cho section {section_type}...")
+
+                # 1. Trích xuất tranh vẽ / hình ảnh lựa chọn (lưới 2x2) bằng OpenCV qua crop_jlpt
+                try:
+                    from .exam.crop_jlpt import extract_images_from_pdf
+                except ImportError:
+                    from exam.crop_jlpt import extract_images_from_pdf
+
+                # Tạo prefix_id an toàn theo tên file để tránh đè ảnh khi nạp nhiều file PDF (ví dụ N5_文法 và N5_読解)
+                clean_fname = re.sub(r'[^a-zA-Z0-9_]', '', p_file.filename.rsplit('.', 1)[0]) if p_file.filename else ''
+                c_prefix = clean_fname[:12] if clean_fname else None
+                c_manifest = []
+
+                try:
+                    c_manifest = extract_images_from_pdf(
+                        pdf_input=pdf_bytes,
+                        output_dir=str(EXTRACTED_IMAGES_DIR),
+                        threshold=0,
+                        margin=0.005,
+                        prefix_id=c_prefix,
+                    )
+                    if c_manifest:
+                        pdf_manifest.extend(c_manifest)
+                        logger.info(f"🖼️ [CROP_JLPT] Đã bóc tách {len(c_manifest)} nhóm ảnh từ PDF {p_file.filename}")
+                except Exception as crop_err:
+                    logger.warning(f"Lỗi khi trích xuất tranh ảnh bằng crop_jlpt: {crop_err}")
+
                 result = parser.parse_pdf_for_section(
                     pdf_bytes=pdf_bytes,
                     section_type=section_type,
@@ -873,8 +921,23 @@ async def extract_section_endpoint(
                 )
                 if result.get("detected_jlpt_level"):
                     jlpt_level = result["detected_jlpt_level"]
-                if result.get("questions"):
-                    combined_questions.extend(result["questions"])
+                file_qs = result.get("questions", [])
+                if c_manifest and file_qs:
+                    try:
+                        from .exam.crop_jlpt import apply_manifest_to_questions
+                    except ImportError:
+                        from exam.crop_jlpt import apply_manifest_to_questions
+                    app_img_base = os.getenv("APP_IMAGE_BASE_URL", "http://localhost:8000/static/extracted_images")
+                    file_qs = apply_manifest_to_questions(
+                        questions=file_qs,
+                        manifest=c_manifest,
+                        base_image_url=app_img_base,
+                        jlpt_level=jlpt_level,
+                    )
+                    logger.info(f"🎨 [CROP_JLPT] Đã tự động gán ảnh đáp án vào câu hỏi cho file {p_file.filename}!")
+
+                if file_qs:
+                    combined_questions.extend(file_qs)
                 if result.get("passage") and not combined_passage:
                     combined_passage = result["passage"]
 
@@ -896,7 +959,7 @@ async def extract_section_endpoint(
 
             d_min_map = {
                 "VOCABULARY": 25 if jlpt_level in ["N5", "N4"] else 30,
-                "GRAMMAR_READING": 45 if jlpt_level in ["N5", "N4"] else 70,
+                "GRAMMAR_READING": 50 if jlpt_level == "N5" else (55 if jlpt_level == "N4" else 70),
                 "KNOWLEDGE_READING": 110 if jlpt_level == "N1" else 105,
             }
 
@@ -998,8 +1061,10 @@ async def parse_answer_key_endpoint(
     flat_map = answer_data.get("flat_answers", {})
 
     target = {}
-    if section_type and section_type in sec_map:
-        target = sec_map[section_type]
+    if section_type:
+        st = section_type.upper()
+        if st in sec_map:
+            target = sec_map[st]
     elif len(sec_map) == 1:
         target = next(iter(sec_map.values()))
     else:

@@ -31,14 +31,32 @@ export const toSlug = (text: string): string => {
     .replace(/^-+|-+$/g, '')
 }
 
+export const flattenNestedRuby = (text: string): string => {
+  if (!text || !text.includes('<ruby>')) return text
+  let res = text.replace(
+    /<ruby>\s*([^<]+?)\s*<rt>\s*<ruby>(?:[\s\S]*?<rt>([^<]+)<\/rt>|[\s\S]*?<rb>([^<]+)<\/rb>|([^<]+))[\s\S]*?<\/ruby>\s*<\/rt>\s*<\/ruby>/gi,
+    (_match, base, rtFuri, rbFuri, rawFuri) => {
+      const furi = (rtFuri || rbFuri || rawFuri || '').trim()
+      return `<ruby>${base.trim()}<rt>${furi}</rt></ruby>`
+    }
+  )
+  res = res.replace(
+    /<ruby>\s*<rb>\s*([^<]+?)\s*<\/rb>\s*<rt>\s*([^<]+?)\s*<\/rt>\s*<\/ruby>/gi,
+    (_m, b, f) => `<ruby>${b.trim()}<rt>${f.trim()}</rt></ruby>`
+  )
+  return res
+}
+
 /**
  * Làm sạch chuỗi tiếng Nhật:
  * 1. Chuyển đổi literal `\n` thành ký tự xuống dòng thực tế `\n`
  * 2. Loại bỏ dấu cách trắng nhân tạo vô lý giữa các ký tự Kanji, Hiragana, Katakana và dấu câu
+ * 3. Chuẩn hóa thẻ <ruby> Furigana không bị lồng nhau (gây xếp chồng chữ hiển thị)
  */
 export const cleanJapaneseText = (text?: string | null): string => {
   if (!text) return ''
   let cleaned = text.replace(/\\n/g, '\n')
+  cleaned = flattenNestedRuby(cleaned)
   // Loại bỏ khoảng trắng giữa các chữ tiếng Nhật (Kana, Kanji)
   cleaned = cleaned.replace(/([\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff])[\s\u3000]+([\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff])/g, '$1$2')
   // Loại bỏ khoảng trắng trước/sau dấu câu tiếng Nhật
@@ -231,6 +249,10 @@ export const cleanQuestionPrompt = (questionText?: string | null, instructionJp?
   // Chuyển 【từ】 thành <u>từ</u> (trừ ô số như 【 21 】 của bài đục lỗ)
   cleaned = cleaned.replace(/【(?!\s*\d+\s*】)(.*?)】/g, '<u>$1</u>')
 
+  // Loại bỏ hoàn toàn thẻ ruby/furigana trên từ gạch chân <u> (tránh lộ đáp án ở câu hỏi đọc chữ Hán)
+  cleaned = cleaned.replace(/<u>\s*<ruby>(.*?)(?:<rt>.*?<\/rt>)?<\/ruby>\s*<\/u>/gi, '<u>$1</u>')
+  cleaned = cleaned.replace(/<ruby>\s*<u>(.*?)<\/u>(?:<rt>.*?<\/rt>)?<\/ruby>/gi, '<u>$1</u>')
+
   // Tách lượt hội thoại giữa các nhân vật thành từng dòng riêng biệt
   // Trường hợp 1: Kết thúc bằng 」 theo sau là tên/nhân vật + 「 hoặc dấu hai chấm (ví dụ: A「...」 B「...」 hoặc 山田「...」 田中「...」)
   cleaned = cleaned.replace(/(」)\s*([A-Za-z0-9\u3040-\u30ff\u4e00-\u9faf]{1,10}[「：:])/g, '$1\n$2')
@@ -379,4 +401,72 @@ export const formatRelativeTime = (value: string | Date | null | undefined): str
   if (days < 7) return `${days} ngày trước`
 
   return formatDate(date)
+}
+
+/**
+ * Làm sạch tiêu đề bài đọc hiểu:
+ * 1. Loại bỏ các thẻ HTML như <ruby>, <rt>, <rb>, <p>, <span>... (tránh lộ cú pháp raw HTML ra ngoài UI)
+ * 2. Nhận diện nếu tiêu đề bị gán nhầm câu chỉ dẫn đề thi Mondai (vd: "もんだい５ つぎの ぶんしょうを 読んで...")
+ * 3. Nhận diện nếu tiêu đề bị gán nhầm câu dẫn bối cảnh (vd: "(3) 森さんの机の上に...")
+ */
+export const cleanPassageTitle = (rawTitle?: string | null, fallback: string = 'Đoạn văn đọc hiểu'): string => {
+  if (!rawTitle) return fallback
+  let cleaned = String(rawTitle).trim()
+  if (!cleaned) return fallback
+
+  // Lột bỏ thẻ <rt>...</rt> trước để chỉ giữ lại chữ Kanji/Kana gốc nếu có
+  cleaned = cleaned.replace(/<rt>[\s\S]*?<\/rt>/gi, '')
+  // Lột bỏ toàn bộ thẻ HTML còn lại
+  cleaned = cleaned.replace(/<[^>]+>/g, '').trim()
+  // Lột khoảng trắng thừa
+  cleaned = cleaned.replace(/\s+/g, ' ').trim()
+
+  if (!cleaned) return fallback
+
+  // Kiểm tra nếu là câu chỉ dẫn đề bài (Mondai instruction)
+  const isInstruction = /(?:もんだい|問題)\s*\d+|つぎの\s*(?:ぶんしょう|文章)|しつもんに\s*(?:こたえて|かたえて|答えて)|いちばん\s*いい\s*ものを|えらんで\s*ください|何を入れますか/i.test(cleaned)
+  if (isInstruction) {
+    return fallback
+  }
+
+  // Kiểm tra nếu là câu dẫn bối cảnh bắt đầu bằng số thứ tự (1), (2), (3)...
+  const numMatch = cleaned.match(/^[（\(]\s*([0-9０-９\d]+)\s*[）\)]/)
+  if (numMatch && (cleaned.length >= 15 || /[。？！]/.test(cleaned))) {
+    return `Bài đọc (${numMatch[1]})`
+  }
+
+  // Nếu quá dài (> 45 ký tự) và có các từ chỉ câu văn thông thường, fallback về tên chuẩn
+  if (cleaned.length > 30 && (/[。、]/.test(cleaned) || /(?:あります|います|でした|ました|メモ|手紙)/.test(cleaned))) {
+    return fallback
+  }
+
+  return cleaned || fallback
+}
+
+/**
+ * Đảm bảo nội dung bài đọc có câu dẫn tình huống (nếu câu dẫn bị lưu nhầm vào title trong các đề cũ)
+ */
+export const ensurePassageContentWithIntro = (contentJp?: string | null, rawTitle?: string | null): string => {
+  if (!contentJp) return ''
+  if (!rawTitle) return contentJp
+
+  const cleanTitle = rawTitle.replace(/<rt>[\s\S]*?<\/rt>/gi, '').replace(/<[^>]+>/g, '').trim()
+  const isInstruction = /(?:もんだい|問題)\s*\d+|つぎの\s*(?:ぶんしょう|文章)|しつもんに\s*(?:こたえて|かたえて|答えて)|いちばん\s*いい\s*ものを|えらんで\s*ください|何を入れますか/i.test(cleanTitle)
+  if (isInstruction) {
+    return contentJp
+  }
+
+  const numMatch = cleanTitle.match(/^[（\(]\s*([0-9０-９\d]+)\s*[）\)]/)
+  const isContextIntro = (numMatch && (cleanTitle.length >= 15 || /[。？！]/.test(cleanTitle))) ||
+    (cleanTitle.length >= 18 && (cleanTitle.includes('あります') || cleanTitle.includes('います') || cleanTitle.includes('でした') || cleanTitle.includes('ました') || cleanTitle.includes('メモ') || cleanTitle.includes('手紙')))
+
+  if (isContextIntro) {
+    const cleanContent = contentJp.replace(/<[^>]+>/g, '')
+    const coreIntro = cleanTitle.replace(/^[（\(]\s*[0-9０-９\d]+\s*[）\)]\s*/, '').trim()
+    if (coreIntro && !cleanContent.includes(coreIntro)) {
+      return `${rawTitle}\n\n${contentJp}`
+    }
+  }
+
+  return contentJp
 }

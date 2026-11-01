@@ -93,7 +93,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
           isSingleLine ? 'min-h-[36px] py-1 px-2.5' : 'p-3'
         }`,
       },
-      handleKeyDown: (view, event) => {
+      handleKeyDown: (_view, event) => {
         // Chặn Enter nếu là singleline (dành cho các ô đáp án 1 dòng)
         if (isSingleLine && event.key === 'Enter') {
           event.preventDefault()
@@ -238,7 +238,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
     const targetHtml = normalizeLegacy(value)
 
     if (currentHtml !== targetHtml && !editor.isFocused) {
-      editor.commands.setContent(targetHtml, false)
+      editor.commands.setContent(targetHtml, { emitUpdate: false })
     }
   }, [value, editor])
 

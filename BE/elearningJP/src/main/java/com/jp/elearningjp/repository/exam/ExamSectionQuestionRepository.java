@@ -24,7 +24,7 @@ public interface ExamSectionQuestionRepository extends JpaRepository<ExamSection
                      "LEFT JOIN FETCH q.passage " +
                      "LEFT JOIN FETCH q.mondaiType " +
                      "WHERE sq.section.id = :sectionId AND sq.deleted = false " +
-                     "ORDER BY sq.questionNumber ASC")
+                     "ORDER BY sq.id ASC")
        List<ExamSectionQuestion> findBySectionIdWithQuestionDetails(@Param("sectionId") Long sectionId);
 
        @Query("SELECT DISTINCT sq FROM ExamSectionQuestion sq " +
@@ -33,6 +33,7 @@ public interface ExamSectionQuestionRepository extends JpaRepository<ExamSection
                      "LEFT JOIN FETCH q.passage " +
                      "LEFT JOIN FETCH q.mondaiType " +
                      "WHERE sq.exam.id = :examId AND sq.deleted = false " +
-                     "ORDER BY sq.questionNumber ASC")
+                     "ORDER BY sq.id ASC")
        List<ExamSectionQuestion> findByExamIdWithQuestionDetails(@Param("examId") Long examId);
 }
+

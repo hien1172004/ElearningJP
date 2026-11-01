@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
+  Mic,
 } from 'lucide-react'
 import { Tooltip, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
@@ -63,6 +64,12 @@ const navItems: NavItem[] = [
     label: 'Khóa học',
     icon: <BookOpen className="w-5 h-5" />,
     match: isActiveOrStartsWith('/courses'),
+  },
+  {
+    to: '/speaking',
+    label: 'Luyện hội thoại',
+    icon: <Mic className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/speaking'),
   },
   {
     to: '/exams',

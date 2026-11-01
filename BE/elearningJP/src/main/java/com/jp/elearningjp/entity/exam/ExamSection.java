@@ -59,7 +59,7 @@ public class ExamSection extends SoftDeletableEntity {
 
     @Builder.Default
     @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("questionNumber ASC")
+    @OrderBy("id ASC")
     private List<ExamSectionQuestion> questions = new ArrayList<>();
 
     public void addQuestion(ExamSectionQuestion child) {
@@ -74,3 +74,4 @@ public class ExamSection extends SoftDeletableEntity {
     }
 
 }
+
