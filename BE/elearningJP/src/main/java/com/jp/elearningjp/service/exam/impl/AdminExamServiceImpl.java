@@ -145,6 +145,7 @@ public class AdminExamServiceImpl implements AdminExamService {
                 section = examSectionRepository.save(section);
 
                 int qNum = 1;
+                String lastMondaiCode = null;
                 java.util.Map<String, ReadingPassage> sectionPassageCache = new java.util.HashMap<>();
                 if (secReq.getQuestions() != null) {
                     for (var qReq : secReq.getQuestions()) {
@@ -234,11 +235,28 @@ public class AdminExamServiceImpl implements AdminExamService {
 
                         question = questionRepository.save(question);
 
+                        int assignedNum;
+                        if (secReq.getSessionType() == com.jp.elearningjp.shared.enums.SessionType.LISTENING) {
+                            String mCode = qReq.getMondaiCode() != null ? qReq.getMondaiCode()
+                                    : (mondaiType != null ? mondaiType.getCode() : "");
+                            if (lastMondaiCode == null || !lastMondaiCode.equals(mCode)) {
+                                lastMondaiCode = mCode;
+                                qNum = 1;
+                            }
+                            assignedNum = qNum++;
+                        } else {
+                            assignedNum = (qReq.getQuestionNumber() != null && qReq.getQuestionNumber() > 0)
+                                    ? qReq.getQuestionNumber() : qNum++;
+                            if (assignedNum >= qNum) {
+                                qNum = assignedNum + 1;
+                            }
+                        }
+
                         ExamSectionQuestion esq = ExamSectionQuestion.builder()
                                 .exam(exam)
                                 .section(section)
                                 .question(question)
-                                .questionNumber(qNum++)
+                                .questionNumber(assignedNum)
                                 .points(new BigDecimal("1.00"))
                                 .build();
 
@@ -273,6 +291,7 @@ public class AdminExamServiceImpl implements AdminExamService {
                             .findBySectionIdWithQuestionDetails(s.getId());
 
                     int currentSecNum = 1;
+                    String currentMondai = null;
                     List<ReviewQuestionResponse> reviewQuestions = new ArrayList<>();
                     for (var sq : sectionQuestions) {
                         Question q = sq.getQuestion();
@@ -293,8 +312,18 @@ public class AdminExamServiceImpl implements AdminExamService {
                             }
                         }
 
-                        // Rule: Số câu ở mỗi phần không nối tiếp nhau mà mỗi phần bắt đầu từ 1
-                        int expectedNum = currentSecNum++;
+                        // Rule: Với LISTENING, mỗi Mondai mới bắt đầu lại từ 1; các phần khác đánh số liên tục 1..N
+                        int expectedNum;
+                        if (s.getSessionType() == com.jp.elearningjp.shared.enums.SessionType.LISTENING) {
+                            String mCode = q != null && q.getMondaiType() != null ? q.getMondaiType().getCode() : "";
+                            if (currentMondai == null || !currentMondai.equals(mCode)) {
+                                currentMondai = mCode;
+                                currentSecNum = 1;
+                            }
+                            expectedNum = currentSecNum++;
+                        } else {
+                            expectedNum = currentSecNum++;
+                        }
                         if (sq.getQuestionNumber() == null || sq.getQuestionNumber() != expectedNum) {
                             sq.setQuestionNumber(expectedNum);
                             examSectionQuestionRepository.save(sq);
@@ -1044,10 +1073,22 @@ public class AdminExamServiceImpl implements AdminExamService {
                 return Long.compare(a.getId(), b.getId());
             });
 
-            // Rule: Số câu ở mỗi phần không nối tiếp nhau mà mỗi phần bắt đầu từ 1
+            // Rule: Số câu ở mỗi phần không nối tiếp nhau mà mỗi phần bắt đầu từ 1.
+            // Với LISTENING: mỗi Mondai mới lại bắt đầu từ 1.
             int secQuestionNumber = 1;
+            String currentMondai = null;
             for (ExamSectionQuestion esq : esqList) {
-                esq.setQuestionNumber(secQuestionNumber++);
+                if (section.getSessionType() == com.jp.elearningjp.shared.enums.SessionType.LISTENING) {
+                    String mCode = esq.getQuestion() != null && esq.getQuestion().getMondaiType() != null
+                            ? esq.getQuestion().getMondaiType().getCode() : "";
+                    if (currentMondai == null || !currentMondai.equals(mCode)) {
+                        currentMondai = mCode;
+                        secQuestionNumber = 1;
+                    }
+                    esq.setQuestionNumber(secQuestionNumber++);
+                } else {
+                    esq.setQuestionNumber(secQuestionNumber++);
+                }
                 examSectionQuestionRepository.save(esq);
                 totalQuestions++;
             }

@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { examService } from '../../services/exam.service'
 import type { ExamReviewData, ReviewQuestion } from '../../types/exam.types'
-import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatSectionName, formatJapanesePassageHtml } from '../../utils/format'
+import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatSectionName, formatJapanesePassageHtml, cleanPassageTitle, ensurePassageContentWithIntro } from '../../utils/format'
 import {
   ArrowLeft,
   CheckCircle2,
@@ -121,8 +121,8 @@ export const ExamReviewPage: React.FC = () => {
     }
   }
 
-  const scrollToQuestion = (qNumber: number) => {
-    const el = document.getElementById(`review-q-${qNumber}`)
+  const scrollToQuestion = (questionId: number) => {
+    const el = document.getElementById(`review-q-${questionId}`)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
@@ -158,7 +158,46 @@ export const ExamReviewPage: React.FC = () => {
   }
 
   const activeSection = reviewData.sections[activeSectionIndex] || reviewData.sections[0]
-  const allQuestions = activeSection ? [...activeSection.questions].sort((a, b) => (a.questionNumber ?? 0) - (b.questionNumber ?? 0)) : []
+  const allQuestions = activeSection ? (
+    activeSection.sessionType === 'LISTENING'
+      ? [...activeSection.questions]
+      : [...activeSection.questions].sort((a, b) => (a.questionNumber ?? 0) - (b.questionNumber ?? 0))
+  ) : []
+
+  // Phân nhóm câu hỏi phần Nghe theo từng Mondai cho bảng điều hướng
+  const listeningReviewMondaiGroups = useMemo(() => {
+    if (activeSection?.sessionType !== 'LISTENING') return []
+    const groups: {
+      mondaiCode?: string
+      mondaiTitle: string
+      questions: ReviewQuestion[]
+    }[] = []
+
+    let curGroup: {
+      mondaiCode?: string
+      mondaiTitle: string
+      questions: ReviewQuestion[]
+    } | null = null
+
+    allQuestions.forEach((q) => {
+      const mCode = q.mondaiCode || ''
+      if (!curGroup || curGroup.mondaiCode !== mCode) {
+        const mondaiIndex = groups.length + 1
+        const display = formatMondaiDisplay(q.mondaiCode, q.mondaiNameVi)
+        const jpTitle = display.jp ? display.jp.split(':')[0].trim() : `問題 ${mondaiIndex}`
+        curGroup = {
+          mondaiCode: mCode,
+          mondaiTitle: jpTitle.includes('問題') ? jpTitle : `問題 ${mondaiIndex}`,
+          questions: [q],
+        }
+        groups.push(curGroup)
+      } else {
+        curGroup.questions.push(q)
+      }
+    })
+
+    return groups
+  }, [allQuestions, activeSection?.sessionType])
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans">
@@ -323,7 +362,7 @@ export const ExamReviewPage: React.FC = () => {
 
                 {/* KHUNG CÂU HỎI */}
                 <div
-                  id={`review-q-${q.questionNumber}`}
+                  id={`review-q-${q.id}`}
                   className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border transition-all ${
                     !isAnswered
                       ? 'border-slate-300 dark:border-slate-700'
@@ -397,14 +436,14 @@ export const ExamReviewPage: React.FC = () => {
                     return (
                       <div className="mb-6 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
                         <div className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3 flex items-center justify-between">
-                          <span>Bài đọc / Dữ liệu tham chiếu: {q.passage.title}</span>
+                          <span>Bài đọc / Dữ liệu tham chiếu: {cleanPassageTitle(q.passage.title, 'Bài đọc')}</span>
                         </div>
 
                         {q.passage.imageUrl && (
                           <div className="mb-4 relative group inline-block">
                             <img
                               src={q.passage.imageUrl}
-                              alt={q.passage.title}
+                              alt={cleanPassageTitle(q.passage.title, 'Bài đọc')}
                               className="max-h-96 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm cursor-pointer"
                               onClick={() => setZoomImageUrl(q.passage?.imageUrl || null)}
                             />
@@ -421,7 +460,7 @@ export const ExamReviewPage: React.FC = () => {
                         {q.passage.contentJp && (
                           <div 
                             className="text-slate-800 dark:text-slate-200 leading-relaxed font-sans p-4 bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs select-text"
-                            dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(q.passage.contentJp) }}
+                            dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(ensurePassageContentWithIntro(q.passage.contentJp, q.passage.title)) }}
                           />
                         )}
                       </div>
@@ -688,34 +727,78 @@ export const ExamReviewPage: React.FC = () => {
             </div>
 
             {/* Grid numbers */}
-            <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1">
-              {allQuestions.map((q) => {
-                const isCorrect = q.studentAnswer?.correct ?? false
-                const isAnswered =
-                  q.studentAnswer?.selectedOptionId != null ||
-                  (q.studentAnswer?.orderedOptionIds && q.studentAnswer.orderedOptionIds.length > 0)
+            {activeSection?.sessionType === 'LISTENING' ? (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                {listeningReviewMondaiGroups.map((group, gIdx) => (
+                  <div key={group.mondaiCode || gIdx} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 px-0.5">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold">
+                        {group.mondaiTitle}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {group.questions.map((q) => {
+                        const isCorrect = q.studentAnswer?.correct ?? false
+                        const isAnswered =
+                          q.studentAnswer?.selectedOptionId != null ||
+                          (q.studentAnswer?.orderedOptionIds && q.studentAnswer.orderedOptionIds.length > 0)
 
-                let colorClass = 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
-                if (isAnswered) {
-                  colorClass = isCorrect
-                    ? 'bg-emerald-500 text-white font-bold hover:bg-emerald-600'
-                    : 'bg-rose-500 text-white font-bold hover:bg-rose-600'
-                }
+                        let colorClass = 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                        if (isAnswered) {
+                          colorClass = isCorrect
+                            ? 'bg-emerald-500 text-white font-bold hover:bg-emerald-600'
+                            : 'bg-rose-500 text-white font-bold hover:bg-rose-600'
+                        }
 
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => scrollToQuestion(q.questionNumber)}
-                    className={`h-9 rounded-xl text-xs flex items-center justify-center transition-all ${colorClass}`}
-                    title={`Câu ${q.questionNumber}: ${
-                      !isAnswered ? 'Chưa làm' : isCorrect ? 'Đúng' : 'Sai'
-                    }`}
-                  >
-                    {q.questionNumber}
-                  </button>
-                )
-              })}
-            </div>
+                        return (
+                          <button
+                            key={q.id}
+                            type="button"
+                            onClick={() => scrollToQuestion(q.id)}
+                            className={`h-8.5 rounded-xl text-xs flex items-center justify-center transition-all cursor-pointer ${colorClass}`}
+                            title={`${group.mondaiTitle} - Câu ${q.questionNumber}: ${
+                              !isAnswered ? 'Chưa làm' : isCorrect ? 'Đúng' : 'Sai'
+                            }`}
+                          >
+                            {q.questionNumber}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+                {allQuestions.map((q) => {
+                  const isCorrect = q.studentAnswer?.correct ?? false
+                  const isAnswered =
+                    q.studentAnswer?.selectedOptionId != null ||
+                    (q.studentAnswer?.orderedOptionIds && q.studentAnswer.orderedOptionIds.length > 0)
+
+                  let colorClass = 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                  if (isAnswered) {
+                    colorClass = isCorrect
+                      ? 'bg-emerald-500 text-white font-bold hover:bg-emerald-600'
+                      : 'bg-rose-500 text-white font-bold hover:bg-rose-600'
+                  }
+
+                  return (
+                    <button
+                      key={q.id}
+                      type="button"
+                      onClick={() => scrollToQuestion(q.id)}
+                      className={`h-9 rounded-xl text-xs flex items-center justify-center transition-all cursor-pointer ${colorClass}`}
+                      title={`Câu ${q.questionNumber}: ${
+                        !isAnswered ? 'Chưa làm' : isCorrect ? 'Đúng' : 'Sai'
+                      }`}
+                    >
+                      {q.questionNumber}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
               <button

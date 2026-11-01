@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -129,7 +130,7 @@ export const ScenarioDetailPage: React.FC = () => {
       navigate(`/speaking/session/${session.id}`)
     } catch (err) {
       console.error('Lỗi tạo phiên luyện nói:', err)
-      alert('Không thể khởi tạo phiên luyện nói. Vui lòng thử lại!')
+      toast.error('Không thể khởi tạo phiên luyện nói. Vui lòng thử lại!')
     } finally {
       setIsStartingSession(false)
     }
@@ -866,7 +867,7 @@ export const ScenarioDetailPage: React.FC = () => {
                     {/* Nút Luyện tập */}
                     <button
                       type="button"
-                      onClick={() => alert('Chế độ luyện tập ngữ pháp đang được kích hoạt!')}
+                      onClick={() => toast.info('Chế độ luyện tập ngữ pháp đang được kích hoạt!')}
                       className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition"
                     >
                       Luyện tập

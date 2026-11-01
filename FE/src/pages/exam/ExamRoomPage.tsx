@@ -1,8 +1,9 @@
+import { toast } from 'sonner'
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { examService } from '@/services'
 import type { ExamTakingData, TakingQuestion, TakingSection, TakingPassage } from '@/types'
-import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatJapanesePassageHtml } from '@/utils/format'
+import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatJapanesePassageHtml, cleanPassageTitle, ensurePassageContentWithIntro } from '@/utils/format'
 import { 
   Clock, AlertCircle, Flag, Send, 
   X, Loader2, Star, ChevronRight, CheckCircle2, Sparkles,
@@ -67,7 +68,7 @@ export const ExamRoomPage: React.FC = () => {
           if (res.data) setTakingData(res.data)
         })
         .catch(err => {
-          alert('Không thể tải bài thi: ' + (err?.response?.data?.message || err.message))
+          toast.error('Không thể tải bài thi: ' + (err?.response?.data?.message || err.message))
           navigate('/exams')
         })
         .finally(() => setLoading(false))
@@ -119,8 +120,47 @@ export const ExamRoomPage: React.FC = () => {
   const currentSection: TakingSection | undefined = takingData?.sections[currentSectionIndex]
   const currentQuestions: TakingQuestion[] = useMemo(() => {
     if (!currentSection?.questions) return []
+    if (currentSection.sessionType === 'LISTENING') {
+      // Với phần nghe: Giữ nguyên thứ tự theo đề thi / id đã sắp xếp từ backend
+      return [...currentSection.questions]
+    }
     return [...currentSection.questions].sort((a, b) => (a.questionNumber ?? 0) - (b.questionNumber ?? 0))
   }, [currentSection])
+
+  // Phân nhóm câu hỏi phần Nghe theo từng Mondai cho bảng điều hướng
+  const listeningMondaiGroups = useMemo(() => {
+    if (currentSection?.sessionType !== 'LISTENING') return []
+    const groups: {
+      mondaiCode?: string
+      mondaiTitle: string
+      questions: TakingQuestion[]
+    }[] = []
+
+    let curGroup: {
+      mondaiCode?: string
+      mondaiTitle: string
+      questions: TakingQuestion[]
+    } | null = null
+
+    currentQuestions.forEach((q) => {
+      const mCode = q.mondaiCode || ''
+      if (!curGroup || curGroup.mondaiCode !== mCode) {
+        const mondaiIndex = groups.length + 1
+        const display = formatMondaiDisplay(q.mondaiCode, q.mondaiNameVi)
+        const jpTitle = display.jp ? display.jp.split(':')[0].trim() : `問題 ${mondaiIndex}`
+        curGroup = {
+          mondaiCode: mCode,
+          mondaiTitle: jpTitle.includes('問題') ? jpTitle : `問題 ${mondaiIndex}`,
+          questions: [q],
+        }
+        groups.push(curGroup)
+      } else {
+        curGroup.questions.push(q)
+      }
+    })
+
+    return groups
+  }, [currentQuestions, currentSection?.sessionType])
   const isLastSection = takingData ? currentSectionIndex >= takingData.sections.length - 1 : true
 
   // Thống kê số câu đã làm trong ca hiện tại
@@ -421,7 +461,7 @@ export const ExamRoomPage: React.FC = () => {
           const useTwoCols = (isNestedInPassage || isShortOptions) && visibleOptions.length === 4 && isShortOptions
 
           return (
-            <div className={useTwoCols ? 'grid grid-cols-1 sm:grid-cols-2 gap-2.5' : 'space-y-2'}>
+            <div className={isThreeOptionsMondai ? 'grid grid-cols-1 sm:grid-cols-3 gap-2.5' : (useTwoCols ? 'grid grid-cols-1 sm:grid-cols-2 gap-2.5' : 'space-y-2')}>
               {visibleOptions.map((opt) => {
                 const isSelected = selectedOptId === opt.id
                 return (
@@ -429,7 +469,7 @@ export const ExamRoomPage: React.FC = () => {
                     key={opt.id}
                     type="button"
                     onClick={() => handleSelectOption(q.id, opt.id)}
-                    className={`w-full ${useTwoCols ? 'p-3' : 'p-3.5'} rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                    className={`w-full ${useTwoCols || isThreeOptionsMondai ? 'p-3' : 'p-3.5'} rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
                         ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-xs'
                         : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/60 bg-white text-slate-800 font-medium'
@@ -445,10 +485,12 @@ export const ExamRoomPage: React.FC = () => {
                       >
                         {opt.optionKey}
                       </span>
-                      <span
-                        className="text-sm md:text-base font-serif truncate sm:whitespace-normal [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold [&_u]:text-indigo-950"
-                        dangerouslySetInnerHTML={{ __html: cleanJapaneseText(opt.optionText) }}
-                      />
+                      {!isThreeOptionsMondai && opt.optionText && opt.optionText.trim() !== String(opt.optionKey) && !opt.optionText.startsWith('選択肢') && !opt.optionText.startsWith('Lựa chọn') && (
+                        <span
+                          className="text-sm md:text-base font-serif truncate sm:whitespace-normal [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold [&_u]:text-indigo-950"
+                          dangerouslySetInnerHTML={{ __html: cleanJapaneseText(opt.optionText) }}
+                        />
+                      )}
                     </div>
 
                     {isSelected && (
@@ -500,7 +542,7 @@ export const ExamRoomPage: React.FC = () => {
         })
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi nộp bài thi!')
+      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi nộp bài thi!')
       setSubmitting(false)
     }
   }
@@ -719,7 +761,7 @@ export const ExamRoomPage: React.FC = () => {
                           <div className="flex items-center gap-2.5">
                             <BookOpen className="w-4 h-4 text-indigo-600" />
                             <h4 className="text-sm sm:text-base font-bold text-slate-900 font-serif">
-                              {item.passage.title || 'Bài đọc hiểu'}
+                              {cleanPassageTitle(item.passage.title, 'Bài đọc hiểu')}
                             </h4>
                           </div>
                           <span className="text-xs font-bold px-2.5 py-0.5 bg-white text-slate-700 border border-slate-200 rounded-lg shadow-2xs">
@@ -734,7 +776,7 @@ export const ExamRoomPage: React.FC = () => {
                               onClick={handlePassageBlankClick}
                               className="text-slate-800 bg-white select-text font-serif text-[16px] sm:text-[17px] leading-[2.2] tracking-wide"
                               title="Bấm vào số chỗ trống 【 21 】 để cuộn nhanh đến câu hỏi tương ứng bên dưới"
-                              dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(item.passage.contentJp) }}
+                              dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(ensurePassageContentWithIntro(item.passage.contentJp, item.passage.title)) }}
                             />
                           )}
                         </div>
@@ -818,11 +860,62 @@ export const ExamRoomPage: React.FC = () => {
             </div>
 
             {/* Grid các ô số câu hỏi (Cuộn nội bộ êm ái) */}
-            <div className="grid grid-cols-4 gap-2 overflow-y-auto pr-1 py-1 flex-1 min-h-[160px]">
-              {currentQuestions.map((q) => {
-                const isAnswered = !!answers[q.id]
-                const isFlagged = flaggedQuestions.has(q.id)
-                const isActive = activeQuestionId === q.id
+            {currentSection.sessionType === 'LISTENING' ? (
+              <div className="space-y-3 overflow-y-auto pr-1 py-1 flex-1 min-h-[160px]">
+                {listeningMondaiGroups.map((group, gIdx) => (
+                  <div key={group.mondaiCode || gIdx} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-extrabold">
+                        {group.mondaiTitle}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-bold">
+                        {group.questions.filter((q) => !!answers[q.id]).length}/{group.questions.length}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {group.questions.map((q) => {
+                        const isAnswered = !!answers[q.id]
+                        const isFlagged = flaggedQuestions.has(q.id)
+                        const isActive = activeQuestionId === q.id
+                        return (
+                          <button
+                            key={q.id}
+                            type="button"
+                            onClick={() => scrollToQuestion(q.id)}
+                            className={`relative h-8.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
+                              isActive ? 'ring-2 ring-indigo-600 ring-offset-1' : ''
+                            } ${
+                              isAnswered
+                                ? 'bg-indigo-600 text-white shadow-2xs hover:bg-indigo-700'
+                                : isFlagged
+                                ? 'bg-amber-50 text-amber-900 border-2 border-amber-400 font-black'
+                                : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                            }`}
+                            title={`${group.mondaiTitle} - Câu ${q.questionNumber}${isAnswered ? ' • Đã làm' : ' • Chưa làm'}${isFlagged ? ' • Đã cắm cờ' : ''}`}
+                          >
+                            <span>{q.questionNumber}</span>
+                            {isFlagged && (
+                              <span
+                                className={`absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center shadow-2xs ${
+                                  isAnswered ? 'bg-amber-400 text-slate-900 ring-1 ring-white' : 'bg-amber-500 text-white'
+                                }`}
+                              >
+                                <Flag className="w-1.5 h-1.5 fill-current" />
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-2 overflow-y-auto pr-1 py-1 flex-1 min-h-[160px]">
+                {currentQuestions.map((q) => {
+                  const isAnswered = !!answers[q.id]
+                  const isFlagged = flaggedQuestions.has(q.id)
+                  const isActive = activeQuestionId === q.id
 
                   return (
                     <button
@@ -854,6 +947,7 @@ export const ExamRoomPage: React.FC = () => {
                   )
                 })}
               </div>
+            )}
 
             {/* Cụm nút hành động phía dưới Palette luôn cố định */}
             <div className="shrink-0 space-y-2 pt-1 border-t border-slate-100">

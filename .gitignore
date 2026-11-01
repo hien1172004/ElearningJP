@@ -64,6 +64,8 @@ AI/data/ETL9G_IMG/
 AI/data/ETL9G_IMG/**
 AI/data/cache/
 AI/data/cache/**
+AI/cache/
+AI/cache/**
 AI/data/*.zip
 AI/data/*.tar*
 AI/checkpoints/
@@ -72,5 +74,5 @@ AI/**/extracted_images/
 AI/**/extracted_audio/
 AI/**/scratch/
 test_crop_output/
-crop_jlpt.py
+/crop_jlpt.py
 __pycache__/

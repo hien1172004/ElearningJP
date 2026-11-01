@@ -7,7 +7,6 @@ interface ConfirmOptions {
   content?: React.ReactNode
   okText?: string
   cancelText?: string
-  okType?: 'primary' | 'danger' | 'default'
   danger?: boolean
 }
 
@@ -17,13 +16,32 @@ interface ConfirmOptions {
  */
 export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
   return new Promise((resolve) => {
+    const isDanger = options.danger ?? false
     const props: ModalFuncProps = {
-      title: options.title,
-      content: options.content,
+      title: (
+        <span className="font-bold text-slate-800 text-base">
+          {options.title}
+        </span>
+      ),
+      content:
+        typeof options.content === 'string' ? (
+          <div className="text-sm text-slate-600 whitespace-pre-line leading-relaxed mt-2.5">
+            {options.content}
+          </div>
+        ) : (
+          options.content
+        ),
       okText: options.okText ?? 'Xác nhận',
       cancelText: options.cancelText ?? 'Huỷ',
-      okButtonProps: { danger: options.danger ?? options.okType === 'danger' },
+      okButtonProps: {
+        danger: isDanger,
+        className: '!rounded-lg font-medium shadow-xs',
+      },
+      cancelButtonProps: {
+        className: '!rounded-lg font-medium text-slate-600 hover:text-slate-800',
+      },
       centered: true,
+      maskClosable: true,
       onOk: () => resolve(true),
       onCancel: () => resolve(false),
     }
@@ -57,17 +75,24 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   return (
     <Modal
       open={open}
-      title={title}
+      title={<span className="font-bold text-slate-800">{title}</span>}
       onOk={onConfirm}
       onCancel={onCancel}
       okText={okText}
       cancelText={cancelText}
-      okButtonProps={{ danger, loading: isLoading }}
+      okButtonProps={{ danger, loading: isLoading, className: '!rounded-lg font-medium shadow-xs' }}
+      cancelButtonProps={{ className: '!rounded-lg' }}
       confirmLoading={isLoading}
       centered
       maskClosable={!isLoading}
     >
-      {content}
+      {typeof content === 'string' ? (
+        <div className="text-sm text-slate-600 whitespace-pre-line leading-relaxed mt-2.5">
+          {content}
+        </div>
+      ) : (
+        content
+      )}
     </Modal>
   )
 }

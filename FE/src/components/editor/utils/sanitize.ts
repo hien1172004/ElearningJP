@@ -2,7 +2,7 @@ import DOMPurify from 'dompurify'
 
 // Cấu hình sanitize whitelist chuẩn JLPT:
 // Chỉ cho phép: p, br, strong, b, u, ruby, rt, span[data-speaker]
-const SANITIZE_CONFIG: DOMPurify.Config = {
+const SANITIZE_CONFIG: any = {
   ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'u', 'ruby', 'rt', 'span'],
   ALLOWED_ATTR: ['data-speaker', 'class'],
 }
@@ -12,7 +12,7 @@ const SANITIZE_CONFIG: DOMPurify.Config = {
  */
 export function sanitizeJapaneseHtml(html: string): string {
   if (!html) return ''
-  return DOMPurify.sanitize(html, SANITIZE_CONFIG).trim()
+  return String(DOMPurify.sanitize(html, SANITIZE_CONFIG)).trim()
 }
 
 /**

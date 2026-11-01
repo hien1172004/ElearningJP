@@ -1,3 +1,5 @@
+import { toast } from 'sonner'
+import { confirmDialog } from '@/components/common/ConfirmModal'
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { examService } from '@/services/exam.service'
@@ -10,7 +12,7 @@ import type {
   CreateQuestionPayload,
   TakingPassage,
 } from '@/types'
-import { formatJapanesePassageHtml, cleanQuestionPrompt } from '@/utils/format'
+import { formatJapanesePassageHtml, cleanQuestionPrompt, cleanPassageTitle, ensurePassageContentWithIntro } from '@/utils/format'
 import {
   getMondaisBySessionType,
   getMondaiByCode,
@@ -23,7 +25,6 @@ import { VocabGrammarStandardForm } from '@/components/exam/forms/VocabGrammarSt
 import { PassageQuestionGroupForm } from '@/components/exam/forms/PassageQuestionGroupForm'
 import { ListeningQuestionForm } from '@/components/exam/forms/ListeningQuestionForm'
 import { FileUploadButton } from '@/components/exam/FileUploadButton'
-import { JapaneseTextEditor } from '@/components/common/JapaneseTextEditor'
 import { RichTextField } from '@/components/editor/RichTextField'
 import {
   FileText,
@@ -213,9 +214,9 @@ export const AdminExamPreviewPage: React.FC = () => {
       await examService.updateSectionAudio(Number(examId), activeSection.id, sectionAudioUrlInput.trim())
       const refreshed = await examService.getAdminExamPreview(Number(examId))
       setPreviewData(refreshed)
-      alert('Đã cập nhật file Audio cho phần thi thành công!')
+      toast.success('Đã cập nhật file Audio cho phần thi thành công!')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi cập nhật Audio')
+      toast.error(err.response?.data?.message || 'Lỗi khi cập nhật Audio')
     } finally {
       setIsUpdatingAudio(false)
     }
@@ -265,12 +266,15 @@ export const AdminExamPreviewPage: React.FC = () => {
       setEditingQuestionId(null)
 
       if (previewData?.totalAttempts && previewData.totalAttempts > 0) {
-        alert(
-          `✅ Đã lưu cập nhật câu hỏi thành công!\n\n📌 LƯU Ý NGHIỆP VỤ: Đề thi này đã có ${previewData.totalAttempts} bài thi đã nộp. Nếu bạn vừa thay đổi đáp án đúng hoặc điểm số, hãy nhấn nút [Chấm lại ${previewData.totalAttempts} bài thi] ở đầu trang để hệ thống tự động cập nhật lại điểm số cho các thí sinh cũ.`
+        toast.info(
+          `Đã lưu câu hỏi! Đề thi đã có ${previewData.totalAttempts} bài thi đã nộp. Hãy bấm [Chấm lại bài thi] ở đầu trang để cập nhật điểm mới.`,
+          { duration: 6000 }
         )
+      } else {
+        toast.success('Đã lưu thay đổi câu hỏi thành công!')
       }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi lưu thay đổi câu hỏi')
+      toast.error(err.response?.data?.message || 'Lỗi lưu thay đổi câu hỏi')
     } finally {
       setSavingQuestion(false)
     }
@@ -281,30 +285,40 @@ export const AdminExamPreviewPage: React.FC = () => {
     if (!examId) return
 
     if (previewData?.inProgressAttempts && previewData.inProgressAttempts > 0) {
-      alert(
-        `⛔ KHÔNG THỂ XÓA CÂU HỎI!\n\nHiện đang có ${previewData.inProgressAttempts} thí sinh đang trực tiếp làm bài thi này. Việc xóa câu hỏi sẽ làm hỏng phiên thi và mất bài làm của thí sinh.\n\nVui lòng chờ thí sinh hoàn thành hoặc sử dụng tính năng "Nhân bản đề (Bản mới)".`
+      toast.error(
+        `Không thể xóa câu hỏi! Hiện đang có ${previewData.inProgressAttempts} thí sinh đang trực tiếp làm bài thi này.`,
+        { duration: 5000 }
       )
       return
     }
 
     if (previewData?.totalAttempts && previewData.totalAttempts > 0) {
-      if (
-        !window.confirm(
-          `⚠️ CẢNH BÁO: Đề thi này đã có ${previewData.totalAttempts} lượt nộp bài!\n\nNếu xóa câu hỏi này, thí sinh thi sau sẽ bị lệch số câu so với thí sinh thi trước.\n\nKhuyến nghị: Bạn nên dùng nút "Nhân bản đề (Bản mới)" ở trên để tạo đề mới an toàn.\n\nBạn có chắc chắn VẪN MUỐN XÓA câu này?`
-        )
-      ) {
-        return
-      }
+      const confirmed = await confirmDialog({
+        title: 'Cảnh báo: Đề thi đã có bài làm',
+        content: `Đề thi này đã có ${previewData.totalAttempts} lượt nộp bài!\n\nNếu xóa câu hỏi này, thí sinh thi sau sẽ bị lệch số câu so với thí sinh trước. Khuyến nghị: Bạn nên dùng tính năng "Nhân bản đề (Bản mới)" để chỉnh sửa an toàn.\n\nBạn có chắc chắn VẪN MUỐN XÓA câu hỏi này?`,
+        okText: 'Vẫn xóa',
+        cancelText: 'Hủy',
+        danger: true,
+      })
+      if (!confirmed) return
     } else {
-      if (!window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này khỏi đề thi không?')) return
+      const confirmed = await confirmDialog({
+        title: 'Xóa câu hỏi?',
+        content: 'Bạn có chắc chắn muốn xóa câu hỏi này khỏi đề thi không? Thao tác này không thể hoàn tác.',
+        okText: 'Xóa câu hỏi',
+        cancelText: 'Hủy',
+        danger: true,
+      })
+      if (!confirmed) return
     }
 
     try {
       await examService.deleteQuestion(Number(examId), qId)
       const refreshed = await examService.getAdminExamPreview(Number(examId))
       setPreviewData(refreshed)
+      toast.success('Đã xóa câu hỏi thành công!')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi xóa câu hỏi')
+      toast.error(err.response?.data?.message || 'Lỗi khi xóa câu hỏi')
     }
   }
 
@@ -312,15 +326,21 @@ export const AdminExamPreviewPage: React.FC = () => {
   const [isCloning, setIsCloning] = useState<boolean>(false)
   const handleCloneExam = async () => {
     if (!examId) return
-    if (!window.confirm('Bạn có muốn nhân bản đề thi này sang một bản mới (Draft) để biên tập/chỉnh sửa an toàn mà không ảnh hưởng kết quả cũ?')) return
+    const confirmed = await confirmDialog({
+      title: 'Nhân bản đề thi?',
+      content: 'Hệ thống sẽ tạo ra một bản sao mới (Bản Nháp) với đầy đủ nội dung, cấu trúc và audio để bạn biên tập an toàn mà không ảnh hưởng kết quả cũ.',
+      okText: 'Nhân bản ngay',
+      cancelText: 'Hủy',
+    })
+    if (!confirmed) return
 
     try {
       setIsCloning(true)
       const newExamId = await examService.cloneExam(Number(examId))
-      alert('Đã nhân bản đề thi thành công! Đang chuyển hướng sang bản mới...')
+      toast.success('Đã nhân bản đề thi thành công! Đang chuyển hướng sang bản mới...')
       navigate(`/admin/exams/${newExamId}/preview`)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi nhân bản đề thi')
+      toast.error(err.response?.data?.message || 'Lỗi khi nhân bản đề thi')
     } finally {
       setIsCloning(false)
     }
@@ -331,21 +351,23 @@ export const AdminExamPreviewPage: React.FC = () => {
   const handleRegradeExam = async () => {
     if (!examId) return
     const attempts = previewData?.totalAttempts || 0
-    if (
-      !window.confirm(
-        `Bạn có chắc chắn muốn chấm lại điểm cho tất cả ${attempts} bài thi đã nộp theo các đáp án hiện tại không? Điểm số của học viên sẽ được tự động tính toán lại.`
-      )
-    )
-      return
+    const confirmed = await confirmDialog({
+      title: 'Chấm lại toàn bộ bài thi đã nộp?',
+      content: `⚠️ CẢNH BÁO QUAN TRỌNG:\n\n• Hệ thống sẽ tính lại điểm số cho TẤT CẢ ${attempts} bài thi đã nộp theo các đáp án hiện tại.\n• Điểm số cũ trên Bảng xếp hạng và Lịch sử thi sẽ được cập nhật lại.\n• Hãy dùng tính năng này sau khi bạn đã chỉnh sửa xong đáp án đúng!`,
+      okText: 'Bắt đầu chấm lại',
+      cancelText: 'Hủy',
+      danger: true,
+    })
+    if (!confirmed) return
 
     try {
       setIsRegrading(true)
       const count = await examService.regradeExam(Number(examId))
-      alert(`✓ Đã chấm lại thành công cho ${count} lượt làm bài!`)
+      toast.success(`Đã chấm lại thành công cho ${count} lượt làm bài!`)
       const refreshed = await examService.getAdminExamPreview(Number(examId))
       setPreviewData(refreshed)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi chấm lại bài thi')
+      toast.error(err.response?.data?.message || 'Lỗi khi chấm lại bài thi')
     } finally {
       setIsRegrading(false)
     }
@@ -369,8 +391,8 @@ export const AdminExamPreviewPage: React.FC = () => {
   const handleStartEditPassage = (p: TakingPassage) => {
     setEditingPassageId(p.id || -1)
     setPassageEditForm({
-      title: p.title || '',
-      contentJp: p.contentJp || '',
+      title: cleanPassageTitle(p.title),
+      contentJp: ensurePassageContentWithIntro(p.contentJp, p.title),
       translationVi: p.translationVi || '',
       imageUrl: p.imageUrl || '',
     })
@@ -384,9 +406,9 @@ export const AdminExamPreviewPage: React.FC = () => {
       const refreshed = await examService.getAdminExamPreview(Number(examId))
       setPreviewData(refreshed)
       setEditingPassageId(null)
-      alert('Đã cập nhật bài đọc thành công!')
+      toast.success('Đã cập nhật bài đọc thành công!')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi cập nhật bài đọc')
+      toast.error(err.response?.data?.message || 'Lỗi khi cập nhật bài đọc')
     } finally {
       setSavingPassage(false)
     }
@@ -394,14 +416,22 @@ export const AdminExamPreviewPage: React.FC = () => {
 
   const handleDeletePassage = async (passageId: number, questions: AdminTakingQuestion[]) => {
     if (!examId) return
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa bài đọc này và toàn bộ ${questions.length} câu hỏi liên quan không?`)) return
+    const confirmed = await confirmDialog({
+      title: 'Xóa bài đọc?',
+      content: `Bạn có chắc chắn muốn xóa bài đọc này và toàn bộ ${questions.length} câu hỏi liên quan không? Thao tác này không thể hoàn tác.`,
+      okText: 'Xóa bài đọc',
+      cancelText: 'Hủy',
+      danger: true,
+    })
+    if (!confirmed) return
+
     try {
       await examService.deletePassage(Number(examId), passageId)
       const refreshed = await examService.getAdminExamPreview(Number(examId))
       setPreviewData(refreshed)
-      alert('Đã xóa bài đọc và các câu hỏi liên quan thành công!')
+      toast.success('Đã xóa bài đọc và các câu hỏi liên quan thành công!')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi xóa bài đọc')
+      toast.error(err.response?.data?.message || 'Lỗi khi xóa bài đọc')
     }
   }
 
@@ -415,9 +445,9 @@ export const AdminExamPreviewPage: React.FC = () => {
       sessionStorage.setItem(`exam_snapshot_time_${examId}`, nowStr)
       setSnapshotTimestamp(nowStr)
       await examService.saveSnapshot(Number(examId), previewData)
-      alert(`📸 Đã tạo điểm lưu đề thi thành công vào lúc ${nowStr}! Bạn có thể yên tâm chỉnh sửa tiếp.`)
+      toast.success(`Đã tạo điểm lưu đề thi thành công vào lúc ${nowStr}! Bạn có thể yên tâm chỉnh sửa tiếp.`)
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi tạo điểm lưu')
+      toast.error(err.message || 'Lỗi khi tạo điểm lưu')
     } finally {
       setIsTakingSnapshot(false)
     }
@@ -440,9 +470,9 @@ export const AdminExamPreviewPage: React.FC = () => {
       const restoredData = res?.data || (await examService.getAdminExamPreview(Number(examId)))
       setPreviewData(restoredData)
       setIsRollbackModalOpen(false)
-      alert(`⏪ Đã hoàn tác thành công đề thi về trạng thái lúc ${snapshotTimestamp || 'ban đầu'}!`)
+      toast.success(`Đã hoàn tác thành công đề thi về trạng thái lúc ${snapshotTimestamp || 'ban đầu'}!`)
     } catch (err: any) {
-      alert(err.response?.data?.message || err.message || 'Lỗi khi khôi phục đề thi về bản lưu trước')
+      toast.error(err.response?.data?.message || err.message || 'Lỗi khi khôi phục đề thi về bản lưu trước')
     } finally {
       setIsRollingBack(false)
     }
@@ -506,7 +536,7 @@ export const AdminExamPreviewPage: React.FC = () => {
   const handleAddQuestionSubmit = async () => {
     if (!examId || !activeSection) return
     if (!newQuestionForm.questionText.trim()) {
-      alert('Vui lòng nhập nội dung câu hỏi')
+      toast.warning('Vui lòng nhập nội dung câu hỏi')
       return
     }
 
@@ -516,8 +546,9 @@ export const AdminExamPreviewPage: React.FC = () => {
       const refreshed = await examService.getAdminExamPreview(Number(examId))
       setPreviewData(refreshed)
       setIsAddModalOpen(false)
+      toast.success('Đã thêm câu hỏi mới thành công!')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi thêm câu hỏi mới')
+      toast.error(err.response?.data?.message || 'Lỗi khi thêm câu hỏi mới')
     } finally {
       setAddingQuestion(false)
     }
@@ -712,13 +743,13 @@ export const AdminExamPreviewPage: React.FC = () => {
       setIsAiSectionModalOpen(false)
       setAiExtractedQuestions([])
       setAiExtractedPassage(null)
-      alert(
+      toast.success(
         aiSaveMode === 'OVERWRITE' && (activeSection.questions?.length || 0) > 0
           ? 'Đã ghi đè và nạp mới toàn bộ câu hỏi vào phần thi này thành công!'
           : 'Đã bổ sung thành công các câu hỏi trích xuất từ AI vào phần này!'
       )
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi lưu câu hỏi AI vào phần thi')
+      toast.error(err.message || 'Lỗi khi lưu câu hỏi AI vào phần thi')
     } finally {
       setAiSectionLoading(false)
     }
@@ -729,18 +760,25 @@ export const AdminExamPreviewPage: React.FC = () => {
   // Phát hành đề thi
   const handlePublishExam = async () => {
     if (!examId) return
-    if (!window.confirm('Bạn có chắc chắn muốn phát hành đề thi này cho tất cả học viên không?')) return
+    const confirmed = await confirmDialog({
+      title: 'Phát hành đề thi?',
+      content: 'Bạn có chắc chắn muốn phát hành đề thi này cho tất cả học viên không? Đề thi sẽ xuất hiện công khai trên danh sách thi thử.',
+      okText: 'Phát hành ngay',
+      cancelText: 'Hủy',
+    })
+    if (!confirmed) return
 
     try {
       setPublishing(true)
       await examService.publishExam(Number(examId))
       setPublishSuccess(true)
       setPreviewData((prev) => (prev ? { ...prev, published: true } : prev))
+      toast.success('Đã phát hành đề thi thành công!')
       setTimeout(() => {
         navigate('/admin/dashboard')
       }, 1200)
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi phát hành đề thi')
+      toast.error(err.response?.data?.message || 'Lỗi khi phát hành đề thi')
     } finally {
       setPublishing(false)
     }
@@ -749,44 +787,47 @@ export const AdminExamPreviewPage: React.FC = () => {
   // Thu hồi đề thi về Bản Nháp
   const handleUnpublishExam = async () => {
     if (!examId) return
-    if (
-      !window.confirm(
-        'Bạn có chắc chắn muốn thu hồi đề thi này về Bản Nháp? Học viên sẽ không còn nhìn thấy hay làm bài thi này nữa.'
-      )
-    )
-      return
+    const confirmed = await confirmDialog({
+      title: 'Thu hồi đề thi về Bản Nháp?',
+      content: 'Học viên sẽ tạm thời không nhìn thấy hoặc làm đề thi này cho đến khi được phát hành lại.',
+      okText: 'Thu hồi đề thi',
+      cancelText: 'Hủy',
+      danger: true,
+    })
+    if (!confirmed) return
 
     try {
       setUnpublishing(true)
       await examService.unpublishExam(Number(examId))
       setPreviewData((prev) => (prev ? { ...prev, published: false } : prev))
       setPublishSuccess(false)
-      alert('Đã chuyển đề thi về Bản Nháp thành công!')
+      toast.success('Đã chuyển đề thi về Bản Nháp thành công!')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi thu hồi đề thi')
+      toast.error(err.response?.data?.message || 'Lỗi khi thu hồi đề thi')
     } finally {
       setUnpublishing(false)
     }
   }
 
-  // Tự động sắp xếp và đánh số lại câu hỏi (mỗi phần bắt đầu từ 1) theo chuẩn JLPT
+  // Tự động sắp xếp và đánh số lại câu hỏi theo chuẩn JLPT
   const [isReordering, setIsReordering] = useState<boolean>(false)
   const handleReorderQuestions = async () => {
     if (!examId) return
-    if (
-      !window.confirm(
-        'Hệ thống sẽ tự động sắp xếp lại các câu hỏi theo đúng trình tự Mondai chuẩn JLPT và đánh số mỗi phần thi bắt đầu từ 1. Bạn có muốn thực hiện không?'
-      )
-    )
-      return
+    const confirmed = await confirmDialog({
+      title: 'Sắp xếp và đánh số lại câu hỏi?',
+      content: 'Hệ thống sẽ tự động sắp xếp lại các câu hỏi theo đúng trình tự Mondai chuẩn JLPT:\n• Phần Từ vựng & Ngữ pháp: Đánh số liên tục 1..N\n• Phần Nghe hiểu: Đánh số bắt đầu từ câu 1 cho mỗi Mondai.\n\nBạn có muốn thực hiện không?',
+      okText: 'Sắp xếp lại',
+      cancelText: 'Hủy',
+    })
+    if (!confirmed) return
 
     try {
       setIsReordering(true)
       const refreshed = await examService.reorderQuestions(Number(examId))
       setPreviewData(refreshed)
-      alert('Đã sắp xếp và đánh số lại câu hỏi (mỗi phần bắt đầu từ câu 1) thành công!')
+      toast.success('Đã sắp xếp và đánh số lại câu hỏi theo chuẩn JLPT thành công!')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Lỗi khi đánh số lại câu hỏi')
+      toast.error(err.response?.data?.message || 'Lỗi khi đánh số lại câu hỏi')
     } finally {
       setIsReordering(false)
     }
@@ -823,10 +864,12 @@ export const AdminExamPreviewPage: React.FC = () => {
 
   const isCurrentSectionListening = activeSection?.sessionType === 'LISTENING'
 
-  // Gom nhóm câu hỏi theo Mondai trong Section (Sắp xếp theo thứ tự số câu hỏi tăng dần 1 -> N)
-  const questionsList = [...(activeSection?.questions || [])].sort(
-    (a, b) => (a.questionNumber ?? 0) - (b.questionNumber ?? 0)
-  )
+  // Gom nhóm câu hỏi theo Mondai trong Section (Với LISTENING: giữ nguyên thứ tự đề thi; với phần khác: sắp xếp theo questionNumber)
+  const questionsList = isCurrentSectionListening
+    ? [...(activeSection?.questions || [])]
+    : [...(activeSection?.questions || [])].sort(
+        (a, b) => (a.questionNumber ?? 0) - (b.questionNumber ?? 0)
+      )
 
   const mondaiGroupsMap = new Map<string, { mondaiDef?: JlptMondaiDefinition; questions: AdminTakingQuestion[] }>()
 
@@ -895,7 +938,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch(`${aiBase}/api/v1/ai/parse-answer-key?jlpt_level=${previewData?.jlptLevel || 'N5'}`, {
+      const res = await fetch(`${aiBase}/api/v1/ai/parse-answer-key?jlpt_level=${previewData?.jlptLevel || 'N5'}&section_type=${activeSection.sessionType}`, {
         method: 'POST',
         body: formData,
       })
@@ -911,16 +954,53 @@ export const AdminExamPreviewPage: React.FC = () => {
       let targetMap: Record<string, number> = {}
       if (secMap[activeSection.sessionType]) {
         targetMap = secMap[activeSection.sessionType]
+      } else if (matchedMap && Object.keys(matchedMap).length > 0) {
+        targetMap = matchedMap
       } else if (Object.keys(secMap).length === 1) {
         targetMap = Object.values(secMap)[0] as Record<string, number>
-      } else {
-        targetMap = flatMap
+      }
+
+      if (Object.keys(targetMap).length === 0) {
+        throw new Error(`Bảng đáp án tải lên không chứa dữ liệu cho phần thi "${activeSection.sectionTitle || activeSection.sessionType}". Vui lòng kiểm tra lại ảnh hoặc trang PDF đáp án của phần thi này!`)
       }
 
       let updatedCount = 0
+      // Nhận diện thứ tự Mondai cho phần Nghe
+      const mondaiOrderMap = new Map<string, number>()
+      let mCounter = 0
+      for (const q of activeSection.questions) {
+        const mc = q.mondaiCode || ''
+        if (!mondaiOrderMap.has(mc)) {
+          mCounter++
+          mondaiOrderMap.set(mc, mCounter)
+        }
+      }
+
       for (const q of activeSection.questions) {
         const qNum = (q.questionNumber || 0).toString()
-        const correctOptKey = matchedMap[qNum] || targetMap[qNum] || flatMap[qNum]
+        let correctOptKey: number | undefined = undefined
+
+        if (activeSection.sessionType === 'LISTENING') {
+          const mc = q.mondaiCode || ''
+          const mNum = mondaiOrderMap.get(mc) || 1
+          const listenData = (secMap['LISTENING'] as any) || targetMap || {}
+
+          // Khớp theo (Mondai, số câu): mondai_1[1], m1[1], m1_1...
+          if (listenData[`mondai_${mNum}`] && listenData[`mondai_${mNum}`][qNum] !== undefined) {
+            correctOptKey = listenData[`mondai_${mNum}`][qNum]
+          } else if (listenData[`m${mNum}`] && listenData[`m${mNum}`][qNum] !== undefined) {
+            correctOptKey = listenData[`m${mNum}`][qNum]
+          } else if (listenData[`m${mNum}_${qNum}`] !== undefined) {
+            correctOptKey = listenData[`m${mNum}_${qNum}`]
+          } else if (flatMap[`m${mNum}_${qNum}`] !== undefined) {
+            correctOptKey = flatMap[`m${mNum}_${qNum}`]
+          } else if (targetMap[qNum] !== undefined) {
+            correctOptKey = targetMap[qNum]
+          }
+        } else {
+          correctOptKey = targetMap[qNum] ?? matchedMap[qNum]
+        }
+
         if (correctOptKey !== undefined) {
           await examService.updateQuestionInline(Number(examId), q.id, {
             correctOptionKey: Number(correctOptKey),
@@ -929,12 +1009,12 @@ export const AdminExamPreviewPage: React.FC = () => {
         }
       }
 
-      alert(`Đã tự động cập nhật đáp án đúng thành công cho ${updatedCount} câu hỏi từ bảng 正答表!`)
+      toast.success(`Đã tự động cập nhật đáp án đúng thành công cho ${updatedCount}/${activeSection.questions.length} câu hỏi phần thi ${activeSection.sectionTitle || activeSection.sessionType} từ bảng 正答表!`)
       // Tải lại preview
       const refreshed = await examService.getAdminExamPreview(Number(examId))
       setPreviewData(refreshed)
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi nạp bảng đáp án')
+      toast.error(err.message || 'Lỗi khi nạp bảng đáp án')
     } finally {
       setIsBatchApplyingAnswerKey(false)
     }
@@ -1603,7 +1683,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                                             </span>
                                           </div>
                                           <h4 className="text-sm font-bold text-slate-800">
-                                            {p.title || 'Đoạn văn đọc hiểu'}
+                                            {cleanPassageTitle(p.title)}
                                           </h4>
                                         </div>
                                       </div>
@@ -1716,7 +1796,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                                         {p.contentJp && (
                                           <div
                                             className="text-xs md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed select-text"
-                                            dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(p.contentJp) }}
+                                            dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(ensurePassageContentWithIntro(p.contentJp, p.title)) }}
                                           />
                                         )}
                                         {p.translationVi && (
@@ -2624,7 +2704,7 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-xs font-bold text-sky-950">
               <BookOpen className="w-3.5 h-3.5 text-sky-600" />
-              <span>{q.passage?.title || 'Đoạn văn đọc hiểu'}</span>
+              <span>{cleanPassageTitle(q.passage?.title)}</span>
             </div>
             {q.passage && handleStartEditPassage && (
               <button
@@ -2640,7 +2720,7 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
           </div>
           <div
             className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed select-text bg-white dark:bg-slate-900 p-3 rounded-xl border border-sky-100 dark:border-sky-900"
-            dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(q.passage?.contentJp) }}
+            dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(ensurePassageContentWithIntro(q.passage?.contentJp, q.passage?.title)) }}
           />
           {q.passage?.translationVi && (
             <p className="text-[11px] text-slate-500 italic">
@@ -2826,11 +2906,11 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
             <RichTextField
               label="Câu hỏi:"
               minRows={2}
-              value={editForm.questionText}
+              value={editForm.questionText || ''}
               disabled={hasSubmissions}
               onChange={(val) => setEditForm({ ...editForm, questionText: val })}
               placeholder="Nhập nội dung câu hỏi tiếng Nhật..."
-              showStarButton={isStarQuestion}
+              showStarButton={Boolean(isStarQuestion)}
               showClozeButton={true}
               helperText={hasSubmissions ? "Đề thi đã có bài nộp - Nội dung câu hỏi đã khóa" : undefined}
             />
@@ -3058,7 +3138,7 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
                         >
                           {opt.optionKey}
                         </span>
-                        {opt.optionText && opt.optionText.trim() !== String(opt.optionKey) && !opt.optionText.startsWith('Lựa chọn') && !(q.hasVisualOptions && opt.optionText.startsWith('選択肢')) && (
+                        {!isThreeOptionsMondai && opt.optionText && opt.optionText.trim() !== String(opt.optionKey) && !opt.optionText.startsWith('Lựa chọn') && !(q.hasVisualOptions && opt.optionText.startsWith('選択肢')) && (
                           <span
                             className="flex-1 font-serif [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold"
                             dangerouslySetInnerHTML={{ __html: opt.optionText }}

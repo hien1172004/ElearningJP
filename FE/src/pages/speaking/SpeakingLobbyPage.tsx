@@ -1,3 +1,5 @@
+import { confirmDialog } from '@/components/common/ConfirmModal'
+import { toast } from 'sonner'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -180,12 +182,21 @@ export const SpeakingLobbyPage: React.FC = () => {
 
   // Xóa tất cả lịch sử
   const handleDeleteAllSessions = async () => {
-    if (!window.confirm('Bạn có chắc muốn xóa tất cả lịch sử luyện tập?')) return
+    const confirmed = await confirmDialog({
+      title: 'Xóa toàn bộ lịch sử luyện tập?',
+      content: 'Tất cả các phiên hội thoại cũ sẽ bị xóa vĩnh viễn và không thể khôi phục.',
+      okText: 'Xóa tất cả',
+      cancelText: 'Hủy',
+      danger: true,
+    })
+    if (!confirmed) return
     try {
       await speakingService.deleteAllSessions()
       setHistorySessions([])
+      toast.success('Đã xóa toàn bộ lịch sử luyện tập!')
     } catch (err) {
       console.error('Lỗi xóa tất cả lịch sử:', err)
+      toast.error('Có lỗi xảy ra khi xóa lịch sử.')
     }
   }
 
@@ -757,7 +768,7 @@ export const SpeakingLobbyPage: React.FC = () => {
                             title="Báo cáo nội dung"
                             onClick={(e) => {
                               e.stopPropagation()
-                              alert('Đã gửi báo cáo tình huống này đến ban quản trị.')
+                              toast.success('Đã gửi báo cáo tình huống này đến ban quản trị!')
                             }}
                           >
                             <AlertTriangle className="w-3.5 h-3.5" />

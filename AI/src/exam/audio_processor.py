@@ -36,7 +36,7 @@ KANJI_KANA_NUM_MAP = {
 FULLWIDTH_DIGITS_TRANS = str.maketrans("０１２３４５６７８９", "0123456789")
 
 _NUM = r'(?:[0-9]{1,2}|十[一二三四五]|[一二三四五六七八九十]|じゅう|きゅう|いち|さん|よん|ろく|なな|しち|はち|に|し|ご|く)'
-_ANN = re.compile(rf'^[\s。、．.]*(?:第\s*)?({_NUM})\s*(?:番|ばん|問)(?!\s*(?:です|だ|で|いい|よい|良い|から|を|に))')
+_ANN = re.compile(rf'^(?:[\s。、．.]|(?:答えはこのように書きます|回答用紙|では|それでは)?[、\s]*(?:始めます|はじめます)?[、\s]*)*(?:第\s*)?({_NUM})\s*(?:番|ばん|問)(?!\s*(?:です|だ|で|いい|よい|良い|から|を|に|は|が|の|も|線|階|分|時|人|本|枚|個|日|年|月|回|つ|目))')
 
 
 class AudioProcessor:
@@ -253,13 +253,27 @@ class AudioProcessor:
             return self._align_gemini_with_vad_timestamps(gemini_questions, whisper_questions)
 
         if whisper_questions:
-            for idx, q in enumerate(whisper_questions):
-                q["question_number"] = idx + 1
+            current_mondai = None
+            mondai_q_num = 1
+            for q in whisper_questions:
+                m_code = q.get("mondai_code", "")
+                if current_mondai is None or current_mondai != m_code:
+                    current_mondai = m_code
+                    mondai_q_num = 1
+                q["question_number"] = mondai_q_num
+                mondai_q_num += 1
             return whisper_questions
 
         if gemini_questions:
-            for idx, q in enumerate(gemini_questions):
-                q["question_number"] = idx + 1
+            current_mondai = None
+            mondai_q_num = 1
+            for q in gemini_questions:
+                m_code = q.get("mondai_code", "")
+                if current_mondai is None or current_mondai != m_code:
+                    current_mondai = m_code
+                    mondai_q_num = 1
+                q["question_number"] = mondai_q_num
+                mondai_q_num += 1
             return gemini_questions
 
         logger.warning("⚠️ Không có phương thức xử lý audio nào thành công. Dùng fallback mẫu.")
@@ -364,7 +378,7 @@ class AudioProcessor:
         Nhận diện cả kana (いち, に, さん...), kanji, chữ số và bỏ qua dấu câu đầu dòng.
         """
         t = text.strip().translate(FULLWIDTH_DIGITS_TRANS)
-        m = _ANN.match(t)
+        m = _ANN.search(t)
         if not m:
             return None
         val_str = m.group(1)
@@ -540,27 +554,31 @@ class AudioProcessor:
                     logger.info(f"ℹ️ Phát hiện bắt đầu câu ví dụ mẫu Mondai {current_mondai} tại {start_t}s ('{text}')")
                     continue
 
-                if EXIT_EXAMPLE_REGEX.search(norm_text):
+                # Khi MC nói 'では 始めます' / '始めます' / '始めましょう' -> Chắc chắn đã kết thúc câu ví dụ và chuẩn bị câu 1
+                if re.search(r'(?:始めます|はじめます|始めましょう|はじめましょう)', norm_text):
+                    in_example = False
+                    example_concluded = True
+                    logger.info(f"🟢 MC xướng '始めます' - Thoát hoàn toàn câu ví dụ Mondai {current_mondai} tại {start_t}s ('{text}')")
+                elif EXIT_EXAMPLE_REGEX.search(norm_text):
                     example_concluded = True
                     logger.info(f"🟢 Phát hiện kết thúc câu ví dụ Mondai {current_mondai} tại {start_t}s ('{text}')")
-                    continue
 
                 matched_num = self._match_question_announcement(norm_text)
-                if saw_example:
-                    # Nếu có câu ví dụ: chỉ cho phép thoát khi ví dụ đã kết thúc (có chốt đáp án) và nghe thấy xướng câu hỏi
-                    if example_concluded and matched_num is not None:
-                        in_example = False
-                        logger.info(f"⚡ Đã thoát ví dụ Mondai {current_mondai} khi MC xướng câu {matched_num} tại {start_t}s ('{text}')")
+                if in_example:
+                    if saw_example:
+                        # Nếu có câu ví dụ: chỉ cho phép thoát khi ví dụ đã kết thúc và nghe thấy xướng câu hỏi
+                        if example_concluded and matched_num is not None:
+                            in_example = False
+                            logger.info(f"⚡ Đã thoát ví dụ Mondai {current_mondai} khi MC xướng câu {matched_num} tại {start_t}s ('{text}')")
+                        else:
+                            continue
                     else:
-                        # Vẫn đang trong ví dụ (kể cả các phương án đọc 1, 2, 3 của ví dụ) -> Bỏ qua
-                        continue
-                else:
-                    # Mondai không có ví dụ mẫu (hoặc MC vào thẳng câu 1..3 sau lời dẫn)
-                    if matched_num is not None and matched_num <= 3:
-                        in_example = False
-                        logger.info(f"⚡ MC vào thẳng câu {matched_num} Mondai {current_mondai} tại {start_t}s ('{text}') -> in_example = False")
-                    else:
-                        continue
+                        # Mondai không có ví dụ mẫu (hoặc MC vào thẳng câu 1..3 sau lời dẫn)
+                        if matched_num is not None and matched_num <= 3:
+                            in_example = False
+                            logger.info(f"⚡ MC vào thẳng câu {matched_num} Mondai {current_mondai} tại {start_t}s ('{text}') -> in_example = False")
+                        else:
+                            continue
 
             # 4. Nhận diện các câu hỏi thật
             matched_num = self._match_question_announcement(norm_text)
@@ -828,9 +846,16 @@ class AudioProcessor:
 
                 aligned_results.append(res_q)
 
-        # Đánh lại số thứ tự câu hỏi tuần tự
-        for idx, q in enumerate(aligned_results):
-            q["question_number"] = idx + 1
+        # Đánh lại số thứ tự câu hỏi: với Listening, mỗi Mondai mới bắt đầu lại từ 1
+        current_mondai = None
+        mondai_q_num = 1
+        for q in aligned_results:
+            m_code = q.get("mondai_code", "")
+            if current_mondai is None or current_mondai != m_code:
+                current_mondai = m_code
+                mondai_q_num = 1
+            q["question_number"] = mondai_q_num
+            mondai_q_num += 1
 
         return aligned_results
 
