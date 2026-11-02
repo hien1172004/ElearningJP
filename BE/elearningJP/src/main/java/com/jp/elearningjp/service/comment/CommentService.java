@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.comment;
 
+import com.jp.elearningjp.shared.event.comment.CommentDeletedEvent;
 import com.jp.elearningjp.dto.request.comment.CommentCreateRequest;
 import com.jp.elearningjp.dto.request.comment.CommentReplyCreateRequest;
 import com.jp.elearningjp.dto.request.comment.CommentUpdateRequest;
@@ -10,15 +11,8 @@ import com.jp.elearningjp.dto.response.comment.CommentReplyListResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyResponse;
 import com.jp.elearningjp.dto.response.comment.CommentResponse;
 import com.jp.elearningjp.entity.comment.Comment;
-import com.jp.elearningjp.entity.comment.CommentDislike;
-import com.jp.elearningjp.entity.comment.CommentDislikeId;
-import com.jp.elearningjp.entity.comment.CommentLike;
-import com.jp.elearningjp.entity.comment.CommentLikeId;
 import com.jp.elearningjp.entity.comment.CommentReply;
-import com.jp.elearningjp.entity.comment.CommentReplyDislike;
-import com.jp.elearningjp.entity.comment.CommentReplyDislikeId;
-import com.jp.elearningjp.entity.comment.CommentReplyLike;
-import com.jp.elearningjp.entity.comment.CommentReplyLikeId;
+import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
@@ -35,6 +29,7 @@ import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.shared.enums.CommentTargetType;
 import com.jp.elearningjp.shared.event.comment.CommentReactionEvent;
 import com.jp.elearningjp.shared.event.comment.CommentRepliedEvent;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +42,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -57,14 +54,21 @@ import java.util.Set;
  * <p>Module này phục vụ bình luận cho 4 loại đối tượng (LESSON / VOCABULARY /
  * KANJI / GRAMMAR) thông qua cặp {@code (targetType, targetId)}.</p>
  *
- * <p>Các cột {@code like_count}, {@code dislike_count}, {@code reply_count}
- * được cập nhật tại application layer (gọi trong transaction).</p>
+ * <p>Các cột {@code like_count}, {@code dislike_count}, {@code reply_count} chỉ được đổi bằng
+ * UPDATE tăng/giảm nguyên tử ở DB (không set trên entity), và entity dùng {@code @DynamicUpdate}
+ * nên sửa/xoá comment không ghi đè bộ đếm đang tăng đồng thời.</p>
+ *
+ * <p>Phân trang bắt đầu từ 1 như phần còn lại của hệ thống.</p>
  */
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class CommentService {
+
+    /** Số reply tối đa trả kèm trong chi tiết comment; xem thêm qua GET /comments/{id}/replies. */
+    static final int DETAIL_REPLY_LIMIT = 50;
+    private static final int MAX_PAGE_SIZE = 100;
 
     CommentRepository commentRepository;
     CommentLikeRepository commentLikeRepository;
@@ -79,6 +83,7 @@ public class CommentService {
     GrammarPointRepository grammarPointRepository;
 
     CurrentUserService currentUserService;
+    CourseAccessGuard courseAccessGuard;
     ApplicationEventPublisher eventPublisher;
 
     // ============================================================
@@ -91,42 +96,36 @@ public class CommentService {
                                                    int page,
                                                    int size) {
         ensureTargetExists(targetType, targetId);
-        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
-        Page<Comment> result = commentRepository.findByTarget(targetType, targetId, pageable);
+        Page<Comment> result = commentRepository.findByTarget(targetType, targetId, toPageable(page, size));
 
         Long currentUserId = currentUserIdOrNull();
-        List<CommentResponse> items = result.getContent().stream()
-                .map(c -> toCommentResponse(c, currentUserId))
-                .toList();
+        List<CommentResponse> items = toCommentResponses(result.getContent(), currentUserId);
 
         return CommentListResponse.builder()
                 .items(items)
                 .total(result.getTotalElements())
-                .page(result.getNumber())
+                .page(result.getNumber() + 1)
                 .size(result.getSize())
                 .totalPages(result.getTotalPages())
                 .build();
     }
 
+    /**
+     * Chi tiết comment kèm tối đa {@link #DETAIL_REPLY_LIMIT} reply đầu tiên.
+     * Reply còn lại lấy qua {@link #getRepliesByComment}.
+     */
     @Transactional(readOnly = true)
     public CommentDetailResponse getCommentDetail(Long commentId) {
-        Comment comment = getActiveComment(commentId);
+        Comment comment = getVisibleComment(commentId);
         Long currentUserId = currentUserIdOrNull();
 
-        CommentResponse commentResponse = toCommentResponse(comment, currentUserId);
-
-        // Lấy toàn bộ reply chưa xoá — không phân trang để giữ đơn giản cho giai đoạn đầu
         List<CommentReply> replies = commentReplyRepository
-                .findByCommentIdOrderByCreatedAtAsc(commentId, PageRequest.of(0, 200))
+                .findByCommentIdOrderByCreatedAtAsc(commentId, PageRequest.of(0, DETAIL_REPLY_LIMIT))
                 .getContent();
 
-        List<CommentReplyResponse> replyResponses = replies.stream()
-                .map(r -> toReplyResponse(r, currentUserId))
-                .toList();
-
         return CommentDetailResponse.builder()
-                .comment(commentResponse)
-                .replies(replyResponses)
+                .comment(toCommentResponses(List.of(comment), currentUserId).get(0))
+                .replies(toReplyResponses(replies, currentUserId))
                 .build();
     }
 
@@ -134,20 +133,15 @@ public class CommentService {
     public CommentReplyListResponse getRepliesByComment(Long commentId,
                                                         int page,
                                                         int size) {
-        getActiveComment(commentId); // chỉ để chắc chắn comment tồn tại
-        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        getVisibleComment(commentId);
         Page<CommentReply> result = commentReplyRepository
-                .findByCommentIdOrderByCreatedAtAsc(commentId, pageable);
+                .findByCommentIdOrderByCreatedAtAsc(commentId, toPageable(page, size));
 
         Long currentUserId = currentUserIdOrNull();
-        List<CommentReplyResponse> items = result.getContent().stream()
-                .map(r -> toReplyResponse(r, currentUserId))
-                .toList();
-
         return CommentReplyListResponse.builder()
-                .items(items)
+                .items(toReplyResponses(result.getContent(), currentUserId))
                 .total(result.getTotalElements())
-                .page(result.getNumber())
+                .page(result.getNumber() + 1)
                 .size(result.getSize())
                 .totalPages(result.getTotalPages())
                 .build();
@@ -182,12 +176,12 @@ public class CommentService {
         log.info("[COMMENT] Created comment id={} targetType={} targetId={} by userId={}",
                 saved.getId(), targetType, targetId, user.getId());
 
-        return toCommentResponse(saved, user.getId());
+        return toCommentResponse(saved, user.getId(), false, false);
     }
 
     @Transactional
     public CommentReplyResponse addReply(Long commentId, CommentReplyCreateRequest request) {
-        Comment comment = getActiveComment(commentId);
+        Comment comment = getVisibleComment(commentId);
         User user = currentUserService.getCurrentUser();
 
         if (request.getContent() == null || request.getContent().isBlank()) {
@@ -196,7 +190,7 @@ public class CommentService {
 
         CommentReply parent = null;
         if (request.getParentReplyId() != null) {
-            parent = commentReplyRepository.findByIdAndDeletedFalse(request.getParentReplyId())
+            parent = commentReplyRepository.findVisibleById(request.getParentReplyId())
                     .orElseThrow(() -> new AppException(ErrorCode.COMMENT_REPLY_NOT_FOUND));
             if (!parent.getComment().getId().equals(comment.getId())) {
                 throw new AppException(ErrorCode.COMMENT_REPLY_INVALID_PARENT);
@@ -213,9 +207,9 @@ public class CommentService {
                 .build();
         CommentReply saved = commentReplyRepository.save(reply);
 
-        // Tăng reply_count của comment gốc
+        // Chỉ tăng ở DB. Không set replyCount trên entity: entity bẩn sẽ ghi đè
+        // reply_count bằng giá trị cũ + 1, làm mất lượt đếm của người trả lời cùng lúc.
         commentRepository.incrementReplyCount(comment.getId());
-        comment.setReplyCount(comment.getReplyCount() + 1);
 
         log.info("[COMMENT] Added reply id={} to commentId={} by userId={} parentReplyId={}",
                 saved.getId(), commentId, user.getId(), parent != null ? parent.getId() : null);
@@ -226,6 +220,7 @@ public class CommentService {
         Long recipientId = comment.getUser() != null ? comment.getUser().getId() : null;
         eventPublisher.publishEvent(CommentRepliedEvent.builder()
                 .recipientUserId(recipientId)
+                .parentReplyUserId(parent != null ? ownerId(parent.getUser()) : null)
                 .replierUserId(user.getId())
                 .replierName(user.getFullName())
                 .commentId(comment.getId())
@@ -235,7 +230,7 @@ public class CommentService {
                 .replyContent(saved.getContent())
                 .build());
 
-        return toReplyResponse(saved, user.getId());
+        return toReplyResponse(saved, user.getId(), false, false);
     }
 
     // ============================================================
@@ -244,9 +239,12 @@ public class CommentService {
 
     @Transactional
     public CommentResponse updateComment(Long commentId, CommentUpdateRequest request) {
-        Comment comment = getActiveComment(commentId);
+        Comment comment = getVisibleComment(commentId);
         User user = currentUserService.getCurrentUser();
-        ensureOwner(comment.getUser(), user.getId());
+        // Sửa nội dung: chỉ chủ bình luận (admin chỉ được xoá, không sửa lời người khác).
+        if (!isOwner(comment.getUser(), user.getId())) {
+            throw new AppException(ErrorCode.COMMENT_FORBIDDEN);
+        }
 
         if (request.getContent() == null || request.getContent().isBlank()) {
             throw new AppException(ErrorCode.COMMENT_CONTENT_EMPTY);
@@ -256,231 +254,198 @@ public class CommentService {
         Comment saved = commentRepository.save(comment);
 
         log.info("[COMMENT] Updated comment id={} by userId={}", commentId, user.getId());
-        return toCommentResponse(saved, user.getId());
+        return toCommentResponses(List.of(saved), user.getId()).get(0);
     }
 
+    /** Xoá mềm comment — chủ bình luận hoặc admin (gỡ bình luận vi phạm). */
     @Transactional
     public void deleteComment(Long commentId) {
         Comment comment = getActiveComment(commentId);
         User user = currentUserService.getCurrentUser();
-        ensureOwner(comment.getUser(), user.getId());
+        ensureOwnerOrAdmin(comment.getUser(), user.getId(), ErrorCode.COMMENT_FORBIDDEN);
 
         comment.softDelete();
         commentRepository.save(comment);
+        // Dọn thông báo trỏ tới comment đã xoá (listener AFTER_COMMIT ở module thông báo)
+        eventPublisher.publishEvent(CommentDeletedEvent.builder().commentId(commentId).build());
 
-        log.info("[COMMENT] Soft-deleted comment id={} by userId={}", commentId, user.getId());
+        log.info("[COMMENT] Soft-deleted comment id={} by userId={} (admin={})",
+                commentId, user.getId(), !isOwner(comment.getUser(), user.getId()));
     }
 
+    /**
+     * Xoá mềm reply cùng toàn bộ reply con cháu — chủ reply hoặc admin.
+     * Không xoá con thì chúng mất cha và FE đẩy chúng lên cấp gốc.
+     */
     @Transactional
     public void deleteReply(Long replyId) {
         CommentReply reply = commentReplyRepository.findByIdAndDeletedFalse(replyId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_REPLY_NOT_FOUND));
         User user = currentUserService.getCurrentUser();
-        ensureOwner(reply.getUser(), user.getId(), ErrorCode.COMMENT_REPLY_FORBIDDEN);
+        ensureOwnerOrAdmin(reply.getUser(), user.getId(), ErrorCode.COMMENT_REPLY_FORBIDDEN);
 
-        reply.softDelete();
-        commentReplyRepository.save(reply);
-        // Giảm reply_count của comment gốc
-        commentRepository.decrementReplyCount(reply.getComment().getId());
+        List<Long> subtreeIds = commentReplyRepository.findActiveSubtreeIds(replyId);
+        int deleted = commentReplyRepository.softDeleteSubtree(replyId, Instant.now());
+        commentRepository.decrementReplyCountBy(reply.getComment().getId(), deleted);
+        if (!subtreeIds.isEmpty()) {
+            eventPublisher.publishEvent(CommentDeletedEvent.builder()
+                    .commentId(reply.getComment().getId())
+                    .replyIds(subtreeIds)
+                    .build());
+        }
 
-        log.info("[COMMENT] Soft-deleted reply id={} by userId={}", replyId, user.getId());
+        log.info("[COMMENT] Soft-deleted reply id={} (+{} descendant(s)) by userId={}",
+                replyId, Math.max(0, deleted - 1), user.getId());
     }
 
     // ============================================================
     // TOGGLE LIKE / DISLIKE  (cho cả comment và reply)
+    //
+    // Thêm reaction bằng INSERT ... ON CONFLICT DO NOTHING và gỡ bằng DELETE trả về số dòng:
+    // bộ đếm chỉ đổi khi DB thực sự đổi, nên bấm 2 lần thật nhanh không còn lỗi 500 do trùng
+    // khoá chính và không đếm lệch.
     // ============================================================
 
     @Transactional
     public CommentReactionResponse toggleLike(Long commentId) {
-        Comment comment = getActiveComment(commentId);
+        Comment comment = getVisibleComment(commentId);
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
-        // Nếu đã like → unlike (không phát thông báo)
-        if (commentLikeRepository.existsByIdUserIdAndIdCommentId(userId, commentId)) {
-            commentLikeRepository.deleteByIdUserIdAndIdCommentId(userId, commentId);
+        if (commentLikeRepository.deleteReaction(userId, commentId) > 0) {
             commentRepository.decrementLikeCount(commentId);
             log.info("[COMMENT] Unliked comment id={} by userId={}", commentId, userId);
-            return buildCommentReaction(comment, userId, false, false);
+            return buildCommentReaction(commentId, false, false);
         }
-
-        // Nếu đang dislike → bỏ dislike trước
-        if (commentDislikeRepository.existsByIdUserIdAndIdCommentId(userId, commentId)) {
-            commentDislikeRepository.deleteByIdUserIdAndIdCommentId(userId, commentId);
+        if (commentDislikeRepository.deleteReaction(userId, commentId) > 0) {
             commentRepository.decrementDislikeCount(commentId);
         }
-
-        CommentLike like = CommentLike.builder()
-                .id(CommentLikeId.builder().userId(userId).commentId(commentId).build())
-                .user(user)
-                .comment(comment)
-                .build();
-        commentLikeRepository.save(like);
-        commentRepository.incrementLikeCount(commentId);
-
-        log.info("[COMMENT] Liked comment id={} by userId={}", commentId, userId);
-
-        // Phát event cho module thông báo — listener chạy AFTER_COMMIT.
-        // Mọi field phải resolve TRƯỚC khi publish (không lazy-load được sau commit).
-        publishReactionEvent(
-                comment.getUser() != null ? comment.getUser().getId() : null,
-                user,
-                true,
-                CommentReactionEvent.ReactionScope.COMMENT,
-                comment.getId(),
-                null,
-                comment.getTargetType(),
-                comment.getTargetId());
-        return buildCommentReaction(comment, userId, true, false);
+        if (commentLikeRepository.insertIfAbsent(userId, commentId) > 0) {
+            commentRepository.incrementLikeCount(commentId);
+            log.info("[COMMENT] Liked comment id={} by userId={}", commentId, userId);
+            publishReactionEvent(ownerId(comment.getUser()), user, true,
+                    CommentReactionEvent.ReactionScope.COMMENT, comment.getId(), null,
+                    comment.getTargetType(), comment.getTargetId());
+        }
+        return buildCommentReaction(commentId, true, false);
     }
 
     @Transactional
     public CommentReactionResponse toggleDislike(Long commentId) {
-        Comment comment = getActiveComment(commentId);
+        Comment comment = getVisibleComment(commentId);
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
-        // Nếu đã dislike → undislike (không phát thông báo)
-        if (commentDislikeRepository.existsByIdUserIdAndIdCommentId(userId, commentId)) {
-            commentDislikeRepository.deleteByIdUserIdAndIdCommentId(userId, commentId);
+        if (commentDislikeRepository.deleteReaction(userId, commentId) > 0) {
             commentRepository.decrementDislikeCount(commentId);
             log.info("[COMMENT] Undisliked comment id={} by userId={}", commentId, userId);
-            return buildCommentReaction(comment, userId, false, false);
+            return buildCommentReaction(commentId, false, false);
         }
-
-        // Nếu đang like → bỏ like trước
-        if (commentLikeRepository.existsByIdUserIdAndIdCommentId(userId, commentId)) {
-            commentLikeRepository.deleteByIdUserIdAndIdCommentId(userId, commentId);
+        if (commentLikeRepository.deleteReaction(userId, commentId) > 0) {
             commentRepository.decrementLikeCount(commentId);
         }
-
-        CommentDislike dislike = CommentDislike.builder()
-                .id(CommentDislikeId.builder().userId(userId).commentId(commentId).build())
-                .user(user)
-                .comment(comment)
-                .build();
-        commentDislikeRepository.save(dislike);
-        commentRepository.incrementDislikeCount(commentId);
-
-        log.info("[COMMENT] Disliked comment id={} by userId={}", commentId, userId);
-
-        publishReactionEvent(
-                comment.getUser() != null ? comment.getUser().getId() : null,
-                user,
-                false,
-                CommentReactionEvent.ReactionScope.COMMENT,
-                comment.getId(),
-                null,
-                comment.getTargetType(),
-                comment.getTargetId());
-        return buildCommentReaction(comment, userId, false, true);
+        if (commentDislikeRepository.insertIfAbsent(userId, commentId) > 0) {
+            commentRepository.incrementDislikeCount(commentId);
+            log.info("[COMMENT] Disliked comment id={} by userId={}", commentId, userId);
+            publishReactionEvent(ownerId(comment.getUser()), user, false,
+                    CommentReactionEvent.ReactionScope.COMMENT, comment.getId(), null,
+                    comment.getTargetType(), comment.getTargetId());
+        }
+        return buildCommentReaction(commentId, false, true);
     }
 
     @Transactional
     public CommentReactionResponse toggleReplyLike(Long replyId) {
-        CommentReply reply = commentReplyRepository.findByIdAndDeletedFalse(replyId)
-                .orElseThrow(() -> new AppException(ErrorCode.COMMENT_REPLY_NOT_FOUND));
+        CommentReply reply = getVisibleReply(replyId);
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
-        // Nếu đã like → unlike (không phát thông báo)
-        if (commentReplyLikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
-            commentReplyLikeRepository.deleteByIdUserIdAndIdReplyId(userId, replyId);
+        if (commentReplyLikeRepository.deleteReaction(userId, replyId) > 0) {
             commentReplyRepository.decrementLikeCount(replyId);
             log.info("[COMMENT] Unliked reply id={} by userId={}", replyId, userId);
-            return buildReplyReaction(reply, userId, false, false);
+            return buildReplyReaction(replyId, false, false);
         }
-
-        if (commentReplyDislikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
-            commentReplyDislikeRepository.deleteByIdUserIdAndIdReplyId(userId, replyId);
+        if (commentReplyDislikeRepository.deleteReaction(userId, replyId) > 0) {
             commentReplyRepository.decrementDislikeCount(replyId);
         }
-
-        CommentReplyLike like = CommentReplyLike.builder()
-                .id(CommentReplyLikeId.builder().userId(userId).replyId(replyId).build())
-                .user(user)
-                .reply(reply)
-                .build();
-        commentReplyLikeRepository.save(like);
-        commentReplyRepository.incrementLikeCount(replyId);
-
-        log.info("[COMMENT] Liked reply id={} by userId={}", replyId, userId);
-
-        publishReactionEvent(
-                reply.getUser() != null ? reply.getUser().getId() : null,
-                user,
-                true,
-                CommentReactionEvent.ReactionScope.REPLY,
-                reply.getComment().getId(),
-                reply.getId(),
-                reply.getComment().getTargetType(),
-                reply.getComment().getTargetId());
-        return buildReplyReaction(reply, userId, true, false);
+        if (commentReplyLikeRepository.insertIfAbsent(userId, replyId) > 0) {
+            commentReplyRepository.incrementLikeCount(replyId);
+            log.info("[COMMENT] Liked reply id={} by userId={}", replyId, userId);
+            publishReactionEvent(ownerId(reply.getUser()), user, true,
+                    CommentReactionEvent.ReactionScope.REPLY, reply.getComment().getId(), reply.getId(),
+                    reply.getComment().getTargetType(), reply.getComment().getTargetId());
+        }
+        return buildReplyReaction(replyId, true, false);
     }
 
     @Transactional
     public CommentReactionResponse toggleReplyDislike(Long replyId) {
-        CommentReply reply = commentReplyRepository.findByIdAndDeletedFalse(replyId)
-                .orElseThrow(() -> new AppException(ErrorCode.COMMENT_REPLY_NOT_FOUND));
+        CommentReply reply = getVisibleReply(replyId);
         User user = currentUserService.getCurrentUser();
         Long userId = user.getId();
 
-        // Nếu đã dislike → undislike (không phát thông báo)
-        if (commentReplyDislikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
-            commentReplyDislikeRepository.deleteByIdUserIdAndIdReplyId(userId, replyId);
+        if (commentReplyDislikeRepository.deleteReaction(userId, replyId) > 0) {
             commentReplyRepository.decrementDislikeCount(replyId);
             log.info("[COMMENT] Undisliked reply id={} by userId={}", replyId, userId);
-            return buildReplyReaction(reply, userId, false, false);
+            return buildReplyReaction(replyId, false, false);
         }
-
-        if (commentReplyLikeRepository.existsByIdUserIdAndIdReplyId(userId, replyId)) {
-            commentReplyLikeRepository.deleteByIdUserIdAndIdReplyId(userId, replyId);
+        if (commentReplyLikeRepository.deleteReaction(userId, replyId) > 0) {
             commentReplyRepository.decrementLikeCount(replyId);
         }
-
-        CommentReplyDislike dislike = CommentReplyDislike.builder()
-                .id(CommentReplyDislikeId.builder().userId(userId).replyId(replyId).build())
-                .user(user)
-                .reply(reply)
-                .build();
-        commentReplyDislikeRepository.save(dislike);
-        commentReplyRepository.incrementDislikeCount(replyId);
-
-        log.info("[COMMENT] Disliked reply id={} by userId={}", replyId, userId);
-
-        publishReactionEvent(
-                reply.getUser() != null ? reply.getUser().getId() : null,
-                user,
-                false,
-                CommentReactionEvent.ReactionScope.REPLY,
-                reply.getComment().getId(),
-                reply.getId(),
-                reply.getComment().getTargetType(),
-                reply.getComment().getTargetId());
-        return buildReplyReaction(reply, userId, false, true);
+        if (commentReplyDislikeRepository.insertIfAbsent(userId, replyId) > 0) {
+            commentReplyRepository.incrementDislikeCount(replyId);
+            log.info("[COMMENT] Disliked reply id={} by userId={}", replyId, userId);
+            publishReactionEvent(ownerId(reply.getUser()), user, false,
+                    CommentReactionEvent.ReactionScope.REPLY, reply.getComment().getId(), reply.getId(),
+                    reply.getComment().getTargetType(), reply.getComment().getTargetId());
+        }
+        return buildReplyReaction(replyId, false, true);
     }
 
     // ============================================================
     // MAPPING
     // ============================================================
 
-    private CommentResponse toCommentResponse(Comment c, Long currentUserId) {
-        CommentResponse.CommentUserInfo userInfo = toUserInfo(c.getUser());
-
-        boolean liked = false;
-        boolean disliked = false;
-        boolean isOwner = false;
-        if (currentUserId != null) {
-            liked = commentLikeRepository.existsByIdUserIdAndIdCommentId(currentUserId, c.getId());
-            disliked = commentDislikeRepository.existsByIdUserIdAndIdCommentId(currentUserId, c.getId());
-            isOwner = c.getUser() != null && currentUserId.equals(c.getUser().getId());
+    /** Trạng thái like/dislike của user lấy bằng 2 query cho cả trang, không phải 2 query mỗi comment. */
+    private List<CommentResponse> toCommentResponses(List<Comment> comments, Long currentUserId) {
+        Set<Long> liked = Set.of();
+        Set<Long> disliked = Set.of();
+        if (currentUserId != null && !comments.isEmpty()) {
+            List<Long> ids = comments.stream().map(Comment::getId).toList();
+            liked = toSet(commentLikeRepository.findReactedIds(currentUserId, ids));
+            disliked = toSet(commentDislikeRepository.findReactedIds(currentUserId, ids));
         }
+        Set<Long> finalLiked = liked;
+        Set<Long> finalDisliked = disliked;
+        return comments.stream()
+                .map(c -> toCommentResponse(c, currentUserId,
+                        finalLiked.contains(c.getId()), finalDisliked.contains(c.getId())))
+                .toList();
+    }
 
+    private List<CommentReplyResponse> toReplyResponses(List<CommentReply> replies, Long currentUserId) {
+        Set<Long> liked = Set.of();
+        Set<Long> disliked = Set.of();
+        if (currentUserId != null && !replies.isEmpty()) {
+            List<Long> ids = replies.stream().map(CommentReply::getId).toList();
+            liked = toSet(commentReplyLikeRepository.findReactedIds(currentUserId, ids));
+            disliked = toSet(commentReplyDislikeRepository.findReactedIds(currentUserId, ids));
+        }
+        Set<Long> finalLiked = liked;
+        Set<Long> finalDisliked = disliked;
+        return replies.stream()
+                .map(r -> toReplyResponse(r, currentUserId,
+                        finalLiked.contains(r.getId()), finalDisliked.contains(r.getId())))
+                .toList();
+    }
+
+    private CommentResponse toCommentResponse(Comment c, Long currentUserId, boolean liked, boolean disliked) {
+        boolean isOwner = isOwner(c.getUser(), currentUserId);
         return CommentResponse.builder()
                 .id(c.getId())
                 .targetType(c.getTargetType())
                 .targetId(c.getTargetId())
-                .user(userInfo)
+                .user(toUserInfo(c.getUser()))
                 .content(c.getContent())
                 .status(c.getStatus())
                 .likeCount(c.getLikeCount())
@@ -489,28 +454,19 @@ public class CommentService {
                 .liked(liked)
                 .disliked(disliked)
                 .owner(isOwner)
+                .deletable(isOwner || isAdmin(currentUserId))
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }
 
-    private CommentReplyResponse toReplyResponse(CommentReply r, Long currentUserId) {
-        CommentResponse.CommentUserInfo userInfo = toUserInfo(r.getUser());
-
-        boolean liked = false;
-        boolean disliked = false;
-        boolean isOwner = false;
-        if (currentUserId != null) {
-            liked = commentReplyLikeRepository.existsByIdUserIdAndIdReplyId(currentUserId, r.getId());
-            disliked = commentReplyDislikeRepository.existsByIdUserIdAndIdReplyId(currentUserId, r.getId());
-            isOwner = r.getUser() != null && currentUserId.equals(r.getUser().getId());
-        }
-
+    private CommentReplyResponse toReplyResponse(CommentReply r, Long currentUserId, boolean liked, boolean disliked) {
+        boolean isOwner = isOwner(r.getUser(), currentUserId);
         return CommentReplyResponse.builder()
                 .id(r.getId())
                 .commentId(r.getComment().getId())
                 .parentReplyId(r.getParentReply() != null ? r.getParentReply().getId() : null)
-                .user(userInfo)
+                .user(toUserInfo(r.getUser()))
                 .content(r.getContent())
                 .status(r.getStatus())
                 .likeCount(r.getLikeCount())
@@ -518,6 +474,7 @@ public class CommentService {
                 .liked(liked)
                 .disliked(disliked)
                 .owner(isOwner)
+                .deletable(isOwner || isAdmin(currentUserId))
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();
@@ -568,62 +525,79 @@ public class CommentService {
                 .build());
     }
 
+    /** Comment chưa xoá (kể cả đang ẩn) — dùng cho thao tác xoá. */
     private Comment getActiveComment(Long commentId) {
         return commentRepository.findByIdAndDeletedFalse(commentId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
     }
 
-    /**
-     * Đọc lại trạng thái reaction của comment từ DB (sau khi toggle).
-     *
-     * <p>Dùng {@code countBy...} trên bảng like/dislike (source of truth) thay vì
-     * {@code likeCount} trên entity trong bộ nhớ — vì các query {@code @Modifying}
-     * increment/decrement chạy thẳng trên DB, không sync lại entity đã load,
-     * nên {@code comment.getLikeCount()} sẽ sai lệch sau khi toggle.</p>
-     */
-    private CommentReactionResponse buildCommentReaction(Comment comment, Long userId,
-                                                         boolean liked, boolean disliked) {
-        return CommentReactionResponse.builder()
-                .liked(liked)
-                .disliked(disliked)
-                .likeCount((int) commentLikeRepository.countByIdCommentId(comment.getId()))
-                .dislikeCount((int) commentDislikeRepository.countByIdCommentId(comment.getId()))
-                .build();
+    /** Comment đang hiển thị và target của nó còn xem được — dùng cho đọc, trả lời, sửa, reaction. */
+    private Comment getVisibleComment(Long commentId) {
+        Comment comment = commentRepository.findVisibleById(commentId)
+                .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
+        ensureTargetExists(comment.getTargetType(), comment.getTargetId());
+        return comment;
+    }
+
+    private CommentReply getVisibleReply(Long replyId) {
+        CommentReply reply = commentReplyRepository.findVisibleById(replyId)
+                .orElseThrow(() -> new AppException(ErrorCode.COMMENT_REPLY_NOT_FOUND));
+        getVisibleComment(reply.getComment().getId()); // comment gốc phải còn và target còn xem được
+        return reply;
     }
 
     /**
-     * Tương tự {@link #buildCommentReaction} nhưng cho reply.
+     * Đọc lại trạng thái reaction từ bảng like/dislike (source of truth) sau khi toggle —
+     * các UPDATE tăng/giảm chạy thẳng trên DB nên số trên entity đã load không còn đúng.
      */
-    private CommentReactionResponse buildReplyReaction(CommentReply reply, Long userId,
-                                                       boolean liked, boolean disliked) {
+    private CommentReactionResponse buildCommentReaction(Long commentId, boolean liked, boolean disliked) {
         return CommentReactionResponse.builder()
                 .liked(liked)
                 .disliked(disliked)
-                .likeCount((int) commentReplyLikeRepository.countByIdReplyId(reply.getId()))
-                .dislikeCount((int) commentReplyDislikeRepository.countByIdReplyId(reply.getId()))
+                .likeCount((int) commentLikeRepository.countByIdCommentId(commentId))
+                .dislikeCount((int) commentDislikeRepository.countByIdCommentId(commentId))
                 .build();
     }
 
-    private void ensureOwner(User owner, Long currentUserId) {
-        ensureOwner(owner, currentUserId, ErrorCode.COMMENT_FORBIDDEN);
+    private CommentReactionResponse buildReplyReaction(Long replyId, boolean liked, boolean disliked) {
+        return CommentReactionResponse.builder()
+                .liked(liked)
+                .disliked(disliked)
+                .likeCount((int) commentReplyLikeRepository.countByIdReplyId(replyId))
+                .dislikeCount((int) commentReplyDislikeRepository.countByIdReplyId(replyId))
+                .build();
     }
 
-    private void ensureOwner(User owner, Long currentUserId, ErrorCode forbiddenCode) {
-        if (owner == null || !currentUserId.equals(owner.getId())) {
+    private void ensureOwnerOrAdmin(User owner, Long currentUserId, ErrorCode forbiddenCode) {
+        if (!isOwner(owner, currentUserId) && !currentUserService.isAdmin()) {
             throw new AppException(forbiddenCode);
         }
     }
 
+    private static boolean isOwner(User owner, Long currentUserId) {
+        return currentUserId != null && owner != null && currentUserId.equals(owner.getId());
+    }
+
+    private boolean isAdmin(Long currentUserId) {
+        return currentUserId != null && currentUserService.isAdmin();
+    }
+
+    private static Long ownerId(User user) {
+        return user != null ? user.getId() : null;
+    }
+
     /**
-     * Kiểm tra target tồn tại trong bảng tương ứng. Tránh để comment "treo"
-     * trỏ vào 1 bản ghi đã bị xoá.
+     * Target phải còn tồn tại và người xem được phép thấy nó. Bài học: chưa xoá, khóa chưa xoá,
+     * và khóa đã publish — khóa nháp chỉ admin, chủ khóa và người đã đăng ký mới thấy bình luận.
      */
     private void ensureTargetExists(CommentTargetType type, Long targetId) {
         if (targetId == null || targetId <= 0) {
             throw new AppException(ErrorCode.COMMENT_INVALID_TARGET);
         }
         boolean exists = switch (type) {
-            case LESSON -> lessonRepository.existsById(targetId);
+            case LESSON -> lessonRepository.findByIdAndDeletedFalse(targetId)
+                    .map(lesson -> isLessonCourseVisible(lesson.getCourse()))
+                    .orElse(false);
             case VOCABULARY -> vocabularyRepository.findByIdAndDeletedFalse(targetId).isPresent();
             case KANJI -> writingCharacterRepository.findByIdAndDeletedFalse(targetId).isPresent();
             case GRAMMAR -> grammarPointRepository.findByIdAndDeletedFalse(targetId).isPresent();
@@ -631,6 +605,14 @@ public class CommentService {
         if (!exists) {
             throw new AppException(ErrorCode.COMMENT_INVALID_TARGET);
         }
+    }
+
+    private boolean isLessonCourseVisible(Course course) {
+        if (course.isDeleted()) {
+            return false;
+        }
+        return Boolean.TRUE.equals(course.getPublished())
+                || courseAccessGuard.canViewUnpublished(course, currentUserIdOrNull());
     }
 
     private Long currentUserIdOrNull() {
@@ -641,9 +623,12 @@ public class CommentService {
         }
     }
 
-    // Unused - giữ chỗ nếu sau này cần dùng tập user
-    @SuppressWarnings("unused")
-    private Set<Long> collectUserIds(List<? extends Object> entities) {
-        return new HashSet<>();
+    /** Trang bắt đầu từ 1; size kẹp trong [1, 100]. */
+    private static Pageable toPageable(int page, int size) {
+        return PageRequest.of(Math.max(page, 1) - 1, Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+    }
+
+    private static Set<Long> toSet(Collection<Long> ids) {
+        return new HashSet<>(ids);
     }
 }

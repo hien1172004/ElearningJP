@@ -13,7 +13,7 @@ import {
 } from 'recharts'
 import { useProgressChart } from '@/hooks/useProgressChart'
 import {
-  chartGranularityForPreset,
+  chartGranularityForRange,
   formatCompactNumber,
   formatIsoDate,
   type SummaryRangePreset,
@@ -227,12 +227,13 @@ export const ProgressChartBlock: React.FC<ProgressChartBlockProps> = ({
   to,
   preset,
 }) => {
-  const granularity = chartGranularityForPreset(preset)
+  const granularity = chartGranularityForRange({ preset, from, to })
 
   const { data, isLoading, isError, error, refetch } = useProgressChart({
     from,
     to,
     granularity,
+    allTime: preset === 'all' || undefined,
   })
 
   if (isLoading && !data) return <SkeletonBlock />

@@ -86,9 +86,9 @@ public class SectionService {
      */
     @Transactional(readOnly = true)
     public List<LessonSectionResponse> getLessonSections(Long lessonId) {
-        if (lessonRepository.findByIdAndDeletedFalse(lessonId).isEmpty()) {
-            throw new AppException(ErrorCode.LESSON_NOT_FOUND);
-        }
+        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        courseAccessGuard.requireLessonContentAccess(lesson);
         List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
         RelatedVocabBundle bundle = loadNestedCollections(sections);
         return lessonSectionMapper.toSectionResponses(
@@ -102,9 +102,7 @@ public class SectionService {
     public LessonSectionResponse getSection(Long sectionId) {
         LessonSection section = lessonSectionRepository.findById(sectionId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
-        if (section.isDeleted()) {
-            throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
-        }
+        courseAccessGuard.requireSectionContentAccess(section);
         // Load full graph theo lesson
         List<LessonSection> sections = lessonSectionRepository
                 .findByLessonIdWithAllItems(section.getLesson().getId());
@@ -149,7 +147,8 @@ public class SectionService {
                 .lesson(lesson)
                 .sectionType(sectionType)
                 .title(title)
-                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
+                // Tạm MAX+1 (không dùng size+1): xoá mềm để lại lỗ hổng, [1,3] có size+1 = 3 sẽ trùng UNIQUE.
+                .orderIndex(OrderIndexResolver.maxOrderIndex(ordered, LessonSection::getOrderIndex) + 1)
                 .build();
 
         LessonSection saved = lessonSectionRepository.save(section);

@@ -8,6 +8,7 @@ import type {
   LeaderboardResponse,
   MyRank,
   ProgressCalendar,
+  ProgressGoal,
   ProgressChartResponse,
   ProgressSummary,
   StudyHeartbeatPayload,
@@ -35,8 +36,20 @@ export const progressService = {
   getSummary: async (params?: {
     from?: string
     to?: string
+    allTime?: boolean
   }): Promise<ApiResponse<ProgressSummary>> => {
     return axiosClient.get('/progress/summary', { params })
+  },
+
+  // ----------------------------------------------------------------
+  // Mục tiêu số từ mới mỗi tuần
+  // ----------------------------------------------------------------
+  getGoal: async (): Promise<ApiResponse<ProgressGoal>> => {
+    return axiosClient.get('/progress/goal')
+  },
+
+  updateGoal: async (weeklyGoalWords: number): Promise<ApiResponse<ProgressGoal>> => {
+    return axiosClient.put('/progress/goal', { weeklyGoalWords })
   },
 
   // ----------------------------------------------------------------
@@ -67,6 +80,7 @@ export const progressService = {
     from?: string
     to?: string
     granularity?: ChartGranularity
+    allTime?: boolean
   }): Promise<ApiResponse<ProgressChartResponse>> => {
     return axiosClient.get('/progress/chart', { params })
   },

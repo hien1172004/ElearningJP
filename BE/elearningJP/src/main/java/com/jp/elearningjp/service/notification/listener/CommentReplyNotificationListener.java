@@ -1,5 +1,7 @@
 package com.jp.elearningjp.service.notification.listener;
 
+import java.util.Set;
+import java.util.HashSet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jp.elearningjp.repository.user.UserSettingsRepository;
@@ -15,7 +17,9 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Sinh thông báo {@code COMMUNITY_REPLY} khi có người trả lời bình luận.
+ * Sinh thông báo {@code COMMUNITY_REPLY} khi có người trả lời: gửi cho chủ bình luận gốc và,
+ * khi trả lời lồng nhau, cho cả người viết reply được trả lời. Mỗi người nhận tối đa 1 thông báo
+ * cho 1 reply, không ai nhận thông báo về reply của chính mình.
  *
  * <p>Chạy {@code AFTER_COMMIT} theo đúng pattern
  * {@code LessonCompletedGamificationListener}: reply chỉ được commit thì mới thông báo,
@@ -39,10 +43,14 @@ public class CommentReplyNotificationListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onCommentReplied(CommentRepliedEvent event) {
-        Long recipientId = event.getRecipientUserId();
+        Set<Long> notified = new HashSet<>();
+        notify(event, event.getRecipientUserId(), "Có trả lời mới về bình luận của bạn", notified);
+        notify(event, event.getParentReplyUserId(), "Có người trả lời bạn", notified);
+    }
 
-        // Không tự nhắn mình khi chủ comment trả lời chính bình luận của mình.
-        if (recipientId == null || recipientId.equals(event.getReplierUserId())) {
+    private void notify(CommentRepliedEvent event, Long recipientId, String title, Set<Long> notified) {
+        // Không tự nhắn mình, và không báo 2 lần cho cùng 1 người (vd chủ comment cũng viết reply cha).
+        if (recipientId == null || recipientId.equals(event.getReplierUserId()) || !notified.add(recipientId)) {
             return;
         }
 
@@ -61,7 +69,7 @@ public class CommentReplyNotificationListener {
             notificationService.create(
                     recipientId,
                     NotificationType.COMMUNITY_REPLY,
-                    "Có trả lời mới về bình luận của bạn",
+                    title,
                     buildBody(event),
                     data
             );

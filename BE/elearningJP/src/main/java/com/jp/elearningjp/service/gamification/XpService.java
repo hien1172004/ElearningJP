@@ -40,9 +40,6 @@ import java.time.Clock;
 @Slf4j
 public class XpService {
 
-    /** Muc tieu mac dinh 5 tu/ngay. */
-    public static final int DEFAULT_GOAL_WORDS = 5;
-
     /** So diem mac dinh khi tra tu (neu app_config chua cau hinh). */
     public static final int DEFAULT_XP_PER_LOOKUP = 2;
 

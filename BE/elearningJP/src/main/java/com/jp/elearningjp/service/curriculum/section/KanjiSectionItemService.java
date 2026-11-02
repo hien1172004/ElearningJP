@@ -113,6 +113,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND);
         }
+        courseAccessGuard.requireSectionContentAccess(item.getSection());
         return buildResponse(item);
     }
 
@@ -153,7 +154,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         LessonKanjiItem item = LessonKanjiItem.builder()
                 .section(section)
                 .character(writingChar)
-                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
+                // Tạm MAX+1 (không dùng size+1): xoá mềm để lại lỗ hổng, [1,3] có size+1 = 3 sẽ trùng UNIQUE.
+                .orderIndex(OrderIndexResolver.maxOrderIndex(ordered, LessonKanjiItem::getOrderIndex) + 1)
                 .note(request.getNote())
                 .build();
 

@@ -167,7 +167,7 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
             </button>
           )}
 
-          {reply.owner && (
+          {(reply.deletable ?? reply.owner) && (
             <Tooltip title="Xoá trả lời">
               <button
                 type="button"

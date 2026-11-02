@@ -15,6 +15,8 @@ export interface UseProgressChartParams {
    * nhãn trục X khớp với dữ liệu.</p>
    */
   granularity?: ChartGranularity
+  /** true → toàn bộ lịch sử, bỏ qua from/to. */
+  allTime?: boolean
 }
 
 /**
@@ -34,12 +36,12 @@ export function useProgressChart(
   params: UseProgressChartParams = {},
   options?: { enabled?: boolean },
 ) {
-  const { from, to, granularity } = params
+  const { from, to, granularity, allTime } = params
 
   return useQuery<ProgressChartResponse>({
-    queryKey: QUERY_KEYS.progress.chart({ from, to, granularity }),
+    queryKey: QUERY_KEYS.progress.chart({ from, to, granularity, allTime }),
     queryFn: async () => {
-      const res = await progressService.getChart({ from, to, granularity })
+      const res = await progressService.getChart({ from, to, granularity, allTime })
       return (res?.data ?? {
         from: '',
         to: '',

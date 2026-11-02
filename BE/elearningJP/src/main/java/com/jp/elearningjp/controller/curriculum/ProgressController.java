@@ -1,6 +1,5 @@
 package com.jp.elearningjp.controller.curriculum;
 
-import com.jp.elearningjp.dto.request.curriculum.LessonCompleteRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.ProgressResponse;
 import com.jp.elearningjp.service.curriculum.ProgressService;
@@ -9,7 +8,6 @@ import com.jp.elearningjp.shared.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -51,18 +49,16 @@ public class ProgressController {
     // ============================================================
 
     @Operation(summary = "Hoàn thành 1 lesson",
-            description = "Body: { \"score\": 85.5 } — score chỉ bắt buộc nếu lesson có quiz. " +
-                    "bestScore chỉ update khi score mới cao hơn. " +
+            description = "Lesson có quiz: phải đã nộp quiz và đạt điểm qua (server chấm, client không gửi điểm). " +
                     "Khi progress đạt 100%, enrollment tự động COMPLETED.")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping(ApiPaths.Progress.COMPLETE)
     public ApiResponse<ProgressResponse> completeLesson(
-            @PathVariable Long lessonId,
-            @RequestBody @Valid LessonCompleteRequest request) {
+            @PathVariable Long lessonId) {
         return ApiResponse.<ProgressResponse>builder()
                 .success(true)
                 .message("Lesson completed")
-                .data(progressService.completeLesson(lessonId, request))
+                .data(progressService.completeLesson(lessonId))
                 .build();
     }
 

@@ -23,7 +23,7 @@ export const commentService = {
   getComments: async (
     targetType: CommentTargetType,
     targetId: number,
-    page = 0,
+    page = 1,
     size = 5,
   ): Promise<ApiResponse<CommentListResponse>> => {
     return axiosClient.get(`/${targetType}/${targetId}/comments`, {
@@ -56,7 +56,7 @@ export const commentService = {
   /** Danh sách reply của 1 bình luận. */
   getReplies: async (
     commentId: number,
-    page = 0,
+    page = 1,
     size = 50,
   ): Promise<ApiResponse<CommentReplyListResponse>> => {
     return axiosClient.get(`/comments/${commentId}/replies`, {

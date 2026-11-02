@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import java.time.Instant;
 import com.jp.elearningjp.dto.request.curriculum.CourseCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.CourseUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.*;
@@ -52,6 +53,8 @@ public class CourseService {
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
 
+    private static final String DEFAULT_SLUG = "khoa-hoc";
+
     /**
      * Lấy danh sách khóa học công khai cho học viên (có phân trang và lọc theo cấp độ JLPT)
      */
@@ -62,22 +65,7 @@ public class CourseService {
                 ? courseRepository.findByJlptLevelAndPublishedTrueAndDeletedFalse(jlptLevel, pageable)
                 : courseRepository.findByPublishedTrueAndDeletedFalse(pageable);
 
-        List<CourseResponse> items = coursePage.getContent().stream()
-                .map(course -> {
-                    CourseResponse response = courseMapper.toCourseResponse(course);
-                    long totalLessons = lessonRepository.countByCourseIdAndDeletedFalse(course.getId());
-                    response.setTotalLessons((int) totalLessons);
-                    return response;
-                })
-                .toList();
-
-        return PageResponse.<CourseResponse>builder()
-                .items(items)
-                .page(page)
-                .size(size)
-                .totalElements(coursePage.getTotalElements())
-                .totalPages(coursePage.getTotalPages())
-                .build();
+        return toCoursePageResponse(coursePage, page, size);
     }
 
     /**
@@ -88,27 +76,14 @@ public class CourseService {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Course> coursePage = courseRepository.findByDeletedFalse(pageable);
 
-        List<CourseResponse> items = coursePage.getContent().stream()
-                .map(course -> {
-                    CourseResponse response = courseMapper.toCourseResponse(course);
-                    long totalLessons = lessonRepository.countByCourseIdAndDeletedFalse(course.getId());
-                    response.setTotalLessons((int) totalLessons);
-                    return response;
-                })
-                .toList();
-
-        return PageResponse.<CourseResponse>builder()
-                .items(items)
-                .page(page)
-                .size(size)
-                .totalElements(coursePage.getTotalElements())
-                .totalPages(coursePage.getTotalPages())
-                .build();
+        return toCoursePageResponse(coursePage, page, size);
     }
 
     /**
      * Xem chi tiết khóa học và mục lục lộ trình bài học
-     * Tự động nhận diện tài khoản: nếu đã đăng ký thì trả về isEnrolled = true và % tiến độ
+     * Tự động nhận diện tài khoản: nếu đã đăng ký thì trả về isEnrolled = true và % tiến độ.
+     * Khóa chưa xuất bản chỉ admin, chủ khóa học và học viên đã đăng ký thấy được;
+     * người khác nhận 404 để không lộ sự tồn tại của khóa.
      */
     @Transactional(readOnly = true)
     public CourseDetailResponse getCourseDetail(Long courseId) {
@@ -131,14 +106,26 @@ public class CourseService {
             }
         }
 
+        if (!Boolean.TRUE.equals(course.getPublished())) {
+            Long viewerId = currentUser != null ? currentUser.getId() : null;
+            boolean allowed = isEnrolled || currentUserService.isAdmin()
+                    || courseAccessGuard.isOwner(course, viewerId);
+            if (!allowed) {
+                throw new AppException(ErrorCode.COURSE_NOT_FOUND);
+            }
+        }
+
         List<Lesson> lessons = lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId);
         int totalLessons = lessons.size();
+        Set<Long> lessonIdsWithQuiz = lessons.isEmpty()
+                ? Set.of()
+                : new HashSet<>(quizRepository.findLessonIdsWithQuiz(lessons.stream().map(Lesson::getId).toList()));
 
         Map<Long, UserLessonProgress> finalProgressMap = progressMap;
         List<LessonOutlineResponse> outlineList = lessons.stream()
                 .map(lesson -> {
                     LessonOutlineResponse outline = lessonMapper.toLessonOutlineResponse(lesson);
-                    outline.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lesson.getId()));
+                    outline.setHasQuiz(lessonIdsWithQuiz.contains(lesson.getId()));
 
                     UserLessonProgress progress = finalProgressMap.get(lesson.getId());
                     if (progress != null) {
@@ -175,10 +162,13 @@ public class CourseService {
     public CourseResponse createCourse(CourseCreateRequest request) {
         User owner = currentUserService.getCurrentUser();
 
-        String baseSlug = SlugUtils.toSlug(request.getTitle());
+        // Tên toàn tiếng Nhật không còn ký tự Latin nào nên slug rỗng → dùng slug mặc định.
+        String titleSlug = SlugUtils.toSlug(request.getTitle());
+        String baseSlug = titleSlug.isEmpty() ? DEFAULT_SLUG : titleSlug;
         String slug = baseSlug;
         int counter = 1;
-        while (courseRepository.existsBySlugAndDeletedFalse(slug)) {
+        // Cột slug UNIQUE trên toàn bảng, nên phải tính cả khóa đã xoá mềm.
+        while (courseRepository.existsBySlug(slug)) {
             slug = baseSlug + "-" + counter++;
         }
 
@@ -225,6 +215,10 @@ public class CourseService {
 
         course.softDelete();
         courseRepository.save(course);
+        // Khóa đã xoá không còn xuất hiện trong "khóa của tôi" và không còn tính tiến độ.
+        Instant now = Instant.now();
+        enrollmentRepository.softDeleteByCourseId(courseId, now);
+        progressRepository.softDeleteByCourseId(courseId, now);
         log.info("[COURSE] Soft-deleted course id={}", courseId);
     }
 
@@ -281,6 +275,33 @@ public class CourseService {
     // =========================================================
     // HELPER METHODS
     // =========================================================
+
+    /** Map trang khóa học, đếm số bài bằng 1 query gộp thay vì 1 query cho mỗi khóa. */
+    private PageResponse<CourseResponse> toCoursePageResponse(Page<Course> coursePage, int page, int size) {
+        List<Long> courseIds = coursePage.getContent().stream().map(Course::getId).toList();
+        Map<Long, Long> lessonCounts = courseIds.isEmpty()
+                ? Map.of()
+                : lessonRepository.countActiveLessonsByCourseIds(courseIds).stream()
+                        .collect(Collectors.toMap(
+                                LessonRepository.CourseLessonCount::getCourseId,
+                                LessonRepository.CourseLessonCount::getLessonCount));
+
+        List<CourseResponse> items = coursePage.getContent().stream()
+                .map(course -> {
+                    CourseResponse response = courseMapper.toCourseResponse(course);
+                    response.setTotalLessons(lessonCounts.getOrDefault(course.getId(), 0L).intValue());
+                    return response;
+                })
+                .toList();
+
+        return PageResponse.<CourseResponse>builder()
+                .items(items)
+                .page(page)
+                .size(size)
+                .totalElements(coursePage.getTotalElements())
+                .totalPages(coursePage.getTotalPages())
+                .build();
+    }
 
     /**
      * Kiểm tra quyền sửa/xoá/publish course:

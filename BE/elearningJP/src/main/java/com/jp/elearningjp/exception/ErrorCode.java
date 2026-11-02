@@ -67,7 +67,6 @@ public enum ErrorCode {
     PROGRESS_NOT_FOUND(1400, "Lesson progress not found", HttpStatus.NOT_FOUND),
     PROGRESS_ALREADY_COMPLETED(1401, "Lesson already completed", HttpStatus.BAD_REQUEST),
     CANNOT_COMPLETE_LESSON(1402, "Cannot mark this lesson as complete", HttpStatus.BAD_REQUEST),
-    INVALID_BEST_SCORE(1403, "Score is only allowed when the lesson has a quiz", HttpStatus.BAD_REQUEST),
 
     // CURRICULUM MODULE — Authorization (1500-1599)
     FORBIDDEN_COURSE_ACCESS(1500, "You don't have permission to access this course", HttpStatus.FORBIDDEN),
@@ -120,6 +119,9 @@ public enum ErrorCode {
     LEADERBOARD_INVALID_WEEK(5101, "Invalid week key. Expected format YYYY-Www (e.g. 2026-W42)", HttpStatus.BAD_REQUEST),
     LEADERBOARD_WEEK_IN_FUTURE(5102, "The requested week is in the future", HttpStatus.BAD_REQUEST),
     LEADERBOARD_REFRESH_TOO_FREQUENT(5103, "Too many refresh requests. Please try again in a few seconds", HttpStatus.TOO_MANY_REQUESTS),
+    LEADERBOARD_REBUILD_IN_PROGRESS(5104, "Leaderboard is being rebuilt. Please try again shortly", HttpStatus.CONFLICT),
+    LEADERBOARD_REBUILD_FAILED(5105, "Could not rebuild the leaderboard", HttpStatus.SERVICE_UNAVAILABLE),
+    PROGRESS_GOAL_INVALID(5106, "Mục tiêu phải từ 30 đến 140 từ/tuần, theo bước 10", HttpStatus.BAD_REQUEST),
 
     // NOTIFICATION MODULE (6100 - 6199)
     NOTIFICATION_NOT_FOUND(6100, "Notification not found", HttpStatus.NOT_FOUND),

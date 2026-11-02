@@ -30,7 +30,7 @@ public class EnrollmentController {
     // ============================================================
 
     @Operation(summary = "Enroll vào course (current user)",
-            description = "Tự động tạo mới hoặc reactivate enrollment nếu đã drop trước đó.")
+            description = "Tạo enrollment mới. Trả 409 nếu đã đăng ký, kể cả khi đã học xong khóa.")
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping(ApiPaths.Course.BASE + ApiPaths.Course.ENROLL)
     public ResponseEntity<ApiResponse<EnrollmentResponse>> enrollInCourse(

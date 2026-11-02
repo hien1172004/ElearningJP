@@ -1,5 +1,10 @@
 package com.jp.elearningjp.repository.curriculum;
 
+import java.time.Instant;
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.EntityGraph;
 import com.jp.elearningjp.entity.curriculum.CourseEnrollment;
 import com.jp.elearningjp.shared.enums.EnrollmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,10 +31,21 @@ public interface CourseEnrollmentRepository extends JpaRepository<CourseEnrollme
     boolean existsByUser_IdAndCourse_IdAndStatusAndDeletedFalse(
             Long userId, Long courseId, EnrollmentStatus status);
 
-    List<CourseEnrollment> findByUser_IdAndDeletedFalseOrderByCreatedAtDesc(Long userId);
+    @EntityGraph(attributePaths = "course")
+    List<CourseEnrollment> findByUser_IdAndDeletedFalseAndCourse_DeletedFalseOrderByCreatedAtDesc(Long userId);
 
-    List<CourseEnrollment> findByUser_IdAndStatusAndDeletedFalseOrderByCreatedAtDesc(
+    @EntityGraph(attributePaths = "course")
+    List<CourseEnrollment> findByUser_IdAndStatusAndDeletedFalseAndCourse_DeletedFalseOrderByCreatedAtDesc(
             Long userId, EnrollmentStatus status);
 
     List<CourseEnrollment> findByUserIdAndDeletedFalse(Long userId);
+
+    Optional<CourseEnrollment> findByIdAndDeletedFalseAndCourse_DeletedFalse(Long id);
+
+    @Modifying
+    @Query("""
+            UPDATE CourseEnrollment e SET e.deleted = true, e.deletedAt = :now
+            WHERE e.course.id = :courseId AND e.deleted = false
+            """)
+    int softDeleteByCourseId(@Param("courseId") Long courseId, @Param("now") Instant now);
 }

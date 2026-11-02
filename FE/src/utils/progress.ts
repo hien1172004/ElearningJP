@@ -5,6 +5,7 @@
  */
 
 import type { ChartGranularity } from '@/types'
+import { isoWeekStart, todayIso } from './week'
 
 /**
  * Các preset kỳ dùng chung cho bộ lọc của Khối 1 (và Khối 3 — biểu đồ).
@@ -12,33 +13,58 @@ import type { ChartGranularity } from '@/types'
  * <p>Đặt ở đây (utils) thay vì trong component để cả Khối 1 lẫn biểu đồ đều
  * import từ 1 nguồn, không tạo vòng phụ thuộc utils ↔ components.</p>
  */
-export type SummaryRangePreset = '7d' | '30d' | '90d' | 'month' | 'year'
+export type SummaryRangePreset = 'day' | 'week' | 'month' | 'all' | 'custom'
+
+/** Kỳ đang lọc. `all` không có from/to: BE tự tính từ ngày đầu có dữ liệu. */
+export interface ProgressRange {
+  preset: SummaryRangePreset
+  from?: string
+  to?: string
+}
+
+/** Số ngày tối đa của kỳ tự chọn. Khớp `ProgressService.MAX_RANGE_DAYS` ở BE. */
+export const MAX_CUSTOM_RANGE_DAYS = 366
+
+const MS_PER_DAY = 86_400_000
+
+function parseIso(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
+}
+
+function toIso(utcMs: number): string {
+  return new Date(utcMs).toISOString().slice(0, 10)
+}
+
+/** Kỳ của các lựa chọn có sẵn, theo ngày của múi giờ nghiệp vụ: hôm nay, tuần này (T2–CN), tháng này. */
+export function resolvePresetRange(preset: Exclude<SummaryRangePreset, 'custom'>): ProgressRange {
+  const today = todayIso()
+  switch (preset) {
+    case 'day':
+      return { preset, from: today, to: today }
+    case 'week': {
+      const monday = isoWeekStart(today)
+      return { preset, from: monday, to: toIso(parseIso(monday) + 6 * MS_PER_DAY) }
+    }
+    case 'month': {
+      const [y, m] = today.split('-').map(Number)
+      return { preset, from: toIso(Date.UTC(y, m - 1, 1)), to: toIso(Date.UTC(y, m, 0)) }
+    }
+    case 'all':
+      return { preset }
+  }
+}
 
 /**
- * Suy ra đơn vị bucket của biểu đồ từ preset kỳ.
- *
- * <ul>
- *   <li>{@code 7d} / {@code 30d} / {@code month} → theo ngày (≤ 31 cột)</li>
- *   <li>{@code 90d} → theo tuần ISO (≤ 13 cột)</li>
- *   <li>{@code year} → theo tháng (≤ 12 cột)</li>
- * </ul>
- *
- * @param preset preset kỳ đang chọn
+ * Đơn vị bucket của biểu đồ theo kỳ: toàn thời gian theo tháng; kỳ tự chọn
+ * theo độ dài (≤ 31 ngày theo ngày, ≤ 180 ngày theo tuần, còn lại theo tháng).
  */
-export function chartGranularityForPreset(
-  preset: SummaryRangePreset,
-): ChartGranularity {
-  switch (preset) {
-    case '90d':
-      return 'week'
-    case 'year':
-      return 'month'
-    case '7d':
-    case '30d':
-    case 'month':
-    default:
-      return 'day'
-  }
+export function chartGranularityForRange({ preset, from, to }: ProgressRange): ChartGranularity {
+  if (preset === 'all') return 'month'
+  if (preset !== 'custom' || !from || !to) return 'day'
+  const days = (parseIso(to) - parseIso(from)) / MS_PER_DAY + 1
+  if (days <= 31) return 'day'
+  return days <= 180 ? 'week' : 'month'
 }
 
 /**

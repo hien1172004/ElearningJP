@@ -48,6 +48,8 @@ export interface CommentItem {
   disliked: boolean
   /** Cờ: user hiện tại là chủ sở hữu (dùng để hiện nút sửa / xoá). */
   owner: boolean
+  /** Được xoá: chủ bình luận hoặc admin */
+  deletable?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -65,6 +67,8 @@ export interface CommentReplyItem {
   liked: boolean
   disliked: boolean
   owner: boolean
+  /** Được xoá: chủ trả lời hoặc admin */
+  deletable?: boolean
   createdAt: string
   updatedAt: string
 }

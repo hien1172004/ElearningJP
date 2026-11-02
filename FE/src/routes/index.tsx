@@ -12,6 +12,7 @@ import {
   TeacherCourseEditorPage,
   LessonViewerPage,
   ProgressPage,
+  ProgressGoalPage,
   GoogleCallbackPage,
   ExamLobbyPage,
   ExamRoomPage,
@@ -153,6 +154,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <ProgressPage /> },
+      { path: 'goal', element: <ProgressGoalPage /> },
     ],
   },
 

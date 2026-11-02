@@ -128,6 +128,17 @@ public class DailyStatsService {
     public record LookupResult(UserDailyStats stats, boolean scored) {}
 
     // -------------------------------------------------------------------------
+    // Muc tieu ngay
+    // -------------------------------------------------------------------------
+
+    /** Ap dung muc tieu moi cho row hom nay (neu da co). Cac ngay truoc giu nguyen. */
+    @Transactional
+    public void applyGoalToToday(Long userId, int goalWords) {
+        int minStudySeconds = appConfigService.getIntValue(CFG_MIN_STUDY_SECONDS, DEFAULT_MIN_STUDY_SECONDS);
+        dailyStatsRepository.updateGoalWords(userId, LocalDate.now(clock), goalWords, minStudySeconds);
+    }
+
+    // -------------------------------------------------------------------------
     // Hoan thanh bai hoc
     // -------------------------------------------------------------------------
 

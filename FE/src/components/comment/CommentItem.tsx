@@ -213,16 +213,19 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             </Tooltip>
 
             {comment.owner && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleStartEdit}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Sửa
-                </button>
+              <button
+                type="button"
+                onClick={handleStartEdit}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Sửa
+              </button>
+            )}
 
+            {/* Xoá: chủ bình luận hoặc admin */}
+            {(comment.deletable ?? comment.owner) && (
+              <>
                 <button
                   type="button"
                   onClick={handleDelete}

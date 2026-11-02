@@ -45,6 +45,9 @@ AGENTS.md
 **/AGENTS.md
 .agents/
 **/.agents/
+CLAUDE.md
+.claude/
+.tmp_mascot_ref/
 
 
 #HTTP-TEST

@@ -16,6 +16,15 @@ import java.util.Optional;
 @Repository
 public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, UserDailyStatsId> {
 
+    /**
+     * Muc tieu ngay cua user, chot vao goal_words khi tao row moi: ceil(tuan / 7), chua chon -> 5.
+     * Khop ProgressGoalService.toDailyGoal va DailyStatsService.DEFAULT_GOAL_WORDS.
+     */
+    String USER_DAILY_GOAL_SQL = """
+            COALESCE((SELECT CAST(CEIL(p.weekly_goal_words / 7.0) AS INT)
+                      FROM user_profiles p WHERE p.user_id = :userId), 5)
+            """;
+
     Optional<UserDailyStats> findByIdUserIdAndIdStatDate(Long userId, LocalDate statDate);
 
     /** Du lieu 1 ky cho lich + bieu do (Buc 5/6). */
@@ -194,7 +203,9 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             INSERT INTO user_daily_stats (user_id, stat_date, lookups, lookups_scored, xp_earned, goal_words, goal_met, lessons_completed, new_items_learned)
-            VALUES (:userId, :statDate, 1, 1, :xpEarned, 5, (:isNew >= 5), 0, :isNew)
+            VALUES (:userId, :statDate, 1, 1, :xpEarned,
+            """ + USER_DAILY_GOAL_SQL + """
+                    , FALSE, 0, :isNew)
             ON CONFLICT (user_id, stat_date) DO UPDATE
             SET
                 lookups         = user_daily_stats.lookups + 1,
@@ -227,8 +238,9 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             INSERT INTO user_daily_stats (user_id, stat_date, study_seconds, xp_earned, goal_words, goal_met, lessons_completed, lookups, lookups_scored, new_items_learned)
-            VALUES (:userId, :statDate, :seconds, :xpEarned, 5,
-                    (:seconds >= :minStudySeconds), 0, 0, 0, 0)
+            VALUES (:userId, :statDate, :seconds, :xpEarned,
+            """ + USER_DAILY_GOAL_SQL + """
+                    , (:seconds >= :minStudySeconds), 0, 0, 0, 0)
             ON CONFLICT (user_id, stat_date) DO UPDATE
             SET
                 study_seconds = user_daily_stats.study_seconds + :seconds,
@@ -378,7 +390,9 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             INSERT INTO user_daily_stats (user_id, stat_date, lessons_completed, xp_earned, lookups, goal_words, goal_met, lookups_scored, new_items_learned)
-            VALUES (:userId, :statDate, 1, :xpEarned, 0, 5, FALSE, 0, 0)
+            VALUES (:userId, :statDate, 1, :xpEarned, 0,
+            """ + USER_DAILY_GOAL_SQL + """
+                    , FALSE, 0, 0)
             ON CONFLICT (user_id, stat_date) DO UPDATE
             SET
                 lessons_completed = user_daily_stats.lessons_completed + 1,
@@ -396,9 +410,27 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             INSERT INTO user_daily_stats (user_id, stat_date, xp_earned, lookups, lessons_completed, goal_words, goal_met, lookups_scored, new_items_learned)
-            VALUES (:userId, :statDate, :xpEarned, 0, 0, 5, FALSE, 0, 0)
+            VALUES (:userId, :statDate, :xpEarned, 0, 0,
+            """ + USER_DAILY_GOAL_SQL + """
+                    , FALSE, 0, 0)
             ON CONFLICT (user_id, stat_date) DO UPDATE
             SET xp_earned = user_daily_stats.xp_earned + :xpEarned
             """, nativeQuery = true)
     void addXp(Long userId, LocalDate statDate, int xpEarned);
+
+    /** Ngay dau tien user co du lieu; null neu chua co. Moc bat dau cua ky "toan thoi gian". */
+    @Query("SELECT MIN(d.id.statDate) FROM UserDailyStats d WHERE d.id.userId = :userId")
+    LocalDate findFirstStatDate(Long userId);
+
+    /** Doi muc tieu cua 1 ngay da co row va tinh lai goal_met. Khong co row -> khong lam gi. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            UPDATE user_daily_stats
+            SET goal_words = :goalWords,
+                goal_met   = new_items_learned >= :goalWords
+                             OR lessons_completed > 0
+                             OR study_seconds >= :minStudySeconds
+            WHERE user_id = :userId AND stat_date = :statDate
+            """, nativeQuery = true)
+    void updateGoalWords(Long userId, LocalDate statDate, int goalWords, int minStudySeconds);
 }

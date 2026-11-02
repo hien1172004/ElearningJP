@@ -1,5 +1,7 @@
 package com.jp.elearningjp.service.curriculum;
 
+import java.util.Optional;
+import com.jp.elearningjp.entity.curriculum.Quiz;
 import com.jp.elearningjp.dto.request.curriculum.LessonCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonUpdateRequest;
@@ -61,10 +63,12 @@ public class LessonService {
     LessonSectionMapper lessonSectionMapper;
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
+    LessonProgressRecorder lessonProgressRecorder;
 
     /**
      * Xem nội dung chi tiết bài học (kèm sections + items).
-     * BẢO VỆ BẢN QUYỀN: Bắt buộc người dùng phải là ADMIN hoặc ĐÃ ĐĂNG KÝ KHÓA HỌC.
+     * BẢO VỆ BẢN QUYỀN: Bắt buộc người dùng phải là ADMIN, CHỦ KHÓA HỌC hoặc ĐÃ ĐĂNG KÝ KHÓA HỌC.
+     * Chỉ học viên đã đăng ký mới được ghi tiến độ; admin/giáo viên soạn bài không tạo progress.
      */
     @Transactional
     public LessonDetailResponse getLessonDetail(Long lessonId) {
@@ -73,39 +77,28 @@ public class LessonService {
 
         Long courseId = lesson.getCourse().getId();
 
-        // 1. Kiểm tra quyền truy cập (admin pass; user khác phải enrolled)
-        courseAccessGuard.requireEnrolled(courseId);
+        // 1. Kiểm tra quyền truy cập (admin, chủ khóa học hoặc học viên đã đăng ký)
+        courseAccessGuard.requireLessonContentAccess(lesson);
         User currentUser = currentUserService.getCurrentUser();
 
-        // 2. Ghi nhận / cập nhật tiến độ học tập của người dùng (IN_PROGRESS)
-        UserLessonProgress progress = progressRepository
-                .findByUserIdAndLessonIdAndDeletedFalse(currentUser.getId(), lessonId)
-                .orElseGet(() -> {
-                    UserLessonProgress newProgress = UserLessonProgress.builder()
-                            .user(currentUser)
-                            .lesson(lesson)
-                            .status(ProgressStatus.IN_PROGRESS)
-                            .startedAt(Instant.now())
-                            .lastAccessedAt(Instant.now())
-                            .build();
-                    return progressRepository.save(newProgress);
-                });
-
-        if (progress.getStatus() == ProgressStatus.NOT_STARTED) {
-            progress.setStatus(ProgressStatus.IN_PROGRESS);
-            progress.setStartedAt(Instant.now());
-        }
-        progress.setLastAccessedAt(Instant.now());
-        progressRepository.save(progress);
+        // 2. Ghi nhận / cập nhật tiến độ học tập của học viên (IN_PROGRESS)
+        UserLessonProgress progress =
+                enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), courseId)
+                        ? recordLessonAccess(currentUser, lesson)
+                        : null;
 
         // 3. Chuẩn bị dữ liệu phản hồi
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(lesson);
         // "Lesson có quiz" = lesson_quizzes có row chưa bị xoá (refactor V20, source of truth là bảng lesson_quizzes)
         response.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lessonId));
-        response.setStatus(progress.getStatus());
-        response.setBestScore(progress.getBestScore());
-        response.setLastAccessedAt(progress.getLastAccessedAt());
-        response.setCompletedAt(progress.getCompletedAt());
+        if (progress != null) {
+            response.setStatus(progress.getStatus());
+            response.setBestScore(progress.getBestScore());
+            response.setLastAccessedAt(progress.getLastAccessedAt());
+            response.setCompletedAt(progress.getCompletedAt());
+        } else {
+            response.setStatus(ProgressStatus.NOT_STARTED);
+        }
 
         // 4. Load sections + nested collections qua SectionService
         List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
@@ -150,8 +143,9 @@ public class LessonService {
 
         Lesson lesson = lessonMapper.toLessonEntity(request);
         lesson.setCourse(course);
-        // orderIndex tạm — sẽ được gán lại chính xác khi persist
-        lesson.setOrderIndex(ordered.size() + 1);
+        // orderIndex tạm MAX+1 — sẽ được gán lại chính xác khi persist.
+        // Không dùng size+1: xoá mềm để lại lỗ hổng, [1,3] có size+1 = 3 sẽ trùng UNIQUE.
+        lesson.setOrderIndex(OrderIndexResolver.maxOrderIndex(ordered, Lesson::getOrderIndex) + 1);
         Lesson saved = lessonRepository.save(lesson);
         lessonRepository.flush();
 
@@ -249,6 +243,8 @@ public class LessonService {
 
         lesson.softDelete();
         lessonRepository.save(lesson);
+        // Progress của bài đã xoá không được tính vào số bài hoàn thành của khóa.
+        progressRepository.softDeleteByLessonId(lessonId, Instant.now());
         log.info("[LESSON] Soft-deleted lesson id={}", lessonId);
     }
 
@@ -334,7 +330,8 @@ public class LessonService {
     }
 
     /**
-     * Học viên đánh dấu hoàn thành bài học thủ công (cho các bài lý thuyết không có quiz)
+     * Học viên đánh dấu hoàn thành bài học thủ công.
+     * Bài có quiz: phải đã nộp quiz và đạt điểm qua ({@code bestScore} do server chấm).
      * Trả về % tiến độ cập nhật của khóa học
      */
     @Transactional
@@ -343,21 +340,37 @@ public class LessonService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Long courseId = lesson.getCourse().getId();
-        courseAccessGuard.requireEnrolled(courseId);
+        courseAccessGuard.requireEnrolledInLesson(lesson);
         User currentUser = currentUserService.getCurrentUser();
 
-        UserLessonProgress progress = progressRepository
-                .findByUserIdAndLessonIdAndDeletedFalse(currentUser.getId(), lessonId)
-                .orElseGet(() -> UserLessonProgress.builder()
-                        .user(currentUser)
-                        .lesson(lesson)
-                        .startedAt(Instant.now())
-                        .build());
+        // Khoá dòng progress (tạo nếu chưa có): bấm hoàn thành 2 lần đồng thời không còn 500.
+        UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lessonId);
 
-        progress.setStatus(ProgressStatus.COMPLETED);
-        progress.setCompletedAt(Instant.now());
-        progress.setLastAccessedAt(Instant.now());
+        Optional<Quiz> lessonQuiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId);
+        lessonQuiz.ifPresent(quiz -> {
+            BigDecimal bestScore = progress.getBestScore();
+            if (bestScore == null || bestScore.compareTo(BigDecimal.valueOf(quiz.getPassingScorePercent())) < 0) {
+                throw new AppException(ErrorCode.CANNOT_COMPLETE_LESSON);
+            }
+        });
+
+        Instant now = Instant.now();
+        boolean newlyCompleted = progress.getStatus() != ProgressStatus.COMPLETED;
+        if (newlyCompleted) {
+            progress.setStatus(ProgressStatus.COMPLETED);
+            progress.setCompletedAt(now);
+            if (progress.getStartedAt() == null) {
+                progress.setStartedAt(now);
+            }
+        }
+        progress.setLastAccessedAt(now);
         progressRepository.save(progress);
+
+        // Chỉ lần đầu hoàn thành mới phát event (XP, tự hoàn thành khóa) — bấm lại không cộng XP lần nữa.
+        if (newlyCompleted) {
+            lessonProgressRecorder.onLessonCompleted(
+                    currentUser.getId(), lesson, progress.getBestScore(), lessonQuiz.isPresent());
+        }
 
         // Tính toán lại % tiến độ khóa học
         int totalLessons = (int) lessonRepository.countByCourseIdAndDeletedFalse(courseId);
@@ -386,6 +399,18 @@ public class LessonService {
     // =========================================================
     // HELPER METHODS
     // =========================================================
+
+    private UserLessonProgress recordLessonAccess(User user, Lesson lesson) {
+        // FE gọi xem bài và /start gần như cùng lúc — khoá dòng để không cùng INSERT → 500.
+        UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(user.getId(), lesson.getId());
+
+        if (progress.getStatus() == ProgressStatus.NOT_STARTED) {
+            progress.setStatus(ProgressStatus.IN_PROGRESS);
+            progress.setStartedAt(Instant.now());
+        }
+        progress.setLastAccessedAt(Instant.now());
+        return progressRepository.save(progress);
+    }
 
     /**
      * Kiểm tra quyền sửa/xoá lesson:

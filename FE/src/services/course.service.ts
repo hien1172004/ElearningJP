@@ -114,14 +114,6 @@ export const enrollmentService = {
   getEnrollmentById(enrollmentId: number): Promise<ApiResponse<Enrollment>> {
     return axiosClient.get(`/enrollments/${enrollmentId}`)
   },
-
-  drop(enrollmentId: number): Promise<ApiResponse<void>> {
-    return axiosClient.post(`/enrollments/${enrollmentId}/drop`)
-  },
-
-  dropByCourseId(courseId: number): Promise<ApiResponse<void>> {
-    return axiosClient.post(`/enrollments/by-course/${courseId}/drop`)
-  },
 }
 
 // ============================================================================

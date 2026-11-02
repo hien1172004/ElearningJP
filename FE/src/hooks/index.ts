@@ -18,7 +18,6 @@ export { useUpdateCourse } from './useUpdateCourse'
 export { useDeleteCourse } from './useDeleteCourse'
 export { usePublishCourse } from './usePublishCourse'
 export { useEnrollCourse } from './useEnrollCourse'
-export { useDropEnrollment } from './useDropEnrollment'
 export { useMyEnrollments } from './useMyEnrollments'
 export { useLessonsByCourse } from './useLessonsByCourse'
 export { useLessonDetail } from './useLessonDetail'
@@ -43,6 +42,7 @@ export { useRecordLookup } from './useRecordLookup'
 export { useStudyTimer } from './useStudyTimer'
 
 // Progress page — Bước 4 (đọc dữ liệu tiến độ)
+export { useProgressGoal, useUpdateProgressGoal } from './useProgressGoal'
 export { useProgressSummary } from './useProgressSummary'
 export type { UseProgressSummaryParams } from './useProgressSummary'
 

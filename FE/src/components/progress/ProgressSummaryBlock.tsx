@@ -1,5 +1,7 @@
 import React from 'react'
-import { Button, Select, Space, Tooltip } from 'antd'
+import { Button, DatePicker, Select, Space, Tooltip } from 'antd'
+import dayjs, { type Dayjs } from 'dayjs'
+import { Link } from 'react-router-dom'
 import { RefreshCw, CalendarRange, Info, CircleAlert, Sparkles } from 'lucide-react'
 import type { ProgressSummary } from '@/types'
 import { StatCard } from './StatCard'
@@ -9,8 +11,12 @@ import {
   formatCompactNumber,
   formatIsoDate,
   formatDuration,
+  MAX_CUSTOM_RANGE_DAYS,
+  resolvePresetRange,
+  type ProgressRange,
   type SummaryRangePreset,
 } from '@/utils/progress'
+import { todayIso } from '@/utils/week'
 
 /**
  * ProgressSummaryBlock — Khối 1: tổng hợp tiến độ.
@@ -43,70 +49,33 @@ import {
  */
 export type { SummaryRangePreset } from '@/utils/progress'
 
+const { RangePicker } = DatePicker
+
+const RANGE_OPTIONS: Array<{ value: SummaryRangePreset; label: string }> = [
+  { value: 'day', label: 'Ngày' },
+  { value: 'week', label: 'Tuần' },
+  { value: 'month', label: 'Tháng' },
+  { value: 'all', label: 'Toàn thời gian' },
+  { value: 'custom', label: 'Khác' },
+]
+
+/** Không chọn ngày tương lai, và không vượt quá độ dài tối đa BE cho phép. */
+function isCustomDateDisabled(current: Dayjs, info: { from?: Dayjs }): boolean {
+  if (current.isAfter(dayjs(todayIso()), 'day')) return true
+  if (!info.from) return false
+  return Math.abs(current.diff(info.from, 'day')) >= MAX_CUSTOM_RANGE_DAYS
+}
+
 interface ProgressSummaryBlockProps {
   summary: ProgressSummary | undefined
   isLoading?: boolean
   isError?: boolean
   onRefetch?: () => void
-  /** Khoảng thời gian hiện tại (đã resolve về yyyy-MM-dd). */
+  /** Kỳ đang chọn. */
+  preset: SummaryRangePreset
   from?: string
   to?: string
-  onRangeChange?: (range: {
-    preset: SummaryRangePreset
-    from?: string
-    to?: string
-  }) => void
-}
-
-// --------------------------------------------------------------------------
-// Local date helpers (không dùng dayjs để tránh phụ thuộc ngoài ý muốn)
-// --------------------------------------------------------------------------
-
-/** Ngày hôm nay dạng yyyy-MM-dd theo giờ địa phương (không phải UTC). */
-function todayIso(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-/** Lùi `n` ngày rồi trả về yyyy-MM-dd. */
-function shiftDays(days: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-/** Ngày đầu tháng hiện tại. */
-function startOfMonthIso(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}-01`
-}
-
-/** Ngày cuối tháng hiện tại. */
-function endOfMonthIso(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
-  return `${y}-${m}-${String(last).padStart(2, '0')}`
-}
-
-/**
- * Năm hiện tại dạng chuỗi 4 chữ số.
- *
- * <p>Tách riêng thành helper (thay vì gọi `new Date()` trực tiếp trong
- * component) để giữ component render "pure" — tránh gọi hàm không tất định
- * (impure) trực tiếp trong quá trình render.</p>
- */
-function currentYear(): string {
-  return String(new Date().getFullYear())
+  onRangeChange?: (range: ProgressRange) => void
 }
 
 // --------------------------------------------------------------------------
@@ -185,84 +154,40 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
   isLoading = false,
   isError = false,
   onRefetch,
+  preset,
   from,
   to,
   onRangeChange,
 }) => {
-  /**
-   * Xác định preset hiện đang active để set `value` của Select.
-   * So sánh với khoảng ngày chuẩn của từng preset.
-   */
-  const activePreset: SummaryRangePreset | undefined = React.useMemo(() => {
-    if (!from || !to) return undefined
-    const presets: Array<[SummaryRangePreset, string, string]> = [
-      ['7d', shiftDays(-6), todayIso()],
-      ['30d', shiftDays(-29), todayIso()],
-      ['90d', shiftDays(-89), todayIso()],
-      ['month', startOfMonthIso(), endOfMonthIso()],
-      ['year', `${currentYear()}-01-01`, `${currentYear()}-12-31`],
-    ]
-    return presets.find(([, f, t]) => f === from && t === to)?.[0]
-  }, [from, to])
+  // "Khác" chỉ mở ô chọn ngày; chưa chọn xong thì số liệu vẫn giữ theo kỳ cũ.
+  const [customOpen, setCustomOpen] = React.useState(preset === 'custom')
 
-  const handlePreset = (preset: SummaryRangePreset) => {
-    if (!onRangeChange) return
-    switch (preset) {
-      case '7d':
-        onRangeChange({
-          preset,
-          from: shiftDays(-6),
-          to: todayIso(),
-        })
-        break
-      case '30d':
-        onRangeChange({
-          preset,
-          from: shiftDays(-29),
-          to: todayIso(),
-        })
-        break
-      case '90d':
-        onRangeChange({
-          preset,
-          from: shiftDays(-89),
-          to: todayIso(),
-        })
-        break
-      case 'month':
-        onRangeChange({
-          preset,
-          from: startOfMonthIso(),
-          to: endOfMonthIso(),
-        })
-        break
-      case 'year':
-        onRangeChange({
-          preset,
-          from: `${new Date().getFullYear()}-01-01`,
-          to: `${new Date().getFullYear()}-12-31`,
-        })
-        break
+  const handlePreset = (next: SummaryRangePreset) => {
+    if (next === 'custom') {
+      setCustomOpen(true)
+      return
     }
+    setCustomOpen(false)
+    onRangeChange?.(resolvePresetRange(next))
+  }
+
+  const handleCustomRange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    if (!dates?.[0] || !dates[1]) return
+    onRangeChange?.({
+      preset: 'custom',
+      from: dates[0].format('YYYY-MM-DD'),
+      to: dates[1].format('YYYY-MM-DD'),
+    })
   }
 
   if (isLoading && !summary) return <SkeletonBlock />
   if (isError && !summary) return <ErrorBlock onRefetch={onRefetch} />
   if (!summary) return <EmptyBlock />
 
-  const hasActivity =
-    summary.wordsLearned > 0 ||
-    summary.totalLookups > 0 ||
-    summary.studySeconds > 0
-
-  if (!hasActivity) {
-    return <EmptyBlock />
-  }
-
   // --- Thẻ "Mục tiêu ngày" ---
   // Dùng `wordsLearnedToday` (tiến độ HÔM NAY) chứ không phải tổng của cả kỳ.
   // BE trả về 0 nếu user chưa có dữ liệu hôm nay (field mới, an toàn với BE cũ).
-  const goalWords = summary.goalWords ?? 5
+  const goalWords = summary.goalWords
   const wordsToday = summary.wordsLearnedToday ?? 0
   const todayGoalMet = summary.goalMetToday ?? wordsToday >= goalWords
 
@@ -289,18 +214,22 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
           <Select
             size="small"
             className="min-w-[120px]"
-            value={activePreset}
-            placeholder="Chọn kỳ"
-            onChange={(v) => handlePreset(v as SummaryRangePreset)}
-            options={[
-              { value: '7d', label: '7 ngày' },
-              { value: '30d', label: '30 ngày' },
-              { value: '90d', label: '90 ngày' },
-              { value: 'month', label: 'Tháng này' },
-              { value: 'year', label: 'Năm nay' },
-            ]}
+            value={customOpen ? 'custom' : preset}
+            onChange={handlePreset}
+            options={RANGE_OPTIONS}
             disabled={!onRangeChange}
           />
+          {customOpen && (
+            <RangePicker
+              size="small"
+              allowClear={false}
+              format="DD/MM/YYYY"
+              placeholder={['Từ ngày', 'Đến ngày']}
+              value={preset === 'custom' && from && to ? [dayjs(from), dayjs(to)] : null}
+              disabledDate={isCustomDateDisabled}
+              onChange={handleCustomRange}
+            />
+          )}
           {onRefetch && (
             <Tooltip title="Làm mới dữ liệu">
               <Button
@@ -408,6 +337,13 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
                   : `Cần thêm ${Math.max(goalWords - wordsToday, 0)} từ`}
               </span>
             </Tooltip>
+
+            <Link
+              to="/progress/goal"
+              className="block text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 mt-1.5"
+            >
+              Đổi mục tiêu
+            </Link>
 
             {/* Tổng lượt tra hôm nay (kể cả tra lại từ đã học) */}
             {/* <p className="text-[10px] text-gray-400 mt-1">

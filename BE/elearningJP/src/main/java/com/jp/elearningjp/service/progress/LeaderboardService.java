@@ -93,6 +93,9 @@ public class LeaderboardService {
     /** Prefix key cooldown refresh (chống spam nút Reload). */
     private static final String REFRESH_CD_PREFIX = "leaderboard:refresh:cd:";
 
+    /** Prefix key cooldown hard refresh (ADMIN) — tách riêng để user thường không chặn được. */
+    private static final String HARD_REFRESH_CD_PREFIX = "leaderboard:refresh-hard:cd:";
+
     /** TTL của key tuần = 8 tuần = 56 ngày. */
     private static final Duration WEEK_TTL = Duration.ofDays(56);
 
@@ -347,8 +350,9 @@ public class LeaderboardService {
      *
      * @param weekKey  tuần cần rebuild
      * @param dbScores điểm tuyệt đối từ DB ({@code [userId, score]})
+     * @return {@code false} nếu Redis lỗi — caller phải báo lỗi, không coi là đã refresh
      */
-    public void hardRebuild(String weekKey, List<LeaderboardRow> dbScores) {
+    public boolean hardRebuild(String weekKey, List<LeaderboardRow> dbScores) {
         String redisKey = key(weekKey);
         try {
             redisTemplate.delete(redisKey);
@@ -356,7 +360,7 @@ public class LeaderboardService {
 
             if (dbScores == null || dbScores.isEmpty()) {
                 log.info("[Leaderboard] hardRebuild done week={} (no data)", weekKey);
-                return;
+                return true;
             }
             Set<Tuple> tuples = new LinkedHashSet<>(dbScores.size());
             for (LeaderboardRow row : dbScores) {
@@ -366,7 +370,7 @@ public class LeaderboardService {
                 tuples.add(Tuple.of(bytes(row.userId().toString()), (double) row.score()));
             }
             if (tuples.isEmpty()) {
-                return;
+                return true;
             }
             Long added = redisTemplate.execute((RedisCallback<Long>) conn ->
                     conn.zSetCommands().zAdd(
@@ -374,8 +378,10 @@ public class LeaderboardService {
             applyTtl(redisKey);
             log.info("[Leaderboard] hardRebuild done week={} users={} (added={})",
                     weekKey, tuples.size(), added);
+            return true;
         } catch (Exception ex) {
             log.warn("[Leaderboard] hardRebuild failed week={}: {}", weekKey, ex.getMessage());
+            return false;
         }
     }
 
@@ -391,7 +397,8 @@ public class LeaderboardService {
      * Redis</b> (tránh ghi đè kết quả của request thắng).</p>
      *
      * <p>TTL <b>30s</b> (không phải 10s): tuần đông người cần đọc toàn bộ bảng +
-     * ZADD batch.</p>
+     * ZADD batch. TTL chỉ là lưới an toàn khi process chết giữa chừng — caller phải gọi
+     * {@link #releaseRebuildLock} ngay khi rebuild xong.</p>
      *
      * @return {@code true} nếu giành được khoá
      */
@@ -408,17 +415,42 @@ public class LeaderboardService {
     }
 
     /**
-     * Thử giành cooldown refresh — chống spam nút "Reload".
+     * Trả khoá rebuild sau khi xong. Lỗi Redis chỉ log — khoá sẽ tự hết hạn theo TTL.
+     */
+    public void releaseRebuildLock(String weekKey) {
+        try {
+            redisTemplate.delete(REBUILD_LOCK_PREFIX + weekKey);
+        } catch (Exception ex) {
+            log.warn("[Leaderboard] release rebuild lock failed week={}: {}", weekKey, ex.getMessage());
+        }
+    }
+
+    /**
+     * Thử giành cooldown refresh <b>theo từng user</b> — user này bấm Reload không làm
+     * user khác nhận 429.
      *
      * @return {@code true} nếu được phép refresh; {@code false} nếu còn trong cooldown
      */
-    public boolean acquireRefreshCooldown(String weekKey) {
+    public boolean acquireRefreshCooldown(String weekKey, Long userId) {
+        return acquireCooldown(REFRESH_CD_PREFIX + weekKey + ":" + userId);
+    }
+
+    /**
+     * Thử giành cooldown hard refresh (ADMIN), độc lập với cooldown refresh thường.
+     *
+     * @return {@code true} nếu được phép refresh; {@code false} nếu còn trong cooldown
+     */
+    public boolean acquireHardRefreshCooldown(String weekKey) {
+        return acquireCooldown(HARD_REFRESH_CD_PREFIX + weekKey);
+    }
+
+    private boolean acquireCooldown(String cooldownKey) {
         try {
             Boolean ok = redisTemplate.opsForValue()
-                    .setIfAbsent(REFRESH_CD_PREFIX + weekKey, "1", REFRESH_COOLDOWN_TTL);
+                    .setIfAbsent(cooldownKey, "1", REFRESH_COOLDOWN_TTL);
             return Boolean.TRUE.equals(ok);
         } catch (Exception ex) {
-            log.warn("[Leaderboard] acquire refresh cooldown failed week={}: {}", weekKey, ex.getMessage());
+            log.warn("[Leaderboard] acquire cooldown failed key={}: {}", cooldownKey, ex.getMessage());
             // Redis lỗi → cho qua, không chặn người dùng vì lỗi hạ tầng.
             return true;
         }

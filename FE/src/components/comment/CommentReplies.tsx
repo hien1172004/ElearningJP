@@ -100,7 +100,7 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
 
   const { data, isLoading, isError, refetch } = useCommentReplies(
     commentId,
-    0,
+    1,
     { enabled: isOpen },
   )
   const addReplyMutation = useAddReply(targetType, targetId)

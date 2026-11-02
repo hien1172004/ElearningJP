@@ -25,6 +25,15 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             """)
     Optional<Comment> findByIdAndDeletedFalse(@Param("id") Long id);
 
+    /** Comment chưa xoá và đang hiển thị (không bị ẩn HIDDEN). */
+    @Query("""
+            SELECT c FROM Comment c
+            LEFT JOIN FETCH c.user
+            WHERE c.id = :id AND c.deleted = false
+              AND c.status = com.jp.elearningjp.shared.enums.ContentStatus.VISIBLE
+            """)
+    Optional<Comment> findVisibleById(@Param("id") Long id);
+
     /**
      * Danh sách comment của 1 target — sắp xếp mới nhất trước.
      */
@@ -34,6 +43,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             WHERE c.targetType = :targetType
               AND c.targetId = :targetId
               AND c.deleted = false
+              AND c.status = com.jp.elearningjp.shared.enums.ContentStatus.VISIBLE
             ORDER BY c.createdAt DESC
             """)
     Page<Comment> findByTarget(
@@ -78,4 +88,13 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @Modifying
     @Query("UPDATE Comment c SET c.replyCount = c.replyCount - 1 WHERE c.id = :id AND c.replyCount > 0")
     int decrementReplyCount(@Param("id") Long id);
+
+    /** Giảm reply_count đi {@code amount} (xoá reply kèm reply con), không xuống dưới 0. */
+    @Modifying
+    @Query("""
+            UPDATE Comment c
+            SET c.replyCount = CASE WHEN c.replyCount > :amount THEN c.replyCount - :amount ELSE 0 END
+            WHERE c.id = :id
+            """)
+    int decrementReplyCountBy(@Param("id") Long id, @Param("amount") int amount);
 }

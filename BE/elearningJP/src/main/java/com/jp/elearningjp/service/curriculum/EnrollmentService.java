@@ -1,5 +1,7 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
+import java.util.Map;
 import com.jp.elearningjp.dto.response.curriculum.EnrollmentResponse;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.CourseEnrollment;
@@ -17,6 +19,7 @@ import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +36,7 @@ public class EnrollmentService {
     private final UserLessonProgressRepository progressRepository;
     private final EnrollmentMapper enrollmentMapper;
     private final CurrentUserService currentUserService;
+    private final CourseAccessGuard courseAccessGuard;
     private final ApplicationEventPublisher eventPublisher;
 
     // ============================================================
@@ -45,7 +49,7 @@ public class EnrollmentService {
      * <p>Điều kiện:</p>
      * <ul>
      *   <li>Course đã publish, chưa archived</li>
-     *   <li>User chưa có enrollment ACTIVE</li>
+     *   <li>User chưa có enrollment nào chưa xoá (ACTIVE hoặc COMPLETED)</li>
      * </ul>
      */
     @Transactional
@@ -55,15 +59,18 @@ public class EnrollmentService {
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
 
         if (course.getPublished() == null || !course.getPublished()) {
-            throw new AppException(ErrorCode.COURSE_NOT_PUBLISHED);
+            // Người ngoài nhận 404 như getCourseDetail để không dò được khóa nháp;
+            // chỉ admin/chủ khóa (vốn đã biết khóa tồn tại) mới thấy lý do thật.
+            boolean canSeeDraft = currentUserService.isAdmin()
+                    || courseAccessGuard.isOwner(course, currentUser.getId());
+            throw new AppException(canSeeDraft ? ErrorCode.COURSE_NOT_PUBLISHED : ErrorCode.COURSE_NOT_FOUND);
         }
         if (course.getArchivedAt() != null) {
             throw new AppException(ErrorCode.COURSE_ARCHIVED);
         }
 
-        // Nếu user đã có enrollment ACTIVE → không cho enroll lại
-        if (enrollmentRepository.existsByUser_IdAndCourse_IdAndStatusAndDeletedFalse(
-                currentUser.getId(), courseId, EnrollmentStatus.ACTIVE)) {
+        // Khớp index uq_course_enrollments_active: chặn mọi bản ghi chưa xoá, không riêng ACTIVE
+        if (enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), courseId)) {
             throw new AppException(ErrorCode.ALREADY_ENROLLED);
         }
 
@@ -73,7 +80,13 @@ public class EnrollmentService {
                 .status(EnrollmentStatus.ACTIVE)
                 .build();
 
-        CourseEnrollment saved = enrollmentRepository.save(enrollment);
+        CourseEnrollment saved;
+        try {
+            saved = enrollmentRepository.saveAndFlush(enrollment);
+        } catch (DataIntegrityViolationException e) {
+            // Bấm đăng ký 2 lần gần như cùng lúc: cả 2 đều qua bước kiểm tra, index chặn request sau.
+            throw new AppException(ErrorCode.ALREADY_ENROLLED);
+        }
 
         eventPublisher.publishEvent(new UserEnrolledEvent(this,
                 currentUser.getId(), courseId, saved.getId()));
@@ -120,31 +133,35 @@ public class EnrollmentService {
     public List<EnrollmentResponse> getMyEnrollments() {
         User currentUser = currentUserService.getCurrentUser();
         List<CourseEnrollment> enrollments = enrollmentRepository
-                .findByUser_IdAndDeletedFalseOrderByCreatedAtDesc(currentUser.getId());
-        return enrollments.stream()
-                .map(e -> enrollmentMapper.toResponse(e,
-                        progressRepository.calculateCourseProgressPercent(
-                                currentUser.getId(), e.getCourse().getId())))
-                .toList();
+                .findByUser_IdAndDeletedFalseAndCourse_DeletedFalseOrderByCreatedAtDesc(currentUser.getId());
+        return toResponses(currentUser.getId(), enrollments);
     }
 
     @Transactional(readOnly = true)
     public List<EnrollmentResponse> getMyActiveEnrollments() {
         User currentUser = currentUserService.getCurrentUser();
         List<CourseEnrollment> enrollments = enrollmentRepository
-                .findByUser_IdAndStatusAndDeletedFalseOrderByCreatedAtDesc(
+                .findByUser_IdAndStatusAndDeletedFalseAndCourse_DeletedFalseOrderByCreatedAtDesc(
                         currentUser.getId(), EnrollmentStatus.ACTIVE);
+        return toResponses(currentUser.getId(), enrollments);
+    }
+
+    /** Tính % tiến độ của mọi khóa bằng 1 query gộp thay vì 1 query cho mỗi enrollment. */
+    private List<EnrollmentResponse> toResponses(Long userId, List<CourseEnrollment> enrollments) {
+        if (enrollments.isEmpty()) {
+            return List.of();
+        }
+        List<Long> courseIds = enrollments.stream().map(e -> e.getCourse().getId()).toList();
+        Map<Long, Integer> percents = progressRepository.calculateCourseProgressPercents(userId, courseIds);
         return enrollments.stream()
-                .map(e -> enrollmentMapper.toResponse(e,
-                        progressRepository.calculateCourseProgressPercent(
-                                currentUser.getId(), e.getCourse().getId())))
+                .map(e -> enrollmentMapper.toResponse(e, percents.getOrDefault(e.getCourse().getId(), 0)))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public EnrollmentResponse getEnrollmentById(Long enrollmentId) {
         User currentUser = currentUserService.getCurrentUser();
-        CourseEnrollment enrollment = enrollmentRepository.findById(enrollmentId)
+        CourseEnrollment enrollment = enrollmentRepository.findByIdAndDeletedFalseAndCourse_DeletedFalse(enrollmentId)
                 .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_FOUND));
 
         if (!enrollment.getUser().getId().equals(currentUser.getId())
