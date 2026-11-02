@@ -3,6 +3,7 @@ import { Volume2, BookmarkPlus, Check, BookOpen, Sparkles } from 'lucide-react'
 import type { VocabularyDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
+import { useAddToSrs } from '@/hooks/useAddToSrs'
 
 interface VocabDetailPanelProps {
   vocabId: number
@@ -13,6 +14,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
   const [detail, setDetail] = useState<VocabularyDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const addToSrs = useAddToSrs()
 
   useEffect(() => {
     let isMounted = true
@@ -63,7 +65,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
   const handleAddToSrs = async () => {
     if (isAddedToSrs) return
     try {
-      await dictionaryService.addToSrs('VOCABULARY', detail.id)
+      await addToSrs.mutateAsync({ type: 'VOCABULARY', id: detail.id })
       setIsAddedToSrs(true)
     } catch (err: any) {
       if (err?.response?.data?.code === 3002) {

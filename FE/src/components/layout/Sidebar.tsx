@@ -12,12 +12,14 @@ import {
   ChevronRight,
   FileText,
   Mic,
+  Layers,
 } from 'lucide-react'
 import { Tooltip, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
 import { useAuthStore, useSidebarStore } from '@/stores'
 import { hasRole } from '@/utils/roles'
 import { cn } from '@/utils/cn'
+import { useSrsStats } from '@/hooks/useSrsStats'
 
 // ============================================================================
 // Types
@@ -42,6 +44,8 @@ interface NavItem {
   requiresRoles?: readonly string[]
   /** Danh sách mục con — nếu có, mục này trở thành nhóm có thể mở rộng. */
   children?: NavChildItem[]
+  /** Badge hiển thị cạnh nhãn (vd: số thẻ SRS đến hạn). */
+  badge?: React.ReactNode
 }
 
 const isActiveOrStartsWith = (prefix: string) => (pathname: string) =>
@@ -82,6 +86,13 @@ const navItems: NavItem[] = [
     label: 'Tiến độ',
     icon: <BarChart3 className="w-5 h-5" />,
     match: isActiveOrStartsWith('/progress'),
+    requiresAuth: true,
+  },
+  {
+    to: '/srs',
+    label: 'Ôn tập SRS',
+    icon: <Layers className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/srs'),
     requiresAuth: true,
   },
   {
@@ -193,10 +204,14 @@ const NavItemRow: React.FC<NavItemRowProps> = ({
         onClick={onNavigate}
         className={linkClasses}
       >
-        <span className="shrink-0 inline-flex items-center justify-center">
+        <span className="shrink-0 relative inline-flex items-center justify-center">
           {item.icon}
+          {collapsed && item.badge && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-600" />
+          )}
         </span>
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+        {!collapsed && item.badge}
       </NavLink>
     )
 
@@ -330,6 +345,8 @@ export const Sidebar: React.FC = () => {
 
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { data: srsStats } = useSrsStats()
+  const dueCount = srsStats?.dueTodayCount ?? 0
 
   const location = useLocation()
   const isMobile = useIsMobile()
@@ -376,13 +393,28 @@ export const Sidebar: React.FC = () => {
   )
 
   // Items hiển thị
-  const visibleNavItems = navItems.filter((item) => {
-    // Chỉ hiện "Quản lý" cho TEACHER/ADMIN
-    if (item.requiresRoles?.length) return hasRole(user, item.requiresRoles)
-    // Chỉ hiện "Tiến độ" khi đã đăng nhập
-    if (item.requiresAuth) return isAuthenticated
-    return true
-  })
+  const visibleNavItems = navItems
+    .filter((item) => {
+      // Chỉ hiện "Quản lý" cho TEACHER/ADMIN
+      if (item.requiresRoles?.length) return hasRole(user, item.requiresRoles)
+      // Chỉ hiện "Tiến độ" / "Ôn tập SRS" khi đã đăng nhập
+      if (item.requiresAuth) return isAuthenticated
+      return true
+    })
+    .map((item) => {
+      // Badge số thẻ SRS đến hạn trên mục "Ôn tập SRS".
+      if (item.to === '/srs' && dueCount > 0) {
+        return {
+          ...item,
+          badge: (
+            <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold tabular-nums">
+              {dueCount}
+            </span>
+          ),
+        }
+      }
+      return item
+    })
 
   /** Nhóm có đang active (bản thân hoặc mục con) hay không. */
   const isGroupActive = (item: NavItem): boolean => {

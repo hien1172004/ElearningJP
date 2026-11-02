@@ -80,3 +80,10 @@ export {
   useMarkAllAsRead,
 } from './useNotifications'
 export { useNotificationSocket } from './useNotificationSocket'
+
+// Module SRS (Spaced Repetition System)
+export { useSrsDue } from './useSrsDue'
+export { useSrsStats } from './useSrsStats'
+export { useSrsReview } from './useSrsReview'
+export { useSrsItems } from './useSrsItems'
+export { useAddToSrs } from './useAddToSrs'

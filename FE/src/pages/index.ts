@@ -7,6 +7,8 @@ export * from './auth/GoogleCallbackPage'
 export * from './dictionary/DictionaryPage'
 export * from './profile/ProfilePage'
 export * from './progress/ProgressPage'
+export * from './srs/SrsReviewPage'
+export * from './srs/SrsDeckPage'
 
 // Course pages
 export * from './courses/CourseCatalogPage'

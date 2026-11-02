@@ -33,7 +33,7 @@ export const CourseProgressBar: React.FC<CourseProgressBarProps> = ({
 }) => {
   const safe = Math.max(0, Math.min(100, Math.round(percent ?? 0)))
   const isComplete = safe >= 100
-  const color = isComplete ? '#10b981' : '#4f46e5'
+  const color = isComplete ? '#10b981' : '#a4393b'
 
   return (
     <div className={`flex items-center gap-3 ${className ?? ''}`}>

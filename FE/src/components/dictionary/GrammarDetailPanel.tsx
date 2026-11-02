@@ -3,6 +3,7 @@ import { Volume2, BookmarkPlus, Check, BookOpen } from 'lucide-react'
 import type { GrammarDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
+import { useAddToSrs } from '@/hooks/useAddToSrs'
 
 interface GrammarDetailPanelProps {
   grammarId: number
@@ -12,6 +13,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
   const [detail, setDetail] = useState<GrammarDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const addToSrs = useAddToSrs()
 
   useEffect(() => {
     let isMounted = true
@@ -55,7 +57,7 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
   const handleAddToSrs = async () => {
     if (isAddedToSrs) return
     try {
-      await dictionaryService.addToSrs('GRAMMAR', detail.id)
+      await addToSrs.mutateAsync({ type: 'GRAMMAR', id: detail.id })
       setIsAddedToSrs(true)
     } catch (err: any) {
       if (err?.response?.data?.code === 3002) {

@@ -26,6 +26,8 @@ import {
   ScenarioDetailPage,
   SpeakingFreeTalkPage,
   ProfilePage,
+  SrsReviewPage,
+  SrsDeckPage,
 } from '@/pages'
 import { AuthGatePage } from '@/pages/auth/AuthGatePage'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -151,6 +153,24 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <ProgressPage /> },
+    ],
+  },
+
+  // ====================================================================
+  // Protected: Ôn tập SRS (Flashcard + thuật toán SM-2)
+  // ====================================================================
+  {
+    path: '/srs',
+    element: (
+      <ProtectedRoute>
+        <WithMainLayout>
+          <ProtectedOutlet />
+        </WithMainLayout>
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <SrsReviewPage /> },
+      { path: 'deck', element: <SrsDeckPage /> },
     ],
   },
 

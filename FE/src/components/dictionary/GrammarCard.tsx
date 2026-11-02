@@ -3,6 +3,7 @@ import { BookmarkPlus, Check, ChevronDown, ChevronUp, BookOpen, Volume2 } from '
 import type { GrammarSummary, GrammarDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { speakJapanese } from '@/utils'
+import { useAddToSrs } from '@/hooks/useAddToSrs'
 
 interface GrammarCardProps {
   grammar: GrammarSummary
@@ -13,6 +14,7 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const addToSrs = useAddToSrs()
 
   const handleToggleExpand = async () => {
     if (!isExpanded && !detail) {
@@ -35,7 +37,7 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
     e.stopPropagation()
     if (isAddedToSrs) return
     try {
-      await dictionaryService.addToSrs('GRAMMAR', grammar.id)
+      await addToSrs.mutateAsync({ type: 'GRAMMAR', id: grammar.id })
       setIsAddedToSrs(true)
     } catch (err: any) {
       if (err?.response?.data?.code === 3002) {
