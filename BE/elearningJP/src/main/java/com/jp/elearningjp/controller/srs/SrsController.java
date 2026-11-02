@@ -1,6 +1,8 @@
 package com.jp.elearningjp.controller.srs;
 
 import com.jp.elearningjp.shared.response.ApiResponse;
+import com.jp.elearningjp.shared.enums.SrsStatus;
+import com.jp.elearningjp.shared.response.PageResponse;
 import com.jp.elearningjp.dto.request.srs.SrsBatchCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsItemCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsReviewRequest;
@@ -40,6 +42,19 @@ public class SrsController {
         return ApiResponse.<List<SrsDueItemResponse>>builder()
                 .success(true)
                 .data(srsService.getDueCards(limit))
+                .build();
+    }
+
+    @Operation(summary = "Danh sách toàn bộ thẻ SRS của học viên", description = "Phân trang + lọc theo trạng thái (LEARNING/REVIEWING/MASTERED) để hiển thị sổ tay ôn tập cá nhân.")
+    @GetMapping(ApiPaths.Srs.ITEMS)
+    public ApiResponse<PageResponse<SrsDueItemResponse>> getItems(
+            @RequestParam(required = false) SrsStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.<PageResponse<SrsDueItemResponse>>builder()
+                .success(true)
+                .data(srsService.getItems(status, page, size))
                 .build();
     }
 
