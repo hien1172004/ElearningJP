@@ -1,5 +1,6 @@
 package com.jp.elearningjp.controller.notification;
 
+import io.swagger.v3.oas.annotations.Parameter;
 import com.jp.elearningjp.dto.response.notification.NotificationListResponse;
 import com.jp.elearningjp.dto.response.notification.NotificationResponse;
 import com.jp.elearningjp.dto.response.notification.UnreadCountResponse;
@@ -48,10 +49,11 @@ public class NotificationController {
     NotificationService notificationService;
     CurrentUserService currentUserService;
 
-    @Operation(summary = "Danh sách thông báo (phân trang, mới nhất trước)")
+    @Operation(summary = "Danh sách thông báo (phân trang, mới nhất trước)",
+            description = "Toàn bộ lịch sử, cả đã đọc lẫn chưa đọc. Trang bắt đầu từ 1.")
     @GetMapping
     public ApiResponse<NotificationListResponse> getList(
-            @RequestParam(value = "page", defaultValue = "0") int page,
+            @Parameter(description = "Trang, bắt đầu từ 1") @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         Long userId = currentUserService.getCurrentUserId();

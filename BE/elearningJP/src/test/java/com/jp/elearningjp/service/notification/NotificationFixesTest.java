@@ -170,6 +170,33 @@ class NotificationFixesTest {
         }
     }
 
+    // ------------------------------------------------------------------ danh sách trong dropdown
+
+    @Nested
+    class Feed {
+
+        @Mock UserRepository userRepository;
+        @Mock NotificationPublisher publisher;
+
+        @Test
+        void getList_pageStartsAtOne() {
+            NotificationService service = new NotificationService(notificationRepository, userRepository, publisher,
+                    Clock.systemUTC());
+            when(notificationRepository.findByUserId(eq(OWNER), any()))
+                    .thenAnswer(i -> new org.springframework.data.domain.PageImpl<>(List.of(),
+                            i.getArgument(1, org.springframework.data.domain.Pageable.class), 25));
+
+            var response = service.getList(OWNER, 2, 10);
+
+            ArgumentCaptor<org.springframework.data.domain.Pageable> pageable =
+                    ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+            verify(notificationRepository).findByUserId(eq(OWNER), pageable.capture());
+            assertThat(pageable.getValue().getPageNumber()).isEqualTo(1); // trang 2 → index 1
+            assertThat(response.getPage()).isEqualTo(2);
+            assertThat(response.getTotalPages()).isEqualTo(3);
+        }
+    }
+
     // ------------------------------------------------------------------ job nhắc nhở
 
     @Nested

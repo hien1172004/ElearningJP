@@ -181,6 +181,8 @@ public final class ApiPaths {
         public static final String LIKE = "/comments/{id}/like";
         public static final String DISLIKE = "/comments/{id}/dislike";
         public static final String REPLIES = "/comments/{id}/replies";
+        /** Vị trí comment (target, từ khóa/khóa học, thứ tự) — để mở thẳng từ thông báo. */
+        public static final String LOCATION = "/comments/{id}/location";
     }
 
     /** Reply endpoints. Reply lồng nhau qua {@code parentReplyId} trong payload. */

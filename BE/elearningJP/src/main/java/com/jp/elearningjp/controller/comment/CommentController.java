@@ -5,6 +5,7 @@ import com.jp.elearningjp.dto.request.comment.CommentReplyCreateRequest;
 import com.jp.elearningjp.dto.request.comment.CommentUpdateRequest;
 import com.jp.elearningjp.dto.response.comment.CommentDetailResponse;
 import com.jp.elearningjp.dto.response.comment.CommentListResponse;
+import com.jp.elearningjp.dto.response.comment.CommentLocationResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReactionResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyListResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyResponse;
@@ -94,6 +95,26 @@ public class CommentController {
         return ApiResponse.<CommentDetailResponse>builder()
                 .success(true)
                 .data(commentService.getCommentDetail(commentId))
+                .build();
+    }
+
+    @Operation(
+            summary = "Vị trí của 1 comment (để mở thẳng từ thông báo)",
+            description = "Trả về target của comment, courseId (bài học) hoặc từ khóa tra cứu (từ vựng / Hán tự / ngữ pháp), "
+                    + "và thứ tự 0-based của comment trong danh sách mới nhất trước. replyId không còn hiển thị thì trả null."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping(ApiPaths.API_V1 + ApiPaths.Comment.LOCATION)
+    public ApiResponse<CommentLocationResponse> getCommentLocation(
+            @Parameter(description = "ID của comment", example = "1")
+            @PathVariable("id") Long commentId,
+            @Parameter(description = "ID reply cần mở (tuỳ chọn)")
+            @RequestParam(value = "replyId", required = false) Long replyId
+    ) {
+        return ApiResponse.<CommentLocationResponse>builder()
+                .success(true)
+                .data(commentService.getCommentLocation(commentId, replyId))
                 .build();
     }
 

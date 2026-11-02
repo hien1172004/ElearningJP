@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -52,6 +53,23 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             Pageable pageable);
 
     long countByTargetTypeAndTargetIdAndDeletedFalse(CommentTargetType targetType, Long targetId);
+
+    /**
+     * Số comment đang hiển thị của target được tạo SAU {@code createdAt} — chính là thứ tự
+     * (0-based) của comment đó trong {@link #findByTarget} (mới nhất trước).
+     */
+    @Query("""
+            SELECT COUNT(c) FROM Comment c
+            WHERE c.targetType = :targetType
+              AND c.targetId = :targetId
+              AND c.deleted = false
+              AND c.status = com.jp.elearningjp.shared.enums.ContentStatus.VISIBLE
+              AND c.createdAt > :createdAt
+            """)
+    long countVisibleNewerThan(
+            @Param("targetType") CommentTargetType targetType,
+            @Param("targetId") Long targetId,
+            @Param("createdAt") Instant createdAt);
 
     /**
      * Tăng like_count của comment lên 1 (gọi khi insert comment_like).

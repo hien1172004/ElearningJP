@@ -1,7 +1,12 @@
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { AxiosError } from 'axios'
+import { isAxiosError, type AxiosError } from 'axios'
+import { toast } from 'sonner'
 import { commentService } from '@/services/comment.service'
 import { QUERY_KEYS } from '@/lib/queryKeys'
+import { storage } from '@/utils/storage'
+import { isTokenExpired } from '@/utils/jwt'
+import { buildCommentLocationUrl } from '@/utils/commentFocus'
 import type {
   CommentItem,
   CommentListResponse,
@@ -44,7 +49,7 @@ export function useComments(
   return useQuery<CommentListResponse, AxiosError>({
     queryKey: enabled
       ? QUERY_KEYS.comment.list(targetType, safeId, page)
-      : ['comments', 'list', 'disabled'],
+      : QUERY_KEYS.comment.listDisabled,
     queryFn: async () => {
       const res = await commentService.getComments(targetType, safeId, page, size)
       return (res?.data ?? {
@@ -80,7 +85,7 @@ export function useCommentReplies(
   return useQuery<CommentReplyListResponse, AxiosError>({
     queryKey: enabled
       ? QUERY_KEYS.comment.replies(safeId, page)
-      : ['comments', 'replies', 'disabled'],
+      : QUERY_KEYS.comment.repliesDisabled,
     queryFn: async () => {
       const res = await commentService.getReplies(safeId, page)
       return (res?.data ?? {
@@ -98,6 +103,33 @@ export function useCommentReplies(
   })
 }
 
+/**
+ * Trả về hàm dựng link mở thẳng tới 1 bình luận (dùng khi bấm thông báo).
+ *
+ * Gọi BE lấy vị trí **tại thời điểm bấm** (target, từ khóa / khóa học, thứ tự) nên link
+ * luôn đúng kể cả khi đã có bình luận mới chen lên trước. Không cache (`staleTime: 0`).
+ * Ném lỗi axios nếu bình luận không còn / không có quyền xem; trả `null` nếu không dựng được URL.
+ */
+export function useResolveCommentLink() {
+  const queryClient = useQueryClient()
+  return useCallback(
+    async (commentId: number, replyId?: number | null): Promise<string | null> => {
+      const location = await queryClient.fetchQuery({
+        queryKey: QUERY_KEYS.comment.location(commentId, replyId ?? null),
+        queryFn: async () => {
+          const res = await commentService.getCommentLocation(commentId, replyId)
+          if (!res?.data) throw new Error('Không lấy được vị trí bình luận')
+          return res.data
+        },
+        staleTime: 0,
+        retry: false,
+      })
+      return buildCommentLocationUrl(location)
+    },
+    [queryClient],
+  )
+}
+
 // ============================================================================
 // Helpers (nội bộ)
 // ============================================================================
@@ -107,7 +139,7 @@ function useInvalidateTarget() {
   const queryClient = useQueryClient()
   return (targetType: CommentTargetType, targetId: number) =>
     queryClient.invalidateQueries({
-      queryKey: ['comments', 'list', targetType, targetId],
+      queryKey: QUERY_KEYS.comment.listByTarget(targetType, targetId),
     })
 }
 
@@ -116,7 +148,7 @@ function useInvalidateReplies() {
   const queryClient = useQueryClient()
   return (commentId: number) =>
     queryClient.invalidateQueries({
-      queryKey: ['comments', 'replies', commentId],
+      queryKey: QUERY_KEYS.comment.repliesByComment(commentId),
     })
 }
 
@@ -237,6 +269,39 @@ interface ReactionContext {
 }
 
 /**
+ * Lấy trạng thái reaction từ response; thiếu `data` thì coi là lỗi
+ * (để rollback) thay vì ghi số đếm giả = 0 vào cache.
+ */
+function requireReactionState(
+  res: { data?: CommentReactionState } | undefined,
+): CommentReactionState {
+  if (!res?.data) {
+    throw new Error('Phản hồi đánh giá không hợp lệ')
+  }
+  return res.data
+}
+
+/**
+ * Access token đã hết hạn → bỏ optimistic update.
+ *
+ * Khi đó request sẽ dính 401: interceptor refresh được thì `onSuccess` vẫn cập
+ * nhật đúng từ server; không refresh được thì UI giữ nguyên (chỉ mở modal
+ * đăng nhập) thay vì số đếm nhảy lên rồi tụt về.
+ */
+function shouldSkipOptimistic(): boolean {
+  return isTokenExpired(storage.getAccessToken())
+}
+
+/** Báo lỗi khi toggle like/dislike thất bại. */
+function toastReactionError(err: unknown) {
+  // 401 đã được axiosClient xử lý (mở modal đăng nhập) — không toast trùng.
+  if (isAxiosError(err) && err.response?.status === 401) return
+  toast.error(
+    extractErrorMessage(err, 'Không cập nhật được đánh giá. Vui lòng thử lại.'),
+  )
+}
+
+/**
  * Toggle like/dislike cho bình luận.
  *
  * **Vì sao cần optimistic update + server response?**
@@ -246,8 +311,8 @@ interface ReactionContext {
  *    (`liked`, `disliked`, `likeCount`, `dislikeCount`) → ta ghi đè lên cache.
  *    Đây là nguồn sự thật, loại bỏ mọi lệch số đếm do optimistic tính sai
  *    (vd: bấm like 2 lần liên tiếp, hoặc server đã có sẵn reaction).
- * 3. `onError`: rollback về cache cũ.
- * 4. `onSettled`: invalidate để đồng bộ với các client khác.
+ * 3. `onError`: rollback về cache cũ, báo lỗi và invalidate để đồng bộ lại
+ *    (thành công thì không refetch — response server đã là trạng thái đúng).
  *
  * Nhờ bước 2, tag like/dislike hiển thị đúng ngay sau khi bấm — **không cần
  * reload trang**.
@@ -272,23 +337,19 @@ export function useToggleCommentReaction(
           kind === 'like'
             ? await commentService.toggleCommentLike(commentId)
             : await commentService.toggleCommentDislike(commentId)
-        return (res?.data ?? {
-          liked: false,
-          disliked: false,
-          likeCount: 0,
-          dislikeCount: 0,
-        }) as CommentReactionState
+        return requireReactionState(res)
       },
       onMutate: async ({ commentId }) => {
-        await queryClient.cancelQueries({
-          queryKey: ['comments', 'list', targetType, targetId],
-        })
+        if (shouldSkipOptimistic()) return { previous: [] }
+
+        const listKey = QUERY_KEYS.comment.listByTarget(targetType, targetId)
+        await queryClient.cancelQueries({ queryKey: listKey })
         const previous = queryClient.getQueriesData<CommentListResponse>({
-          queryKey: ['comments', 'list', targetType, targetId],
+          queryKey: listKey,
         })
 
         queryClient.setQueriesData<CommentListResponse>(
-          { queryKey: ['comments', 'list', targetType, targetId] },
+          { queryKey: listKey },
           (old) => {
             if (!old?.items) return old
             return {
@@ -305,7 +366,7 @@ export function useToggleCommentReaction(
       onSuccess: (state, { commentId }) => {
         // Ghi đè bằng trạng thái chính xác từ server.
         queryClient.setQueriesData<CommentListResponse>(
-          { queryKey: ['comments', 'list', targetType, targetId] },
+          { queryKey: QUERY_KEYS.comment.listByTarget(targetType, targetId) },
           (old) => {
             if (!old?.items) return old
             return {
@@ -317,27 +378,27 @@ export function useToggleCommentReaction(
           },
         )
       },
-      onError: (_err, _vars, context) => {
+      onError: (err, _vars, context) => {
         // Rollback về trạng thái trước khi optimistic update.
         context?.previous?.forEach(([key, data]) => {
           queryClient.setQueryData(key, data)
         })
-      },
-      onSettled: () => {
+        toastReactionError(err)
         void invalidate(targetType, targetId)
       },
     },
   )
 }
 
-/** Toggle like/dislike cho reply (optimistic update trên cache replies). */
-export function useToggleReplyReaction(
-  targetType: CommentTargetType,
-  targetId: number,
-  kind: ToggleKind,
-) {
+/**
+ * Toggle like/dislike cho reply (optimistic update trên cache replies).
+ *
+ * Chỉ đụng cache reply của đúng bình luận cha (`commentId`) — không huỷ/ghi đè
+ * cache reply của bình luận khác. Không invalidate danh sách bình luận vì
+ * reaction của reply không làm đổi số liệu của bình luận.
+ */
+export function useToggleReplyReaction(kind: ToggleKind) {
   const queryClient = useQueryClient()
-  const invalidateTarget = useInvalidateTarget()
   const invalidateReplies = useInvalidateReplies()
 
   return useMutation<
@@ -352,21 +413,19 @@ export function useToggleReplyReaction(
           kind === 'like'
             ? await commentService.toggleReplyLike(replyId)
             : await commentService.toggleReplyDislike(replyId)
-        return (res?.data ?? {
-          liked: false,
-          disliked: false,
-          likeCount: 0,
-          dislikeCount: 0,
-        }) as CommentReactionState
+        return requireReactionState(res)
       },
-      onMutate: async ({ replyId }) => {
-        await queryClient.cancelQueries({ queryKey: ['comments', 'replies'] })
+      onMutate: async ({ replyId, commentId }) => {
+        if (shouldSkipOptimistic()) return { previous: [] }
+
+        const repliesKey = QUERY_KEYS.comment.repliesByComment(commentId)
+        await queryClient.cancelQueries({ queryKey: repliesKey })
         const previous = queryClient.getQueriesData<CommentReplyListResponse>({
-          queryKey: ['comments', 'replies'],
+          queryKey: repliesKey,
         })
 
         queryClient.setQueriesData<CommentReplyListResponse>(
-          { queryKey: ['comments', 'replies'] },
+          { queryKey: repliesKey },
           (old) => {
             if (!old?.items) return old
             return {
@@ -380,10 +439,10 @@ export function useToggleReplyReaction(
 
         return { previous }
       },
-      onSuccess: (state, { replyId }) => {
+      onSuccess: (state, { replyId, commentId }) => {
         // Ghi đè bằng trạng thái chính xác từ server.
         queryClient.setQueriesData<CommentReplyListResponse>(
-          { queryKey: ['comments', 'replies'] },
+          { queryKey: QUERY_KEYS.comment.repliesByComment(commentId) },
           (old) => {
             if (!old?.items) return old
             return {
@@ -395,14 +454,12 @@ export function useToggleReplyReaction(
           },
         )
       },
-      onError: (_err, _vars, context) => {
+      onError: (err, { commentId }, context) => {
         context?.previous?.forEach(([key, data]) => {
           queryClient.setQueryData(key, data)
         })
-      },
-      onSettled: (_data, { commentId }) => {
+        toastReactionError(err)
         void invalidateReplies(commentId)
-        void invalidateTarget(targetType, targetId)
       },
     },
   )

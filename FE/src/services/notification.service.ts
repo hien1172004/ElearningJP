@@ -13,9 +13,9 @@ import type {
  * để có thể retry an toàn (idempotent).
  */
 export const notificationService = {
-  /** Danh sách phân trang, mới nhất trước. */
+  /** Danh sách phân trang (trang bắt đầu từ 1), mới nhất trước — cả đã đọc lẫn chưa đọc. */
   getList: async (
-    page = 0,
+    page = 1,
     size = 20,
   ): Promise<ApiResponse<NotificationListResponse>> => {
     return axiosClient.get('/notifications', { params: { page, size } })

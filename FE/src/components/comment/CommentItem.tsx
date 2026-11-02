@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Avatar, Button, Input, Tooltip } from 'antd'
 import {
   ThumbsUp,
@@ -12,6 +12,9 @@ import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { formatRelativeTime } from '@/utils/format'
 import { confirmDialog } from '@/components/common/ConfirmModal'
+import { FOCUS_HIGHLIGHT_MS } from '@/utils/commentFocus'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthModalStore } from '@/stores/useAuthModalStore'
 import {
   useDeleteComment,
   useToggleCommentReaction,
@@ -24,6 +27,12 @@ interface CommentItemProps {
   comment: CommentItemType
   targetType: CommentTargetType
   targetId: number
+  /** Bình luận được mở từ thông báo → cuộn tới + highlight. */
+  focused?: boolean
+  /** Reply cần mở trong bình luận này (từ thông báo). */
+  focusReplyId?: number
+  /** Báo cho `CommentSection` đã hiển thị xong focus. */
+  onFocusDone?: () => void
 }
 
 /** BE giới hạn `@Size(max = 5000)`. */
@@ -39,8 +48,23 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   comment,
   targetType,
   targetId,
+  focused = false,
+  focusReplyId,
+  onFocusDone,
 }) => {
   const [isEditing, setIsEditing] = useState(false)
+  const articleRef = useRef<HTMLElement>(null)
+  // Chỉ highlight chính bình luận khi thông báo không trỏ tới 1 reply cụ thể.
+  const highlightSelf = focused && !focusReplyId
+
+  // Cuộn tới bình luận. Nếu cần mở reply thì CommentReplyItem tự cuộn tiếp + báo xong.
+  useEffect(() => {
+    if (!focused) return
+    articleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (focusReplyId) return
+    const timer = window.setTimeout(() => onFocusDone?.(), FOCUS_HIGHLIGHT_MS)
+    return () => window.clearTimeout(timer)
+  }, [focused, focusReplyId, onFocusDone])
   const [editValue, setEditValue] = useState(comment.content)
 
   const likeMutation = useToggleCommentReaction(targetType, targetId, 'like')
@@ -52,11 +76,24 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   const updateMutation = useUpdateComment(targetType, targetId)
   const deleteMutation = useDeleteComment(targetType, targetId)
 
-  const isPending =
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLogin = useAuthModalStore((s) => s.openLogin)
+
+  // Chỉ khoá like/dislike khi đang có reaction hoặc đang xoá — không khoá khi đang sửa.
+  const isReactionLocked =
     likeMutation.isPending ||
     dislikeMutation.isPending ||
-    updateMutation.isPending ||
     deleteMutation.isPending
+
+  const handleReaction = (kind: 'like' | 'dislike') => {
+    // Khách chưa đăng nhập: mở modal đăng nhập thay vì gọi API (tránh 401).
+    if (!isAuthenticated) {
+      openLogin(window.location.pathname + window.location.search)
+      return
+    }
+    const mutation = kind === 'like' ? likeMutation : dislikeMutation
+    mutation.mutate({ commentId: comment.id })
+  }
 
   const handleStartEdit = () => {
     setEditValue(comment.content)
@@ -106,7 +143,13 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   }
 
   return (
-    <article className="flex gap-3">
+    <article
+      ref={articleRef}
+      className={cn(
+        'flex gap-3 rounded-md transition-colors duration-700',
+        highlightSelf && 'bg-amber-50 ring-2 ring-amber-200 ring-offset-4',
+      )}
+    >
       {/* Avatar */}
       <Avatar
         size={36}
@@ -177,10 +220,10 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <Tooltip title="Hữu ích">
               <button
                 type="button"
-                disabled={isPending}
-                onClick={() => likeMutation.mutate({ commentId: comment.id })}
+                disabled={isReactionLocked}
+                onClick={() => handleReaction('like')}
                 className={cn(
-                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition',
+                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed',
                   comment.liked
                     ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700',
@@ -194,12 +237,10 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             <Tooltip title="Không hữu ích">
               <button
                 type="button"
-                disabled={isPending}
-                onClick={() =>
-                  dislikeMutation.mutate({ commentId: comment.id })
-                }
+                disabled={isReactionLocked}
+                onClick={() => handleReaction('dislike')}
                 className={cn(
-                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition',
+                  'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed',
                   comment.disliked
                     ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                     : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700',
@@ -246,6 +287,8 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             targetType={targetType}
             targetId={targetId}
             replyCount={comment.replyCount}
+            focusReplyId={focusReplyId}
+            onFocusDone={onFocusDone}
           />
         )}
       </div>

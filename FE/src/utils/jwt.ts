@@ -43,6 +43,17 @@ export function decodeJwt(token: string | null | undefined): JwtPayload | null {
 }
 
 /**
+ * Token đã hết hạn theo claim `exp` chưa (chỉ dùng cho quyết định UI).
+ * Không có token → coi như hết hạn. Không đọc được `exp` → `false` (để BE quyết định).
+ */
+export function isTokenExpired(token: string | null | undefined): boolean {
+  if (!token) return true
+  const exp = decodeJwt(token)?.exp
+  if (typeof exp !== 'number') return false
+  return exp <= Math.floor(Date.now() / 1000)
+}
+
+/**
  * Trích danh sách roles từ claim "scope".
  * BE build dạng: "ROLE_USER ROLE_TEACHER ROLE_ADMIN"
  * Hàm này strip prefix "ROLE_" → trả ["USER", "TEACHER", "ADMIN"].

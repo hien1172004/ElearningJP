@@ -73,6 +73,24 @@ export interface CommentReplyItem {
   updatedAt: string
 }
 
+/**
+ * Vị trí của 1 bình luận — dùng để mở thẳng tới bình luận khi bấm thông báo.
+ * Đối chiếu với BE: `CommentLocationResponse`.
+ */
+export interface CommentLocation {
+  commentId: number
+  /** `null` nếu không yêu cầu hoặc reply không còn hiển thị. */
+  replyId?: number | null
+  targetType: CommentTargetType
+  targetId: number
+  /** Chỉ có với LESSON. */
+  courseId?: number | null
+  /** Từ khóa tra cứu (từ / chữ Hán / tiêu đề ngữ pháp) — `null` với LESSON. */
+  keyword?: string | null
+  /** Thứ tự 0-based trong danh sách mới nhất trước → trang = position / size + 1. */
+  position: number
+}
+
 export interface CommentListResponse {
   items: CommentItem[]
   total: number

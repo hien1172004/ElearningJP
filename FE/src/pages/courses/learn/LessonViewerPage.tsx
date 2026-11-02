@@ -31,6 +31,7 @@ import {
 } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { toSlug } from '@/utils'
+import { parseCommentFocus } from '@/utils/commentFocus'
 import type {
   LessonSectionType,
   LessonKanjiItem,
@@ -100,12 +101,18 @@ export const LessonViewerPage: React.FC = () => {
       !qCourseId ||
       !qLessonId
     if (needReplace) {
-      navigate(
-        `/learn/${courseSlug}/${lessonSlug}?courseId=${cId}&lessonId=${lId}`,
-        { replace: true },
-      )
+      // Giữ các query param khác (vd `comment`/`reply`/`cpos` khi mở từ thông báo).
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.set('courseId', String(cId))
+      nextParams.set('lessonId', String(lId))
+      navigate(`/learn/${courseSlug}/${lessonSlug}?${nextParams.toString()}`, {
+        replace: true,
+      })
     }
-  }, [course, lesson, cId, lId, params.courseSlug, params.lessonSlug, qCourseId, qLessonId, navigate])
+  }, [course, lesson, cId, lId, params.courseSlug, params.lessonSlug, qCourseId, qLessonId, searchParams, navigate])
+
+  // Bình luận cần mở thẳng (từ thông báo) — target luôn là bài học đang xem.
+  const commentFocus = parseCommentFocus(searchParams)
 
   // Tự động start khi đã đăng ký khóa + không có lỗi. Giáo viên/admin xem bài (chưa đăng ký)
   // không gọi /start — BE chỉ ghi tiến độ cho học viên nên sẽ trả 403.
@@ -531,7 +538,7 @@ export const LessonViewerPage: React.FC = () => {
             {/* Bình luận bài học (đặt dưới card nội dung, trên footer Back/Next) */}
             {lId > 0 && (
               <div className="mt-6">
-                <CommentSection targetType="LESSON" targetId={lId} />
+                <CommentSection targetType="LESSON" targetId={lId} focus={commentFocus} />
               </div>
             )}
 
