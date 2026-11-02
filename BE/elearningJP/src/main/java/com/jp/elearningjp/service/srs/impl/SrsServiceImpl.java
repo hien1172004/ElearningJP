@@ -32,11 +32,14 @@ import com.jp.elearningjp.service.srs.Sm2Algorithm;
 import com.jp.elearningjp.service.srs.SrsService;
 import com.jp.elearningjp.shared.enums.SrsCardType;
 import com.jp.elearningjp.shared.enums.SrsStatus;
+import com.jp.elearningjp.shared.response.PageResponse;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -412,5 +415,30 @@ public class SrsServiceImpl implements SrsService {
     @Transactional(readOnly = true)
     public SrsStatsResponse getStatistics() {
         return getStatistics(currentUserService.getCurrentUserId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SrsDueItemResponse> getItems(Long userId, SrsStatus status, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
+        Page<SrsItem> result = srsItemRepository.findByUserIdAndStatus(userId, status, pageable);
+
+        List<SrsDueItemResponse> items = result.getContent().stream()
+                .map(this::mapToDueItemResponse)
+                .toList();
+
+        return PageResponse.<SrsDueItemResponse>builder()
+                .items(items)
+                .page(result.getNumber())
+                .size(result.getSize())
+                .totalElements(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SrsDueItemResponse> getItems(SrsStatus status, int page, int size) {
+        return getItems(currentUserService.getCurrentUserId(), status, page, size);
     }
 }

@@ -6,6 +6,8 @@ import com.jp.elearningjp.dto.request.srs.SrsReviewRequest;
 import com.jp.elearningjp.dto.response.srs.SrsDueItemResponse;
 import com.jp.elearningjp.dto.response.srs.SrsReviewResultResponse;
 import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
+import com.jp.elearningjp.shared.enums.SrsStatus;
+import com.jp.elearningjp.shared.response.PageResponse;
 
 import java.util.List;
 
@@ -28,4 +30,7 @@ public interface SrsService {
 
     SrsStatsResponse getStatistics(Long userId);
     SrsStatsResponse getStatistics();
+
+    PageResponse<SrsDueItemResponse> getItems(Long userId, SrsStatus status, int page, int size);
+    PageResponse<SrsDueItemResponse> getItems(SrsStatus status, int page, int size);
 }

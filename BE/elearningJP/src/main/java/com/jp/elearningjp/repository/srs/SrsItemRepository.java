@@ -2,6 +2,7 @@ package com.jp.elearningjp.repository.srs;
 
 import com.jp.elearningjp.entity.srs.SrsItem;
 import com.jp.elearningjp.shared.enums.SrsStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -66,4 +67,23 @@ public interface SrsItemRepository extends JpaRepository<SrsItem, Long> {
            "  AND s.deleted = false " +
            "GROUP BY s.user.id")
     List<Object[]> countDueCardsGroupByUser(@Param("now") Instant now);
+
+    /**
+     * Liệt kê toàn bộ thẻ SRS của user (phân trang), có thể lọc theo trạng thái.
+     * {@code status = null} → không lọc, trả về tất cả.
+     * <p>Sắp xếp theo {@code next_review_at} tăng dần (thẻ sắp đến hạn lên đầu),
+     * dùng {@code id} làm tie-breaker để thứ tự ổn định.</p>
+     */
+    @Query("SELECT s FROM SrsItem s " +
+           "LEFT JOIN FETCH s.vocab " +
+           "LEFT JOIN FETCH s.character " +
+           "LEFT JOIN FETCH s.grammar " +
+           "WHERE s.user.id = :userId " +
+           "  AND s.deleted = false " +
+           "  AND (:status IS NULL OR s.status = :status) " +
+           "ORDER BY s.nextReviewAt ASC, s.id ASC")
+    Page<SrsItem> findByUserIdAndStatus(
+            @Param("userId") Long userId,
+            @Param("status") SrsStatus status,
+            Pageable pageable);
 }
