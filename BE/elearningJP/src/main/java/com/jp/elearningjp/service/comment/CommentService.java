@@ -6,6 +6,7 @@ import com.jp.elearningjp.dto.request.comment.CommentReplyCreateRequest;
 import com.jp.elearningjp.dto.request.comment.CommentUpdateRequest;
 import com.jp.elearningjp.dto.response.comment.CommentDetailResponse;
 import com.jp.elearningjp.dto.response.comment.CommentListResponse;
+import com.jp.elearningjp.dto.response.comment.CommentLocationResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReactionResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyListResponse;
 import com.jp.elearningjp.dto.response.comment.CommentReplyResponse;
@@ -145,6 +146,45 @@ public class CommentService {
                 .size(result.getSize())
                 .totalPages(result.getTotalPages())
                 .build();
+    }
+
+    /**
+     * Vị trí của comment để FE mở thẳng tới nó (dùng khi bấm thông báo).
+     *
+     * <p>Comment phải còn hiển thị và target còn xem được (cùng điều kiện như đọc comment).
+     * Reply không còn / không thuộc comment này thì bỏ qua ({@code replyId = null}) thay vì
+     * báo lỗi — người dùng vẫn được đưa tới comment gốc.</p>
+     */
+    @Transactional(readOnly = true)
+    public CommentLocationResponse getCommentLocation(Long commentId, Long replyId) {
+        Comment comment = getVisibleComment(commentId);
+        CommentTargetType targetType = comment.getTargetType();
+        Long targetId = comment.getTargetId();
+
+        Long visibleReplyId = replyId == null ? null : commentReplyRepository.findVisibleById(replyId)
+                .filter(reply -> reply.getComment().getId().equals(commentId))
+                .map(CommentReply::getId)
+                .orElse(null);
+
+        CommentLocationResponse.CommentLocationResponseBuilder location = CommentLocationResponse.builder()
+                .commentId(commentId)
+                .replyId(visibleReplyId)
+                .targetType(targetType)
+                .targetId(targetId)
+                .position(commentRepository.countVisibleNewerThan(targetType, targetId, comment.getCreatedAt()));
+
+        // getVisibleComment đã kiểm tra target còn tồn tại, nên các findBy dưới đây luôn có giá trị.
+        switch (targetType) {
+            case LESSON -> lessonRepository.findByIdAndDeletedFalse(targetId)
+                    .ifPresent(lesson -> location.courseId(lesson.getCourse().getId()));
+            case VOCABULARY -> vocabularyRepository.findByIdAndDeletedFalse(targetId)
+                    .ifPresent(vocab -> location.keyword(vocab.getWord()));
+            case KANJI -> writingCharacterRepository.findByIdAndDeletedFalse(targetId)
+                    .ifPresent(kanji -> location.keyword(kanji.getCharacter()));
+            case GRAMMAR -> grammarPointRepository.findByIdAndDeletedFalse(targetId)
+                    .ifPresent(grammar -> location.keyword(grammar.getTitle()));
+        }
+        return location.build();
     }
 
     // ============================================================

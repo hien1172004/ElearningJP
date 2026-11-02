@@ -110,9 +110,10 @@ public class NotificationService {
     // ============================================================
 
     @Transactional(readOnly = true)
+    /** Trang bắt đầu từ 1 như phần còn lại của hệ thống. */
     public NotificationListResponse getList(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(
-                Math.max(page, 0),
+                Math.max(page, 1) - 1,
                 Math.min(Math.max(size, 1), 100)
         );
         Page<Notification> result = notificationRepository.findByUserId(userId, pageable);
@@ -124,7 +125,7 @@ public class NotificationService {
         return NotificationListResponse.builder()
                 .items(items)
                 .total(result.getTotalElements())
-                .page(result.getNumber())
+                .page(result.getNumber() + 1)
                 .size(result.getSize())
                 .totalPages(result.getTotalPages())
                 .unreadCount(notificationRepository.countUnread(userId))

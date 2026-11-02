@@ -3,6 +3,7 @@ import type {
   ApiResponse,
   CommentItem,
   CommentListResponse,
+  CommentLocation,
   CommentReactionState,
   CommentReplyItem,
   CommentReplyListResponse,
@@ -51,6 +52,16 @@ export const commentService = {
   /** Xoá mềm bình luận (chỉ chủ sở hữu). */
   deleteComment: async (commentId: number): Promise<ApiResponse<void>> => {
     return axiosClient.delete(`/comments/${commentId}`)
+  },
+
+  /** Vị trí của bình luận (target, từ khóa / khóa học, thứ tự) — để mở thẳng từ thông báo. */
+  getCommentLocation: async (
+    commentId: number,
+    replyId?: number | null,
+  ): Promise<ApiResponse<CommentLocation>> => {
+    return axiosClient.get(`/comments/${commentId}/location`, {
+      params: replyId ? { replyId } : undefined,
+    })
   },
 
   /** Danh sách reply của 1 bình luận. */

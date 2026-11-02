@@ -54,15 +54,31 @@ export const QUERY_KEYS = {
     kana: (type: string) => ['dictionary', 'kana', type] as const,
   },
   comment: {
+    /** Key gốc — mọi trang bình luận của 1 target (dùng để invalidate / setQueriesData). */
+    listByTarget: (targetType: string, targetId: number | string) =>
+      ['comments', 'list', targetType, targetId] as const,
     list: (targetType: string, targetId: number | string, page: number) =>
       ['comments', 'list', targetType, targetId, page] as const,
+    /** Key khi query bình luận bị tắt (thiếu targetId). */
+    listDisabled: ['comments', 'list', 'disabled'] as const,
+    /** Key gốc — mọi trang reply của 1 bình luận. */
+    repliesByComment: (commentId: number | string) =>
+      ['comments', 'replies', commentId] as const,
     replies: (commentId: number | string, page: number) =>
       ['comments', 'replies', commentId, page] as const,
+    /** Key khi query reply bị tắt (chưa mở khối trả lời). */
+    repliesDisabled: ['comments', 'replies', 'disabled'] as const,
+    /** Vị trí bình luận (mở thẳng từ thông báo). */
+    location: (commentId: number, replyId: number | null) =>
+      ['comments', 'location', commentId, replyId] as const,
   },
   notification: {
     /** Key gốc — invalidate `all` sẽ quét cả list/unread/recent. */
     all: ['notifications'] as const,
     list: (page: number) => ['notifications', 'list', page] as const,
+    /** Danh sách cuộn vô hạn trong dropdown chuông. */
+    feedAll: ['notifications', 'feed'] as const,
+    feed: (size: number) => ['notifications', 'feed', size] as const,
     unreadCount: ['notifications', 'unread-count'] as const,
     recent: ['notifications', 'recent'] as const,
   },

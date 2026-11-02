@@ -1,10 +1,13 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Avatar, Tooltip } from 'antd'
 import { ThumbsUp, ThumbsDown, Trash2, CornerUpLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { formatRelativeTime } from '@/utils/format'
 import { confirmDialog } from '@/components/common/ConfirmModal'
+import { FOCUS_HIGHLIGHT_MS } from '@/utils/commentFocus'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthModalStore } from '@/stores/useAuthModalStore'
 import {
   useDeleteReply,
   useToggleReplyReaction,
@@ -24,6 +27,9 @@ interface CommentReplyItemProps {
   onDeleted?: () => void
   /** Mở ô nhập reply lồng nhau (parentReplyId = reply này). */
   onReply?: (reply: CommentReplyItemType) => void
+  /** Reply được mở từ thông báo → cuộn tới + highlight. */
+  focused?: boolean
+  onFocusDone?: () => void
 }
 
 /** Số cấp lồng nhau tối đa được hiển thị (reply cấp 3 sẽ phẳng về cấp 2). */
@@ -42,15 +48,38 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
   depth = 0,
   onDeleted,
   onReply,
+  focused = false,
+  onFocusDone,
 }) => {
-  const likeMutation = useToggleReplyReaction(targetType, targetId, 'like')
-  const dislikeMutation = useToggleReplyReaction(targetType, targetId, 'dislike')
-  const deleteMutation = useDeleteReply(targetType, targetId)
+  const rootRef = useRef<HTMLDivElement>(null)
 
-  const isPending =
+  useEffect(() => {
+    if (!focused) return
+    rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const timer = window.setTimeout(() => onFocusDone?.(), FOCUS_HIGHLIGHT_MS)
+    return () => window.clearTimeout(timer)
+  }, [focused, onFocusDone])
+
+  const likeMutation = useToggleReplyReaction('like')
+  const dislikeMutation = useToggleReplyReaction('dislike')
+  const deleteMutation = useDeleteReply(targetType, targetId)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLogin = useAuthModalStore((s) => s.openLogin)
+
+  const isReactionLocked =
     likeMutation.isPending ||
     dislikeMutation.isPending ||
     deleteMutation.isPending
+
+  const handleReaction = (kind: 'like' | 'dislike') => {
+    // Khách chưa đăng nhập: mở modal đăng nhập thay vì gọi API (tránh 401).
+    if (!isAuthenticated) {
+      openLogin(window.location.pathname + window.location.search)
+      return
+    }
+    const mutation = kind === 'like' ? likeMutation : dislikeMutation
+    mutation.mutate({ replyId: reply.id, commentId: reply.commentId })
+  }
 
   const handleDelete = async () => {
     const confirmed = await confirmDialog({
@@ -80,8 +109,10 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
 
   return (
     <div
+      ref={rootRef}
       className={cn(
-        'flex gap-2.5',
+        'flex gap-2.5 rounded-md transition-colors duration-700',
+        focused && 'bg-amber-50 ring-2 ring-amber-200 ring-offset-2',
         visualDepth > 0 &&
           'ml-5 sm:ml-8 border-l-2 border-gray-100 pl-3',
       )}
@@ -115,15 +146,10 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
           <Tooltip title="Hữu ích">
             <button
               type="button"
-              disabled={isPending}
-              onClick={() =>
-                likeMutation.mutate({
-                  replyId: reply.id,
-                  commentId: reply.commentId,
-                })
-              }
+              disabled={isReactionLocked}
+              onClick={() => handleReaction('like')}
               className={cn(
-                'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition',
+                'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed',
                 reply.liked
                   ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                   : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700',
@@ -137,15 +163,10 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
           <Tooltip title="Không hữu ích">
             <button
               type="button"
-              disabled={isPending}
-              onClick={() =>
-                dislikeMutation.mutate({
-                  replyId: reply.id,
-                  commentId: reply.commentId,
-                })
-              }
+              disabled={isReactionLocked}
+              onClick={() => handleReaction('dislike')}
               className={cn(
-                'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition',
+                'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed',
                 reply.disliked
                   ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
                   : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700',

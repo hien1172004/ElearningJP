@@ -18,6 +18,9 @@ interface CommentRepliesProps {
   replyCount?: number
   /** Mở sẵn khối reply (vd: khi vừa gửi 1 reply). */
   defaultOpen?: boolean
+  /** Reply cần mở (từ thông báo) → tự mở khối reply, cuộn tới + highlight. */
+  focusReplyId?: number
+  onFocusDone?: () => void
 }
 
 /** Node của cây reply (dựng từ `parentReplyId` — BE trả về danh sách phẳng). */
@@ -68,6 +71,8 @@ function renderNode(
         targetId={props.targetId}
         depth={depth}
         onReply={onReply}
+        focused={props.focusReplyId === node.reply.id}
+        onFocusDone={props.onFocusDone}
       />
       {node.children.length > 0 && (
         <div className="space-y-2.5">
@@ -93,8 +98,16 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
   targetId,
   replyCount = 0,
   defaultOpen = false,
+  focusReplyId,
+  onFocusDone,
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const [isOpen, setIsOpen] = useState(defaultOpen || !!focusReplyId)
+  // Thông báo trỏ tới 1 reply khi khối đang đóng → mở ra (mỗi reply 1 lần).
+  const [openedForReplyId, setOpenedForReplyId] = useState(focusReplyId)
+  if (focusReplyId && focusReplyId !== openedForReplyId) {
+    setOpenedForReplyId(focusReplyId)
+    setIsOpen(true)
+  }
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [replyTo, setReplyTo] = useState<CommentReplyItemType | null>(null)
 
@@ -190,7 +203,12 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
           {tree.length > 0 && (
             <div className="space-y-3">
               {tree.map((node) =>
-                renderNode(node, 0, { commentId, targetType, targetId }, handleStartReply),
+                renderNode(
+                  node,
+                  0,
+                  { commentId, targetType, targetId, focusReplyId, onFocusDone },
+                  handleStartReply,
+                ),
               )}
             </div>
           )}

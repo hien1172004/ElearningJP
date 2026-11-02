@@ -6,6 +6,7 @@ import com.jp.elearningjp.dto.request.comment.CommentUpdateRequest;
 import com.jp.elearningjp.dto.response.comment.CommentListResponse;
 import com.jp.elearningjp.entity.comment.Comment;
 import com.jp.elearningjp.entity.comment.CommentReply;
+import com.jp.elearningjp.entity.content.Vocabulary;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.user.User;
@@ -295,5 +296,64 @@ class CommentServiceTest {
         assertThat(response.getItems()).extracting(c -> c.getLiked()).containsExactly(false, true);
         assertThat(response.getItems()).extracting(c -> c.getDeletable()).containsExactly(false, true);
         verify(commentLikeRepository, times(1)).findReactedIds(eq(VIEWER_ID), anyList());
+    }
+
+    // ---- vị trí comment (mở thẳng từ thông báo)
+
+    @Test
+    void getCommentLocation_lesson_returnsCourseAndPositionAmongNewerComments() {
+        when(commentRepository.countVisibleNewerThan(CommentTargetType.LESSON, LESSON_ID, comment.getCreatedAt()))
+                .thenReturn(7L);
+
+        var location = service.getCommentLocation(COMMENT_ID, null);
+
+        assertThat(location.getTargetType()).isEqualTo(CommentTargetType.LESSON);
+        assertThat(location.getTargetId()).isEqualTo(LESSON_ID);
+        assertThat(location.getCourseId()).isEqualTo(10L);
+        assertThat(location.getKeyword()).isNull();
+        assertThat(location.getPosition()).isEqualTo(7L);
+        assertThat(location.getReplyId()).isNull();
+    }
+
+    @Test
+    void getCommentLocation_vocabulary_returnsWordAsKeyword() {
+        Vocabulary vocab = Vocabulary.builder().word("食べる").build();
+        vocab.setId(30L);
+        when(vocabularyRepository.findByIdAndDeletedFalse(30L)).thenReturn(Optional.of(vocab));
+        comment.setTargetType(CommentTargetType.VOCABULARY);
+        comment.setTargetId(30L);
+
+        var location = service.getCommentLocation(COMMENT_ID, null);
+
+        assertThat(location.getKeyword()).isEqualTo("食べる");
+        assertThat(location.getCourseId()).isNull();
+    }
+
+    @Test
+    void getCommentLocation_replyOfAnotherComment_isDropped() {
+        Comment other = Comment.builder()
+                .targetType(CommentTargetType.LESSON).targetId(LESSON_ID).user(author).content("o").build();
+        other.setId(999L);
+        CommentReply foreign = CommentReply.builder().comment(other).user(author).content("r").build();
+        foreign.setId(7L);
+        when(commentReplyRepository.findVisibleById(7L)).thenReturn(Optional.of(foreign));
+
+        assertThat(service.getCommentLocation(COMMENT_ID, 7L).getReplyId()).isNull();
+    }
+
+    @Test
+    void getCommentLocation_replyOfThisComment_isKept() {
+        CommentReply reply = CommentReply.builder().comment(comment).user(author).content("r").build();
+        reply.setId(8L);
+        when(commentReplyRepository.findVisibleById(8L)).thenReturn(Optional.of(reply));
+
+        assertThat(service.getCommentLocation(COMMENT_ID, 8L).getReplyId()).isEqualTo(8L);
+    }
+
+    @Test
+    void getCommentLocation_hiddenOrDeletedComment_notFound() {
+        when(commentRepository.findVisibleById(COMMENT_ID)).thenReturn(Optional.empty());
+
+        assertRejected(() -> service.getCommentLocation(COMMENT_ID, null), ErrorCode.COMMENT_NOT_FOUND);
     }
 }

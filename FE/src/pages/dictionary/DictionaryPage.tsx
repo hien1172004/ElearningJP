@@ -27,6 +27,7 @@ import { dictionaryService } from '@/services'
 import { CommentSection } from '@/components/comment'
 import { StudyTimerTracker } from '@/components/common'
 import { useRecordLookup } from '@/hooks/useRecordLookup'
+import { parseCommentFocus, parseDictionaryTargetId } from '@/utils/commentFocus'
 import {
   VocabDetailPanel,
   KanjiDetailPanel,
@@ -64,11 +65,54 @@ const TAB_FROM_PARAM: Record<string, TabType> = {
   GRAMMAR: 'grammar',
 }
 
+/**
+ * Mục cần chọn sẵn khi mở từ URL (`?tab&q&id=` — link từ thông báo bình luận).
+ * Từ vựng / ngữ pháp chọn theo id; chữ Hán chọn theo ký tự (`q`) vì panel chi tiết đi theo ký tự.
+ */
+interface PendingSelection {
+  tab: TabType
+  keyword: string
+  id?: number
+  char?: string
+}
+
+function readUrlSelection(params: URLSearchParams): PendingSelection | null {
+  const id = parseDictionaryTargetId(params)
+  const tab = TAB_FROM_PARAM[params.get(QP_TAB) ?? '']
+  const keyword = (params.get(QP_KEYWORD) ?? '').trim()
+  if (!id || !tab || !keyword) return null
+  return tab === 'kanji' ? { tab, keyword, char: keyword } : { tab, keyword, id }
+}
+
+/**
+ * Lấy (và xoá) mục chọn sẵn khi kết quả tìm của `tab` về. Chỉ dùng khi từ khóa vẫn là từ khóa
+ * trong URL — user đã gõ từ khác thì bỏ, để không chọn nhầm ở lần tìm sau.
+ */
+function takePendingSelection(
+  ref: React.MutableRefObject<PendingSelection | null>,
+  tab: TabType,
+  keyword: string,
+): PendingSelection | null {
+  const pending = ref.current
+  if (!pending || pending.tab !== tab) return null
+  ref.current = null
+  return pending.keyword === keyword ? pending : null
+}
+
 export const DictionaryPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   // Từ khóa mở sẵn từ URL (được set một lần khi vào trang).
   const initialKeyword = searchParams.get(QP_KEYWORD) ?? ''
   const initialTab = TAB_FROM_PARAM[searchParams.get(QP_TAB) ?? ''] ?? 'vocab'
+
+  // Mở thẳng tới bình luận từ thông báo (xem utils/commentFocus).
+  const commentFocus = parseCommentFocus(searchParams)
+  const focusTab = TAB_FROM_PARAM[searchParams.get(QP_TAB) ?? '']
+  const focusTargetId = parseDictionaryTargetId(searchParams)
+  /** Chỉ truyền focus cho khối bình luận đúng tab + đúng mục mà link trỏ tới. */
+  const focusFor = (tab: TabType, targetId: number | null) =>
+    commentFocus && focusTab === tab && focusTargetId === targetId ? commentFocus : null
+  const pendingSelectRef = useRef<PendingSelection | null>(readUrlSelection(searchParams))
 
   const [keyword, setKeyword] = useState<string>(initialKeyword)
   const [debouncedKeyword, setDebouncedKeyword] = useState<string>('')
@@ -137,6 +181,12 @@ export const DictionaryPage: React.FC = () => {
     }
     const t = TAB_FROM_PARAM[searchParams.get(QP_TAB) ?? '']
     if (t) setActiveTab(t)
+    // Link có `id` → chọn luôn mục đó (kể cả khi từ khóa không đổi nên không tìm lại).
+    const pending = readUrlSelection(searchParams)
+    pendingSelectRef.current = pending
+    if (pending?.tab === 'vocab' && pending.id) setSelectedVocabId(pending.id)
+    if (pending?.tab === 'grammar' && pending.id) setSelectedGrammarId(pending.id)
+    if (pending?.tab === 'kanji' && pending.char) setSelectedKanjiChar(pending.char)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
 
@@ -254,8 +304,9 @@ export const DictionaryPage: React.FC = () => {
         if (isMounted && res.data) {
           setVocabPage(res.data)
           const items = res.data.items ?? []
+          const pending = takePendingSelection(pendingSelectRef, 'vocab', debouncedKeyword)
           if (items.length > 0) {
-            setSelectedVocabId(items[0].id)
+            setSelectedVocabId(pending?.id ?? items[0].id)
             if (debouncedKeyword) {
               saveToHistory({
                 tab: 'vocab',
@@ -266,7 +317,7 @@ export const DictionaryPage: React.FC = () => {
               })
             }
           } else {
-            setSelectedVocabId(null)
+            setSelectedVocabId(pending?.id ?? null)
           }
         }
       })
@@ -301,8 +352,9 @@ export const DictionaryPage: React.FC = () => {
         if (isMounted && res.data) {
           setKanjiPage(res.data)
           const items = res.data.items ?? []
+          const pending = takePendingSelection(pendingSelectRef, 'kanji', debouncedKeyword)
           if (items.length > 0) {
-            setSelectedKanjiChar(items[0].character)
+            setSelectedKanjiChar(pending?.char ?? items[0].character)
             if (debouncedKeyword) {
               saveToHistory({
                 tab: 'kanji',
@@ -313,7 +365,7 @@ export const DictionaryPage: React.FC = () => {
               })
             }
           } else {
-            setSelectedKanjiChar(null)
+            setSelectedKanjiChar(pending?.char ?? null)
           }
         }
       })
@@ -348,8 +400,9 @@ export const DictionaryPage: React.FC = () => {
         if (isMounted && res.data) {
           setGrammarPage(res.data)
           const items = res.data.items ?? []
+          const pending = takePendingSelection(pendingSelectRef, 'grammar', debouncedKeyword)
           if (items.length > 0) {
-            setSelectedGrammarId(items[0].id)
+            setSelectedGrammarId(pending?.id ?? items[0].id)
             if (debouncedKeyword) {
               saveToHistory({
                 tab: 'grammar',
@@ -359,7 +412,7 @@ export const DictionaryPage: React.FC = () => {
               })
             }
           } else {
-            setSelectedGrammarId(null)
+            setSelectedGrammarId(pending?.id ?? null)
           }
         }
       })
@@ -1067,19 +1120,31 @@ export const DictionaryPage: React.FC = () => {
                =============================================================== */}
             {activeTab === 'vocab' && selectedVocabId && (
               <div className="mt-6">
-                <CommentSection targetType="VOCABULARY" targetId={selectedVocabId} />
+                <CommentSection
+                  targetType="VOCABULARY"
+                  targetId={selectedVocabId}
+                  focus={focusFor('vocab', selectedVocabId)}
+                />
               </div>
             )}
 
             {activeTab === 'kanji' && selectedKanjiId && (
               <div className="mt-6">
-                <CommentSection targetType="KANJI" targetId={selectedKanjiId} />
+                <CommentSection
+                  targetType="KANJI"
+                  targetId={selectedKanjiId}
+                  focus={focusFor('kanji', selectedKanjiId)}
+                />
               </div>
             )}
 
             {activeTab === 'grammar' && selectedGrammarId && (
               <div className="mt-6">
-                <CommentSection targetType="GRAMMAR" targetId={selectedGrammarId} />
+                <CommentSection
+                  targetType="GRAMMAR"
+                  targetId={selectedGrammarId}
+                  focus={focusFor('grammar', selectedGrammarId)}
+                />
               </div>
             )}
           </div>

@@ -1,10 +1,24 @@
 ﻿import React from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Sparkles, Trophy, Search } from 'lucide-react'
+import { BookOpen, Sparkles, Trophy, Search, LogIn } from 'lucide-react'
 import { Card } from 'antd'
 import { Button as AntdButton } from 'antd'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthModalStore } from '@/stores/useAuthModalStore'
+
+/** Trang ôn tập SRS — nằm trong ProtectedRoute. */
+const SRS_PATH = '/srs'
 
 export const HomePage: React.FC = () => {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLogin = useAuthModalStore((s) => s.openLogin)
+
+  const handleSrsClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isAuthenticated) return
+    e.preventDefault()
+    openLogin(SRS_PATH)
+  }
+
   return (
     <div className="py-12 flex flex-col items-center text-center">
       <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-sm font-semibold mb-4 border border-indigo-200/60 shadow-2xs">
@@ -53,37 +67,56 @@ export const HomePage: React.FC = () => {
           </Card>
         </Link>
 
-        <Card className="!h-full">
-          <div className="w-12 h-12 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <h3 className="font-bold text-lg text-gray-900">Giáo trình bài bản</h3>
-          <p className="text-gray-600 text-sm mt-1.5">
-            Từ vựng, ngữ pháp, chữ Hán chia theo lộ trình từng cấp độ JLPT từ N5
-            đến N1.
-          </p>
-        </Card>
+        <Link to="/courses" className="block group">
+          <Card className="!h-full hover:!border-purple-400 hover:!shadow-md transition group-hover:!border-purple-400">
+            <div className="w-12 h-12 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-lg text-gray-900 group-hover:text-purple-600 transition">
+              Giáo trình bài bản
+            </h3>
+            <p className="text-gray-600 text-sm mt-1.5">
+              Từ vựng, ngữ pháp, chữ Hán chia theo lộ trình từng cấp độ JLPT từ N5
+              đến N1.
+            </p>
+          </Card>
+        </Link>
 
-        <Card className="!h-full">
-          <div className="w-12 h-12 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <h3 className="font-bold text-lg text-gray-900">Flashcard SRS</h3>
-          <p className="text-gray-600 text-sm mt-1.5">
-            Thuật toán ghi nhớ ngắt quãng SM-2 giúp học sâu nhớ lâu, tự động đồng
-            bộ từ Quiz.
-          </p>
-        </Card>
+        {/* /srs cần đăng nhập: khách bấm → mở modal đăng nhập (xong quay lại /srs) thay vì bị đá sang /login. */}
+        <Link to={SRS_PATH} onClick={handleSrsClick} className="block group">
+          <Card className="!h-full hover:!border-amber-400 hover:!shadow-md transition group-hover:!border-amber-400">
+            <div className="w-12 h-12 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-lg text-gray-900 group-hover:text-amber-600 transition">
+              Flashcard SRS
+            </h3>
+            <p className="text-gray-600 text-sm mt-1.5">
+              Thuật toán ghi nhớ ngắt quãng SM-2 giúp học sâu nhớ lâu, tự động đồng
+              bộ từ Quiz.
+            </p>
+            {!isAuthenticated && (
+              <p className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-700">
+                <LogIn className="w-3.5 h-3.5" />
+                Đăng nhập để ôn tập
+              </p>
+            )}
+          </Card>
+        </Link>
 
-        <Card className="!h-full">
-          <div className="w-12 h-12 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
-            <Trophy className="w-6 h-6" />
-          </div>
-          <h3 className="font-bold text-lg text-gray-900">Thi thử JLPT chuẩn</h3>
-          <p className="text-gray-600 text-sm mt-1.5">
-            Đề thi mô phỏng thực tế với bảng điểm quy đổi Scaled Score chuẩn xác.
-          </p>
-        </Card>
+        <Link to="/exams" className="block group">
+          <Card className="!h-full hover:!border-emerald-400 hover:!shadow-md transition group-hover:!border-emerald-400">
+            <div className="w-12 h-12 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-110 transition">
+              <Trophy className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-lg text-gray-900 group-hover:text-emerald-600 transition">
+              Thi thử JLPT chuẩn
+            </h3>
+            <p className="text-gray-600 text-sm mt-1.5">
+              Đề thi mô phỏng thực tế với bảng điểm quy đổi Scaled Score chuẩn xác.
+            </p>
+          </Card>
+        </Link>
       </div>
     </div>
   )

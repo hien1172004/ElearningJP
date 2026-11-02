@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { Button, Pagination } from 'antd'
 import { MessageSquare, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -6,6 +6,7 @@ import { useComments, useCreateComment, extractErrorMessage } from '@/hooks/useC
 import { CommentComposer } from './CommentComposer'
 import { CommentItem } from './CommentItem'
 import type { CommentTargetType } from '@/types'
+import type { CommentFocus } from '@/utils/commentFocus'
 
 interface CommentSectionProps {
   /** Loại đối tượng được bình luận. */
@@ -17,6 +18,11 @@ interface CommentSectionProps {
   /** Tiêu đề tuỳ chỉnh. */
   title?: string
   className?: string
+  /**
+   * Bình luận cần mở thẳng (từ thông báo). Trang gọi chỉ truyền khi bình luận này
+   * thuộc đúng target đang hiển thị. Mở đúng trang, cuộn tới và highlight 1 lần.
+   */
+  focus?: CommentFocus | null
 }
 
 /**
@@ -36,6 +42,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   pageSize = 5,
   title = 'Bình luận',
   className,
+  focus,
 }) => {
   const [page, setPage] = useState(1)
 
@@ -47,6 +54,21 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     setPrevTarget({ targetType, targetId })
     setPage(1)
   }
+
+  // Bình luận cần mở (từ thông báo): nhảy tới trang chứa nó — mỗi focus chỉ áp dụng 1 lần.
+  const focusKey = focus
+    ? `${targetType}:${targetId}:${focus.commentId}:${focus.replyId ?? ''}`
+    : null
+  const [appliedFocusKey, setAppliedFocusKey] = useState<string | null>(null)
+  const [doneFocusKey, setDoneFocusKey] = useState<string | null>(null)
+  if (focus && focusKey && focusKey !== appliedFocusKey) {
+    setAppliedFocusKey(focusKey)
+    setDoneFocusKey(null)
+    setPage(Math.floor(focus.position / pageSize) + 1)
+  }
+  // Đã cuộn + highlight xong → tắt focus để đổi trang / quay lại không cuộn lần nữa.
+  const activeFocus = focus && focusKey !== doneFocusKey ? focus : null
+  const handleFocusDone = useCallback(() => setDoneFocusKey(focusKey), [focusKey])
 
   const { data, isLoading, isError, error, refetch, isFetching } = useComments(
     targetType,
@@ -151,6 +173,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 comment={comment}
                 targetType={targetType}
                 targetId={targetId}
+                focused={activeFocus?.commentId === comment.id}
+                focusReplyId={
+                  activeFocus?.commentId === comment.id
+                    ? activeFocus.replyId
+                    : undefined
+                }
+                onFocusDone={handleFocusDone}
               />
             </div>
           ))}

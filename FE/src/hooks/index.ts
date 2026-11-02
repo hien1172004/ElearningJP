@@ -69,6 +69,7 @@ export {
   useDeleteReply,
   useToggleCommentReaction,
   useToggleReplyReaction,
+  useResolveCommentLink,
 } from './useComments'
 
 // Module thông báo (chuông báo + real-time STOMP)

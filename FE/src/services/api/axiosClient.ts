@@ -90,6 +90,12 @@ axiosClient.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    // Request gửi kèm token nhưng phiên cục bộ đã bị xoá (vd vừa đăng xuất, request còn đang bay)
+    // → 401 là đương nhiên: không xoá phiên lần nữa, không mở modal "hết phiên".
+    if (originalRequest.headers?.Authorization && !storage.getAccessToken()) {
+      return Promise.reject(error)
+    }
+
     const remember = storage.getRemember()
 
     // Nếu user không bật Remember me -> logout mềm.

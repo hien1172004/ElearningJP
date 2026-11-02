@@ -34,13 +34,13 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     /** Danh sách phân trang, mới nhất trước. */
     @Query("SELECT n FROM Notification n " +
            "WHERE n.user.id = :userId AND n.deleted = false " +
-           "ORDER BY n.createdAt DESC")
+           "ORDER BY n.createdAt DESC, n.id DESC")
     Page<Notification> findByUserId(@Param("userId") Long userId, Pageable pageable);
 
     /** 20 thông báo CHƯA ĐỌC mới nhất — cho dropdown nhanh trên TopBar. */
     @Query("SELECT n FROM Notification n " +
            "WHERE n.user.id = :userId AND n.read = false AND n.deleted = false " +
-           "ORDER BY n.createdAt DESC")
+           "ORDER BY n.createdAt DESC, n.id DESC")
     List<Notification> findRecentUnread(@Param("userId") Long userId, Pageable pageable);
 
     /** Load để service tự phân biệt NOT_FOUND và FORBIDDEN. */

@@ -93,6 +93,24 @@ class NotificationQueriesIT {
     }
 
     @Test
+    void findByUserId_sameTimestamp_stableOrderAcrossPages() {
+        // Job nhắc nhở có thể tạo nhiều thông báo cùng thời điểm: id phân định thứ tự,
+        // nên cuộn trang trong dropdown không lặp hay sót mục.
+        long first = notify("SRS_DUE", "{}");
+        long second = notify("STREAK_WARNING", "{}");
+        long third = notify("COMMUNITY_LIKE", "{}");
+        jdbc.update("UPDATE notifications SET created_at = TIMESTAMPTZ '2026-11-02 08:00:00+07' WHERE user_id = ?", userId);
+
+        List<Long> page1 = notificationRepository.findByUserId(userId, org.springframework.data.domain.PageRequest.of(0, 2))
+                .map(n -> n.getId()).getContent();
+        List<Long> page2 = notificationRepository.findByUserId(userId, org.springframework.data.domain.PageRequest.of(1, 2))
+                .map(n -> n.getId()).getContent();
+
+        assertThat(page1).containsExactly(third, second);
+        assertThat(page2).containsExactly(first);
+    }
+
+    @Test
     void findIdsNotEligibleForNotifications_bannedInactiveAndDeleted() {
         long banned = newUser("BANNED");
         long inactive = newUser("INACTIVE");
