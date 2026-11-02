@@ -6,6 +6,7 @@ export type * from './exam.types'
 export type * from './progress.types'
 export type * from './comment.types'
 export type * from './notification.types'
+export type * from './srs.types'
 
 // `JlptLevel` đã được export từ './dictionary.types' — không export lại
 // từ './user.types' để tránh ambiguous (TS2308).

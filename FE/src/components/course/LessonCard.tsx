@@ -1,5 +1,5 @@
 ﻿import React from 'react'
-import { ChevronUp, ChevronDown, Pencil, Trash2, BookOpen, Sparkles } from 'lucide-react'
+import { ChevronUp, ChevronDown, Pencil, Trash2, Sparkles } from 'lucide-react'
 import type { LessonSummary, LessonOutline } from '@/types'
 
 interface LessonCardProps {

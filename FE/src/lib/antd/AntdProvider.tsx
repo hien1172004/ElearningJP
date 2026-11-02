@@ -4,13 +4,13 @@ import viVN from 'antd/locale/vi_VN'
 // antd v6 already supports React 19, no patch needed.
 
 const themeToken = {
-  // Đồng bộ với tone indigo hiện tại của codebase
-  colorPrimary: '#4f46e5', // indigo-600
-  colorInfo: '#4f46e5',
+  // Đồng bộ với chủ đề Wine/Rose (đỏ rượu vang) — xem index.css @theme
+  colorPrimary: '#a4393b', // wine-600
+  colorInfo: '#a4393b',
   colorSuccess: '#10b981', // emerald-500
   colorWarning: '#f59e0b', // amber-500
   colorError: '#e11d48', // rose-600
-  colorLink: '#4f46e5',
+  colorLink: '#a4393b',
 
   // Bo góc mềm mại như design hiện tại
   borderRadius: 12, // rounded-md

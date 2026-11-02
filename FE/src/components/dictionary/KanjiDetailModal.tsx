@@ -3,6 +3,7 @@ import { X, Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { speakJapanese } from '@/utils'
+import { useAddToSrs } from '@/hooks/useAddToSrs'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
 
@@ -21,6 +22,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
+  const addToSrs = useAddToSrs()
 
   useEffect(() => {
     if (!character) {
@@ -54,7 +56,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
   const handleAddToSrs = async () => {
     if (!detail || isAddedToSrs) return
     try {
-      await dictionaryService.addToSrs('KANJI', detail.id)
+      await addToSrs.mutateAsync({ type: 'KANJI', id: detail.id })
       setIsAddedToSrs(true)
     } catch (err: any) {
       if (err?.response?.data?.code === 3002) {

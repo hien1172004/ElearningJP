@@ -3,6 +3,7 @@ import { Volume2, BookmarkPlus, Check, ChevronDown, ChevronUp, BookOpen } from '
 import type { VocabularySummary, VocabularyDetail } from '@/types'
 import { playSmartAudio } from '@/utils'
 import { dictionaryService } from '@/services'
+import { useAddToSrs } from '@/hooks/useAddToSrs'
 
 interface VocabCardProps {
   vocab: VocabularySummary
@@ -15,6 +16,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
   const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false)
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
   const [isAddingSrs, setIsAddingSrs] = useState<boolean>(false)
+  const addToSrs = useAddToSrs()
 
   const handlePlayAudio = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -46,7 +48,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
     if (isAddedToSrs || isAddingSrs) return
     setIsAddingSrs(true)
     try {
-      await dictionaryService.addToSrs('VOCABULARY', vocab.id)
+      await addToSrs.mutateAsync({ type: 'VOCABULARY', id: vocab.id })
       setIsAddedToSrs(true)
     } catch (err: any) {
       // Nếu đã có sẵn trong SRS

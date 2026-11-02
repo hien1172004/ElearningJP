@@ -3,12 +3,13 @@ import { Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
+import { useAddToSrs } from '@/hooks/useAddToSrs'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
 
 interface KanjiDetailPanelProps {
   character: string
-  onSelectVocab?: (vocabId: number) => void
+  onSelectVocab?: (vocabId: number, word: string) => void
   /**
    * Gọi khi đã resolve xong id của chữ Hán.
    * BE dùng `writing_characters.id` làm targetId cho bình luận KANJI,
@@ -27,6 +28,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
   const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
   const [expandedReadings, setExpandedReadings] = useState<Record<string, boolean>>({})
+  const addToSrs = useAddToSrs()
 
   // Giữ callback trong ref để không tạo vòng lặp render vô hạn khi parent
   // truyền callback mới mỗi lần render.
@@ -79,7 +81,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
   const handleAddToSrs = async () => {
     if (isAddedToSrs) return
     try {
-      await dictionaryService.addToSrs('KANJI', detail.id)
+      await addToSrs.mutateAsync({ type: 'KANJI', id: detail.id })
       setIsAddedToSrs(true)
     } catch (err: any) {
       if (err?.response?.data?.code === 3002) {
@@ -281,7 +283,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
                     {displayedWords.map((w, idx) => (
                       <div
                         key={idx}
-                        onClick={() => onSelectVocab?.(w.vocabId)}
+                        onClick={() => onSelectVocab?.(w.vocabId, w.word)}
                         className="bg-white p-3 rounded-md border border-gray-200/80 hover:border-indigo-400 hover:shadow-xs transition cursor-pointer flex items-center justify-between group"
                       >
                         <div>

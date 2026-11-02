@@ -1014,8 +1014,10 @@ export const DictionaryPage: React.FC = () => {
                 <VocabDetailPanel
                   vocabId={selectedVocabId}
                   onSelectKanji={(char) => {
+                    setIsDropdownOpen(false)
                     setActiveTab('kanji')
                     setKeyword(char)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
                 />
               ) : (
@@ -1031,9 +1033,12 @@ export const DictionaryPage: React.FC = () => {
               selectedKanjiChar ? (
                 <KanjiDetailPanel
                   character={selectedKanjiChar}
-                  onSelectVocab={(vId) => {
+                  onSelectVocab={(vId, word) => {
+                    setIsDropdownOpen(false)
                     setActiveTab('vocab')
+                    setKeyword(word)
                     setSelectedVocabId(vId)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
                   onIdResolved={(id) => setSelectedKanjiId(id)}
                 />

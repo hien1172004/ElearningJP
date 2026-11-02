@@ -1,15 +1,62 @@
 @import "tailwindcss";
 
+/* =====================================================================
+   THEME — Chủ đề "Wine / Rose" (đỏ rượu vang + hồng đất trên nền trắng)
+   Trích xuất từ design/theme.png. Override biến Tailwind v4 để đổi màu
+   toàn app mà không cần sửa từng component (indigo -> wine, purple -> rose,
+   blue -> plum cho các gradient ấm).
+   ===================================================================== */
+@theme {
+  /* Primary: Wine / Burgundy (was indigo) */
+  --color-indigo-50: #faf2f1;
+  --color-indigo-100: #fadbd7;
+  --color-indigo-200: #f0c4c0;
+  --color-indigo-300: #e2a7a2;
+  --color-indigo-400: #d1948a;
+  --color-indigo-500: #bf615f;
+  --color-indigo-600: #a4393b;
+  --color-indigo-700: #863233;
+  --color-indigo-800: #6a292a;
+  --color-indigo-900: #572325;
+  --color-indigo-950: #3b1618;
+
+  /* Secondary: Rose / Mauve (was purple) */
+  --color-purple-50: #faf1ef;
+  --color-purple-100: #f8dcd8;
+  --color-purple-200: #efc3be;
+  --color-purple-300: #e3a8a0;
+  --color-purple-400: #d29289;
+  --color-purple-500: #bf6a5f;
+  --color-purple-600: #ae4d42;
+  --color-purple-700: #954037;
+  --color-purple-800: #76352d;
+  --color-purple-900: #5f2c26;
+  --color-purple-950: #3f1d18;
+
+  /* Accent: Deep Plum (was blue, cho gradient ấm rose -> wine -> plum) */
+  --color-blue-50: #f4f3f7;
+  --color-blue-100: #e9e7ee;
+  --color-blue-200: #d3d0dd;
+  --color-blue-300: #b2adc2;
+  --color-blue-400: #8a83a5;
+  --color-blue-500: #685f86;
+  --color-blue-600: #494360;
+  --color-blue-700: #3c364e;
+  --color-blue-800: #2e2a3c;
+  --color-blue-900: #221f2e;
+  --color-blue-950: #16141f;
+}
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
+  --text: #5f5867;
+  --text-h: #2e2a3c;
   --color-brand: #f3f4f6;
   --bg: #fff;
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
+  --accent: #a4393b;
+  --accent-bg: rgba(164, 57, 59, 0.1);
+  --accent-border: rgba(164, 57, 59, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
@@ -69,7 +116,7 @@ body {
 .ant-input:focus,
 .ant-input-affix-wrapper:focus,
 .ant-input-affix-wrapper-focused {
-  border-color: #6366f1 !important;
+  border-color: #a4393b !important;
 }
 
 /* JLPT Japanese Typography */
