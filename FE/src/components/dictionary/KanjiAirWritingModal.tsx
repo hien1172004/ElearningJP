@@ -110,6 +110,8 @@ const detectStaticGesture = (lm: NormalizedLandmark[]): AirGestureType => {
   const wrist = lm[0]
   const thumbTip = lm[4]
   const thumbMcp = lm[2]
+  const thumbCmc = lm[1]
+  const thumbIp = lm[3]
   const indexTip = lm[8]
   const indexPip = lm[6]
   const indexMcp = lm[5]
@@ -131,11 +133,22 @@ const detectStaticGesture = (lm: NormalizedLandmark[]): AirGestureType => {
   const pinkyFolded = isFingerFolded(pinkyTip, pinkyPip, pinkyMcp, wrist)
 
   const allFolded = indexFolded && middleFolded && ringFolded && pinkyFolded
-  // 👍 Ngón cái DUỖI ra xa bàn tay (khoảng cách đầu ngón cái tới gốc ngón trỏ lớn hơn
-  // rõ rệt khoảng cách chuẩn giữa 2 gốc ngón). Tránh dùng so sánh Y vì nắm đấm có ngón
-  // cái gập vòng lên trên cũng làm thumbTip.y < thumbMcp.y -> gây nhầm sang Tra cứu.
-  const thumbUp =
-    getDistance(thumbTip, indexMcp) > getDistance(thumbMcp, indexMcp) * 1.5
+  // 👍 Phân biệt với ✊ nắm đấm bằng 2 yếu tố:
+  // (1) Độ "duỗi thẳng" của ngón cái: ≈ 1.0 khi duỗi thẳng, < 1.0 khi gập (bất đẳng thức tam giác).
+  // (2) Hướng: đầu ngón cái phải cao hơn gốc (chỉ lên), tránh nhầm ngón cái thẳng nhưng nằm ngang.
+  // (3) Visibility: ngón cái bị che (visibility thấp) -> coi là KHÔNG vươn (nắm đấm).
+  const thumbVisible =
+    (thumbTip.visibility ?? 1) > 0.4 && (thumbMcp.visibility ?? 1) > 0.4
+
+  const thumbStraightness =
+    getDistance(thumbCmc, thumbTip) /
+    (getDistance(thumbCmc, thumbMcp) +
+      getDistance(thumbMcp, thumbIp) +
+      getDistance(thumbIp, thumbTip))
+
+  const thumbPointingUp = thumbTip.y < thumbMcp.y - 0.02
+
+  const thumbUp = thumbVisible && thumbStraightness > 0.85 && thumbPointingUp
 
   // 1. NẮM ĐẤM ✊ (XÓA HẾT): cả 4 ngón gập + ngón cái gập (không chỉ lên)
   if (allFolded && !thumbUp) return 'FIST_CLEAR'
