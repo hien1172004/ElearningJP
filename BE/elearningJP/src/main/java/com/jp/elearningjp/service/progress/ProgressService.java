@@ -19,6 +19,7 @@ import com.jp.elearningjp.repository.gamification.StudyEventRepository;
 import com.jp.elearningjp.repository.gamification.UserDailyStatsRepository;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.config.AppConfigService;
+import com.jp.elearningjp.service.gamification.DailyStatsService;
 import com.jp.elearningjp.service.gamification.StreakService;
 import com.jp.elearningjp.shared.enums.LookupTargetType;
 import com.jp.elearningjp.shared.util.CurrentUserService;
@@ -53,7 +54,7 @@ import java.util.Set;
  *   <li>{@code wordsLearned} = số MỤC MỚI đã học (= {@code user_daily_stats.new_items_learned})</li>
  *   <li>{@code totalLookups} = TỔNG số lần tra từ điển (= {@code user_daily_stats.lookups})</li>
  *   <li>Streak chỉ tính ngày có {@code >= 1} mục MỚI (chính sách STRICT)</li>
- *   <li>Mục tiêu mặc định 5 mục mới/ngày</li>
+ *   <li>Mục tiêu ngày lấy từ mục tiêu tuần của user, xem {@link ProgressGoalService}</li>
  * </ul>
  *
  * <p><b>Cache:</b> summary/calendar/chart đọc trực tiếp từ DB (không cache).
@@ -70,9 +71,6 @@ public class ProgressService {
 
     /** Số ngày mặc định khi FE không truyền `from` (tháng gần nhất). */
     private static final int DEFAULT_RANGE_DAYS = 30;
-
-    /** Mục tiêu mặc định (đã chốt ở plan). */
-    private static final int DEFAULT_GOAL_WORDS = 5;
 
     /**
      * Cửa sổ quét tối đa để tính streak (ngày).
@@ -116,6 +114,8 @@ public class ProgressService {
 
     /** Múi giờ nghiệp vụ — xem {@link com.jp.elearningjp.config.TimeConfig}. */
     private final Clock clock;
+
+    private final ProgressGoalService progressGoalService;
 
     // =====================================================================
     // Khoi 1 — Summary
@@ -168,6 +168,31 @@ public class ProgressService {
             days = 1;
         }
 
+        return buildSummary(userId, start, end, days, true);
+    }
+
+    /**
+     * Tổng hợp toàn bộ lịch sử của user hiện tại, từ ngày đầu tiên có dữ liệu đến hôm nay.
+     * Không giới hạn {@link #MAX_RANGE_DAYS}; không có kỳ trước nên không có % thay đổi.
+     */
+    @Transactional(readOnly = true)
+    public ProgressSummaryResponse getAllTimeSummary() {
+        Long userId = currentUserService.getCurrentUserId();
+        LocalDate today = LocalDate.now(clock);
+        LocalDate start = firstActivityDate(userId, today);
+        int days = (int) (ChronoUnit.DAYS.between(start, today) + 1);
+        return buildSummary(userId, start, today, days, false);
+    }
+
+    private LocalDate firstActivityDate(Long userId, LocalDate today) {
+        LocalDate first = dailyStatsRepository.findFirstStatDate(userId);
+        return first != null ? first : today;
+    }
+
+    private ProgressSummaryResponse buildSummary(Long userId, LocalDate start, LocalDate end,
+                                                 int days, boolean comparePrevious) {
+        LocalDate today = LocalDate.now(clock);
+
         // --- Kỳ trước: cùng độ dài, liền kề trước kỳ hiện tại ---
         // prevTo = start - 1, nên ranh giới phân loại chỉ cần 1 mốc: stat_date >= start
         LocalDate prevFrom = start.minusDays(days);
@@ -195,6 +220,7 @@ public class ProgressService {
                 .orElse(null);
         int newWordsToday = (todayRow != null) ? nz(todayRow.getNewItemsLearned()) : 0;
         int lookupsToday = (todayRow != null) ? nz(todayRow.getLookups()) : 0;
+        int goalWords = progressGoalService.getDailyGoal(userId);
 
         return ProgressSummaryResponse.builder()
                 .from(start)
@@ -207,15 +233,15 @@ public class ProgressService {
                 .goalMetDays(agg.goalMetDays())
                 .currentStreak(currentStreak)
                 .longestStreak(longestStreak)
-                .wordsLearnedDeltaPct(deltaPct(agg.newWords(), agg.prevNewWords()))
-                .studySecondsDeltaPct(deltaPct(agg.studySeconds(), agg.prevStudySeconds()))
-                .goalWords(DEFAULT_GOAL_WORDS)
+                .wordsLearnedDeltaPct(comparePrevious ? deltaPct(agg.newWords(), agg.prevNewWords()) : null)
+                .studySecondsDeltaPct(comparePrevious ? deltaPct(agg.studySeconds(), agg.prevStudySeconds()) : null)
+                .goalWords(goalWords)
                 .today(today)
                 .wordsLearnedToday(newWordsToday)
                 .lookupsToday(lookupsToday)
                 // Quy tắc HẸP (khớp lịch ở Khối 2 và top-lookups):
                 // chỉ tính "đạt" khi đủ số mục MỚI.
-                .goalMetToday(newWordsToday >= DEFAULT_GOAL_WORDS)
+                .goalMetToday(newWordsToday >= goalWords)
                 .build();
     }
 
@@ -281,9 +307,9 @@ public class ProgressService {
             int lessons = nz(row.getLessonsCompleted());
             int seconds = nz(row.getStudySeconds());
 
-            // Mục tiêu từ của chính ngày đó (mặc định 5 nếu dữ liệu cũ chưa có).
+            // Mục tiêu đã chốt của chính ngày đó (dữ liệu cũ chưa có thì dùng mặc định).
             int goalWords = (row.getGoalWords() != null && row.getGoalWords() > 0)
-                    ? row.getGoalWords() : DEFAULT_GOAL_WORDS;
+                    ? row.getGoalWords() : DailyStatsService.DEFAULT_GOAL_WORDS;
 
             // Chính sách STRICT: ngày chỉ "có hoạt động" khi học được MỤC MỚI,
             // hoặc học xong bài / học đủ thời gian.
@@ -314,7 +340,7 @@ public class ProgressService {
                 .monthStart(monthStart)
                 .monthEnd(monthEnd)
                 .today(today)
-                .goalWords(DEFAULT_GOAL_WORDS)
+                .goalWords(progressGoalService.getDailyGoal(userId))
                 .currentStreak(currentStreak)
                 .longestStreak(longestStreak)
                 .activeDays(activeDays)
@@ -376,8 +402,19 @@ public class ProgressService {
                     .build();
         }
 
-        String gran = ProgressChartBucketUtil.resolveGranularity(granularity);
+        return buildChart(userId, start, end, ProgressChartBucketUtil.resolveGranularity(granularity));
+    }
 
+    /** Biểu đồ toàn bộ lịch sử của user hiện tại. Không giới hạn {@link #MAX_RANGE_DAYS}. */
+    @Transactional(readOnly = true)
+    public ChartResponse getAllTimeChart(String granularity) {
+        Long userId = currentUserService.getCurrentUserId();
+        LocalDate today = LocalDate.now(clock);
+        return buildChart(userId, firstActivityDate(userId, today), today,
+                ProgressChartBucketUtil.resolveGranularity(granularity));
+    }
+
+    private ChartResponse buildChart(Long userId, LocalDate start, LocalDate end, String gran) {
         // 1 query duy nhất — lấy các ngày CÓ hoạt động trong kỳ.
         List<UserDailyStats> rows = dailyStatsRepository.findCalendarRange(userId, start, end);
 
@@ -598,12 +635,10 @@ public class ProgressService {
      *   <li>{@code ZREVRANGE} top 5 → nếu có: đi qua <b>2 batch query</b>
      *       ({@code findWeekStatsByUserIds} + {@code findDisplayInfosByIds}) → dựng
      *       {@code entries} (hết N+1).</li>
-     *   <li>Nếu rỗng <b>và tuần còn trong TTL</b> → {@code findAllScoresByWeek} từ DB →
-     *       {@code rebuild} (có lock) → dựng entries từ kết quả DB.</li>
-     *   <li>Nếu rỗng <b>và tuần ngoài TTL</b> → đọc thẳng DB, <b>không</b> ghi Redis
+     *   <li>Nếu rỗng <b>và tuần còn trong TTL</b> → giành lock trước: thắng thì quét toàn bộ
+     *       tuần từ DB + {@code rebuild}; thua thì chỉ đọc top N từ DB (có LIMIT).</li>
+     *   <li>Nếu rỗng <b>và tuần ngoài TTL</b> → đọc top N từ DB, <b>không</b> ghi Redis
      *       (tránh hồi sinh key cũ).</li>
-     *   <li>{@code totalPlayers} = {@code ZCARD} (Redis) hoặc
-     *       {@code countUsersWithScoreInWeek} (DB).</li>
      * </ol>
      *
      * @param week tuần ISO {@code YYYY-Www} (null/blank → tuần hiện tại)
@@ -628,32 +663,20 @@ public class ProgressService {
         boolean withinRetention = LeaderboardWeekUtil.isWithinRetention(
                 weekKey, clock, LEADERBOARD_RETENTION_WEEKS);
 
-        List<Object[]> dbScores = findAllScoresByWeek(range);
-
-        if (withinRetention) {
-            // Có thể xây lại ZSET — dùng lock chống cache stampede.
-            if (leaderboardService.tryAcquireRebuildLock(weekKey)) {
-                leaderboardService.rebuild(weekKey, toRows(dbScores));
-            } else {
-                // Thua lock → đọc DB và trả về luôn, KHÔNG ghi Redis
-                // (tránh ghi đè kết quả của request thắng lock).
-                log.debug("[Progress] rebuild lock busy, serve from DB week={}", weekKey);
+        if (withinRetention && leaderboardService.tryAcquireRebuildLock(weekKey)) {
+            try {
+                List<LeaderboardService.LeaderboardRow> rows = toRows(findAllScoresByWeek(range));
+                leaderboardService.rebuild(weekKey, rows);
+                return buildResponse(weekKey, range, topOf(rows), (long) rows.size());
+            } finally {
+                leaderboardService.releaseRebuildLock(weekKey);
             }
-        } else {
-            // Tuần ngoài TTL → đọc thẳng DB, không ghi lại Redis.
-            log.debug("[Progress] week outside retention, serve from DB only week={}", weekKey);
         }
 
-        List<LeaderboardService.LeaderboardRow> rows = toRows(dbScores);
-        List<LeaderboardService.LeaderboardRow> limited = rows.size() > LEADERBOARD_LIMIT
-                ? rows.subList(0, LEADERBOARD_LIMIT)
-                : rows;
-
-        Long totalPlayers = withinRetention
-                ? leaderboardService.getTotalPlayers(weekKey)
-                : countUsersWithScoreInWeek(range);
-
-        return buildResponse(weekKey, range, limited, totalPlayers);
+        // Thua lock hoặc tuần ngoài TTL → không ghi Redis, chỉ đọc đúng phần cần hiển thị.
+        log.debug("[Progress] serve leaderboard from DB top-N week={} withinRetention={}",
+                weekKey, withinRetention);
+        return buildResponseFromDbTop(weekKey, range);
     }
 
     /**
@@ -704,7 +727,8 @@ public class ProgressService {
     /**
      * Refresh bảng xếp hạng tuần.
      *
-     * <p><b>Cooldown 30s</b> — lần gọi thứ 2 trong 30s trả HTTP 429.</p>
+     * <p><b>Cooldown 30s</b> — refresh thường tính theo từng user, hard refresh có
+     * cooldown riêng; gọi lại quá sớm trả HTTP 429.</p>
      *
      * <p><b>{@code hard=false} (mặc định) — chỉ "bù lỡ", KHÔNG sửa điểm giảm.</b> Vì
      * {@code ZADD GT} chỉ nâng điểm, rebuild thường <b>không sửa được</b> điểm đã bị
@@ -719,6 +743,8 @@ public class ProgressService {
      * @param week tuần ISO {@code YYYY-Www} (null/blank → tuần hiện tại)
      * @param hard {@code true} → xoá key rồi dựng lại từ đầu
      * @return bảng xếp hạng sau refresh
+     * @throws AppException {@code LEADERBOARD_REBUILD_IN_PROGRESS} nếu hard refresh gặp rebuild
+     *                      đang chạy; {@code LEADERBOARD_REBUILD_FAILED} nếu Redis lỗi khi hard refresh
      */
     @Transactional(readOnly = true)
     public LeaderboardResponse refreshLeaderboard(String week, boolean hard) {
@@ -726,39 +752,56 @@ public class ProgressService {
         LocalDate[] range = LeaderboardWeekUtil.weekRange(weekKey);
 
         // Cooldown — chống spam nút Reload
-        if (!leaderboardService.acquireRefreshCooldown(weekKey)) {
+        boolean allowed = hard
+                ? leaderboardService.acquireHardRefreshCooldown(weekKey)
+                : leaderboardService.acquireRefreshCooldown(weekKey, currentUserService.getCurrentUserId());
+        if (!allowed) {
             throw new AppException(ErrorCode.LEADERBOARD_REFRESH_TOO_FREQUENT);
         }
 
-        List<Object[]> dbScores = findAllScoresByWeek(range);
-        List<LeaderboardService.LeaderboardRow> rows = toRows(dbScores);
-
-        if (hard) {
-            // Xoá key rồi dựng lại từ đầu — lock phải được giữ xuyên suốt.
-            if (leaderboardService.tryAcquireRebuildLock(weekKey)) {
-                leaderboardService.hardRebuild(weekKey, rows);
-            } else {
-                log.debug("[Progress] hard rebuild lock busy week={}", weekKey);
+        if (!leaderboardService.tryAcquireRebuildLock(weekKey)) {
+            if (hard) {
+                // Không được trả dữ liệu cũ như thể đã xoá key và dựng lại.
+                throw new AppException(ErrorCode.LEADERBOARD_REBUILD_IN_PROGRESS);
             }
-        } else {
-            // Rebuild thường — ZADD GT nên không đè bản mới hơn bằng ảnh chụp DB cũ.
-            if (leaderboardService.tryAcquireRebuildLock(weekKey)) {
-                leaderboardService.rebuild(weekKey, rows);
-            } else {
-                log.debug("[Progress] rebuild lock busy week={}", weekKey);
-            }
+            // Refresh thường: đã có rebuild khác đang chạy, kết quả tương đương.
+            log.debug("[Progress] rebuild lock busy week={}", weekKey);
+            return buildResponseFromDbTop(weekKey, range);
         }
 
-        List<LeaderboardService.LeaderboardRow> limited = rows.size() > LEADERBOARD_LIMIT
-                ? rows.subList(0, LEADERBOARD_LIMIT)
-                : rows;
-
-        return buildResponse(weekKey, range, limited, leaderboardService.getTotalPlayers(weekKey));
+        try {
+            List<LeaderboardService.LeaderboardRow> rows = toRows(findAllScoresByWeek(range));
+            if (hard) {
+                // Xoá key rồi dựng lại từ đầu — lock được giữ xuyên suốt.
+                if (!leaderboardService.hardRebuild(weekKey, rows)) {
+                    throw new AppException(ErrorCode.LEADERBOARD_REBUILD_FAILED);
+                }
+            } else {
+                // Rebuild thường — ZADD GT nên không đè bản mới hơn bằng ảnh chụp DB cũ.
+                leaderboardService.rebuild(weekKey, rows);
+            }
+            return buildResponse(weekKey, range, topOf(rows), (long) rows.size());
+        } finally {
+            leaderboardService.releaseRebuildLock(weekKey);
+        }
     }
 
     // =====================================================================
     // Leaderboard helpers
     // =====================================================================
+
+    /** Dựng response chỉ từ top N trong DB (có LIMIT) — không quét toàn bộ tuần. */
+    private LeaderboardResponse buildResponseFromDbTop(String weekKey, LocalDate[] range) {
+        int learnedItemPoints = appConfigService.getIntValue(CFG_LEARNED_ITEM_POINTS, DEFAULT_LEARNED_ITEM_POINTS);
+        int lessonPoints = appConfigService.getIntValue(CFG_LESSON_POINTS, DEFAULT_LESSON_POINTS);
+        List<LeaderboardService.LeaderboardRow> top = toRows(dailyStatsRepository.findTopUsersByWeek(
+                range[0], range[1], LEADERBOARD_LIMIT, learnedItemPoints, lessonPoints));
+        return buildResponse(weekKey, range, top, countUsersWithScoreInWeek(range));
+    }
+
+    private List<LeaderboardService.LeaderboardRow> topOf(List<LeaderboardService.LeaderboardRow> rows) {
+        return rows.size() > LEADERBOARD_LIMIT ? rows.subList(0, LEADERBOARD_LIMIT) : rows;
+    }
 
     /**
      * Resolve & validate tuần.

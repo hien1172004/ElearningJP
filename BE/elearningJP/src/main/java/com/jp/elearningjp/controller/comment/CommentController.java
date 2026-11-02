@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.*;
  * <ul>
  *   <li>{@code GET    /api/v1/comments/{id}} — chi tiết (công khai)</li>
  *   <li>{@code PUT    /api/v1/comments/{id}} — cập nhật (chỉ chủ sở hữu)</li>
- *   <li>{@code DELETE /api/v1/comments/{id}} — xoá mềm (chỉ chủ sở hữu)</li>
+ *   <li>{@code DELETE /api/v1/comments/{id}} — xoá mềm (chủ sở hữu hoặc admin)</li>
  *   <li>{@code POST   /api/v1/comments/{id}/like}    — toggle like</li>
  *   <li>{@code POST   /api/v1/comments/{id}/dislike} — toggle dislike</li>
  *   <li>{@code GET    /api/v1/comments/{id}/replies} — danh sách reply (công khai)</li>
@@ -46,7 +46,7 @@ import org.springframework.web.bind.annotation.*;
  *
  * <p>Endpoint theo id reply:
  * <ul>
- *   <li>{@code DELETE /api/v1/comment-replies/{id}} — xoá mềm (chỉ chủ sở hữu)</li>
+ *   <li>{@code DELETE /api/v1/comment-replies/{id}} — xoá mềm kèm reply con (chủ sở hữu hoặc admin)</li>
  *   <li>{@code POST   /api/v1/comment-replies/{id}/like}    — toggle like reply</li>
  *   <li>{@code POST   /api/v1/comment-replies/{id}/dislike} — toggle dislike reply</li>
  * </ul>
@@ -73,7 +73,7 @@ public class CommentController {
             @PathVariable("targetType") CommentTargetType targetType,
             @Parameter(description = "ID của đối tượng", example = "1")
             @PathVariable("targetId") Long targetId,
-            @RequestParam(value = "page", defaultValue = "0") int page,
+            @Parameter(description = "Trang, bắt đầu từ 1") @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "20") int size
     ) {
         return ApiResponse.<CommentListResponse>builder()
@@ -83,8 +83,8 @@ public class CommentController {
     }
 
     @Operation(
-            summary = "Chi tiết 1 comment (kèm toàn bộ reply)",
-            description = "Trả về 1 comment và danh sách reply (lồng nhau được làm phẳng, client tự dựng cây qua parentReplyId)."
+            summary = "Chi tiết 1 comment (kèm tối đa 50 reply đầu tiên)",
+            description = "Trả về 1 comment và tối đa 50 reply đầu (lồng nhau được làm phẳng, client tự dựng cây qua parentReplyId). Reply còn lại lấy qua GET /comments/{id}/replies."
     )
     @GetMapping(ApiPaths.API_V1 + ApiPaths.Comment.BY_ID)
     public ApiResponse<CommentDetailResponse> getCommentDetail(
@@ -101,7 +101,7 @@ public class CommentController {
     @GetMapping(ApiPaths.API_V1 + ApiPaths.Comment.REPLIES)
     public ApiResponse<CommentReplyListResponse> getReplies(
             @PathVariable("id") Long commentId,
-            @RequestParam(value = "page", defaultValue = "0") int page,
+            @Parameter(description = "Trang, bắt đầu từ 1") @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = "50") int size
     ) {
         return ApiResponse.<CommentReplyListResponse>builder()
@@ -167,7 +167,7 @@ public class CommentController {
                 .build();
     }
 
-    @Operation(summary = "[Chủ sở hữu] Xoá mềm comment")
+    @Operation(summary = "[Chủ sở hữu / Admin] Xoá mềm comment")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping(ApiPaths.API_V1 + ApiPaths.Comment.BY_ID)
@@ -179,7 +179,7 @@ public class CommentController {
                 .build();
     }
 
-    @Operation(summary = "[Chủ sở hữu] Xoá mềm reply")
+    @Operation(summary = "[Chủ sở hữu / Admin] Xoá mềm reply kèm toàn bộ reply con")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping(ApiPaths.API_V1 + ApiPaths.CommentReply.BY_ID)

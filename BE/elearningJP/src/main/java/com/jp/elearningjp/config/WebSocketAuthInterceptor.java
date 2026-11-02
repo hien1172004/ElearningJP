@@ -1,5 +1,6 @@
 package com.jp.elearningjp.config;
 
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -67,6 +68,11 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             }
             String principalName = String.valueOf(userIdClaim);
             accessor.setUser(new UsernamePasswordAuthenticationToken(principalName, null, List.of()));
+            // Ghi hạn token để WebSocketSessionExpiryEnforcer đóng phiên khi token hết hạn.
+            Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+            if (sessionAttributes != null && jwt.getExpiresAt() != null) {
+                sessionAttributes.put(WebSocketSessionExpiryEnforcer.TOKEN_EXPIRES_AT, jwt.getExpiresAt());
+            }
             log.debug("[WS] CONNECT authenticated for userId={}", principalName);
         } catch (MessageDeliveryException ex) {
             throw ex;

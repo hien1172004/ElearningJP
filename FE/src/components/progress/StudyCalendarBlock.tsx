@@ -247,9 +247,11 @@ export const StudyCalendarBlock: React.FC = () => {
             <LegendItem color="bg-blue-600" label="Đạt mục tiêu" />
             <LegendItem color="bg-emerald-500" label="Có học, chưa đạt" />
             <LegendItem color="bg-white border border-gray-300" label="Không học" />
-            <span className="text-[10px] text-gray-400 ml-auto">
-              Mục tiêu {data?.goalWords ?? 5} từ MỚI/ngày
-            </span>
+            {data && (
+              <span className="text-[10px] text-gray-400 ml-auto">
+                Mục tiêu {data.goalWords} từ MỚI/ngày
+              </span>
+            )}
           </div>
         </div>
 

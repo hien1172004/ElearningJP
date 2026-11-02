@@ -75,6 +75,7 @@ public class QuizService {
     CourseAccessGuard courseAccessGuard;
     SrsItemRepository srsItemRepository;
     SrsReviewLogRepository srsReviewLogRepository;
+    LessonProgressRecorder lessonProgressRecorder;
     EntityManager entityManager;
 
     // =========================================================
@@ -89,7 +90,7 @@ public class QuizService {
     public LessonQuizResponse getLessonQuiz(Long lessonId) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-        courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
+        courseAccessGuard.requireEnrolledInLesson(lesson);
 
         Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
@@ -158,7 +159,7 @@ public class QuizService {
     public QuizSubmitResponse submitQuiz(Long lessonId, QuizSubmitRequest request) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-        courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
+        courseAccessGuard.requireEnrolledInLesson(lesson);
         User currentUser = currentUserService.getCurrentUser();
 
         Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
@@ -950,13 +951,12 @@ public class QuizService {
         boolean isPassed = scorePercent.compareTo(BigDecimal.valueOf(quiz.getPassingScorePercent())) >= 0;
 
         // Cập nhật progress
-        UserLessonProgress progress = progressRepository
-                .findByUserIdAndLessonIdAndDeletedFalse(currentUser.getId(), lesson.getId())
-                .orElseGet(() -> UserLessonProgress.builder()
-                        .user(currentUser)
-                        .lesson(lesson)
-                        .startedAt(Instant.now())
-                        .build());
+        // Khoá dòng progress: nộp 2 lần đồng thời không còn 500 và chỉ 1 lần được tính là hoàn thành.
+        UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lesson.getId());
+        boolean wasCompleted = progress.getStatus() == ProgressStatus.COMPLETED;
+        if (progress.getStartedAt() == null) {
+            progress.setStartedAt(Instant.now());
+        }
 
         BigDecimal currentBest = progress.getBestScore() != null ? progress.getBestScore() : BigDecimal.ZERO;
         progress.setBestScore(scorePercent.max(currentBest));
@@ -969,6 +969,11 @@ public class QuizService {
             }
         }
         progressRepository.save(progress);
+
+        // Qua quiz lần đầu = hoàn thành bài: phát event (XP, tự hoàn thành khóa) như route complete.
+        if (isPassed && !wasCompleted) {
+            lessonProgressRecorder.onLessonCompleted(currentUser.getId(), lesson, progress.getBestScore(), true);
+        }
 
         log.info("[QUIZ] User id={} submitted quiz for lesson id={}, score={} %, isPassed={}",
                 currentUser.getId(), lesson.getId(), scorePercent, isPassed);

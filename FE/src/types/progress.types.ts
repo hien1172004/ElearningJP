@@ -4,6 +4,14 @@ import type { ApiResponse } from './api.types'
 // Lookup / heartbeat — dùng cho instrumentation (Bước 2 + 3)
 // ============================================================================
 
+/** Mục tiêu học tập. Khớp `ProgressGoalResponse` ở BE. */
+export interface ProgressGoal {
+  /** false → user chưa chọn mục tiêu. */
+  configured: boolean
+  weeklyGoalWords: number | null
+  dailyGoalWords: number
+}
+
 /** Loại đối tượng người dùng tra cứu. Khớp enum BE `LookupTargetType`. */
 export type LookupTargetType = 'VOCAB' | 'KANJI' | 'GRAMMAR'
 
@@ -83,7 +91,7 @@ export interface ProgressSummary {
   wordsLearnedDeltaPct: number | null
   /** % thay đổi studySeconds so với kỳ trước. */
   studySecondsDeltaPct: number | null
-  /** Mục tiêu từ/ngày (mặc định 5). */
+  /** Mục tiêu từ/ngày đang áp dụng. */
   goalWords: number
   /** Hôm nay theo múi giờ nghiệp vụ (Asia/Ho_Chi_Minh), `yyyy-MM-dd`. */
   today: string

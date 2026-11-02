@@ -5,7 +5,6 @@ import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
-import com.jp.elearningjp.shared.enums.EnrollmentStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -78,19 +77,17 @@ class CourseAccessGuardTest {
 
             // Quan trọng: không được gọi enrollmentRepository khi là admin
             verify(enrollmentRepository, never())
-                    .existsByUser_IdAndCourse_IdAndStatusAndDeletedFalse(
+                    .existsByUserIdAndCourseIdAndDeletedFalse(
                             org.mockito.ArgumentMatchers.anyLong(),
-                            org.mockito.ArgumentMatchers.anyLong(),
-                            org.mockito.ArgumentMatchers.any());
+                            org.mockito.ArgumentMatchers.anyLong());
         }
 
         @Test
-        @DisplayName("User đã enroll ACTIVE → pass")
+        @DisplayName("User đã enroll (mọi trạng thái) → pass")
         void enrolledUser_passes() {
             when(currentUserService.isAdmin()).thenReturn(false);
             when(currentUserService.getCurrentUserId()).thenReturn(student.getId());
-            when(enrollmentRepository.existsByUser_IdAndCourse_IdAndStatusAndDeletedFalse(
-                    student.getId(), 100L, EnrollmentStatus.ACTIVE))
+            when(enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(student.getId(), 100L))
                     .thenReturn(true);
 
             assertDoesNotThrow(() -> courseAccessGuard.requireEnrolled(100L));
@@ -101,8 +98,7 @@ class CourseAccessGuardTest {
         void notEnrolled_throws() {
             when(currentUserService.isAdmin()).thenReturn(false);
             when(currentUserService.getCurrentUserId()).thenReturn(student.getId());
-            when(enrollmentRepository.existsByUser_IdAndCourse_IdAndStatusAndDeletedFalse(
-                    student.getId(), 100L, EnrollmentStatus.ACTIVE))
+            when(enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(student.getId(), 100L))
                     .thenReturn(false);
 
             AppException ex = assertThrows(AppException.class,

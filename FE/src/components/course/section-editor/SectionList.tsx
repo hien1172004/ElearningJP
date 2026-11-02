@@ -98,7 +98,7 @@ export const SectionList: React.FC<SectionListProps> = ({
     const targetIndex = direction === 'up' ? index - 1 : index + 1
     if (targetIndex < 0 || targetIndex >= arr.length) return
     const newOrder = [...arr]
-    ;[newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]]
+      ;[newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]]
     await reorderSections.mutateAsync({
       itemIds: newOrder.map((s) => s.id),
     })

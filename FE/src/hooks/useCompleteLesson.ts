@@ -20,9 +20,13 @@ export function useCompleteLesson(lessonId: number, courseId?: number) {
       })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.lesson.detail(lessonId) })
       if (courseId) {
+        // Outline + % tiến độ của khóa nằm trong course detail
         qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detail(courseId) })
-        qc.invalidateQueries({ queryKey: ['courses', courseId, 'lessons'] })
       }
+      // Summary, lịch học, biểu đồ, bảng xếp hạng (XP vừa cộng)
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.progress.all })
+      // % tiến độ trong "khóa của tôi"
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.enrollment.all })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const msg =

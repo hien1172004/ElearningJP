@@ -5,6 +5,7 @@ import com.jp.elearningjp.dto.response.dictionary.*;
 import com.jp.elearningjp.entity.gamification.UserDailyStats;
 import com.jp.elearningjp.service.dictionary.DictionaryService;
 import com.jp.elearningjp.service.gamification.StudyTrackerService;
+import com.jp.elearningjp.service.gamification.DailyStatsService;
 import com.jp.elearningjp.service.gamification.XpService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.enums.CharacterType;
@@ -177,7 +178,7 @@ public class DictionaryController {
 
         DictionaryLookupResponse data = DictionaryLookupResponse.builder()
                 .wordsLearnedToday(stats != null ? stats.getNewItemsLearned() : 0)
-                .goalWords(stats != null ? stats.getGoalWords() : XpService.DEFAULT_GOAL_WORDS)
+                .goalWords(stats != null ? stats.getGoalWords() : DailyStatsService.DEFAULT_GOAL_WORDS)
                 .goalMet(stats != null ? Boolean.TRUE.equals(stats.getGoalMet()) : false)
                 .xpAwarded(xpService.getLookupXp())
                 .statDate(LocalDate.now(clock))

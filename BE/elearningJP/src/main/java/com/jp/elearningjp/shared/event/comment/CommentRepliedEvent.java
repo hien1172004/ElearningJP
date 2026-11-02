@@ -23,6 +23,11 @@ public class CommentRepliedEvent {
     /** Chủ comment gốc — người sẽ nhận thông báo. */
     Long recipientUserId;
 
+    /**
+     * Người viết reply cha (khi trả lời lồng nhau) — cũng nhận thông báo; {@code null} khi
+     * trả lời thẳng vào comment.
+     */
+    Long parentReplyUserId;
     /** Người viết reply — dùng để bỏ qua trường hợp tự reply chính mình. */
     Long replierUserId;
 

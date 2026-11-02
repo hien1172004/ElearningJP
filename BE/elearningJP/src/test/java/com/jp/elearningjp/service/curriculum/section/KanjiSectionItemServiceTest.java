@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemUpdateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiRelatedVocabRequest;
@@ -60,6 +61,7 @@ class KanjiSectionItemServiceTest {
     @Mock VocabularyRepository vocabularyRepository;
     @Mock VocabularyCharacterRepository vocabularyCharacterRepository;
     @Mock LessonSectionMapper mapper;
+    @Mock CourseAccessGuard courseAccessGuard;
     @Mock DictionaryService dictionaryService;
     @Mock CurrentUserService currentUserService;
 

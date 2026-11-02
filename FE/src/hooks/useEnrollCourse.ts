@@ -17,7 +17,7 @@ export function useEnrollCourse() {
       toast.success('Đăng ký khóa học thành công!', {
         description: 'Bạn có thể bắt đầu học ngay bây giờ.',
       })
-      qc.invalidateQueries({ queryKey: ['enrollments'] })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.enrollment.all })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detail(courseId) })
       // Điều hướng về trang chi tiết khoá học để user bấm "Vào học".
       navigate(`/courses/${courseId}`)
@@ -25,9 +25,9 @@ export function useEnrollCourse() {
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const code = error.response?.data?.code
       let msg = error.response?.data?.message ?? 'Không thể đăng ký khóa học.'
-      if (code === 2001) msg = 'Bạn đã đăng ký khóa học này rồi.'
-      else if (code === 2002) msg = 'Khóa học chưa được xuất bản.'
-      else if (code === 2003) msg = 'Khóa học đã được lưu trữ.'
+      if (code === 1301) msg = 'Bạn đã đăng ký khóa học này rồi.'
+      else if (code === 1101) msg = 'Khóa học chưa được xuất bản.'
+      else if (code === 1102) msg = 'Khóa học đã được lưu trữ.'
       toast.error('Đăng ký thất bại', { description: msg })
     },
   })

@@ -1,5 +1,6 @@
 package com.jp.elearningjp.entity.comment;
 
+import org.hibernate.annotations.DynamicUpdate;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.shared.enums.ContentStatus;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
@@ -21,6 +22,8 @@ import org.hibernate.annotations.DynamicInsert;
 @Entity
 @Table(name = "comment_replies")
 @DynamicInsert
+// Chỉ UPDATE cột thực sự đổi: sửa/xoá comment không ghi đè like/dislike/reply count đang tăng đồng thời.
+@DynamicUpdate
 @Getter
 @Setter
 @NoArgsConstructor

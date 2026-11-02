@@ -1,17 +1,20 @@
 import React, { useMemo, useState } from 'react'
 import { BarChart3, Flame } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
+import { LoadingState } from '@/components/common'
 import {
   LeaderboardBlock,
   ProgressChartBlock,
   ProgressSummaryBlock,
   StudyCalendarBlock,
   TopLookupsBlock,
-  type SummaryRangePreset,
 } from '@/components/progress'
+import { resolvePresetRange, type ProgressRange } from '@/utils/progress'
+import { useProgressGoal } from '@/hooks/useProgressGoal'
 import { useProgressSummary } from '@/hooks/useProgressSummary'
 
 /**
- * ProgressPage — trang "Tiến độ học tập" (Mazii-style).
+ * ProgressDashboard — nội dung trang "Tiến độ học tập" (Mazii-style).
  *
  * Bố cục (2 khối trên mỗi hàng ở desktop):
  * <pre>
@@ -28,17 +31,12 @@ import { useProgressSummary } from '@/hooks/useProgressSummary'
  *
  * Route: `/progress` (protected — cần đăng nhập).
  */
-export const ProgressPage: React.FC = () => {
-  const [range, setRange] = useState<{
-    preset: SummaryRangePreset
-    from?: string
-    to?: string
-  }>({ preset: '30d' })
+const ProgressDashboard: React.FC = () => {
+  const [range, setRange] = useState<ProgressRange>(() => resolvePresetRange('month'))
 
-  // Chỉ truyền from/to khi user chọn preset cụ thể (không phải mặc định).
   const queryParams = useMemo(
-    () => ({ from: range.from, to: range.to }),
-    [range.from, range.to],
+    () => ({ from: range.from, to: range.to, allTime: range.preset === 'all' || undefined }),
+    [range.from, range.to, range.preset],
   )
 
   const { data, isLoading, isError, refetch } = useProgressSummary(queryParams)
@@ -110,6 +108,7 @@ export const ProgressPage: React.FC = () => {
           isLoading={isLoading}
           isError={isError}
           onRefetch={() => void refetch()}
+          preset={range.preset}
           from={range.from}
           to={range.to}
           onRangeChange={setRange}
@@ -134,6 +133,18 @@ export const ProgressPage: React.FC = () => {
 
     </div>
   )
+}
+
+/**
+ * ProgressPage — chưa chọn mục tiêu thì chuyển sang trang chọn mục tiêu.
+ * Lỗi khi tải mục tiêu vẫn hiện số liệu, không chặn cả trang.
+ */
+export const ProgressPage: React.FC = () => {
+  const { data: goal, isLoading } = useProgressGoal()
+
+  if (isLoading) return <LoadingState fullHeight />
+  if (goal && !goal.configured) return <Navigate to="/progress/goal" replace />
+  return <ProgressDashboard />
 }
 
 export default ProgressPage

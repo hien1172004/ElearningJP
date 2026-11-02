@@ -1,10 +1,10 @@
 package com.jp.elearningjp.service.curriculum;
 
-import com.jp.elearningjp.dto.request.curriculum.LessonCompleteRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.ProgressResponse;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.Lesson;
+import com.jp.elearningjp.entity.curriculum.Quiz;
 import com.jp.elearningjp.entity.curriculum.UserLessonProgress;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
@@ -17,7 +17,6 @@ import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
 import com.jp.elearningjp.shared.enums.EnrollmentStatus;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
-import com.jp.elearningjp.shared.event.curriculum.LessonCompletedEvent;
 import com.jp.elearningjp.shared.event.curriculum.LessonStartedEvent;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
@@ -45,8 +44,8 @@ public class ProgressService {
     private final ProgressMapper progressMapper;
     private final CurrentUserService currentUserService;
     private final CourseAccessGuard courseAccessGuard;
-    private final EnrollmentService enrollmentService;
     private final ApplicationEventPublisher eventPublisher;
+    private final LessonProgressRecorder lessonProgressRecorder;
 
     // ============================================================
     // START LESSON
@@ -62,33 +61,19 @@ public class ProgressService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
-        courseAccessGuard.requireEnrolled(lesson.getCourse().getId());
+        courseAccessGuard.requireEnrolledInLesson(lesson);
 
-        Optional<UserLessonProgress> existing = progressRepository
-                .findByUser_IdAndLesson_IdAndDeletedFalse(currentUser.getId(), lessonId);
-
-        UserLessonProgress progress;
+        // Khoá dòng progress (tạo nếu chưa có): 2 request đồng thời không còn cùng INSERT → 500.
+        UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lessonId);
         boolean isNewStart = false;
         Instant now = Instant.now();
 
-        if (existing.isPresent()) {
-            progress = existing.get();
-            if (progress.getStatus() == ProgressStatus.NOT_STARTED) {
-                progress.setStatus(ProgressStatus.IN_PROGRESS);
-                progress.setStartedAt(now);
-                isNewStart = true;
-            }
-            progress.setLastAccessedAt(now);
-        } else {
-            progress = UserLessonProgress.builder()
-                    .user(currentUser)
-                    .lesson(lesson)
-                    .status(ProgressStatus.IN_PROGRESS)
-                    .startedAt(now)
-                    .lastAccessedAt(now)
-                    .build();
+        if (progress.getStatus() == ProgressStatus.NOT_STARTED) {
+            progress.setStatus(ProgressStatus.IN_PROGRESS);
+            progress.setStartedAt(now);
             isNewStart = true;
         }
+        progress.setLastAccessedAt(now);
 
         UserLessonProgress saved = progressRepository.save(progress);
 
@@ -107,89 +92,48 @@ public class ProgressService {
     /**
      * User hoàn thành 1 lesson.
      *
-     * <p>SAU REFACTOR (V20/V21): khái niệm "lesson có quiz" được xác định
-     * trực tiếp bằng sự tồn tại của row trong bảng {@code lesson_quizzes}
-     * (đã bỏ hoàn toàn {@code LessonSectionType.TEST}).</p>
-     *
-     * <ul>
-     *   <li>Nếu lesson có quiz → bắt buộc phải gửi {@code score} để
-     *       hoàn thành (đây là điểm quiz).</li>
-     *   <li>Nếu lesson KHÔNG có quiz → KHÔNG được gửi score (vì
-     *       không có quiz để chấm).</li>
-     * </ul>
+     * <p>Lesson có quiz (có row trong {@code lesson_quizzes}): chỉ hoàn thành được khi
+     * {@code bestScore} do <b>server chấm</b> lúc nộp quiz đã đạt {@code passingScorePercent}.
+     * Client không gửi điểm.</p>
      */
     @Transactional
-    public ProgressResponse completeLesson(Long lessonId, LessonCompleteRequest request) {
+    public ProgressResponse completeLesson(Long lessonId) {
         User currentUser = currentUserService.getCurrentUser();
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Long courseId = lesson.getCourse().getId();
-        courseAccessGuard.requireEnrolled(courseId);
+        courseAccessGuard.requireEnrolledInLesson(lesson);
 
-        // Xác định "có quiz" dựa trên bảng lesson_quizzes (source of truth)
-        boolean isMiniTest = quizRepository.existsByLessonIdAndDeletedFalse(lessonId);
+        // Khoá dòng: request trùng chờ request đầu xong rồi nhận PROGRESS_ALREADY_COMPLETED thay vì 500.
+        UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lessonId);
 
-        BigDecimal score = request.getScore();
+        if (progress.getStatus() == ProgressStatus.COMPLETED) {
+            throw new AppException(ErrorCode.PROGRESS_ALREADY_COMPLETED);
+        }
+
+        Optional<Quiz> quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId);
+        boolean isMiniTest = quiz.isPresent();
         if (isMiniTest) {
-            if (score == null) {
+            BigDecimal bestScore = progress.getBestScore();
+            if (bestScore == null || bestScore.compareTo(BigDecimal.valueOf(quiz.get().getPassingScorePercent())) < 0) {
                 throw new AppException(ErrorCode.CANNOT_COMPLETE_LESSON);
             }
-        } else {
-            if (score != null) {
-                throw new AppException(ErrorCode.INVALID_BEST_SCORE);
-            }
         }
 
-        // Lấy / tạo progress
-        Optional<UserLessonProgress> existing = progressRepository
-                .findByUser_IdAndLesson_IdAndDeletedFalse(currentUser.getId(), lessonId);
-
-        UserLessonProgress progress;
         Instant now = Instant.now();
-
-        if (existing.isPresent()) {
-            progress = existing.get();
-            if (progress.getStatus() == ProgressStatus.COMPLETED) {
-                throw new AppException(ErrorCode.PROGRESS_ALREADY_COMPLETED);
-            }
-            progress.setStatus(ProgressStatus.COMPLETED);
-            progress.setCompletedAt(now);
-            progress.setLastAccessedAt(now);
-
-            // Update bestScore (chỉ khi cao hơn và có quiz)
-            if (isMiniTest && score != null) {
-                if (progress.getBestScore() == null || score.compareTo(progress.getBestScore()) > 0) {
-                    progress.setBestScore(score);
-                }
-            }
-        } else {
-            progress = UserLessonProgress.builder()
-                    .user(currentUser)
-                    .lesson(lesson)
-                    .status(ProgressStatus.COMPLETED)
-                    .startedAt(now)
-                    .lastAccessedAt(now)
-                    .completedAt(now)
-                    .bestScore(isMiniTest ? score : null)
-                    .build();
+        if (progress.getStartedAt() == null) {
+            progress.setStartedAt(now);
         }
+        progress.setStatus(ProgressStatus.COMPLETED);
+        progress.setCompletedAt(now);
+        progress.setLastAccessedAt(now);
 
         UserLessonProgress saved = progressRepository.save(progress);
 
-        // Tính progress % sau khi complete
-        int courseProgressPercent = progressRepository
-                .calculateCourseProgressPercent(currentUser.getId(), courseId);
-
-        // Publish event (EnrollmentService sẽ tự complete enrollment nếu 100%)
-        eventPublisher.publishEvent(new LessonCompletedEvent(this,
-                currentUser.getId(), lessonId, courseId,
-                saved.getBestScore(), isMiniTest, courseProgressPercent));
-
-        // Auto-complete enrollment nếu 100%
-        if (courseProgressPercent >= 100) {
-            enrollmentService.markAsCompletedIfFull(currentUser.getId(), courseId);
-        }
+        // XP/streak qua LessonCompletedEvent + tự hoàn thành khóa khi đạt 100%
+        int courseProgressPercent = lessonProgressRecorder.onLessonCompleted(
+                currentUser.getId(), lesson, saved.getBestScore(), isMiniTest);
 
         log.info("Lesson {} completed: userId={}, courseId={}, progressPercent={}, hasQuiz={}",
                 lessonId, currentUser.getId(), courseId, courseProgressPercent, isMiniTest);

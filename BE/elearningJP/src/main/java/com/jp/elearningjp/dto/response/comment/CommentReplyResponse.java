@@ -36,6 +36,9 @@ public class CommentReplyResponse {
     Boolean disliked;
     Boolean owner;
 
+    /** Người xem được xoá: chủ bình luận hoặc admin (gỡ bình luận vi phạm). */
+    Boolean deletable;
+
     Instant createdAt;
     Instant updatedAt;
 }

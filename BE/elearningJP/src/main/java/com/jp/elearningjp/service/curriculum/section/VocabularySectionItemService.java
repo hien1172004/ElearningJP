@@ -122,7 +122,8 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         LessonVocabularyItem item = LessonVocabularyItem.builder()
                 .section(section)
                 .vocab(vocab)
-                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
+                // Tạm MAX+1 (không dùng size+1): xoá mềm để lại lỗ hổng, [1,3] có size+1 = 3 sẽ trùng UNIQUE.
+                .orderIndex(OrderIndexResolver.maxOrderIndex(ordered, LessonVocabularyItem::getOrderIndex) + 1)
                 .customHiragana(resolvedHiragana)
                 .customRomaji(resolvedRomaji)
                 .customAudioUrl(resolvedAudio)
@@ -166,6 +167,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);
         }
+        courseAccessGuard.requireSectionContentAccess(item.getSection());
         return lessonSectionMapper.toVocabularyItemResponse(item);
     }
 

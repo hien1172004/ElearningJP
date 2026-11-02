@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.notification;
 
+import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.config.TimeConfig;
 import com.jp.elearningjp.repository.gamification.NotificationRepository;
 import com.jp.elearningjp.repository.gamification.UserDailyStatsRepository;
@@ -56,6 +57,7 @@ public class NotificationScheduler {
     UserGamificationRepository userGamificationRepository;
     UserDailyStatsRepository userDailyStatsRepository;
     StreakService streakService;
+    UserRepository userRepository;
     Clock clock;
 
     // ============================================================
@@ -75,6 +77,7 @@ public class NotificationScheduler {
         }
 
         Set<Long> optedOut = new HashSet<>(userSettingsRepository.findUserIdsWithSrsDueDisabled());
+        optedOut.addAll(userRepository.findIdsNotEligibleForNotifications()); // bị khoá / không hoạt động / đã xoá
 
         int sent = 0;
         int skipped = 0;
@@ -130,6 +133,7 @@ public class NotificationScheduler {
         }
 
         Set<Long> optedOut = new HashSet<>(userSettingsRepository.findUserIdsWithStreakWarningDisabled());
+        optedOut.addAll(userRepository.findIdsNotEligibleForNotifications()); // bị khoá / không hoạt động / đã xoá
 
         int sent = 0;
         int skipped = 0;

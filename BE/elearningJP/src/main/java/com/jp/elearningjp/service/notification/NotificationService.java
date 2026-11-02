@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.notification;
 
+import java.util.Collection;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.jp.elearningjp.dto.response.notification.NotificationListResponse;
 import com.jp.elearningjp.dto.response.notification.NotificationResponse;
@@ -174,6 +175,27 @@ public class NotificationService {
     @Transactional
     public void markAllAsRead(Long userId) {
         notificationRepository.markAllAsRead(userId, Instant.now(clock));
+    }
+
+    // ============================================================
+    // CLEANUP (comment / reply bị xoá)
+    // ============================================================
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int removeForComment(Long commentId) {
+        if (commentId == null) {
+            return 0;
+        }
+        return notificationRepository.softDeleteByCommentId(commentId, Instant.now(clock));
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int removeForReplies(Collection<Long> replyIds) {
+        if (replyIds == null || replyIds.isEmpty()) {
+            return 0;
+        }
+        List<String> ids = replyIds.stream().map(String::valueOf).toList();
+        return notificationRepository.softDeleteByReplyIds(ids, Instant.now(clock));
     }
 
     // ============================================================

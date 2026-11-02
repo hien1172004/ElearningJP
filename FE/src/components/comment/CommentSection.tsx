@@ -37,7 +37,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   title = 'Bình luận',
   className,
 }) => {
-  const [page, setPage] = useState(0)
+  const [page, setPage] = useState(1)
 
   // Đổi target (vd: chọn từ vựng khác trong trang tra cứu) → về trang đầu.
   // Dùng pattern "adjust state during render" của React thay vì useEffect
@@ -45,7 +45,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const [prevTarget, setPrevTarget] = useState({ targetType, targetId })
   if (prevTarget.targetType !== targetType || prevTarget.targetId !== targetId) {
     setPrevTarget({ targetType, targetId })
-    setPage(0)
+    setPage(1)
   }
 
   const { data, isLoading, isError, error, refetch, isFetching } = useComments(
@@ -65,7 +65,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       await createMutation.mutateAsync({ content })
       toast.success('Đã đăng bình luận')
       // Quay về trang đầu để thấy bình luận vừa đăng.
-      setPage(0)
+      setPage(1)
       void refetch()
     } catch (err: any) {
       toast.error(
@@ -162,10 +162,10 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         <div className="flex items-center justify-center gap-3 mt-4 pt-3 border-t border-gray-100">
           <Pagination
             size="small"
-            current={page + 1}
+            current={page}
             total={total}
             pageSize={pageSize}
-            onChange={(next) => setPage(next - 1)}
+            onChange={(next) => setPage(next)}
             showSizeChanger={false}
             hideOnSinglePage
             itemRender={(_current, type, originalElement) => {

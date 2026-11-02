@@ -39,8 +39,12 @@ export function useSubmitQuiz(lessonId: number) {
     },
     onSuccess: () => {
       // Invalidate related caches so progress UI refreshes
-      qc.invalidateQueries({ queryKey: ['lessons', 'detail', lessonId] })
-      qc.invalidateQueries({ queryKey: ['progress'] })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.lesson.detail(lessonId) })
+      // Qua quiz = hoàn thành bài: outline + % khóa (course detail), XP/summary, "khóa của tôi".
+      // Hook không biết courseId nên làm mới theo tiền tố; chỉ query đang hiển thị mới tải lại.
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detailAll })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.progress.all })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.enrollment.all })
     },
   })
 }

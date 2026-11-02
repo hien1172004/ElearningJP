@@ -19,8 +19,15 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.jp.elearningjp.dto.request.progress.UpdateProgressGoalRequest;
+import com.jp.elearningjp.dto.response.progress.ProgressGoalResponse;
+import com.jp.elearningjp.service.progress.ProgressGoalService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +50,33 @@ import java.util.List;
 public class LearningProgressController {
 
     ProgressService progressService;
+    ProgressGoalService progressGoalService;
+
+    @Operation(
+            summary = "Mục tiêu số từ mới mỗi tuần của tôi",
+            description = "`configured = false` → user chưa chọn mục tiêu, FE hiện trang chọn mục tiêu.")
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping(ApiPaths.LearningProgress.GOAL)
+    public ApiResponse<ProgressGoalResponse> getGoal() {
+        return ApiResponse.<ProgressGoalResponse>builder()
+                .success(true)
+                .data(progressGoalService.getMyGoal())
+                .build();
+    }
+
+    @Operation(
+            summary = "Đặt mục tiêu số từ mới mỗi tuần",
+            description = "Nhận 30–140, bước 10. Áp dụng ngay cho hôm nay, các ngày trước giữ nguyên.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping(ApiPaths.LearningProgress.GOAL)
+    public ApiResponse<ProgressGoalResponse> updateGoal(@Valid @RequestBody UpdateProgressGoalRequest request) {
+        return ApiResponse.<ProgressGoalResponse>builder()
+                .success(true)
+                .message("Đã lưu mục tiêu học tập")
+                .data(progressGoalService.updateMyGoal(request.getWeeklyGoalWords()))
+                .build();
+    }
 
     @Operation(
             summary = "Tổng hợp tiến độ học tập theo kỳ",
@@ -52,7 +86,7 @@ public class LearningProgressController {
                       Hán tự chỉ tính 1 lần, khi học lần đầu tiên)
                     - `totalLookups` = **TỔNG** số lần tra từ điển trong kỳ (kể cả tra lại từ đã học)
                     - `currentStreak` = số ngày liên tiếp học được ít nhất 1 mục mới
-                    - `goalWords` = mục tiêu mặc định 5 mục mới/ngày
+                    - `goalWords` = mục tiêu số mục mới/ngày = ceil(mục tiêu tuần / 7); chưa chọn thì là 5
 
                     **Tham số:**
                     - `from` / `to`: định dạng `yyyy-MM-dd`. Bỏ trống → mặc định 30 ngày gần nhất.
@@ -67,12 +101,16 @@ public class LearningProgressController {
             @Parameter(description = "Ngày kết thúc (yyyy-MM-dd)")
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate to) {
+            LocalDate to,
+
+            @Parameter(description = "true → toàn bộ lịch sử, bỏ qua from/to và không giới hạn 366 ngày.")
+            @RequestParam(defaultValue = "false")
+            boolean allTime) {
 
         // Service tự lấy userId hiện tại từ SecurityContext (JWT).
         return ApiResponse.<ProgressSummaryResponse>builder()
                 .success(true)
-                .data(progressService.getSummary(from, to))
+                .data(allTime ? progressService.getAllTimeSummary() : progressService.getSummary(from, to))
                 .build();
     }
 
@@ -149,12 +187,18 @@ public class LearningProgressController {
 
             @Parameter(description = "Đơn vị bucket: day | week | month. Bỏ trống → day.")
             @RequestParam(required = false)
-            String granularity) {
+            String granularity,
+
+            @Parameter(description = "true → toàn bộ lịch sử, bỏ qua from/to và không giới hạn 366 ngày.")
+            @RequestParam(defaultValue = "false")
+            boolean allTime) {
 
         // Service tự lấy userId hiện tại từ SecurityContext (JWT).
         return ApiResponse.<ChartResponse>builder()
                 .success(true)
-                .data(progressService.getChart(from, to, granularity))
+                .data(allTime
+                        ? progressService.getAllTimeChart(granularity)
+                        : progressService.getChart(from, to, granularity))
                 .build();
     }
 
@@ -267,7 +311,7 @@ public class LearningProgressController {
                     (sửa tay dữ liệu, xoá row `user_daily_stats`) → dùng endpoint **hard**
                     (chỉ ADMIN).
 
-                    **Cooldown 30s** → gọi lại trong 30s sẽ nhận HTTP 429.""")
+                    **Cooldown 30s theo từng user** → gọi lại trong 30s sẽ nhận HTTP 429.""")
     @PostMapping(ApiPaths.LearningProgress.LEADERBOARD_REFRESH)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<LeaderboardResponse>> refreshLeaderboard(
@@ -295,7 +339,8 @@ public class LearningProgressController {
                     xoá row `user_daily_stats`) → `ZADD GT` thường không sửa được.
                     Endpoint này `DEL` key rồi dựng lại từ đầu → sửa được cả điểm giảm.
 
-                    **Cooldown 30s** → HTTP 429 nếu gọi lại quá nhanh.""")
+                    **Cooldown 30s** (riêng với refresh thường) → HTTP 429 nếu gọi lại quá nhanh.
+                    Đang có rebuild khác chạy → HTTP 409. Redis lỗi → HTTP 503.""")
     @PostMapping(ApiPaths.LearningProgress.LEADERBOARD_REFRESH_HARD)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<LeaderboardResponse>> hardRefreshLeaderboard(

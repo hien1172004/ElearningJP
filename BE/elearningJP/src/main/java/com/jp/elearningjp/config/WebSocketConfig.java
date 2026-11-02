@@ -1,5 +1,6 @@
 package com.jp.elearningjp.config;
 
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -28,6 +29,11 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *
  * <p>Không dùng {@code @MessageMapping}: server chủ động push qua
  * {@code SimpMessagingTemplate}.</p>
+ *
+ * <p><b>Nhiều instance:</b> simple broker nằm trong bộ nhớ, nên thông báo được phát qua
+ * Redis pub/sub để mọi instance cùng giao (xem {@code NotificationPublisher}).
+ * <b>Hết hạn token:</b> phiên bị đóng khi token dùng lúc CONNECT hết hạn
+ * (xem {@link WebSocketSessionExpiryEnforcer}).</p>
  */
 @Configuration
 @EnableWebSocketMessageBroker
@@ -46,6 +52,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     };
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+    private final WebSocketSessionExpiryEnforcer sessionExpiryEnforcer;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
@@ -59,6 +66,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.enableSimpleBroker("/queue", "/topic");
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
+    }
+
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
+        registration.addDecoratorFactory(sessionExpiryEnforcer);
     }
 
     @Override

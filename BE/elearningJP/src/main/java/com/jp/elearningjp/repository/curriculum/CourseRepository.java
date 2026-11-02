@@ -24,4 +24,7 @@ public interface CourseRepository extends JpaRepository<Course, Long>, JpaSpecif
     Optional<Course> findBySlugAndDeletedFalse(String slug);
 
     boolean existsBySlugAndDeletedFalse(String slug);
+
+    /** Tính cả khóa đã xoá mềm — khớp ràng buộc UNIQUE toàn bảng của cột slug. */
+    boolean existsBySlug(String slug);
 }

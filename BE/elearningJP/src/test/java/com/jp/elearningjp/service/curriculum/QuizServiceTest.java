@@ -77,6 +77,7 @@ class QuizServiceTest {
     @Mock CourseAccessGuard courseAccessGuard;
     @Mock SrsItemRepository srsItemRepository;
     @Mock SrsReviewLogRepository srsReviewLogRepository;
+    @Mock LessonProgressRecorder lessonProgressRecorder;
 
     @InjectMocks QuizService service;
 
@@ -225,8 +226,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA, optB));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any(UserLessonProgress.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
             when(srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(anyLong(), anyLong()))
@@ -272,11 +273,11 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA, optB));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.of(UserLessonProgress.builder()
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder()
                             .user(user).lesson(lesson)
                             .status(ProgressStatus.IN_PROGRESS)
-                            .build()));
+                            .build());
             when(progressRepository.save(any(UserLessonProgress.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
 
@@ -309,8 +310,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA, optB));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -350,8 +351,8 @@ class QuizServiceTest {
             when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -383,8 +384,8 @@ class QuizServiceTest {
             when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -415,8 +416,8 @@ class QuizServiceTest {
             when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -463,8 +464,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(o1, o2));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -506,8 +507,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(o1, o2));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -542,8 +543,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(o1));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -587,8 +588,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.of(existing));
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(existing);
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -624,8 +625,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.of(existing));
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(existing);
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -661,8 +662,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.of(existing));
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(existing);
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             service.submitQuiz(10L, req);
@@ -705,8 +706,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(7L, 200L))
                     .thenReturn(Optional.empty());
@@ -763,8 +764,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA, optB));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(7L, 200L))
                     .thenReturn(Optional.of(existingSrs));
@@ -807,8 +808,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(srsItemRepository.findByUserIdAndCharacterIdAndDeletedFalse(7L, 300L))
                     .thenReturn(Optional.empty());
@@ -846,8 +847,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             service.submitQuiz(10L, req);
@@ -898,8 +899,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(o1, o2));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(7L, 200L))
                     .thenReturn(Optional.of(existingSrs));
@@ -981,8 +982,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q2a));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(4L))
                     .thenReturn(List.of(q4o1));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);
@@ -1073,8 +1074,8 @@ class QuizServiceTest {
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
                     .thenReturn(List.of(optA, optB));
-            when(progressRepository.findByUserIdAndLessonIdAndDeletedFalse(7L, 10L))
-                    .thenReturn(Optional.empty());
+            when(lessonProgressRecorder.lockOrCreate(7L, 10L))
+                    .thenReturn(UserLessonProgress.builder().build());
             when(progressRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             QuizSubmitResponse resp = service.submitQuiz(10L, req);

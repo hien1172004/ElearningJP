@@ -1,5 +1,6 @@
 package com.jp.elearningjp.repository.curriculum;
 
+import java.util.Collection;
 import com.jp.elearningjp.entity.curriculum.Quiz;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,6 +26,10 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
      * Kiểm tra lesson đã có quiz chưa.
      */
     boolean existsByLessonIdAndDeletedFalse(Long lessonId);
+
+    /** Trong các lesson cho trước, lấy id những lesson đang có quiz. */
+    @Query("SELECT q.lesson.id FROM Quiz q WHERE q.lesson.id IN :lessonIds AND q.deleted = false")
+    List<Long> findLessonIdsWithQuiz(@Param("lessonIds") Collection<Long> lessonIds);
 
     /**
      * Lấy tất cả quiz của 1 lesson kèm questions.

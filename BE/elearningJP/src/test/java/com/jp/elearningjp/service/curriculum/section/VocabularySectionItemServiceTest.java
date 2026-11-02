@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyExampleCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyExampleUpsertRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyItemCreateRequest;
@@ -51,6 +52,7 @@ class VocabularySectionItemServiceTest {
     @Mock LessonVocabularyExampleRepository exampleRepository;
     @Mock VocabularyRepository vocabularyRepository;
     @Mock LessonSectionMapper mapper;
+    @Mock CourseAccessGuard courseAccessGuard;
 
     @InjectMocks VocabularySectionItemService service;
 

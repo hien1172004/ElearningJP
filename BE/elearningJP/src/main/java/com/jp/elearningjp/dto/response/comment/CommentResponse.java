@@ -42,6 +42,9 @@ public class CommentResponse {
     /** Cờ cho biết current user có phải chủ sở hữu comment (dùng để hiển thị nút sửa / xoá). */
     Boolean owner;
 
+    /** Người xem được xoá: chủ bình luận hoặc admin (gỡ bình luận vi phạm). */
+    Boolean deletable;
+
     Instant createdAt;
     Instant updatedAt;
 

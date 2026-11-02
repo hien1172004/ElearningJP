@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { enrollmentService } from '@/services'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import type { Enrollment } from '@/types'
 
 export function useMyEnrollments(activeOnly = false) {
   return useQuery<Enrollment[]>({
-    queryKey: ['enrollments', 'me', activeOnly ? 'active' : 'all'],
+    queryKey: QUERY_KEYS.enrollment.mine(activeOnly),
     queryFn: async () => {
       const res = activeOnly
         ? await enrollmentService.getMyActiveEnrollments()

@@ -144,7 +144,7 @@ public class UserService {
     /**
      * Lấy UserProfile hoặc tự động tạo mới nếu tài khoản chưa có bản ghi profile.
      */
-    private UserProfile getOrCreateProfile(User user) {
+    public UserProfile getOrCreateProfile(User user) {
         return userProfileRepository.findByUserId(user.getId())
                 .orElseGet(() -> {
                     UserProfile newProfile = UserProfile.builder()

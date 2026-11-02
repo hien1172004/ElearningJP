@@ -165,6 +165,8 @@ public final class ApiPaths {
          * khiển bằng query string.</p>
          */
         public static final String LEADERBOARD_REFRESH_HARD = "/leaderboard/refresh/hard";
+        /** Mục tiêu số từ mới mỗi tuần của user hiện tại. */
+        public static final String GOAL = "/goal";
     }
 
     /**

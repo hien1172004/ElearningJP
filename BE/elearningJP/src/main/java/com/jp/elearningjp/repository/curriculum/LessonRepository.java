@@ -1,5 +1,6 @@
 package com.jp.elearningjp.repository.curriculum;
 
+import java.util.Collection;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -19,6 +20,21 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
     long countByCourseIdAndDeletedFalse(Long courseId);
 
     long countByCourse_IdAndDeletedFalse(Long courseId);
+
+    /** Đếm số bài active theo từng khóa; khóa không có bài sẽ không có dòng trả về. */
+    @Query("""
+            SELECT l.course.id AS courseId, COUNT(l.id) AS lessonCount
+            FROM Lesson l
+            WHERE l.course.id IN :courseIds AND l.deleted = false
+            GROUP BY l.course.id
+            """)
+    List<CourseLessonCount> countActiveLessonsByCourseIds(@Param("courseIds") Collection<Long> courseIds);
+
+    interface CourseLessonCount {
+        Long getCourseId();
+
+        Long getLessonCount();
+    }
 
     @Query("SELECT COALESCE(MAX(l.orderIndex), 0) FROM Lesson l WHERE l.course.id = :courseId AND l.deleted = false")
     Integer findMaxOrderIndexByCourseId(@Param("courseId") Long courseId);

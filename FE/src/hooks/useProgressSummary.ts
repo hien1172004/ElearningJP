@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { progressService } from '@/services/progress.service'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import type { ProgressSummary } from '@/types'
@@ -8,6 +8,8 @@ export interface UseProgressSummaryParams {
   from?: string
   /** Ngày kết thúc `yyyy-MM-dd`. undefined → hôm nay. */
   to?: string
+  /** true → toàn bộ lịch sử, bỏ qua from/to. */
+  allTime?: boolean
 }
 
 /**
@@ -23,12 +25,12 @@ export function useProgressSummary(
   params: UseProgressSummaryParams = {},
   options?: { enabled?: boolean },
 ) {
-  const { from, to } = params
+  const { from, to, allTime } = params
 
   return useQuery<ProgressSummary>({
-    queryKey: QUERY_KEYS.progress.summary({ from, to }),
+    queryKey: QUERY_KEYS.progress.summary({ from, to, allTime }),
     queryFn: async () => {
-      const res = await progressService.getSummary({ from, to })
+      const res = await progressService.getSummary({ from, to, allTime })
       return res?.data as ProgressSummary
     },
     enabled: options?.enabled ?? true,
@@ -38,5 +40,7 @@ export function useProgressSummary(
     staleTime: 0,
     refetchOnMount: 'always',
     retry: 1,
+    // Giữ số liệu cũ khi đổi kỳ để bộ lọc không biến mất trong lúc tải.
+    placeholderData: keepPreviousData,
   })
 }

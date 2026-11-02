@@ -29,5 +29,7 @@ public interface LessonMapper {
     @Mapping(target = "sections", ignore = true)
     LessonDetailResponse toLessonDetailResponse(Lesson lesson);
 
+    // orderIndex do LessonService xử lý (kẹp + đánh số lại) — mapper không được ghi đè giá trị thô từ request.
+    @Mapping(target = "orderIndex", ignore = true)
     void updateLessonFromRequest(LessonUpdateRequest request, @MappingTarget Lesson lesson);
 }

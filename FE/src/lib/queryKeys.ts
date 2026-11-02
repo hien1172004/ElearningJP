@@ -6,7 +6,13 @@ export const QUERY_KEYS = {
   me: ['me'] as const,
   course: {
     list: (params: Record<string, unknown>) => ['courses', 'list', params] as const,
+    detailAll: ['courses', 'detail'] as const,
     detail: (id: number | string) => ['courses', 'detail', id] as const,
+  },
+  enrollment: {
+    all: ['enrollments'] as const,
+    mine: (activeOnly: boolean) =>
+      ['enrollments', 'me', activeOnly ? 'active' : 'all'] as const,
   },
   lesson: {
     detail: (id: number | string) => ['lessons', 'detail', id] as const,
@@ -22,6 +28,10 @@ export const QUERY_KEYS = {
     items: (params: Record<string, unknown>) => ['srs', 'items', params] as const,
   },
   progress: {
+    all: ['progress'] as const,
+    goal: ['progress', 'goal'] as const,
+    summaryAll: ['progress', 'summary'] as const,
+    calendarAll: ['progress', 'calendar'] as const,
     summary: (params: Record<string, unknown>) =>
       ['progress', 'summary', params] as const,
     calendar: (month?: string) =>

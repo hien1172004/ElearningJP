@@ -1,5 +1,6 @@
 package com.jp.elearningjp.repository.gamification;
 
+import java.util.Collection;
 import com.jp.elearningjp.entity.gamification.Notification;
 import com.jp.elearningjp.shared.enums.NotificationType;
 import org.springframework.data.domain.Page;
@@ -56,6 +57,48 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
      * {@code @Transactional}. {@code clearAutomatically} để entity đã load trong
      * persistence context không còn giữ giá trị {@code read = false} cũ.</p>
      */
+    /**
+     * Chống spam like: user {@code actorId} đã từng tạo thông báo like cho đúng comment/reply này
+     * chưa (bỏ like rồi like lại không tạo thông báo mới). {@code replyId = -1} nghĩa là like comment.
+     */
+    @Query(value = """
+            SELECT EXISTS (
+                SELECT 1 FROM notifications n
+                WHERE n.user_id = :userId
+                  AND n.type = 'COMMUNITY_LIKE'
+                  AND n.deleted = false
+                  AND n.data_json ->> 'actorUserId' = CAST(:actorId AS text)
+                  AND n.data_json ->> 'commentId' = CAST(:commentId AS text)
+                  AND COALESCE(n.data_json ->> 'replyId', '-1') = CAST(:replyId AS text)
+            )
+            """, nativeQuery = true)
+    boolean existsCommunityLike(@Param("userId") Long userId,
+                                @Param("actorId") Long actorId,
+                                @Param("commentId") Long commentId,
+                                @Param("replyId") Long replyId);
+
+    /** Xoá mềm mọi thông báo cộng đồng trỏ tới 1 comment (comment đã bị xoá). */
+    @Modifying
+    @Query(value = """
+            UPDATE notifications
+            SET deleted = TRUE, deleted_at = :now, updated_at = :now
+            WHERE deleted = FALSE
+              AND type IN ('COMMUNITY_REPLY', 'COMMUNITY_LIKE', 'COMMUNITY_DISLIKE')
+              AND data_json ->> 'commentId' = CAST(:commentId AS text)
+            """, nativeQuery = true)
+    int softDeleteByCommentId(@Param("commentId") Long commentId, @Param("now") Instant now);
+
+    /** Xoá mềm mọi thông báo cộng đồng trỏ tới các reply (đã bị xoá). Id truyền dạng chuỗi để so với jsonb. */
+    @Modifying
+    @Query(value = """
+            UPDATE notifications
+            SET deleted = TRUE, deleted_at = :now, updated_at = :now
+            WHERE deleted = FALSE
+              AND type IN ('COMMUNITY_REPLY', 'COMMUNITY_LIKE', 'COMMUNITY_DISLIKE')
+              AND data_json ->> 'replyId' IN (:replyIds)
+            """, nativeQuery = true)
+    int softDeleteByReplyIds(@Param("replyIds") Collection<String> replyIds, @Param("now") Instant now);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Notification n SET n.read = true, n.updatedAt = :now " +
            "WHERE n.user.id = :userId AND n.read = false AND n.deleted = false")

@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleUpsertRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarItemCreateRequest;
@@ -49,6 +50,7 @@ class GrammarSectionItemServiceTest {
     @Mock LessonGrammarExampleRepository exampleRepository;
     @Mock GrammarPointRepository grammarPointRepository;
     @Mock LessonSectionMapper mapper;
+    @Mock CourseAccessGuard courseAccessGuard;
 
     @InjectMocks GrammarSectionItemService service;
 

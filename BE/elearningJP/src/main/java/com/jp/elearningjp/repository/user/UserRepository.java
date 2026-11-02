@@ -18,4 +18,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Batch fetch user displayName + avatarUrl theo danh sách ID. */
     @Query("SELECT u.id, u.fullName, u.avatarUrl FROM User u WHERE u.id IN :ids")
     List<Object[]> findDisplayInfosByIds(Collection<Long> ids);
+
+    /** User không được nhận thông báo nhắc nhở: không ACTIVE (bị khoá BANNED, INACTIVE) hoặc đã xoá. */
+    @Query("SELECT u.id FROM User u WHERE u.status <> com.jp.elearningjp.shared.enums.UserStatus.ACTIVE OR u.deleted = true")
+    List<Long> findIdsNotEligibleForNotifications();
 }

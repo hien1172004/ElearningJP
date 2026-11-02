@@ -55,6 +55,10 @@ public class UserProfile extends BaseEntity {
     @Column(name = "daily_study_time_minutes", nullable = false)
     private Integer dailyStudyTimeMinutes = 30;
 
+    /** Mục tiêu số từ mới mỗi tuần. NULL = user chưa chọn. */
+    @Column(name = "weekly_goal_words")
+    private Integer weeklyGoalWords;
+
     @Builder.Default
     @Column(name = "timezone", nullable = false, length = 50)
     private String timezone = "Asia/Ho_Chi_Minh";

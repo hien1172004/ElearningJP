@@ -28,12 +28,12 @@ import type {
 /**
  * Danh sách bình luận của 1 target.
  *
- * @param page trang hiện tại (0-based)
+ * @param page trang hiện tại (bắt đầu từ 1)
  */
 export function useComments(
   targetType: CommentTargetType,
   targetId: number | undefined | null,
-  page = 0,
+  page = 1,
   options?: { enabled?: boolean; size?: number },
 ) {
   const safeId = targetId ?? 0
@@ -70,7 +70,7 @@ export function useComments(
  */
 export function useCommentReplies(
   commentId: number | undefined | null,
-  page = 0,
+  page = 1,
   options?: { enabled?: boolean },
 ) {
   const safeId = commentId ?? 0

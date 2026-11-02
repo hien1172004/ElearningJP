@@ -107,13 +107,15 @@ export const LessonViewerPage: React.FC = () => {
     }
   }, [course, lesson, cId, lId, params.courseSlug, params.lessonSlug, qCourseId, qLessonId, navigate])
 
-  // Tự động start khi đăng nhập + không có lỗi
+  // Tự động start khi đã đăng ký khóa + không có lỗi. Giáo viên/admin xem bài (chưa đăng ký)
+  // không gọi /start — BE chỉ ghi tiến độ cho học viên nên sẽ trả 403.
+  const isEnrolled = course?.isEnrolled ?? false
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (lId && isAuthenticated && !isError) {
+    if (lId && isAuthenticated && isEnrolled && !isError) {
       startLesson.mutate()
     }
-  }, [lId, isAuthenticated, isError])
+  }, [lId, isAuthenticated, isEnrolled, isError])
 
   // Build danh sách "trang" theo section.orderIndex (chỉ giữ section có items)
   const navItems: NavItem[] = useMemo(() => {

@@ -112,7 +112,8 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         LessonGrammarItem item = LessonGrammarItem.builder()
                 .section(section)
                 .grammar(grammar)
-                .orderIndex(ordered.size() + 1) // tạm — sẽ gán lại chính xác khi persist
+                // Tạm MAX+1 (không dùng size+1): xoá mềm để lại lỗ hổng, [1,3] có size+1 = 3 sẽ trùng UNIQUE.
+                .orderIndex(OrderIndexResolver.maxOrderIndex(ordered, LessonGrammarItem::getOrderIndex) + 1)
                 .customMeaning(resolvedMeaning)
                 .customStructure(resolvedStructure)
                 .note(request.getNote())
@@ -153,6 +154,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);
         }
+        courseAccessGuard.requireSectionContentAccess(item.getSection());
         return lessonSectionMapper.toGrammarItemResponse(item);
     }
 
