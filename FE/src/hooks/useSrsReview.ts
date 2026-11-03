@@ -26,8 +26,8 @@ export function useSrsReview() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.srs.stats })
       void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.srs.forecast })
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.srs.due })
-      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.srs.items })
+      void queryClient.invalidateQueries({ queryKey: ['srs', 'due'] })
+      void queryClient.invalidateQueries({ queryKey: ['srs', 'items'] })
     },
   })
 }
