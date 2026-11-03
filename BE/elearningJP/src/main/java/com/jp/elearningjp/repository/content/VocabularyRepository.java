@@ -29,6 +29,8 @@ public interface VocabularyRepository extends JpaRepository<Vocabulary, Long> {
 
     Optional<Vocabulary> findByWordAndDeletedFalse(String word);
 
+    Optional<Vocabulary> findFirstByWordAndDeletedFalseOrderBySenseNoAsc(String word);
+
     Optional<Vocabulary> findByHiraganaAndDeletedFalse(String hiragana);
 
     /**

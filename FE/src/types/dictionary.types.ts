@@ -81,10 +81,35 @@ export interface KanjiRelatedWord {
   reading?: string
 }
 
+export interface KanjiComponentDetail {
+  w: string
+  h?: string | null
+  d?: string | null
+}
+
+export interface KanjiGraphNode {
+  id: string
+  word: string
+  hanViet?: string
+  detail?: string
+}
+
+export interface KanjiGraphLink {
+  source: string
+  target: string
+}
+
+export interface KanjiCompGraph {
+  nodes?: KanjiGraphNode[]
+  links?: KanjiGraphLink[]
+}
+
 export interface KanjiDetail extends KanjiSummary {
   meaningEn?: string
   romaji?: string
   strokes: CharacterStroke[]
+  compDetails?: KanjiComponentDetail[]
+  compGraph?: KanjiCompGraph
   wordsByReading?: Record<string, KanjiRelatedWord[]>
   allRelatedWords?: KanjiRelatedWord[]
 }

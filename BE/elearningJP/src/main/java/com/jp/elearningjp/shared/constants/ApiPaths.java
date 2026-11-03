@@ -249,4 +249,49 @@ public final class ApiPaths {
         public static final String BASE = "/ai/scenarios";
         public static final String BY_ID = "/{id}";
     }
+
+    public static final class NotebookGroup {
+        public static final String BASE = "/notebook-groups";
+        public static final String BY_ID = "/{id}";
+        public static final String WITH_NOTEBOOKS = "/with-notebooks";
+    }
+
+    public static final class Notebook {
+        public static final String BASE = "/notebooks";
+        public static final String BY_ID = "/{id}";
+        public static final String UNGROUPED = "/ungrouped";
+        public static final String BY_GROUP = "/group/{groupId}";
+        public static final String SEARCH = "/search";
+        public static final String MOVE = "/{id}/move";
+
+        // Words & Import/Export
+        public static final String WORDS = "/{id}/words";
+        public static final String WORD_BY_ID = "/{id}/words/{wordId}";
+        public static final String WORDS_BATCH = "/{id}/words/batch";
+        public static final String WORDS_SHUFFLE = "/{id}/words/shuffle";
+        public static final String WORDS_IMPORT = "/{id}/words/import";
+        public static final String EXPORT_EXCEL = "/{id}/export/excel";
+        public static final String EXPORT_KANJI_PDF = "/{id}/export/kanji-pdf";
+        public static final String EXPORT_KANJI_PDF_PREVIEW = "/{id}/export/kanji-pdf/preview";
+        public static final String EXPORT_KANJI_PDF_META = "/{id}/export/kanji-pdf/meta";
+        public static final String STATS_OVERVIEW = "/stats/overview";
+
+        // Review SRS & Quiz
+        public static final String REVIEW_ITEMS = "/{id}/review";
+        public static final String REVIEW_SUBMIT = "/{id}/review/submit";
+
+        // Sharing & Cloning
+        public static final String SHARE = "/{id}/share";
+        public static final String SHARE_BY_CODE = "/share/{shareCode}";
+        public static final String SHARE_TOGGLE = "/{id}/share/toggle";
+        public static final String PUBLIC_TOGGLE = "/{id}/public/toggle";
+        public static final String CLONE_BY_CODE = "/clone";
+
+        // Community Exploration
+        public static final String EXPLORE = "/explore";
+        public static final String EXPLORE_BY_ID = "/explore/{id}";
+        public static final String EXPLORE_LIKE = "/explore/{id}/like";
+        public static final String EXPLORE_FAVORITES = "/explore/favorites";
+        public static final String EXPLORE_RECENT = "/explore/recent";
+    }
 }

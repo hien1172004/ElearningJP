@@ -1,5 +1,5 @@
 import React from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar, TopBar } from '@/components/layout'
 import { AuthModal } from '@/components/auth'
 import { useSidebarStore } from '@/stores'
@@ -14,6 +14,7 @@ import { cn } from '@/utils/cn'
  */
 export const MainLayout: React.FC = () => {
   const collapsed = useSidebarStore((s) => s.collapsed)
+  const location = useLocation()
 
   // Mount 1 lần ở cấp layout: mở kết nối STOMP để nhận thông báo real-time.
   // Hook tự bỏ qua khi chưa đăng nhập và deactivate khi logout.
@@ -21,6 +22,10 @@ export const MainLayout: React.FC = () => {
 
   // Tự động đăng ký Web Push khi đã đăng nhập (guard bằng isAuthenticated bên trong).
   useWebPush()
+
+  // Không hiển thị footer trên trang ôn tập sổ tay (Flashcard, Quizz, Speaking)
+  const hideFooter =
+    location.pathname.includes('/notebooks/') && location.pathname.includes('/review')
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 font-sans">
@@ -40,15 +45,24 @@ export const MainLayout: React.FC = () => {
           collapsed ? 'md:ml-16' : 'md:ml-60',
         )}
       >
-        <main className="flex-1 w-full max-w-[1650px] mx-auto px-3 sm:px-4 lg:px-5 py-5">
+        <main
+          className={cn(
+            'flex-1 w-full',
+            hideFooter
+              ? 'max-w-[1650px] mx-auto px-3 sm:px-4 lg:px-5 py-2'
+              : 'max-w-[1650px] mx-auto px-3 sm:px-4 lg:px-5 py-5',
+          )}
+        >
           <Outlet />
         </main>
 
-        <footer className="bg-white border-t border-gray-200">
-          <div className="max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-5 py-6 text-center text-sm text-gray-500">
-            © 2026 ElearningJP - Hệ thống học tiếng Nhật trực tuyến thông minh (SRS &amp; Mazii Dictionary)
-          </div>
-        </footer>
+        {!hideFooter && (
+          <footer className="bg-white border-t border-gray-200">
+            <div className="max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-5 py-6 text-center text-sm text-gray-500">
+              © 2026 ElearningJP - Hệ thống học tiếng Nhật trực tuyến thông minh (SRS &amp; Mazii Dictionary)
+            </div>
+          </footer>
+        )}
       </div>
 
       {/* Mount AuthModal 1 lần ở layout root để mở từ bất kỳ đâu */}

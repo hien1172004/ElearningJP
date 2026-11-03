@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, PenTool } from 'lucide-react'
 import type { CharacterStroke } from '@/types'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
@@ -48,12 +48,20 @@ interface KanjiStrokeViewerProps {
   character: string
   strokes: CharacterStroke[]
   size?: number
+  meaningVi?: string
+  hanViet?: string
+  onPractice?: () => void
+  showPracticeButton?: boolean
 }
 
 export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
   character,
   strokes,
   size = 200,
+  meaningVi,
+  hanViet,
+  onPractice,
+  showPracticeButton = false,
 }) => {
   const [currentStrokeIndex, setCurrentStrokeIndex] = useState<number>(strokes.length)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
@@ -173,7 +181,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
             {strokes.slice(0, currentStrokeIndex).map((stroke, index) => {
               const strokeColor = useMultiColors
                 ? STROKE_COLORS[index % STROKE_COLORS.length]
-                : index === currentStrokeIndex - 1
+                : (isPlaying || currentStrokeIndex < strokes.length) && index === currentStrokeIndex - 1
                   ? '#dc2626'
                   : '#1e293b'
 
@@ -335,10 +343,10 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
           </div>
         )}
 
-        {strokes && strokes.length > 0 && (
+        {showPracticeButton && strokes && strokes.length > 0 && (
           <button
             type="button"
-            onClick={() => setIsPracticeOpen(true)}
+            onClick={() => (onPractice ? onPractice() : setIsPracticeOpen(true))}
             className="mt-2 w-full py-2 px-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-md text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
           >
             <PenTool className="w-3.5 h-3.5 text-amber-300" />
@@ -347,12 +355,16 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
         )}
       </div>
 
-      <KanjiPracticeModal
-        isOpen={isPracticeOpen}
-        onClose={() => setIsPracticeOpen(false)}
-        character={character}
-        strokes={strokes}
-      />
+      {!onPractice && (
+        <KanjiPracticeModal
+          isOpen={isPracticeOpen}
+          onClose={() => setIsPracticeOpen(false)}
+          character={character}
+          meaningVi={meaningVi}
+          hanViet={hanViet}
+          strokes={strokes}
+        />
+      )}
     </div>
   )
 }

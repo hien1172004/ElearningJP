@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { X, Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
+import { Tooltip } from 'antd'
+import { X, Volume2, BookmarkPlus, Check, Sparkles, PenTool, Plus, Network } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { speakJapanese } from '@/utils'
 import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
+import { KanjiBreakdownModal } from './KanjiBreakdownModal'
+import { AddWordToNotebookModal, type AddWordTargetData } from '@/components/notebook/AddWordToNotebookModal'
 
 interface KanjiDetailModalProps {
   character: string | null
@@ -23,6 +26,8 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
   const { isSaved } = useSrsSavedIds()
   const isAddedToSrs = isSaved('KANJI', detail?.id)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState<boolean>(false)
+  const [isAddToNotebookOpen, setIsAddToNotebookOpen] = useState<boolean>(false)
   const addToSrs = useAddToSrs()
 
   useEffect(() => {
@@ -62,6 +67,20 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
     }
   }
 
+  const kanjiWordData: AddWordTargetData = detail
+    ? {
+        word: detail.character,
+        reading: detail.kunyomi?.[0]?.replace(/\./g, '') || detail.onyomi?.[0] || '',
+        sinoVietnamese: detail.hanViet?.split(',')?.[0]?.trim()?.toUpperCase() || '',
+        meaning: detail.meaningVi || '',
+        partOfSpeech: 'Chữ Hán',
+      }
+    : {
+        word: character || '',
+        reading: '',
+        meaning: '',
+      }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
       <div className="bg-white rounded-md shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -97,15 +116,26 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
             <button
               type="button"
               onClick={handleAddToSrs}
-              disabled={isAddedToSrs}
-              className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              disabled={isAddedToSrs || addToSrs.isPending}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
                 isAddedToSrs
-                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                  : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
               }`}
+              title={isAddedToSrs ? 'Đã thêm vào SRS' : 'Thêm vào SRS để ôn tập'}
             >
               {isAddedToSrs ? <Check className="w-4 h-4" /> : <BookmarkPlus className="w-4 h-4" />}
-              {isAddedToSrs ? 'Đã lưu SRS' : 'Lưu vào SRS'}
+              <span>{isAddedToSrs ? 'Đã lưu SRS' : 'Lưu SRS'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsAddToNotebookOpen(true)}
+              className="px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 cursor-pointer"
+              title="Thêm vào sổ tay"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Sổ tay</span>
             </button>
 
             <button
@@ -134,15 +164,11 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                     character={detail.character}
                     strokes={detail.strokes || []}
                     size={170}
+                    meaningVi={detail.meaningVi}
+                    hanViet={detail.hanViet}
+                    onPractice={() => setIsPracticeOpen(true)}
+                    showPracticeButton={false}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setIsPracticeOpen(true)}
-                    className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-md shadow-xs hover:shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <PenTool className="w-3.5 h-3.5" />
-                    <span>Luyện viết & Chấm điểm AI</span>
-                  </button>
                 </div>
 
                 {/* Cột phải: Thông số âm On / Kun / Số nét */}
@@ -216,6 +242,65 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Bộ & Kanji Breakdown */}
+                  {((detail.compDetails && detail.compDetails.length > 0) || (detail.compGraph?.nodes && detail.compGraph.nodes.length > 0)) && (
+                    <div className="pt-2 border-t border-indigo-100">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                          Bộ
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsBreakdownOpen(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+                          title="Xem sơ đồ phân rã Kanji Breakdown"
+                        >
+                          <Network className="w-3.5 h-3.5" />
+                          <span>Kanji Breakdown</span>
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {detail.compDetails?.map((comp, idx) => {
+                          const compTooltip = (
+                            <div className="max-w-xs text-left p-1 text-xs leading-relaxed space-y-1">
+                              <div className="font-bold text-sm text-amber-300 flex items-center gap-1.5">
+                                <span>[{comp.w}]</span>
+                                {comp.h && <span>[{comp.h}]</span>}
+                              </div>
+                              {comp.d ? (
+                                <div className="text-gray-100 whitespace-pre-line text-[11px] leading-5 max-h-40 overflow-y-auto pr-1">
+                                  {comp.d}
+                                </div>
+                              ) : (
+                                <div className="text-gray-300 text-[11px]">
+                                  {comp.h ? `Thành phần Hán tự: ${comp.h}` : 'Bộ thủ / nét chữ'}
+                                </div>
+                              )}
+                            </div>
+                          )
+                          return (
+                            <Tooltip
+                              key={idx}
+                              title={compTooltip}
+                              placement="top"
+                              color="#1e293b"
+                              overlayInnerStyle={{ padding: '8px 12px', borderRadius: '8px' }}
+                            >
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-indigo-50 hover:border-indigo-300 text-gray-800 rounded border border-gray-200/90 text-xs shadow-2xs cursor-pointer transition">
+                                <span className="font-serif font-bold text-base text-gray-900 leading-none">{comp.w}</span>
+                                {comp.h && (
+                                  <span className="text-[11px] font-extrabold text-amber-700 uppercase tracking-wide">
+                                    {comp.h}
+                                  </span>
+                                )}
+                              </span>
+                            </Tooltip>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -288,14 +373,32 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
       </div>
 
       {detail && (
-        <KanjiPracticeModal
-          isOpen={isPracticeOpen}
-          onClose={() => setIsPracticeOpen(false)}
-          character={detail.character}
-          meaningVi={detail.meaningVi}
-          hanViet={detail.hanViet}
-          strokes={detail.strokes || []}
-        />
+        <>
+          <KanjiPracticeModal
+            isOpen={isPracticeOpen}
+            onClose={() => setIsPracticeOpen(false)}
+            character={detail.character}
+            meaningVi={detail.meaningVi}
+            hanViet={detail.hanViet}
+            strokes={detail.strokes || []}
+          />
+
+          <KanjiBreakdownModal
+            open={isBreakdownOpen}
+            character={detail.character}
+            hanViet={detail.hanViet}
+            meaningVi={detail.meaningVi}
+            compGraph={detail.compGraph}
+            compDetails={detail.compDetails}
+            onClose={() => setIsBreakdownOpen(false)}
+          />
+
+          <AddWordToNotebookModal
+            open={isAddToNotebookOpen}
+            wordData={kanjiWordData}
+            onClose={() => setIsAddToNotebookOpen(false)}
+          />
+        </>
       )}
     </div>
   )

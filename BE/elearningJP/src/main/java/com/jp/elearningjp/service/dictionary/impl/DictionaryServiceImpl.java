@@ -220,6 +220,8 @@ public class DictionaryServiceImpl implements DictionaryService {
                 .romaji(wc.getRomaji())
                 .jlptLevel(wc.getJlptLevel())
                 .radicals(wc.getRadicals())
+                .compDetails(wc.getCompDetails())
+                .compGraph(wc.getCompGraph())
                 .strokes(strokes)
                 .wordsByReading(wordsByReading)
                 .allRelatedWords(limitedAllRelatedWords)

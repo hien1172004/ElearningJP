@@ -25,6 +25,9 @@ public class KanjiDetailResponse {
     JlptLevel jlptLevel;
     List<String> radicals;
 
+    List<Map<String, Object>> compDetails;
+    Map<String, Object> compGraph;
+
     List<CharacterStrokeResponse> strokes;
 
     // Danh sách từ vựng liên quan gom nhóm theo âm đọc (Mazii-style)

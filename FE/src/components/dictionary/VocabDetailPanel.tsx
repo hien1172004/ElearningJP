@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Volume2, BookmarkPlus, Check, BookOpen, Sparkles } from 'lucide-react'
+import { Volume2, BookmarkPlus, Check, BookOpen, Sparkles, Plus } from 'lucide-react'
 import type { VocabularyDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
 import { useAddToSrs, useSrsSavedIds } from '@/hooks'
+import { AddWordToNotebookModal, type AddWordTargetData } from '@/components/notebook/AddWordToNotebookModal'
 
 interface VocabDetailPanelProps {
   vocabId: number
@@ -16,6 +17,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
   const { isSaved } = useSrsSavedIds()
   const isAddedToSrs = isSaved('VOCABULARY', vocabId)
   const addToSrs = useAddToSrs()
+  const [isAddToNotebookOpen, setIsAddToNotebookOpen] = useState<boolean>(false)
 
   useEffect(() => {
     let isMounted = true
@@ -71,6 +73,15 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
     }
   }
 
+  const vocabWordData: AddWordTargetData = {
+    word: detail.word || detail.hiragana,
+    reading: detail.hiragana || '',
+    sinoVietnamese: detail.hanViet || '',
+    meaning: detail.meaningVi || '',
+    partOfSpeech: detail.partOfSpeech || 'Từ vựng',
+    audioUrl: detail.audioUrl,
+  }
+
   return (
     <div className="bg-white rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
       {/* 1. Header từ vựng kiểu Mazii: Từ to bản, Furigana, Hán-Việt, Nút nghe, Nút lưu */}
@@ -111,9 +122,6 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
           {/* Nghĩa tiếng Việt chính */}
           <div className="pt-1">
             <p className="text-xl font-bold text-indigo-950">{detail.meaningVi}</p>
-            {detail.meaningEn && (
-              <p className="text-sm text-gray-500 mt-0.5">Tiếng Anh: {detail.meaningEn}</p>
-            )}
           </div>
         </div>
 
@@ -132,15 +140,26 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
           <button
             type="button"
             onClick={handleAddToSrs}
-            disabled={isAddedToSrs}
-            className={`px-4 py-3.5 rounded-md text-sm font-semibold flex items-center gap-2 transition ${
+            disabled={isAddedToSrs || addToSrs.isPending}
+            className={`p-3.5 rounded-md hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm ${
               isAddedToSrs
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
             }`}
+            title={isAddedToSrs ? 'Đã thêm vào SRS' : 'Thêm vào SRS để ôn tập'}
           >
-            {isAddedToSrs ? <Check className="w-5 h-5" /> : <BookmarkPlus className="w-5 h-5" />}
-            <span>{isAddedToSrs ? 'Đã lưu SRS' : 'Lưu SRS'}</span>
+            {isAddedToSrs ? <Check className="w-5 h-5 text-emerald-600" /> : <BookmarkPlus className="w-5 h-5 text-rose-600" />}
+            <span className="hidden sm:inline">{isAddedToSrs ? 'Đã lưu SRS' : 'Lưu SRS'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAddToNotebookOpen(true)}
+            className="p-3.5 rounded-md bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm cursor-pointer"
+            title="Thêm từ vựng vào sổ tay"
+          >
+            <Plus className="w-5 h-5 text-gray-700" />
+            <span className="hidden sm:inline">Sổ tay</span>
           </button>
         </div>
       </div>
@@ -273,6 +292,12 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
           </div>
         </div>
       )}
+
+      <AddWordToNotebookModal
+        open={isAddToNotebookOpen}
+        wordData={vocabWordData}
+        onClose={() => setIsAddToNotebookOpen(false)}
+      />
     </div>
   )
 }
