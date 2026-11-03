@@ -29,6 +29,11 @@ import {
   ProfilePage,
   SrsReviewPage,
   SrsDeckPage,
+  NotebookListPage,
+  NotebookDetailPage,
+  NotebookReviewPage,
+  NotebookExplorePage,
+  NotebookShareRedirectPage,
 } from '@/pages'
 import { AuthGatePage } from '@/pages/auth/AuthGatePage'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -98,6 +103,27 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <ProfilePage /> },
+    ],
+  },
+
+  // ====================================================================
+  // Protected: Sổ tay từ vựng (with MainLayout)
+  // ====================================================================
+  {
+    path: '/notebooks',
+    element: (
+      <ProtectedRoute>
+        <WithMainLayout>
+          <ProtectedOutlet />
+        </WithMainLayout>
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <NotebookListPage /> },
+      { path: 'explore', element: <NotebookExplorePage /> },
+      { path: 'share/:shareCode', element: <NotebookShareRedirectPage /> },
+      { path: ':id', element: <NotebookDetailPage /> },
+      { path: ':id/review', element: <NotebookReviewPage /> },
     ],
   },
 

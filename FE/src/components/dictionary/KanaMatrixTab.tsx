@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Volume2, Sparkles, X } from 'lucide-react'
 import type { KanaMatrix, KanaCharacter, CharacterType } from '@/types'
 import { dictionaryService } from '@/services'
@@ -260,6 +260,7 @@ export const KanaMatrixTab: React.FC = () => {
                 character={selectedKana.character}
                 strokes={selectedKana.strokes || []}
                 size={160}
+                showPracticeButton={false}
               />
             </div>
 

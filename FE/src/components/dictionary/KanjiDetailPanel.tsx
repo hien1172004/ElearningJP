@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
+import { Tooltip } from 'antd'
+import { Volume2, BookmarkPlus, Check, Sparkles, PenTool, Plus, Network } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
 import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
+import { KanjiBreakdownModal } from './KanjiBreakdownModal'
+import { AddWordToNotebookModal, type AddWordTargetData } from '@/components/notebook/AddWordToNotebookModal'
 
 interface KanjiDetailPanelProps {
   character: string
@@ -27,7 +30,9 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const { isSaved } = useSrsSavedIds()
   const isAddedToSrs = isSaved('KANJI', detail?.id)
+  const [isAddToNotebookOpen, setIsAddToNotebookOpen] = useState<boolean>(false)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState<boolean>(false)
   const [expandedReadings, setExpandedReadings] = useState<Record<string, boolean>>({})
   const addToSrs = useAddToSrs()
 
@@ -87,68 +92,88 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
     }
   }
 
+  const kanjiWordData: AddWordTargetData = {
+    word: detail.character,
+    reading: detail.kunyomi?.[0]?.replace(/\./g, '') || detail.onyomi?.[0] || '',
+    sinoVietnamese: detail.hanViet?.split(',')?.[0]?.trim()?.toUpperCase() || '',
+    meaning: detail.meaningVi || '',
+    partOfSpeech: 'Chữ Hán',
+  }
+
   return (
     <div className="bg-white rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
       {/* 1. Header Chữ Hán */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-gray-100 pb-6">
-        <div className="space-y-2">
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-gray-100 pb-5">
+        <div className="space-y-2 flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {detail.jlptLevel && (
-              <span className="px-2.5 py-1 text-xs font-bold rounded bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+              <span className="px-2.5 py-0.5 text-xs font-bold rounded bg-indigo-50 text-indigo-700 border border-indigo-200/80">
                 JLPT {detail.jlptLevel}
               </span>
             )}
             {detail.hanViet && (
-              <span className="px-3 py-1 text-xs font-extrabold rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
+              <span className="px-3 py-0.5 text-xs font-extrabold rounded bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wide">
                 Hán Việt: {detail.hanViet}
               </span>
             )}
           </div>
 
-          <div className="flex items-baseline gap-4">
-            <h2 className="text-6xl font-black text-gray-900 font-serif">{detail.character}</h2>
-            <div>
-              <p className="text-2xl font-bold text-indigo-950">{detail.meaningVi}</p>
-              {detail.meaningEn && (
-                <p className="text-sm text-gray-500">Tiếng Anh: {detail.meaningEn}</p>
-              )}
+          <div className="flex items-center gap-4 flex-wrap">
+            <h2 className="text-5xl md:text-6xl font-black text-gray-900 font-serif shrink-0 m-0 leading-none">
+              {detail.character}
+            </h2>
+            <div className="flex-1 min-w-[140px]">
+              <p className="text-xl md:text-2xl font-bold text-indigo-950 m-0 break-words leading-snug">
+                {detail.meaningVi}
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-start">
+        <div className="flex items-center gap-2 shrink-0 self-start flex-wrap">
           <button
             type="button"
             onClick={() => playSmartAudio({ text: detail.character })}
-            className="p-3.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs cursor-pointer"
             title="Nghe phát âm"
           >
-            <Volume2 className="w-5 h-5" />
-            <span className="hidden sm:inline">Phát âm</span>
+            <Volume2 className="w-4 h-4" />
+            <span>Phát âm</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsPracticeOpen(true)}
-            className="p-3.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs cursor-pointer"
             title="Luyện viết & Chấm điểm nét AI"
           >
-            <PenTool className="w-5 h-5" />
-            <span className="hidden sm:inline">Luyện viết</span>
+            <PenTool className="w-4 h-4" />
+            <span>Luyện viết</span>
           </button>
 
           <button
             type="button"
             onClick={handleAddToSrs}
-            disabled={isAddedToSrs}
-            className={`px-4 py-3.5 rounded-md text-sm font-semibold flex items-center gap-2 transition cursor-pointer ${
+            disabled={isAddedToSrs || addToSrs.isPending}
+            className={`px-3.5 py-2 rounded-xl hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs ${
               isAddedToSrs
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
             }`}
+            title={isAddedToSrs ? 'Đã thêm vào SRS' : 'Thêm vào SRS để ôn tập'}
           >
-            {isAddedToSrs ? <Check className="w-5 h-5" /> : <BookmarkPlus className="w-5 h-5" />}
+            {isAddedToSrs ? <Check className="w-4 h-4 text-emerald-600" /> : <BookmarkPlus className="w-4 h-4 text-rose-600" />}
             <span>{isAddedToSrs ? 'Đã lưu SRS' : 'Lưu SRS'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAddToNotebookOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs cursor-pointer"
+            title="Thêm chữ Hán vào sổ tay"
+          >
+            <Plus className="w-4 h-4 text-gray-700" />
+            <span>Sổ tay</span>
           </button>
         </div>
       </div>
@@ -160,15 +185,11 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
             character={detail.character}
             strokes={detail.strokes || []}
             size={180}
+            meaningVi={detail.meaningVi}
+            hanViet={detail.hanViet}
+            onPractice={() => setIsPracticeOpen(true)}
+            showPracticeButton={false}
           />
-          <button
-            type="button"
-            onClick={() => setIsPracticeOpen(true)}
-            className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-md shadow-xs hover:shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
-          >
-            <PenTool className="w-3.5 h-3.5" />
-            <span>Thực hành viết & Chấm điểm AI</span>
-          </button>
         </div>
 
         <div className="space-y-4 text-sm justify-center flex flex-col">
@@ -234,6 +255,65 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
               )}
             </div>
           </div>
+
+          {/* Bộ & Kanji Breakdown (tương tự giao diện Mazii) */}
+          {((detail.compDetails && detail.compDetails.length > 0) || (detail.compGraph?.nodes && detail.compGraph.nodes.length > 0)) && (
+            <div className="pt-2 border-t border-indigo-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Bộ
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsBreakdownOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+                  title="Xem sơ đồ phân rã Kanji Breakdown"
+                >
+                  <Network className="w-3.5 h-3.5" />
+                  <span>Kanji Breakdown</span>
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {detail.compDetails?.map((comp, idx) => {
+                  const compTooltip = (
+                    <div className="max-w-xs text-left p-1 text-xs leading-relaxed space-y-1">
+                      <div className="font-bold text-sm text-amber-300 flex items-center gap-1.5">
+                        <span>[{comp.w}]</span>
+                        {comp.h && <span>[{comp.h}]</span>}
+                      </div>
+                      {comp.d ? (
+                        <div className="text-gray-100 whitespace-pre-line text-[11px] leading-5 max-h-40 overflow-y-auto pr-1">
+                          {comp.d}
+                        </div>
+                      ) : (
+                        <div className="text-gray-300 text-[11px]">
+                          {comp.h ? `Thành phần Hán tự: ${comp.h}` : 'Bộ thủ / nét chữ'}
+                        </div>
+                      )}
+                    </div>
+                  )
+                  return (
+                    <Tooltip
+                      key={idx}
+                      title={compTooltip}
+                      placement="top"
+                      color="#1e293b"
+                      overlayInnerStyle={{ padding: '8px 12px', borderRadius: '8px' }}
+                    >
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-indigo-50 hover:border-indigo-300 text-gray-800 rounded border border-gray-200/90 text-xs shadow-2xs cursor-pointer transition">
+                        <span className="font-serif font-bold text-base text-gray-900 leading-none">{comp.w}</span>
+                        {comp.h && (
+                          <span className="text-[11px] font-extrabold text-amber-700 uppercase tracking-wide">
+                            {comp.h}
+                          </span>
+                        )}
+                      </span>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -329,6 +409,22 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
         meaningVi={detail.meaningVi}
         hanViet={detail.hanViet}
         strokes={detail.strokes || []}
+      />
+
+      <KanjiBreakdownModal
+        open={isBreakdownOpen}
+        character={detail.character}
+        hanViet={detail.hanViet}
+        meaningVi={detail.meaningVi}
+        compGraph={detail.compGraph}
+        compDetails={detail.compDetails}
+        onClose={() => setIsBreakdownOpen(false)}
+      />
+
+      <AddWordToNotebookModal
+        open={isAddToNotebookOpen}
+        wordData={kanjiWordData}
+        onClose={() => setIsAddToNotebookOpen(false)}
       />
     </div>
   )

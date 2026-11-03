@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { BookmarkPlus, Check, ChevronDown, ChevronUp, BookOpen, Volume2 } from 'lucide-react'
+import { BookmarkPlus, Check, ChevronDown, ChevronUp, BookOpen, Volume2, Plus } from 'lucide-react'
 import type { GrammarSummary, GrammarDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { speakJapanese } from '@/utils'
 import { useAddToSrs, useSrsSavedIds } from '@/hooks'
+import { AddWordToNotebookModal, type AddWordTargetData } from '@/components/notebook/AddWordToNotebookModal'
 
 interface GrammarCardProps {
   grammar: GrammarSummary
@@ -16,6 +17,7 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
   const { isSaved } = useSrsSavedIds()
   const isAddedToSrs = isSaved('GRAMMAR', grammar.id)
   const addToSrs = useAddToSrs()
+  const [isAddToNotebookOpen, setIsAddToNotebookOpen] = useState<boolean>(false)
 
   const handleToggleExpand = async () => {
     if (!isExpanded && !detail) {
@@ -44,6 +46,12 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
     }
   }
 
+  const grammarWordData: AddWordTargetData = {
+    word: grammar.title,
+    reading: grammar.structure || '',
+    meaning: grammar.meaningVi || '',
+    partOfSpeech: 'Ngữ pháp',
+  }
   // Parse examples json nếu có
   const parsedExamples: Array<{ jp?: string; vi?: string }> = (() => {
     if (!detail?.examplesJson) return []
@@ -86,21 +94,35 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
           <button
             type="button"
             onClick={handleAddToSrs}
-            disabled={isAddedToSrs}
+            disabled={isAddedToSrs || addToSrs.isPending}
             className={`px-3 py-2 rounded-md text-xs font-semibold flex items-center gap-1.5 transition ${
               isAddedToSrs
-                ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                : 'bg-gray-100 hover:bg-indigo-600 hover:text-white text-gray-700'
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
+                : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
             }`}
+            title={isAddedToSrs ? 'Đã thêm vào SRS' : 'Thêm vào SRS để ôn tập'}
           >
             {isAddedToSrs ? <Check className="w-4 h-4" /> : <BookmarkPlus className="w-4 h-4" />}
-            {isAddedToSrs ? 'Đã lưu SRS' : 'Thêm SRS'}
+            <span>{isAddedToSrs ? 'Đã lưu SRS' : 'Lưu SRS'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsAddToNotebookOpen(true)
+            }}
+            className="px-3 py-2 rounded-md text-xs font-semibold flex items-center gap-1.5 transition bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 cursor-pointer"
+            title="Thêm vào sổ tay"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Sổ tay</span>
           </button>
 
           <button
             type="button"
             onClick={handleToggleExpand}
-            className="p-2.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            className="p-2.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition cursor-pointer"
             title={isExpanded ? 'Thu gọn' : 'Xem chi tiết & ví dụ'}
           >
             {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -166,6 +188,12 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
           )}
         </div>
       )}
+
+      <AddWordToNotebookModal
+        open={isAddToNotebookOpen}
+        wordData={grammarWordData}
+        onClose={() => setIsAddToNotebookOpen(false)}
+      />
     </div>
   )
 }

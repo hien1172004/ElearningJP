@@ -17,3 +17,4 @@ export type {
   UpdateProfileRequest,
   ChangePasswordRequest,
 } from './user.types'
+export type * from './notebook.types'

@@ -15,12 +15,15 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 import io.hypersistence.utils.hibernate.type.array.ListArrayType;
 
 @Entity
@@ -67,6 +70,14 @@ public class WritingCharacter extends SoftDeletableEntity {
     @Type(ListArrayType.class)
     @Column(name = "radicals", columnDefinition = "text[]")
     private List<String> radicals;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "comp_details_json", columnDefinition = "jsonb")
+    private List<Map<String, Object>> compDetails;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "comp_graph_json", columnDefinition = "jsonb")
+    private Map<String, Object> compGraph;
 
     @Builder.Default
     @Column(name = "is_active", nullable = false)

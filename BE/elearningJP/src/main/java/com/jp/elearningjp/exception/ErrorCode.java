@@ -126,7 +126,21 @@ public enum ErrorCode {
     // NOTIFICATION MODULE (6100 - 6199)
     NOTIFICATION_NOT_FOUND(6100, "Notification not found", HttpStatus.NOT_FOUND),
     NOTIFICATION_FORBIDDEN(6101, "You don't have permission to access this notification", HttpStatus.FORBIDDEN),
-    ;
+    
+
+    // NOTEBOOK MODULE (7000 - 7099)
+    NOTEBOOK_NOT_FOUND(7000, "Notebook not found", HttpStatus.NOT_FOUND),
+    NOTEBOOK_FORBIDDEN(7001, "You do not have permission to access this notebook", HttpStatus.FORBIDDEN),
+    NOTEBOOK_GROUP_NOT_FOUND(7002, "Notebook group not found", HttpStatus.NOT_FOUND),
+    NOTEBOOK_GROUP_NAME_EXISTED(7003, "Notebook group name already exists", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_SHARE_CODE_NOT_FOUND(7004, "Share code not found or sharing is disabled", HttpStatus.NOT_FOUND),
+    NOTEBOOK_WORD_NOT_FOUND(7005, "Notebook word not found", HttpStatus.NOT_FOUND),
+    NOTEBOOK_EXCEL_ROW_LIMIT_EXCEEDED(7006, "Excel file exceeds maximum 500 rows limit", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_EXCEL_EMPTY_FILE(7007, "Excel file is empty", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_EXCEL_INVALID_FORMAT(7008, "Invalid Excel file format", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_ALREADY_EXISTS(7009, "Sổ tay này đã có trong kho của bạn rồi", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_CANNOT_CLONE_OWN(7010, "Bạn là tác giả của sổ tay này và đã có trong kho cá nhân", HttpStatus.BAD_REQUEST),
+;
 
 
      int code;

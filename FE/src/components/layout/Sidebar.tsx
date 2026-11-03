@@ -4,6 +4,7 @@ import {
   Search as SearchLucide,
   GraduationCap,
   BookOpen,
+  Bookmark,
   Home,
   BarChart3,
   X,
@@ -62,6 +63,13 @@ const navItems: NavItem[] = [
     label: 'Tra từ điển',
     icon: <SearchLucide className="w-5 h-5" />,
     match: isActiveOrStartsWith('/dictionary'),
+  },
+  {
+    to: '/notebooks',
+    label: 'Sổ tay từ vựng',
+    icon: <Bookmark className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/notebooks'),
+    requiresAuth: true,
   },
   {
     to: '/courses',

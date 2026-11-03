@@ -55,7 +55,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
         strokeColor: '#1e1b4b', // Mực chàm đậm
         outlineColor: '#cbd5e1', // Nét viền mờ chỉ dẫn
         drawingColor: '#2563eb', // Nét người dùng vẽ: Xanh dương nổi bật
-        drawingWidth: 7,
+        drawingWidth: Math.max(18, Math.round(size / 11)), // Tăng độ dày nét cọ vẽ (18-28px) mượt mà, đậm đà
         highlightColor: '#10b981', // Màu sáng khi vẽ đúng nét: Xanh ngọc
         highlightOnComplete: true,
         showHintAfterMisses: 2, // Tự động gợi ý nét nếu viết sai 2 lần
@@ -222,7 +222,10 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
         </div>
 
         {/* DOM element được HanziWriter gắn SVG vào */}
-        <div ref={containerRef} className="relative z-10 w-full h-full cursor-crosshair" />
+        <div
+          ref={containerRef}
+          className="relative z-10 w-full h-full cursor-crosshair [&_svg_path]:stroke-linecap-round [&_svg_path]:stroke-linejoin-round"
+        />
 
         {/* Loading Spinner */}
         {isLoading && (
