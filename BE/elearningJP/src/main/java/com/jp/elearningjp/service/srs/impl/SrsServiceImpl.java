@@ -7,6 +7,7 @@ import com.jp.elearningjp.dto.request.srs.SrsReviewRequest;
 import com.jp.elearningjp.dto.response.srs.SrsDueItemResponse;
 import com.jp.elearningjp.dto.response.srs.SrsForecastDay;
 import com.jp.elearningjp.dto.response.srs.SrsForecastResponse;
+import com.jp.elearningjp.dto.response.srs.SrsSavedIdsResponse;
 import com.jp.elearningjp.dto.response.srs.SrsReviewResultResponse;
 import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
 import com.jp.elearningjp.entity.content.GrammarPoint;
@@ -488,5 +489,21 @@ public class SrsServiceImpl implements SrsService {
     @Transactional(readOnly = true)
     public SrsForecastResponse getForecast() {
         return getForecast(currentUserService.getCurrentUserId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsSavedIdsResponse getSavedIds(Long userId) {
+        return SrsSavedIdsResponse.builder()
+                .vocabIds(srsItemRepository.findSavedVocabIds(userId))
+                .characterIds(srsItemRepository.findSavedCharacterIds(userId))
+                .grammarIds(srsItemRepository.findSavedGrammarIds(userId))
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsSavedIdsResponse getSavedIds() {
+        return getSavedIds(currentUserService.getCurrentUserId());
     }
 }

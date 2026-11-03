@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface SrsItemRepository extends JpaRepository<SrsItem, Long> {
@@ -85,5 +86,14 @@ public interface SrsItemRepository extends JpaRepository<SrsItem, Long> {
     Page<SrsItem> findByUserIdAndStatus(
             @Param("userId") Long userId,
             @Param("status") SrsStatus status,
-            Pageable pageable);
+                        Pageable pageable);
+
+    @Query("SELECT s.vocab.id FROM SrsItem s WHERE s.user.id = :userId AND s.vocab IS NOT NULL AND s.deleted = false")
+    Set<Long> findSavedVocabIds(@Param("userId") Long userId);
+
+    @Query("SELECT s.character.id FROM SrsItem s WHERE s.user.id = :userId AND s.character IS NOT NULL AND s.deleted = false")
+    Set<Long> findSavedCharacterIds(@Param("userId") Long userId);
+
+    @Query("SELECT s.grammar.id FROM SrsItem s WHERE s.user.id = :userId AND s.grammar IS NOT NULL AND s.deleted = false")
+    Set<Long> findSavedGrammarIds(@Param("userId") Long userId);
 }

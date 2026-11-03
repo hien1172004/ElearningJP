@@ -8,6 +8,7 @@ import com.jp.elearningjp.dto.request.srs.SrsItemCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsReviewRequest;
 import com.jp.elearningjp.dto.response.srs.SrsDueItemResponse;
 import com.jp.elearningjp.dto.response.srs.SrsForecastResponse;
+import com.jp.elearningjp.dto.response.srs.SrsSavedIdsResponse;
 import com.jp.elearningjp.dto.response.srs.SrsReviewResultResponse;
 import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
 import com.jp.elearningjp.service.srs.SrsService;
@@ -119,6 +120,15 @@ public class SrsController {
         return ApiResponse.<SrsForecastResponse>builder()
                 .success(true)
                 .data(srsService.getForecast())
+                .build();
+    }
+
+    @Operation(summary = "Lấy danh sách ID đã lưu vào SRS", description = "Trả về tập hợp các vocabIds, characterIds, grammarIds mà học viên đã thêm vào SRS.")
+    @GetMapping(ApiPaths.Srs.SAVED_IDS)
+    public ApiResponse<SrsSavedIdsResponse> getSavedIds() {
+        return ApiResponse.<SrsSavedIdsResponse>builder()
+                .success(true)
+                .data(srsService.getSavedIds())
                 .build();
     }
 }

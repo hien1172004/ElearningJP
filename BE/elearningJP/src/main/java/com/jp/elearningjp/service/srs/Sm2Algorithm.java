@@ -76,10 +76,10 @@ public final class Sm2Algorithm {
         SrsStatus newStatus;
 
         if (rating == SrsRating.AGAIN) {
-            // Học viên quên -> Reset lại từ đầu
+            // Học viên quên -> Reset lại từ đầu, giữ lại trong phiên hôm nay (chuẩn Anki)
             newRepetition = 0;
             newLapse++;
-            newInterval = 1;
+            newInterval = 0;
             // Giảm EF: EF' = EF - 0.20
             newEf = currentEf.subtract(new BigDecimal("0.20"));
             newStatus = SrsStatus.LEARNING;
