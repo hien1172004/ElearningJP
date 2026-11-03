@@ -77,10 +77,14 @@ public class SrsServiceImpl implements SrsService {
     @Override
     @Transactional(readOnly = true)
     public List<SrsDueItemResponse> getDueCards(Long userId, int limit) {
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        LocalDate today = LocalDate.now(clock);
+        Instant endOfDay = today.plusDays(1).atStartOfDay(zone).toInstant();
+
         int pageLimit = Math.min(Math.max(limit, 1), 100);
         List<SrsItem> dueItems = srsItemRepository.findDueCards(
                 userId,
-                Instant.now(),
+                endOfDay,
                 PageRequest.of(0, pageLimit)
         );
 
@@ -262,12 +266,15 @@ public class SrsServiceImpl implements SrsService {
         Integer prevInterval = srsItem.getIntervalDays();
 
         // Áp dụng thuật toán SM-2
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
         Sm2Algorithm.CalculationResult calc = Sm2Algorithm.calculate(
                 prevEf,
                 prevInterval,
                 srsItem.getRepetitionCount(),
                 srsItem.getLapseCount(),
-                request.getRating()
+                request.getRating(),
+                clock,
+                zone
         );
 
         // Cập nhật SrsItem
@@ -321,8 +328,12 @@ public class SrsServiceImpl implements SrsService {
     @Override
     @Transactional(readOnly = true)
     public SrsStatsResponse getStatistics(Long userId) {
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        LocalDate today = LocalDate.now(clock);
+        Instant endOfDay = today.plusDays(1).atStartOfDay(zone).toInstant();
+
         long totalItems = srsItemRepository.countByUserIdAndDeletedFalse(userId);
-        long dueToday = srsItemRepository.countDueCards(userId, Instant.now());
+        long dueToday = srsItemRepository.countDueCards(userId, endOfDay);
         long learning = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.LEARNING);
         long reviewing = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.REVIEWING);
         long mastered = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.MASTERED);

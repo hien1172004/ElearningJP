@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import { Link, useNavigate } from 'react-router-dom'
 import { Layers, Loader2, RefreshCw, Sparkles, Trophy } from 'lucide-react'
 import { toast } from 'sonner'
@@ -90,7 +92,10 @@ export const SrsReviewPage: React.FC = () => {
     )
   }
 
+  const queryClient = useQueryClient()
+
   const handleReload = async () => {
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.srs.forecast })
     await refetch()
     setReviewedIndex(0)
     setTotalXp(0)
