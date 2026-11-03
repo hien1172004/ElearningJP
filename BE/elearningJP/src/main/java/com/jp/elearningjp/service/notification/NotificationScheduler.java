@@ -51,6 +51,7 @@ public class NotificationScheduler {
     private static final int STREAK_LOOKBACK_DAYS = 400;
 
     NotificationService notificationService;
+    WebPushService webPushService;
     NotificationRepository notificationRepository;
     UserSettingsRepository userSettingsRepository;
     SrsItemRepository srsItemRepository;
@@ -61,10 +62,10 @@ public class NotificationScheduler {
     Clock clock;
 
     // ============================================================
-    // SRS_DUE — 08:00 giờ VN
+    // SRS_DUE — 07:00 giờ VN
     // ============================================================
 
-    @Scheduled(cron = "0 0 8 * * *", zone = TimeConfig.APP_ZONE)
+    @Scheduled(cron = "0 0 7 * * *", zone = TimeConfig.APP_ZONE)
     @SchedulerLock(name = "srsDueJob", lockAtMostFor = "PT10M", lockAtLeastFor = "PT1M")
     public void sendSrsDueReminders() {
         Instant now = Instant.now(clock);
@@ -102,6 +103,13 @@ public class NotificationScheduler {
                         "Bạn có thẻ SRS cần ôn tập",
                         "Hôm nay bạn có " + dueCount + " thẻ đến hạn ôn tập. Ôn ngay để không quên nhé!",
                         null
+                );
+                // Kênh bổ sung: Web Push tới trình duyệt (lỗi từng subscription được nuốt bên trong).
+                webPushService.sendToUser(
+                        userId,
+                        "Bạn có thẻ SRS cần ôn tập",
+                        "Hôm nay bạn có " + dueCount + " thẻ đến hạn ôn tập.",
+                        "/srs"
                 );
                 sent++;
             } catch (DataIntegrityViolationException ex) {

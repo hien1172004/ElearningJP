@@ -1,9 +1,12 @@
 package com.jp.elearningjp.service.srs.impl;
 
+import com.jp.elearningjp.config.TimeConfig;
 import com.jp.elearningjp.dto.request.srs.SrsBatchCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsItemCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsReviewRequest;
 import com.jp.elearningjp.dto.response.srs.SrsDueItemResponse;
+import com.jp.elearningjp.dto.response.srs.SrsForecastDay;
+import com.jp.elearningjp.dto.response.srs.SrsForecastResponse;
 import com.jp.elearningjp.dto.response.srs.SrsReviewResultResponse;
 import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
 import com.jp.elearningjp.entity.content.GrammarPoint;
@@ -45,7 +48,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,6 +72,7 @@ public class SrsServiceImpl implements SrsService {
     LessonGrammarItemRepository lessonGrammarItemRepository;
     UserRepository userRepository;
     CurrentUserService currentUserService;
+    Clock clock;
 
     @Override
     @Transactional(readOnly = true)
@@ -440,5 +447,35 @@ public class SrsServiceImpl implements SrsService {
     @Transactional(readOnly = true)
     public PageResponse<SrsDueItemResponse> getItems(SrsStatus status, int page, int size) {
         return getItems(currentUserService.getCurrentUserId(), status, page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsForecastResponse getForecast(Long userId) {
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        LocalDate today = LocalDate.now(clock);
+
+        List<SrsForecastDay> days = new ArrayList<>(5);
+        long prevCumulative = 0;
+        for (int i = 0; i < 5; i++) {
+            LocalDate day = today.plusDays(i);
+            // Mốc cuối ngày = 00:00 ngày hôm sau (theo múi giờ VN).
+            Instant endOfDay = day.plusDays(1).atStartOfDay(zone).toInstant();
+            long cumulative = srsItemRepository.countDueCards(userId, endOfDay);
+            days.add(SrsForecastDay.builder()
+                    .date(day)
+                    .count((int) (cumulative - prevCumulative))
+                    .today(i == 0)
+                    .build());
+            prevCumulative = cumulative;
+        }
+
+        return SrsForecastResponse.builder().days(days).build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsForecastResponse getForecast() {
+        return getForecast(currentUserService.getCurrentUserId());
     }
 }

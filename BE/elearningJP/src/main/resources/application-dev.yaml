@@ -66,6 +66,12 @@ app:
   ai-service-url: ${AI_SERVICE_URL:http://host.docker.internal:8000}
   google:
     client-id: ${GOOGLE_CLIENT_ID}
+  # Web Push (VAPID). KHÔNG commit private key thật vào repo — đây chỉ là key dev.
+  # Production: ghi đè bằng biến môi trường VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY.
+  web-push:
+    vapid-public-key: ${VAPID_PUBLIC_KEY:BFckzKFFMX4TAtW1lVLtLF8dad9YOyI2Eww2JWSeY845Xz869lC5IMTHsXOujNfAzI6dgbULc8bcFGmU5YLeC1c}
+    vapid-private-key: ${VAPID_PRIVATE_KEY:CS8bP2-1rbsF5hGwtoldWAUZM9Ny4kZ_Z5chII3MFS0}
+    vapid-subject: ${VAPID_SUBJECT:mailto:admin@elearningjp.com}
 
 springdoc:
   api-docs:

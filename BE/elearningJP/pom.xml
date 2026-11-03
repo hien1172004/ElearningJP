@@ -174,6 +174,12 @@
             <artifactId>shedlock-provider-jdbc-template</artifactId>
             <version>${shedlock.version}</version>
         </dependency>
+        <!-- Web Push Notifications (VAPID) — gửi thông báo đẩy tới trình duyệt -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>5.1.1</version>
+        </dependency>
     </dependencies>
 
     <build>
