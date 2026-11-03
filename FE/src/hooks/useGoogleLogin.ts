@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { authService } from '@/services/auth.service'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { useAuthModalStore } from '@/stores/useAuthModalStore'
 import {
   decodeJwt,
   extractEmailFromToken,
@@ -306,6 +307,7 @@ export function useGoogleLogin(options: UseGoogleLoginOptions = {}) {
 
       const redirectTo = redirectOverride.current || options.redirectTo || '/'
       redirectOverride.current = null
+      useAuthModalStore.getState().close()
       navigate(redirectTo, { replace: true })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {

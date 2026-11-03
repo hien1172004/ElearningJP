@@ -7,7 +7,11 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import com.jp.elearningjp.config.TimeConfig;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
 public final class Sm2Algorithm {
@@ -46,6 +50,19 @@ public final class Sm2Algorithm {
             Integer lapseCount,
             SrsRating rating
     ) {
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        return calculate(currentEf, currentInterval, repetitionCount, lapseCount, rating, Clock.system(zone), zone);
+    }
+
+    public static CalculationResult calculate(
+            BigDecimal currentEf,
+            Integer currentInterval,
+            Integer repetitionCount,
+            Integer lapseCount,
+            SrsRating rating,
+            Clock clock,
+            ZoneId zone
+    ) {
         if (currentEf == null) currentEf = DEFAULT_EF;
         if (currentInterval == null) currentInterval = 0;
         if (repetitionCount == null) repetitionCount = 0;
@@ -59,10 +76,10 @@ public final class Sm2Algorithm {
         SrsStatus newStatus;
 
         if (rating == SrsRating.AGAIN) {
-            // Học viên quên -> Reset lại từ đầu
+            // Học viên quên -> Reset lại từ đầu, giữ lại trong phiên hôm nay (chuẩn Anki)
             newRepetition = 0;
             newLapse++;
-            newInterval = 1;
+            newInterval = 0;
             // Giảm EF: EF' = EF - 0.20
             newEf = currentEf.subtract(new BigDecimal("0.20"));
             newStatus = SrsStatus.LEARNING;
@@ -117,8 +134,13 @@ public final class Sm2Algorithm {
         }
         newEf = newEf.setScale(2, RoundingMode.HALF_UP);
 
-        // Tính thời điểm tiếp theo (thêm số ngày mới vào Instant hiện tại)
-        Instant nextReviewAt = Instant.now().plus(newInterval, ChronoUnit.DAYS);
+        // Tính thời điểm tiếp theo theo calendar day (chuẩn Anki/SuperMemo: đầu ngày của ngày đến hạn)
+        ZoneId targetZone = zone != null ? zone : ZoneId.of(TimeConfig.APP_ZONE);
+        Clock targetClock = clock != null ? clock : Clock.system(targetZone);
+        LocalDate today = LocalDate.now(targetClock);
+        Instant nextReviewAt = newInterval > 0
+                ? today.plusDays(newInterval).atStartOfDay(targetZone).toInstant()
+                : Instant.now(targetClock);
 
         return CalculationResult.builder()
                 .newEf(newEf)

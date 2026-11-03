@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Modal, Tabs, App as AntdApp, Divider, Form, Input, Button, Checkbox } from 'antd'
 import { Mail, Lock, User, Phone } from 'lucide-react'
 import { z } from 'zod'
-import { useAuthModalStore } from '@/stores'
+import { useAuthModalStore, useAuthStore } from '@/stores'
 import { useGoogleLogin, useLogin, useRegister } from '@/hooks'
 import { GoogleButton } from './GoogleButton'
 import { AUTH_EXPIRED_EVENT, type AuthExpiredDetail } from '@/utils/authEvents'
@@ -56,6 +56,14 @@ export const AuthModal: React.FC = () => {
   const { message } = AntdApp.useApp()
 
   const { open, mode, redirectTo, close, setMode } = useAuthModalStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  // Tự động đóng modal nếu người dùng đã đăng nhập thành công (kể cả qua Google popup/One Tap)
+  useEffect(() => {
+    if (open && isAuthenticated) {
+      close()
+    }
+  }, [open, isAuthenticated, close])
   const { startGoogleLogin, isLoading: isGoogleLoading } = useGoogleLogin()
 
   // Form instances

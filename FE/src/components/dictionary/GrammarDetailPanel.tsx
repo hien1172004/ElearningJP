@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Volume2, BookmarkPlus, Check, BookOpen } from 'lucide-react'
 import type { GrammarDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
-import { useAddToSrs } from '@/hooks/useAddToSrs'
+import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 
 interface GrammarDetailPanelProps {
   grammarId: number
@@ -12,13 +12,13 @@ interface GrammarDetailPanelProps {
 export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarId }) => {
   const [detail, setDetail] = useState<GrammarDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const { isSaved } = useSrsSavedIds()
+  const isAddedToSrs = isSaved('GRAMMAR', grammarId)
   const addToSrs = useAddToSrs()
 
   useEffect(() => {
     let isMounted = true
     setIsLoading(true)
-    setIsAddedToSrs(false)
 
     dictionaryService
       .getGrammarDetail(grammarId)
@@ -55,14 +55,11 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
   }
 
   const handleAddToSrs = async () => {
-    if (isAddedToSrs) return
+    if (isAddedToSrs || !detail) return
     try {
       await addToSrs.mutateAsync({ type: 'GRAMMAR', id: detail.id })
-      setIsAddedToSrs(true)
-    } catch (err: any) {
-      if (err?.response?.data?.code === 3002) {
-        setIsAddedToSrs(true)
-      }
+    } catch {
+      /* ignore */
     }
   }
 

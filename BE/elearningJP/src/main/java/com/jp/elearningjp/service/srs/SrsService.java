@@ -4,6 +4,8 @@ import com.jp.elearningjp.dto.request.srs.SrsBatchCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsItemCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsReviewRequest;
 import com.jp.elearningjp.dto.response.srs.SrsDueItemResponse;
+import com.jp.elearningjp.dto.response.srs.SrsForecastResponse;
+import com.jp.elearningjp.dto.response.srs.SrsSavedIdsResponse;
 import com.jp.elearningjp.dto.response.srs.SrsReviewResultResponse;
 import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
 import com.jp.elearningjp.shared.enums.SrsStatus;
@@ -33,4 +35,10 @@ public interface SrsService {
 
     PageResponse<SrsDueItemResponse> getItems(Long userId, SrsStatus status, int page, int size);
     PageResponse<SrsDueItemResponse> getItems(SrsStatus status, int page, int size);
+
+    SrsForecastResponse getForecast(Long userId);
+        SrsForecastResponse getForecast();
+
+    SrsSavedIdsResponse getSavedIds(Long userId);
+    SrsSavedIdsResponse getSavedIds();
 }

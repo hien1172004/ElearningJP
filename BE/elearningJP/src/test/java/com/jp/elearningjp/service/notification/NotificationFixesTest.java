@@ -202,6 +202,7 @@ class NotificationFixesTest {
     @Nested
     class Scheduler {
 
+        @Mock WebPushService webPushService;
         @Mock UserGamificationRepository userGamificationRepository;
         @Mock UserDailyStatsRepository userDailyStatsRepository;
         @Mock SrsItemRepository srsItemRepository;
@@ -211,7 +212,7 @@ class NotificationFixesTest {
         @Test
         void srsReminder_skipsBannedOrInactiveUsers() {
             Clock clock = Clock.fixed(Instant.parse("2026-11-02T01:00:00Z"), ZoneOffset.UTC);
-            NotificationScheduler scheduler = new NotificationScheduler(notificationService, notificationRepository,
+            NotificationScheduler scheduler = new NotificationScheduler(notificationService, webPushService, notificationRepository,
                     userSettingsRepository, srsItemRepository, userGamificationRepository,
                     userDailyStatsRepository, streakService, userRepository, clock);
             when(srsItemRepository.countDueCardsGroupByUser(any()))

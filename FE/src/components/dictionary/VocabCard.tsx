@@ -1,9 +1,9 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { Volume2, BookmarkPlus, Check, ChevronDown, ChevronUp, BookOpen } from 'lucide-react'
 import type { VocabularySummary, VocabularyDetail } from '@/types'
 import { playSmartAudio } from '@/utils'
 import { dictionaryService } from '@/services'
-import { useAddToSrs } from '@/hooks/useAddToSrs'
+import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 
 interface VocabCardProps {
   vocab: VocabularySummary
@@ -14,7 +14,8 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
   const [detail, setDetail] = useState<VocabularyDetail | null>(null)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false)
-  const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const { isSaved } = useSrsSavedIds()
+  const isAddedToSrs = isSaved('VOCABULARY', vocab.id)
   const [isAddingSrs, setIsAddingSrs] = useState<boolean>(false)
   const addToSrs = useAddToSrs()
 
@@ -49,14 +50,8 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
     setIsAddingSrs(true)
     try {
       await addToSrs.mutateAsync({ type: 'VOCABULARY', id: vocab.id })
-      setIsAddedToSrs(true)
-    } catch (err: any) {
-      // Nếu đã có sẵn trong SRS
-      if (err?.response?.data?.code === 3002) {
-        setIsAddedToSrs(true)
-      } else {
-        console.error('Lỗi khi thêm vào SRS:', err)
-      }
+    } catch {
+      /* ignore */
     } finally {
       setIsAddingSrs(false)
     }

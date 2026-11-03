@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Volume2, BookmarkPlus, Check, BookOpen, Sparkles } from 'lucide-react'
 import type { VocabularyDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
-import { useAddToSrs } from '@/hooks/useAddToSrs'
+import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 
 interface VocabDetailPanelProps {
   vocabId: number
@@ -13,13 +13,13 @@ interface VocabDetailPanelProps {
 export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onSelectKanji }) => {
   const [detail, setDetail] = useState<VocabularyDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const { isSaved } = useSrsSavedIds()
+  const isAddedToSrs = isSaved('VOCABULARY', vocabId)
   const addToSrs = useAddToSrs()
 
   useEffect(() => {
     let isMounted = true
     setIsLoading(true)
-    setIsAddedToSrs(false)
 
     dictionaryService
       .getVocabularyDetail(vocabId)
@@ -63,14 +63,11 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
   }
 
   const handleAddToSrs = async () => {
-    if (isAddedToSrs) return
+    if (isAddedToSrs || !detail) return
     try {
       await addToSrs.mutateAsync({ type: 'VOCABULARY', id: detail.id })
-      setIsAddedToSrs(true)
-    } catch (err: any) {
-      if (err?.response?.data?.code === 3002) {
-        setIsAddedToSrs(true)
-      }
+    } catch {
+      /* ignore */
     }
   }
 

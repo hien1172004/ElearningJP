@@ -1,9 +1,13 @@
 package com.jp.elearningjp.service.srs.impl;
 
+import com.jp.elearningjp.config.TimeConfig;
 import com.jp.elearningjp.dto.request.srs.SrsBatchCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsItemCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsReviewRequest;
 import com.jp.elearningjp.dto.response.srs.SrsDueItemResponse;
+import com.jp.elearningjp.dto.response.srs.SrsForecastDay;
+import com.jp.elearningjp.dto.response.srs.SrsForecastResponse;
+import com.jp.elearningjp.dto.response.srs.SrsSavedIdsResponse;
 import com.jp.elearningjp.dto.response.srs.SrsReviewResultResponse;
 import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
 import com.jp.elearningjp.entity.content.GrammarPoint;
@@ -45,7 +49,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,14 +73,19 @@ public class SrsServiceImpl implements SrsService {
     LessonGrammarItemRepository lessonGrammarItemRepository;
     UserRepository userRepository;
     CurrentUserService currentUserService;
+    Clock clock;
 
     @Override
     @Transactional(readOnly = true)
     public List<SrsDueItemResponse> getDueCards(Long userId, int limit) {
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        LocalDate today = LocalDate.now(clock);
+        Instant endOfDay = today.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
+
         int pageLimit = Math.min(Math.max(limit, 1), 100);
         List<SrsItem> dueItems = srsItemRepository.findDueCards(
                 userId,
-                Instant.now(),
+                endOfDay,
                 PageRequest.of(0, pageLimit)
         );
 
@@ -255,12 +267,15 @@ public class SrsServiceImpl implements SrsService {
         Integer prevInterval = srsItem.getIntervalDays();
 
         // Áp dụng thuật toán SM-2
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
         Sm2Algorithm.CalculationResult calc = Sm2Algorithm.calculate(
                 prevEf,
                 prevInterval,
                 srsItem.getRepetitionCount(),
                 srsItem.getLapseCount(),
-                request.getRating()
+                request.getRating(),
+                clock,
+                zone
         );
 
         // Cập nhật SrsItem
@@ -314,8 +329,12 @@ public class SrsServiceImpl implements SrsService {
     @Override
     @Transactional(readOnly = true)
     public SrsStatsResponse getStatistics(Long userId) {
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        LocalDate today = LocalDate.now(clock);
+        Instant endOfDay = today.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
+
         long totalItems = srsItemRepository.countByUserIdAndDeletedFalse(userId);
-        long dueToday = srsItemRepository.countDueCards(userId, Instant.now());
+        long dueToday = srsItemRepository.countDueCards(userId, endOfDay);
         long learning = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.LEARNING);
         long reviewing = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.REVIEWING);
         long mastered = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.MASTERED);
@@ -440,5 +459,51 @@ public class SrsServiceImpl implements SrsService {
     @Transactional(readOnly = true)
     public PageResponse<SrsDueItemResponse> getItems(SrsStatus status, int page, int size) {
         return getItems(currentUserService.getCurrentUserId(), status, page, size);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsForecastResponse getForecast(Long userId) {
+        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        LocalDate today = LocalDate.now(clock);
+
+        List<SrsForecastDay> days = new ArrayList<>(5);
+        long prevCumulative = 0;
+        for (int i = 0; i < 5; i++) {
+            LocalDate day = today.plusDays(i);
+            // Mốc cuối ngày = 00:00 ngày hôm sau (theo múi giờ VN).
+            Instant endOfDay = day.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
+            long cumulative = srsItemRepository.countDueCards(userId, endOfDay);
+            days.add(SrsForecastDay.builder()
+                    .date(day)
+                    .count((int) (cumulative - prevCumulative))
+                    .today(i == 0)
+                    .build());
+            prevCumulative = cumulative;
+        }
+
+        return SrsForecastResponse.builder().days(days).build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsForecastResponse getForecast() {
+        return getForecast(currentUserService.getCurrentUserId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsSavedIdsResponse getSavedIds(Long userId) {
+        return SrsSavedIdsResponse.builder()
+                .vocabIds(srsItemRepository.findSavedVocabIds(userId))
+                .characterIds(srsItemRepository.findSavedCharacterIds(userId))
+                .grammarIds(srsItemRepository.findSavedGrammarIds(userId))
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SrsSavedIdsResponse getSavedIds() {
+        return getSavedIds(currentUserService.getCurrentUserId());
     }
 }
