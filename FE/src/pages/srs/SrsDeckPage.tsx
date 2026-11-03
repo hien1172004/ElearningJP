@@ -10,6 +10,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { SrsForecastBar } from '@/components/srs'
 import { useSrsItems } from '@/hooks/useSrsItems'
 import type { SrsStatus } from '@/types'
 
@@ -79,6 +80,11 @@ export const SrsDeckPage: React.FC = () => {
           Ôn ngay
         </Link>
       </header>
+
+      {/* ===== Dự báo ôn tập ===== */}
+      <div className="mb-5">
+        <SrsForecastBar />
+      </div>
 
       {/* ===== Filter tabs ===== */}
       <div className="flex gap-2 mb-5 flex-wrap">

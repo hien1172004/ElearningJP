@@ -26,6 +26,7 @@ export const QUERY_KEYS = {
     due: (params: Record<string, unknown>) => ['srs', 'due', params] as const,
     stats: ['srs', 'stats'] as const,
     items: (params: Record<string, unknown>) => ['srs', 'items', params] as const,
+    forecast: ['srs', 'forecast'] as const,
   },
   progress: {
     all: ['progress'] as const,

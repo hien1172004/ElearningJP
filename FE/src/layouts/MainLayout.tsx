@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar, TopBar } from '@/components/layout'
 import { AuthModal } from '@/components/auth'
 import { useSidebarStore } from '@/stores'
-import { useNotificationSocket } from '@/hooks/useNotificationSocket'
+import { useNotificationSocket, useWebPush } from '@/hooks'
 import { cn } from '@/utils/cn'
 
 /**
@@ -18,6 +18,9 @@ export const MainLayout: React.FC = () => {
   // Mount 1 lần ở cấp layout: mở kết nối STOMP để nhận thông báo real-time.
   // Hook tự bỏ qua khi chưa đăng nhập và deactivate khi logout.
   useNotificationSocket()
+
+  // Tự động đăng ký Web Push khi đã đăng nhập (guard bằng isAuthenticated bên trong).
+  useWebPush()
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 font-sans">

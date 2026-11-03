@@ -88,3 +88,18 @@ export interface SrsBatchAddRequest {
   characterIds?: number[]
   grammarIds?: number[]
 }
+
+/** Một ngày trong dự báo ôn tập SRS. */
+export interface SrsForecastDay {
+  /** Ngày (yyyy-MM-dd). */
+  date: string
+  /** Số thẻ đến hạn trong ngày đó (hôm nay gồm cả thẻ quá hạn). */
+  count: number
+  /** true nếu là ngày hôm nay. */
+  today: boolean
+}
+
+/** Dự báo số thẻ cần ôn: hôm nay + 4 ngày tiếp theo. */
+export interface SrsForecast {
+  days: SrsForecastDay[]
+}

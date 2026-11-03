@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Layers, Loader2, RefreshCw, Sparkles, Trophy } from 'lucide-react'
 import { toast } from 'sonner'
-import { SrsFlashcard, SrsRatingButtons } from '@/components/srs'
+import { SrsFlashcard, SrsRatingButtons, SrsForecastBar } from '@/components/srs'
 import { useSrsDue } from '@/hooks/useSrsDue'
 import { useSrsReview } from '@/hooks/useSrsReview'
 import { cn } from '@/utils/cn'
@@ -130,6 +130,11 @@ export const SrsReviewPage: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* ===== Dự báo ôn tập ===== */}
+      <div className="mb-5">
+        <SrsForecastBar />
+      </div>
 
       {/* ===== Chọn số thẻ mỗi phiên ===== */}
       <div className="flex items-center gap-3 mb-5">
