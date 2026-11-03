@@ -80,7 +80,7 @@ public class SrsServiceImpl implements SrsService {
     public List<SrsDueItemResponse> getDueCards(Long userId, int limit) {
         ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
         LocalDate today = LocalDate.now(clock);
-        Instant endOfDay = today.plusDays(1).atStartOfDay(zone).toInstant();
+        Instant endOfDay = today.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
 
         int pageLimit = Math.min(Math.max(limit, 1), 100);
         List<SrsItem> dueItems = srsItemRepository.findDueCards(
@@ -331,7 +331,7 @@ public class SrsServiceImpl implements SrsService {
     public SrsStatsResponse getStatistics(Long userId) {
         ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
         LocalDate today = LocalDate.now(clock);
-        Instant endOfDay = today.plusDays(1).atStartOfDay(zone).toInstant();
+        Instant endOfDay = today.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
 
         long totalItems = srsItemRepository.countByUserIdAndDeletedFalse(userId);
         long dueToday = srsItemRepository.countDueCards(userId, endOfDay);
@@ -472,7 +472,7 @@ public class SrsServiceImpl implements SrsService {
         for (int i = 0; i < 5; i++) {
             LocalDate day = today.plusDays(i);
             // Mốc cuối ngày = 00:00 ngày hôm sau (theo múi giờ VN).
-            Instant endOfDay = day.plusDays(1).atStartOfDay(zone).toInstant();
+            Instant endOfDay = day.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
             long cumulative = srsItemRepository.countDueCards(userId, endOfDay);
             days.add(SrsForecastDay.builder()
                     .date(day)
