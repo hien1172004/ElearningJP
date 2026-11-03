@@ -128,41 +128,13 @@ export const ExamReviewPage: React.FC = () => {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-600 dark:text-slate-400 font-medium">Đang tải chi tiết bài làm...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error || !reviewData) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 max-w-md w-full text-center">
-          <XCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Lỗi tải dữ liệu</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">{error || 'Không tìm thấy dữ liệu xem lại'}</p>
-          <button
-            onClick={() => navigate('/exam-history')}
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition"
-          >
-            Quay lại lịch sử
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const activeSection = reviewData.sections[activeSectionIndex] || reviewData.sections[0]
-  const allQuestions = activeSection ? (
-    activeSection.sessionType === 'LISTENING'
+  const activeSection = reviewData?.sections?.[activeSectionIndex] || reviewData?.sections?.[0]
+  const allQuestions = useMemo(() => {
+    if (!activeSection) return []
+    return activeSection.sessionType === 'LISTENING'
       ? [...activeSection.questions]
       : [...activeSection.questions].sort((a, b) => (a.questionNumber ?? 0) - (b.questionNumber ?? 0))
-  ) : []
+  }, [activeSection])
 
   // Phân nhóm câu hỏi phần Nghe theo từng Mondai cho bảng điều hướng
   const listeningReviewMondaiGroups = useMemo(() => {
@@ -198,6 +170,35 @@ export const ExamReviewPage: React.FC = () => {
 
     return groups
   }, [allQuestions, activeSection?.sessionType])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-600 dark:text-slate-400 font-medium">Đang tải chi tiết bài làm...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !reviewData || !activeSection) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 max-w-md w-full text-center">
+          <XCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Lỗi tải dữ liệu</h2>
+          <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">{error || 'Không tìm thấy dữ liệu xem lại'}</p>
+          <button
+            onClick={() => navigate('/exam-history')}
+            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition"
+          >
+            Quay lại lịch sử
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans">
