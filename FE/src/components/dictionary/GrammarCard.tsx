@@ -1,9 +1,9 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { BookmarkPlus, Check, ChevronDown, ChevronUp, BookOpen, Volume2 } from 'lucide-react'
 import type { GrammarSummary, GrammarDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { speakJapanese } from '@/utils'
-import { useAddToSrs } from '@/hooks/useAddToSrs'
+import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 
 interface GrammarCardProps {
   grammar: GrammarSummary
@@ -13,7 +13,8 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
   const [detail, setDetail] = useState<GrammarDetail | null>(null)
   const [isExpanded, setIsExpanded] = useState<boolean>(false)
   const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false)
-  const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const { isSaved } = useSrsSavedIds()
+  const isAddedToSrs = isSaved('GRAMMAR', grammar.id)
   const addToSrs = useAddToSrs()
 
   const handleToggleExpand = async () => {
@@ -38,11 +39,8 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
     if (isAddedToSrs) return
     try {
       await addToSrs.mutateAsync({ type: 'GRAMMAR', id: grammar.id })
-      setIsAddedToSrs(true)
-    } catch (err: any) {
-      if (err?.response?.data?.code === 3002) {
-        setIsAddedToSrs(true)
-      }
+    } catch {
+      /* ignore */
     }
   }
 

@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { speakJapanese } from '@/utils'
-import { useAddToSrs } from '@/hooks/useAddToSrs'
+import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
 
@@ -20,7 +20,8 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
 }) => {
   const [detail, setDetail] = useState<KanjiDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
-  const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const { isSaved } = useSrsSavedIds()
+  const isAddedToSrs = isSaved('KANJI', detail?.id)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
   const addToSrs = useAddToSrs()
 
@@ -32,7 +33,6 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
 
     let isMounted = true
     setIsLoading(true)
-    setIsAddedToSrs(false)
 
     dictionaryService
       .getKanjiDetail(character)
@@ -54,14 +54,11 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
   if (!character) return null
 
   const handleAddToSrs = async () => {
-    if (!detail || isAddedToSrs) return
+    if (isAddedToSrs || !detail) return
     try {
       await addToSrs.mutateAsync({ type: 'KANJI', id: detail.id })
-      setIsAddedToSrs(true)
-    } catch (err: any) {
-      if (err?.response?.data?.code === 3002) {
-        setIsAddedToSrs(true)
-      }
+    } catch {
+      /* ignore */
     }
   }
 

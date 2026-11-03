@@ -1,14 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import { Link, useNavigate } from 'react-router-dom'
-import { Layers, Loader2, RefreshCw, Sparkles, Trophy } from 'lucide-react'
+import { Layers, Loader2, RefreshCw, Sparkles, Trophy, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { SrsFlashcard, SrsRatingButtons, SrsForecastBar } from '@/components/srs'
 import { useSrsDue } from '@/hooks/useSrsDue'
 import { useSrsReview } from '@/hooks/useSrsReview'
 import { cn } from '@/utils/cn'
-import type { SrsRating } from '@/types'
+import type { SrsRating, SrsDueItem } from '@/types'
 
 /** Các lựa chọn số thẻ mỗi phiên (backend clamp 1..100). */
 const LIMIT_OPTIONS = [10, 20, 50, 100] as const
@@ -16,43 +16,57 @@ const LIMIT_OPTIONS = [10, 20, 50, 100] as const
 type Phase = 'loading' | 'error' | 'empty' | 'done' | 'reviewing'
 
 /**
- * SrsReviewPage — màn hình ôn tập Flashcard (lật thẻ + 4 nút SM-2).
+ * SrsReviewPage — màn hình ôn tập Flashcard (lật thẻ + 4 nút SM-2 Anki loop).
  *
- * Luồng: GET /srs/due?limit=N → danh sách `data` → lật thẻ → đánh giá → tăng
- * `reviewedIndex` (optimistic) → hết danh sách thì hiện tổng kết + "Ôn tiếp".
- *
- * Hàng đợi được derive trực tiếp từ `data` + `reviewedIndex` (không giữ state
- * queue riêng) nên đổi `limit` hay refetch không gây mất đồng bộ.
+ * Chuẩn Anki (Intra-session queue):
+ *  - Khi bấm "Lại" (Again): Thẻ được đưa về cuối hàng đợi của phiên để học lại.
+ *  - Khi bấm "Khó" (Hard), "Tốt" (Good), "Dễ" (Easy): Thẻ được tính là đã thuộc và kết thúc phiên.
+ *  - Phiên chỉ kết thúc khi tất cả thẻ đều đã được nhớ thành công.
  */
 export const SrsReviewPage: React.FC = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [limit, setLimit] = useState(20)
   const { data, isLoading, isError, refetch, isFetching } = useSrsDue(limit)
   const review = useSrsReview()
 
-  const [reviewedIndex, setReviewedIndex] = useState(0)
+  // Hàng đợi phiên học xoay vòng (Anki-style)
+  const [queue, setQueue] = useState<SrsDueItem[]>([])
+  const [initialTotal, setInitialTotal] = useState(0)
+  const [completedCount, setCompletedCount] = useState(0)
+
   const [totalXp, setTotalXp] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [revealedAt, setRevealedAt] = useState<number | null>(null)
 
-  const cards = data ?? []
-  const current = reviewedIndex < cards.length ? cards[reviewedIndex] : undefined
+  // Khởi tạo hàng đợi khi dữ liệu được tải về lần đầu
+  useEffect(() => {
+    if (data && data.length > 0 && queue.length === 0 && completedCount === 0) {
+      setQueue(data)
+      setInitialTotal(data.length)
+    }
+  }, [data, queue.length, completedCount])
+
+  const current = queue.length > 0 ? queue[0] : undefined
 
   const phase: Phase = isLoading
     ? 'loading'
     : isError
       ? 'error'
-      : cards.length === 0
+      : (data?.length === 0 && queue.length === 0 && completedCount === 0)
         ? 'empty'
-        : reviewedIndex >= cards.length
+        : (queue.length === 0 && completedCount > 0)
           ? 'done'
-          : 'reviewing'
+          : queue.length > 0
+            ? 'reviewing'
+            : 'empty'
 
   const handleLimitChange = (n: number) => {
     if (n === limit) return
     setLimit(n)
-    // Reset phiên đồng bộ ngay khi đổi số thẻ (tránh lệch với data cũ/cached).
-    setReviewedIndex(0)
+    setQueue([])
+    setInitialTotal(0)
+    setCompletedCount(0)
     setTotalXp(0)
     setFlipped(false)
     setRevealedAt(null)
@@ -61,7 +75,6 @@ export const SrsReviewPage: React.FC = () => {
   const handleFlip = () => {
     if (phase !== 'reviewing' || !current) return
     setFlipped((f) => !f)
-    // Ghi lại mốc thời điểm lật thẻ để đo responseTimeMs.
     setRevealedAt((prev) => (prev == null ? Date.now() : prev))
   }
 
@@ -70,10 +83,20 @@ export const SrsReviewPage: React.FC = () => {
     const card = current
     const responseTimeMs = revealedAt != null ? Date.now() - revealedAt : undefined
 
-    // Optimistic: chuyển sang thẻ kế tiếp.
-    setReviewedIndex((i) => i + 1)
     setFlipped(false)
     setRevealedAt(null)
+
+    if (rating === 'AGAIN') {
+      // Chuẩn Anki: Đẩy thẻ quên về cuối hàng đợi của phiên học
+      setQueue((prev) => [...prev.slice(1), card])
+      toast.info('Thẻ sẽ xuất hiện lại ở cuối phiên để bạn ôn lại', {
+        icon: <RotateCcw className="w-4 h-4 text-rose-500" />,
+      })
+    } else {
+      // Đã nhớ được (Hard, Good, Easy): Đánh dấu hoàn thành trong phiên
+      setQueue((prev) => prev.slice(1))
+      setCompletedCount((c) => c + 1)
+    }
 
     review.mutate(
       {
@@ -86,25 +109,27 @@ export const SrsReviewPage: React.FC = () => {
         },
         onError: () => {
           toast.error('Không thể lưu kết quả ôn tập. Vui lòng thử lại.')
-          setReviewedIndex((i) => Math.max(0, i - 1))
         },
       },
     )
   }
 
-  const queryClient = useQueryClient()
-
   const handleReload = async () => {
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.srs.forecast })
-    await refetch()
-    setReviewedIndex(0)
+    const res = await refetch()
+    const newCards = res.data ?? []
+    setQueue(newCards)
+    setInitialTotal(newCards.length)
+    setCompletedCount(0)
     setTotalXp(0)
     setFlipped(false)
     setRevealedAt(null)
   }
 
-  const total = cards.length
-  const progressPct = total > 0 ? Math.round((reviewedIndex / total) * 100) : 0
+  const progressPct =
+    initialTotal > 0
+      ? Math.min(100, Math.round((completedCount / initialTotal) * 100))
+      : 0
 
   return (
     <div className="max-w-3xl mx-auto pb-16">
@@ -217,7 +242,7 @@ export const SrsReviewPage: React.FC = () => {
           </span>
           <h2 className="text-xl font-bold text-slate-900">Hoàn thành buổi ôn tập!</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Bạn đã ôn <span className="font-semibold text-slate-700">{reviewedIndex}</span> thẻ
+            Bạn đã hoàn thành <span className="font-semibold text-slate-700">{completedCount}</span> thẻ trong phiên học
             {totalXp > 0 && (
               <>
                 {' · '}
@@ -257,7 +282,7 @@ export const SrsReviewPage: React.FC = () => {
               />
             </div>
             <span className="text-xs font-semibold text-slate-500 tabular-nums whitespace-nowrap">
-              {reviewedIndex + 1} / {total}
+              Đã thuộc {completedCount}/{initialTotal} (còn {queue.length})
             </span>
           </div>
 

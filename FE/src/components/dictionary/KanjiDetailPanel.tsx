@@ -1,9 +1,9 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Volume2, BookmarkPlus, Check, Sparkles, PenTool } from 'lucide-react'
 import type { KanjiDetail } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
-import { useAddToSrs } from '@/hooks/useAddToSrs'
+import { useAddToSrs, useSrsSavedIds } from '@/hooks'
 import { KanjiStrokeViewer } from './KanjiStrokeViewer'
 import { KanjiPracticeModal } from './KanjiPracticeModal'
 
@@ -25,7 +25,8 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
 }) => {
   const [detail, setDetail] = useState<KanjiDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [isAddedToSrs, setIsAddedToSrs] = useState<boolean>(false)
+  const { isSaved } = useSrsSavedIds()
+  const isAddedToSrs = isSaved('KANJI', detail?.id)
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
   const [expandedReadings, setExpandedReadings] = useState<Record<string, boolean>>({})
   const addToSrs = useAddToSrs()
@@ -40,7 +41,6 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
   useEffect(() => {
     let isMounted = true
     setIsLoading(true)
-    setIsAddedToSrs(false)
 
     dictionaryService
       .getKanjiDetail(character)
@@ -79,14 +79,11 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
   }
 
   const handleAddToSrs = async () => {
-    if (isAddedToSrs) return
+    if (isAddedToSrs || !detail) return
     try {
       await addToSrs.mutateAsync({ type: 'KANJI', id: detail.id })
-      setIsAddedToSrs(true)
-    } catch (err: any) {
-      if (err?.response?.data?.code === 3002) {
-        setIsAddedToSrs(true)
-      }
+    } catch {
+      /* ignore */
     }
   }
 

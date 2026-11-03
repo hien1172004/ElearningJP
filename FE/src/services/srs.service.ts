@@ -6,6 +6,7 @@ import type {
   SrsBatchAddRequest,
   SrsDueItem,
   SrsForecast,
+  SrsSavedIds,
   SrsReviewRequest,
   SrsReviewResult,
   SrsStats,
@@ -37,6 +38,11 @@ export const srsService = {
   /** Dự báo số thẻ cần ôn (hôm nay + 4 ngày tiếp theo). */
   getForecast: async (): Promise<ApiResponse<SrsForecast>> => {
     return axiosClient.get('/srs/forecast')
+  },
+
+  /** Lấy toàn bộ ID từ vựng, chữ Hán, ngữ pháp đã lưu trong SRS của user. */
+  getSavedIds: async (): Promise<ApiResponse<SrsSavedIds>> => {
+    return axiosClient.get('/srs/saved-ids')
   },
 
   /** Nộp kết quả lật thẻ (Again/Hard/Good/Easy) → SM-2 cập nhật chu kỳ. */

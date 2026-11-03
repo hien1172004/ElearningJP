@@ -103,3 +103,10 @@ export interface SrsForecastDay {
 export interface SrsForecast {
   days: SrsForecastDay[]
 }
+
+/** Tập hợp các ID đã được lưu vào SRS của học viên. */
+export interface SrsSavedIds {
+  vocabIds: number[]
+  characterIds: number[]
+  grammarIds: number[]
+}
