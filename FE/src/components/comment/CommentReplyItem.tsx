@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Avatar, Tooltip } from 'antd'
-import { ThumbsUp, ThumbsDown, Trash2, CornerUpLeft } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, Trash2, CornerUpLeft, Flag } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { formatRelativeTime } from '@/utils/format'
@@ -12,6 +12,7 @@ import {
   useDeleteReply,
   useToggleReplyReaction,
 } from '@/hooks/useComments'
+import { ReportCommentModal } from './ReportCommentModal'
 import type {
   CommentReplyItem as CommentReplyItemType,
   CommentTargetType,
@@ -39,7 +40,7 @@ const MAX_VISUAL_DEPTH = 1
  * CommentReplyItem — 1 dòng reply trong cây trả lời.
  *
  * Hiển thị: avatar nhỏ, tên, thời gian tương đối, nội dung, like/dislike,
- * nút "Trả lời" và nút xoá (chỉ chủ sở hữu).
+ * nút "Trả lời", nút xoá (chủ sở hữu / admin) và nút báo cáo vi phạm (người khác).
  */
 export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
   reply,
@@ -52,6 +53,7 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
   onFocusDone,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null)
+  const [isReportOpen, setIsReportOpen] = useState(false)
 
   useEffect(() => {
     if (!focused) return
@@ -79,6 +81,14 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
     }
     const mutation = kind === 'like' ? likeMutation : dislikeMutation
     mutation.mutate({ replyId: reply.id, commentId: reply.commentId })
+  }
+
+  const handleReport = () => {
+    if (!isAuthenticated) {
+      openLogin(window.location.pathname + window.location.search)
+      return
+    }
+    setIsReportOpen(true)
   }
 
   const handleDelete = async () => {
@@ -199,8 +209,28 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
               </button>
             </Tooltip>
           )}
+
+          {!reply.owner && (
+            <Tooltip title="Báo cáo vi phạm">
+              <button
+                type="button"
+                onClick={handleReport}
+                aria-label="Báo cáo vi phạm"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold text-gray-400 hover:bg-amber-50 hover:text-amber-700 transition"
+              >
+                <Flag className="w-3.5 h-3.5" />
+              </button>
+            </Tooltip>
+          )}
         </div>
       </div>
+
+      <ReportCommentModal
+        open={isReportOpen}
+        kind="reply"
+        targetId={reply.id}
+        onClose={() => setIsReportOpen(false)}
+      />
     </div>
   )
 }

@@ -65,9 +65,9 @@ public class CourseController {
     // ADMIN ENDPOINTS
     // =========================================================
 
-    @Operation(summary = "[Admin] Lấy toàn bộ danh sách khóa học", description = "Dành cho quản trị viên xem toàn bộ khóa học (kể cả khóa chưa xuất bản)")
+    @Operation(summary = "[Admin/Teacher] Danh sách khóa học để quản lý", description = "Kể cả khóa chưa xuất bản. Quản trị viên thấy toàn bộ khóa học; giáo viên chỉ thấy khóa học do mình tạo")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @GetMapping("/admin")
     public ApiResponse<PageResponse<CourseResponse>> getAllCoursesForAdmin(
             @RequestParam(defaultValue = "1") int page,

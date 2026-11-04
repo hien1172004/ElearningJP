@@ -6,6 +6,19 @@ export { useResetPassword } from './useResetPassword'
 export { useValidateResetToken } from './useValidateResetToken'
 export { useUserProfile, useUpdateProfile, useChangeAvatar, USER_PROFILE_QUERY_KEY } from './useUserProfile'
 export { useChangePassword } from './useChangePassword'
+export { useAdminUsers, useUpdateUserStatus, useUpdateUserRoles } from './useAdminUsers'
+export { useAdminDashboard } from './useAdminDashboard'
+export {
+  useAdminScenarios,
+  useAdminScenario,
+  useCreateScenario,
+  useUpdateScenario,
+  useDeleteScenario,
+} from './useAdminScenarios'
+export { useModerationQueue, useModerationBrowse, useModerationAction } from './useAdminModeration'
+export { useReportComment } from './useReportComment'
+export { useRecipientCount, useBroadcastHistory, useSendBroadcast } from './useBroadcasts'
+export { useCourseStudents, useStudentCourseDetail } from './useCourseStudents'
 
 // Đăng nhập bằng Google (GSI idToken + luồng OAuth2 redirect)
 export { useGoogleLogin, useGoogleCallback } from './useGoogleLogin'

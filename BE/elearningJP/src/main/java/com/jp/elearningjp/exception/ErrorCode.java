@@ -27,6 +27,7 @@ public enum ErrorCode {
     USER_BANNED(1013, "User is banned", HttpStatus.FORBIDDEN),
     INVALID_RESET_TOKEN(1014, "Reset token is invalid", HttpStatus.BAD_REQUEST),
     SAME_OLD_PASSWORD(1015, "New password must be different from old password", HttpStatus.BAD_REQUEST),
+    CANNOT_MODIFY_OWN_ACCOUNT(1016, "You cannot change the status or roles of your own account", HttpStatus.BAD_REQUEST),
 
 // CURRICULUM MODULE — Course (1100-1199)
     COURSE_NOT_FOUND(1100, "Course not found", HttpStatus.NOT_FOUND),
@@ -57,6 +58,7 @@ public enum ErrorCode {
     LESSON_REORDER_LIST_EMPTY(1218, "Danh sách lesson cần reorder không được rỗng", HttpStatus.BAD_REQUEST),
     LESSON_REORDER_LIST_INVALID(1219, "Danh sách lesson cần reorder chứa ID trùng lặp hoặc không hợp lệ", HttpStatus.BAD_REQUEST),
     LESSON_REORDER_LIST_MISMATCH(1220, "Danh sách lesson cần reorder phải khớp 100% với tất cả lesson hiện có trong khóa học", HttpStatus.CONFLICT),
+    LESSON_KANJI_RELATED_VOCAB_TOO_MANY(1221, "Số từ vựng liên quan vượt quá giới hạn 200 từ cho 1 chữ Hán", HttpStatus.BAD_REQUEST),
 
     // CURRICULUM MODULE — Enrollment (1300-1399)
     ENROLLMENT_NOT_FOUND(1300, "Enrollment not found", HttpStatus.NOT_FOUND),
@@ -97,6 +99,9 @@ public enum ErrorCode {
     COMMENT_REPLY_NOT_FOUND(4004, "Comment reply not found", HttpStatus.NOT_FOUND),
     COMMENT_REPLY_FORBIDDEN(4005, "You don't have permission to modify this reply", HttpStatus.FORBIDDEN),
     COMMENT_REPLY_INVALID_PARENT(4006, "Parent reply must belong to the same comment", HttpStatus.BAD_REQUEST),
+    COMMENT_ALREADY_REPORTED(4007, "You have already reported this content", HttpStatus.CONFLICT),
+    COMMENT_REPORT_OWN(4008, "You cannot report your own content", HttpStatus.BAD_REQUEST),
+    COMMENT_MODERATION_FORBIDDEN(4009, "You don't have permission to moderate this content", HttpStatus.FORBIDDEN),
 
     // EXAM MODULE (5000 - 5099)
     EXAM_NOT_FOUND(5000, "Exam not found", HttpStatus.NOT_FOUND),
@@ -114,6 +119,7 @@ public enum ErrorCode {
     AI_SCENARIO_NOT_FOUND(6001, "Speaking scenario not found", HttpStatus.NOT_FOUND),
     AI_QUOTA_EXCEEDED(6002, "Daily speaking quota exceeded", HttpStatus.TOO_MANY_REQUESTS),
     AI_SESSION_FORBIDDEN(6003, "You do not have access to this session", HttpStatus.FORBIDDEN),
+    AI_SCENARIO_FORBIDDEN(6004, "You do not have permission to manage this scenario", HttpStatus.FORBIDDEN),
 
     // LEADERBOARD / PROGRESS MODULE (5100 - 5199)
     LEADERBOARD_INVALID_WEEK(5101, "Invalid week key. Expected format YYYY-Www (e.g. 2026-W42)", HttpStatus.BAD_REQUEST),
@@ -126,6 +132,9 @@ public enum ErrorCode {
     // NOTIFICATION MODULE (6100 - 6199)
     NOTIFICATION_NOT_FOUND(6100, "Notification not found", HttpStatus.NOT_FOUND),
     NOTIFICATION_FORBIDDEN(6101, "You don't have permission to access this notification", HttpStatus.FORBIDDEN),
+    BROADCAST_INVALID_AUDIENCE(6102, "Invalid broadcast audience", HttpStatus.BAD_REQUEST),
+    BROADCAST_FORBIDDEN(6103, "You don't have permission to send to this audience", HttpStatus.FORBIDDEN),
+    BROADCAST_NO_RECIPIENTS(6104, "No recipients match this audience", HttpStatus.BAD_REQUEST),
     
 
     // NOTEBOOK MODULE (7000 - 7099)

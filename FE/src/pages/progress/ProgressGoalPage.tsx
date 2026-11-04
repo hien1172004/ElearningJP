@@ -13,8 +13,8 @@ import {
 const MASCOT_SRC = '/mascot/standing.svg'
 
 const IntroStep: React.FC<{ onStart: () => void }> = ({ onStart }) => (
-  <div className="rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-blue-800 px-4 py-16 sm:py-24 flex justify-center">
-    <div className="w-full max-w-2xl rounded-xl bg-white/85 backdrop-blur p-6 sm:p-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-10 shadow-lg">
+  <div className="px-4 py-10 sm:py-14 flex justify-center">
+    <div className="w-full max-w-2xl rounded-xl bg-white border border-suna p-6 sm:p-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-10 shadow-xs">
       <img src={MASCOT_SRC} alt="" className="w-36 h-36 sm:w-44 sm:h-44 shrink-0" />
       <div className="text-center sm:text-left">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-snug">

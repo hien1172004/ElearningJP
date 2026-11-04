@@ -596,7 +596,7 @@ class KanjiSectionItemServiceTest {
 
         when(kanjiItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
         when(kanjiItemRepository.save(any(LessonKanjiItem.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(relatedVocabRepository.findByKanjiItemIdAndDeletedFalse(50L)).thenReturn(List.of(existingRv));
+        when(relatedVocabRepository.findByKanjiItemId(50L)).thenReturn(List.of(existingRv));
 
         service.updateKanjiItem(50L, request);
 
@@ -620,20 +620,87 @@ class KanjiSectionItemServiceTest {
 
         when(kanjiItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
         when(kanjiItemRepository.save(any(LessonKanjiItem.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(relatedVocabRepository.findByKanjiItemIdAndDeletedFalse(50L))
+        when(relatedVocabRepository.findByKanjiItemId(50L))
                 .thenReturn(List.of(oldRv)); // existing → cũ
         when(vocabularyRepository.findByIdAndDeletedFalse(200L)).thenReturn(Optional.of(vocab2));
-
-        LessonKanjiRelatedVocab savedRv = LessonKanjiRelatedVocab.builder()
-                .kanjiItem(existingItem).vocab(vocab2).build();
-        savedRv.setId(600L);
-        when(relatedVocabRepository.save(any(LessonKanjiRelatedVocab.class))).thenReturn(savedRv);
 
         service.updateKanjiItem(50L, request);
 
         assertThat(oldRv.isDeleted()).isTrue(); // cái cũ bị soft-delete
-        verify(relatedVocabRepository).saveAll(any());  // saveAll existing → soft-delete
-        verify(relatedVocabRepository).save(any(LessonKanjiRelatedVocab.class)); // save mới
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<LessonKanjiRelatedVocab>> captor =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(relatedVocabRepository).saveAll(captor.capture());
+        assertThat(captor.getValue())
+                .extracting(rv -> rv.getVocab().getId())
+                .containsExactlyInAnyOrder(100L, 200L); // 100 xoá mềm + 200 tạo mới
+    }
+
+    @Test
+    @DisplayName("updateKanjiItem: chọn lại vocab đã bị xoá mềm → restore dòng cũ, không insert (tránh vi phạm UNIQUE)")
+    void updateKanjiItem_reselectSoftDeletedVocab_restoresRow() {
+        LessonKanjiRelatedVocab deletedRv = LessonKanjiRelatedVocab.builder()
+                .kanjiItem(existingItem).vocab(vocab1).build();
+        deletedRv.setId(500L);
+        deletedRv.softDelete();
+
+        LessonKanjiItemUpdateRequest request = LessonKanjiItemUpdateRequest.builder()
+                .relatedVocabulary(List.of(LessonKanjiRelatedVocabRequest.builder()
+                        .vocabIds(List.of(100L)).build()))
+                .build();
+
+        when(kanjiItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(kanjiItemRepository.save(any(LessonKanjiItem.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(relatedVocabRepository.findByKanjiItemId(50L)).thenReturn(List.of(deletedRv));
+        when(vocabularyRepository.findByIdAndDeletedFalse(100L)).thenReturn(Optional.of(vocab1));
+
+        service.updateKanjiItem(50L, request);
+
+        assertThat(deletedRv.isDeleted()).isFalse();
+        verify(relatedVocabRepository).saveAll(List.of(deletedRv));
+        verify(relatedVocabRepository, never()).save(any(LessonKanjiRelatedVocab.class));
+    }
+
+    @Test
+    @DisplayName("updateKanjiItem: 53 vocabId (> 50 cũ, <= 200) → lưu được")
+    void updateKanjiItem_moreThan50Vocabs_allowed() {
+        List<Long> ids = java.util.stream.LongStream.rangeClosed(1, 53).boxed().toList();
+        LessonKanjiItemUpdateRequest request = LessonKanjiItemUpdateRequest.builder()
+                .relatedVocabulary(List.of(LessonKanjiRelatedVocabRequest.builder().vocabIds(ids).build()))
+                .build();
+
+        when(kanjiItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(kanjiItemRepository.save(any(LessonKanjiItem.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(relatedVocabRepository.findByKanjiItemId(50L)).thenReturn(List.of());
+        when(vocabularyRepository.findByIdAndDeletedFalse(anyLong())).thenAnswer(inv -> {
+            Vocabulary v = Vocabulary.builder().word("w").hiragana("h").build();
+            v.setId(inv.getArgument(0));
+            return Optional.of(v);
+        });
+
+        service.updateKanjiItem(50L, request);
+
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<List<LessonKanjiRelatedVocab>> captor =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(relatedVocabRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).hasSize(53);
+    }
+
+    @Test
+    @DisplayName("updateKanjiItem: > 200 vocab → LESSON_KANJI_RELATED_VOCAB_TOO_MANY")
+    void updateKanjiItem_tooManyVocabs_throws() {
+        List<Long> ids = java.util.stream.LongStream.rangeClosed(1, 201).boxed().toList();
+        LessonKanjiItemUpdateRequest request = LessonKanjiItemUpdateRequest.builder()
+                .relatedVocabulary(List.of(LessonKanjiRelatedVocabRequest.builder().vocabIds(ids).build()))
+                .build();
+
+        when(kanjiItemRepository.findById(50L)).thenReturn(Optional.of(existingItem));
+        when(kanjiItemRepository.save(any(LessonKanjiItem.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThatThrownBy(() -> service.updateKanjiItem(50L, request))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.LESSON_KANJI_RELATED_VOCAB_TOO_MANY);
     }
 
     @Test

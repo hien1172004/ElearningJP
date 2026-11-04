@@ -175,6 +175,11 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     public KanjiDetailResponse getKanjiDetail(String character) {
+        return getKanjiDetail(character, false);
+    }
+
+    @Override
+    public KanjiDetailResponse getKanjiDetail(String character, boolean includeAllRelatedWords) {
         WritingCharacter wc = writingCharacterRepository.findByCharacterAndDeletedFalse(character)
                 .orElseThrow(() -> new AppException(ErrorCode.CHARACTER_NOT_FOUND));
 
@@ -205,8 +210,10 @@ public class DictionaryServiceImpl implements DictionaryService {
                         LinkedHashMap::new, 
                         Collectors.collectingAndThen(Collectors.toList(), list -> list.stream().limit(5).toList())));
 
-        // Giới hạn danh sách allRelatedWords tối đa 20 từ tiêu biểu nhất
-        List<KanjiRelatedWordResponse> limitedAllRelatedWords = allRelatedWords.stream().limit(20).toList();
+        // Giới hạn danh sách allRelatedWords tối đa 20 từ tiêu biểu nhất (trừ khi yêu cầu lấy đủ)
+        List<KanjiRelatedWordResponse> limitedAllRelatedWords = includeAllRelatedWords
+                ? allRelatedWords
+                : allRelatedWords.stream().limit(20).toList();
 
         return KanjiDetailResponse.builder()
                 .id(wc.getId())

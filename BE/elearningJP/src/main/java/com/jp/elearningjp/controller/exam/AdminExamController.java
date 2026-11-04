@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,8 @@ import com.jp.elearningjp.shared.enums.ExamType;
 @RequestMapping(ApiPaths.API_V1 + ApiPaths.AdminExam.BASE)
 @RequiredArgsConstructor
 @Tag(name = "Admin Exam", description = "APIs dành cho Quản trị viên/Giáo viên quản lý, xem trước và chỉnh sửa đề thi")
+// Đặt ở cấp class để mọi endpoint (kể cả endpoint thêm sau) đều chỉ dành cho ADMIN/TEACHER
+@PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
 public class AdminExamController {
 
     private final AdminExamService adminExamService;
@@ -189,6 +192,9 @@ public class AdminExamController {
     }
 
     @GetMapping(ApiPaths.AdminExam.BY_COURSE)
+    // Ngoại lệ: trang chi tiết khóa học / sidebar bài học của học viên cũng gọi API này,
+    // nên chỉ yêu cầu đăng nhập (ghi đè @PreAuthorize cấp class).
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Lấy danh sách đề thi thuộc về một khóa học (giữa khóa, cuối khóa)")
     public ApiResponse<List<ExamSummaryResponse>> getCourseExams(@PathVariable Long courseId) {
         List<ExamSummaryResponse> exams = adminExamService.getCourseExams(courseId);

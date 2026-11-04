@@ -246,7 +246,7 @@ export const SrsReviewPage: React.FC = () => {
             {totalXp > 0 && (
               <>
                 {' · '}
-                <span className="font-semibold text-indigo-600">+{totalXp} XP</span>
+                {/* <span className="font-semibold text-indigo-600">+{totalXp} XP</span> */}
               </>
             )}
           </p>

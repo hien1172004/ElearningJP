@@ -7,6 +7,8 @@ import {
   Pencil,
   Save,
   X,
+  CornerUpLeft,
+  Flag,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
@@ -21,7 +23,12 @@ import {
   useUpdateComment,
 } from '@/hooks/useComments'
 import { CommentReplies } from './CommentReplies'
-import type { CommentItem as CommentItemType, CommentTargetType } from '@/types'
+import { ReportCommentModal } from './ReportCommentModal'
+import type {
+  CommentItem as CommentItemType,
+  CommentReplyItem as CommentReplyItemType,
+  CommentTargetType,
+} from '@/types'
 
 interface CommentItemProps {
   comment: CommentItemType
@@ -42,7 +49,8 @@ const MAX_CONTENT_LENGTH = 5000
  * CommentItem — 1 bình luận gốc.
  *
  * Hiển thị: avatar, tên, thời gian tương đối, nội dung, thanh hành động
- * (like / dislike / trả lời / sửa / xoá) và khối reply thu gọn.
+ * (like / dislike / trả lời / sửa / xoá / báo cáo) và khối reply thu gọn.
+ * Bấm "Trả lời" mở ngay ô viết trả lời bên dưới.
  */
 export const CommentItem: React.FC<CommentItemProps> = ({
   comment,
@@ -53,6 +61,12 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   onFocusDone,
 }) => {
   const [isEditing, setIsEditing] = useState(false)
+  const [isReportOpen, setIsReportOpen] = useState(false)
+  // Ô viết trả lời: replyTo = null khi trả lời bình luận gốc
+  const [composer, setComposer] = useState<{ open: boolean; replyTo: CommentReplyItemType | null }>({
+    open: false,
+    replyTo: null,
+  })
   const articleRef = useRef<HTMLElement>(null)
   // Chỉ highlight chính bình luận khi thông báo không trỏ tới 1 reply cụ thể.
   const highlightSelf = focused && !focusReplyId
@@ -93,6 +107,22 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     }
     const mutation = kind === 'like' ? likeMutation : dislikeMutation
     mutation.mutate({ commentId: comment.id })
+  }
+
+  const handleStartReply = (reply?: CommentReplyItemType) => {
+    setComposer({ open: true, replyTo: reply ?? null })
+  }
+
+  const handleCloseComposer = () => {
+    setComposer({ open: false, replyTo: null })
+  }
+
+  const handleReport = () => {
+    if (!isAuthenticated) {
+      openLogin(window.location.pathname + window.location.search)
+      return
+    }
+    setIsReportOpen(true)
   }
 
   const handleStartEdit = () => {
@@ -253,6 +283,20 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               </button>
             </Tooltip>
 
+            <button
+              type="button"
+              onClick={() => handleStartReply()}
+              className={cn(
+                'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition',
+                composer.open && !composer.replyTo
+                  ? 'bg-indigo-50 text-indigo-700'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700',
+              )}
+            >
+              <CornerUpLeft className="w-3.5 h-3.5" />
+              Trả lời
+            </button>
+
             {comment.owner && (
               <button
                 type="button"
@@ -277,6 +321,20 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                 </button>
               </>
             )}
+
+            {/* Báo cáo vi phạm: không hiện với bình luận của chính mình */}
+            {!comment.owner && (
+              <Tooltip title="Báo cáo vi phạm">
+                <button
+                  type="button"
+                  onClick={handleReport}
+                  aria-label="Báo cáo vi phạm"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-gray-400 hover:bg-amber-50 hover:text-amber-700 transition"
+                >
+                  <Flag className="w-3.5 h-3.5" />
+                </button>
+              </Tooltip>
+            )}
           </div>
         )}
 
@@ -289,9 +347,19 @@ export const CommentItem: React.FC<CommentItemProps> = ({
             replyCount={comment.replyCount}
             focusReplyId={focusReplyId}
             onFocusDone={onFocusDone}
+            composer={composer}
+            onStartReply={handleStartReply}
+            onCloseComposer={handleCloseComposer}
           />
         )}
       </div>
+
+      <ReportCommentModal
+        open={isReportOpen}
+        kind="comment"
+        targetId={comment.id}
+        onClose={() => setIsReportOpen(false)}
+      />
     </article>
   )
 }

@@ -82,7 +82,7 @@ interface ProgressSummaryBlockProps {
 // Loading skeleton
 // --------------------------------------------------------------------------
 const SkeletonBlock: React.FC = () => (
-  <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-4">
+  <div className="rounded-md p-4">
     <div className="animate-pulse space-y-3">
       <div className="h-5 w-44 bg-gray-200 rounded" />
       <div className="grid grid-cols-2 gap-3">
@@ -101,7 +101,7 @@ const ErrorBlock: React.FC<{ onRefetch?: () => void; message?: string }> = ({
   onRefetch,
   message,
 }) => (
-  <div className="bg-white rounded-md border border-rose-200 shadow-xs p-6">
+  <div className="rounded-md bg-rose-50/60 p-6">
     <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
       <span className="flex items-center justify-center w-14 h-14 rounded-full bg-rose-50 text-rose-500 shrink-0">
         <CircleAlert className="w-7 h-7" aria-hidden="true" />
@@ -125,7 +125,7 @@ const ErrorBlock: React.FC<{ onRefetch?: () => void; message?: string }> = ({
 // Empty state — user chưa có hoạt động nào
 // --------------------------------------------------------------------------
 const EmptyBlock: React.FC<{ onGoStudy?: () => void }> = ({ onGoStudy }) => (
-  <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6">
+  <div className="rounded-md p-6">
     <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
       <span className="flex items-center justify-center w-[72px] h-[72px] rounded-full bg-gradient-to-br from-indigo-100 to-sky-100 text-indigo-500 shrink-0">
         <Sparkles className="w-9 h-9" aria-hidden="true" />
@@ -245,8 +245,9 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
       </div>
 
       {/* ---------- Mascot + thẻ số liệu ---------- */}
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_200px] gap-3">
-        <div className="grid grid-cols-2 gap-3">
+      {/* Thẻ số liệu giới hạn rộng tối đa 440px; phần còn lại dành cho mascot */}
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,440px)_minmax(0,1fr)] gap-3">
+        <div className="grid grid-cols-2 gap-2.5 content-start">
           <StatCard
             icon="words"
             label="Từ đã học"
@@ -294,9 +295,9 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
         </div>
 
         {/* Mascot cạnh danh */}
-        <div className="flex flex-col items-center justify-center gap-2 bg-white rounded-md border border-gray-200/80 shadow-xs p-3.5">
-          <MascotProgress learned={wordsToday} goal={goalWords} size={120} />
-          <div className="w-full text-center">
+        <div className="flex flex-col items-center justify-center gap-2 bg-kinari rounded-md p-4">
+          <MascotProgress learned={wordsToday} goal={goalWords} size={128} />
+          <div className="w-full max-w-[240px] text-center">
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
               Mục tiêu ngày
             </p>

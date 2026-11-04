@@ -18,3 +18,9 @@ export type {
   ChangePasswordRequest,
 } from './user.types'
 export type * from './notebook.types'
+export type * from './adminUser.types'
+export type * from './adminDashboard.types'
+export type * from './adminScenario.types'
+export type * from './adminModeration.types'
+export type * from './adminBroadcast.types'
+export type * from './courseStudents.types'

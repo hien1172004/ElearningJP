@@ -28,7 +28,7 @@ export const MainLayout: React.FC = () => {
     location.pathname.includes('/notebooks/') && location.pathname.includes('/review')
 
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-900 font-sans">
+    <div className="min-h-screen bg-kinari text-sumi font-sans">
       {/* TopBar - full-width, fixed top */}
       <TopBar />
 

@@ -21,6 +21,14 @@ interface CommentRepliesProps {
   /** Reply cần mở (từ thông báo) → tự mở khối reply, cuộn tới + highlight. */
   focusReplyId?: number
   onFocusDone?: () => void
+  /**
+   * Ô viết trả lời — do `CommentItem` điều khiển để nút "Trả lời" nằm trên thanh hành động
+   * của bình luận. `replyTo` khác null khi trả lời một reply cụ thể.
+   */
+  composer?: { open: boolean; replyTo: CommentReplyItemType | null }
+  /** Mở ô viết trả lời (không truyền reply = trả lời bình luận gốc). */
+  onStartReply?: (reply?: CommentReplyItemType) => void
+  onCloseComposer?: () => void
 }
 
 /** Node của cây reply (dựng từ `parentReplyId` — BE trả về danh sách phẳng). */
@@ -60,7 +68,7 @@ function buildReplyTree(
 function renderNode(
   node: ReplyNode,
   depth: number,
-  props: Omit<CommentRepliesProps, 'defaultOpen'>,
+  props: Pick<CommentRepliesProps, 'targetType' | 'targetId' | 'focusReplyId' | 'onFocusDone'>,
   onReply: (reply: CommentReplyItemType) => void,
 ): React.ReactNode {
   return (
@@ -88,9 +96,10 @@ function renderNode(
 /**
  * CommentReplies — khối trả lời của 1 bình luận.
  *
- * - Mặc định thu gọn, chỉ tải data khi user bấm "X trả lời".
+ * - Mặc định thu gọn, chỉ tải data khi user bấm "Xem N trả lời" (chỉ hiện khi đã có trả lời).
  * - Cây reply lồng nhau dựng từ `parentReplyId`.
- * - Có ô nhập reply nhanh (gửi `parentReplyId` khi reply 1 reply khác).
+ * - Ô viết trả lời hiện ngay khi bấm "Trả lời" (trạng thái nằm ở `CommentItem`);
+ *   gửi `parentReplyId` khi trả lời 1 reply khác.
  */
 export const CommentReplies: React.FC<CommentRepliesProps> = ({
   commentId,
@@ -100,6 +109,9 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
   defaultOpen = false,
   focusReplyId,
   onFocusDone,
+  composer = { open: false, replyTo: null },
+  onStartReply,
+  onCloseComposer,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen || !!focusReplyId)
   // Thông báo trỏ tới 1 reply khi khối đang đóng → mở ra (mỗi reply 1 lần).
@@ -108,8 +120,7 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
     setOpenedForReplyId(focusReplyId)
     setIsOpen(true)
   }
-  const [isComposerOpen, setIsComposerOpen] = useState(false)
-  const [replyTo, setReplyTo] = useState<CommentReplyItemType | null>(null)
+  const replyTo = composer.replyTo
 
   const { data, isLoading, isError, refetch } = useCommentReplies(
     commentId,
@@ -125,16 +136,11 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
 
   const handleToggle = () => {
     setIsOpen((prev) => !prev)
-    if (!isOpen) {
-      setIsComposerOpen(false)
-      setReplyTo(null)
-    }
   }
 
-  /** Mở ô nhập reply (có thể trả lời 1 reply khác). */
+  /** Trả lời 1 reply khác → mở ô viết trả lời ngay. */
   const handleStartReply = (reply?: CommentReplyItemType) => {
-    setReplyTo(reply ?? null)
-    setIsComposerOpen(true)
+    onStartReply?.(reply)
   }
 
   const handleSubmitReply = async (content: string) => {
@@ -145,9 +151,10 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
         parentReplyId: replyTo?.id,
       })
       toast.success('Đã gửi trả lời')
-      setIsComposerOpen(false)
-      setReplyTo(null)
-      void refetch()
+      onCloseComposer?.()
+      // Mở danh sách để thấy ngay trả lời vừa gửi
+      if (isOpen) void refetch()
+      else setIsOpen(true)
     } catch (err: any) {
       toast.error(
         err?.response?.data?.message ?? 'Không gửi được trả lời. Vui lòng thử lại.',
@@ -156,25 +163,27 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
   }
 
   const totalReplies = data?.total ?? replyCount
+  const hasReplies = totalReplies > 0
+
+  // Chưa có trả lời và chưa mở ô viết → không hiện gì (bỏ chú thích "Chưa có trả lời nào")
+  if (!hasReplies && !composer.open) return null
 
   return (
-    <div className="mt-3 border-t border-gray-100 pt-3">
-      {/* Nút mở / đóng khối reply */}
-      <button
-        type="button"
-        onClick={handleToggle}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition"
-      >
-        <CornerDownRight className="w-3.5 h-3.5" />
-        {isOpen
-          ? 'Ẩn trả lời'
-          : totalReplies > 0
-            ? `Xem ${totalReplies} trả lời`
-            : 'Trả lời'}
-      </button>
+    <div className="mt-2 space-y-3">
+      {/* Nút mở / đóng danh sách trả lời — chỉ khi đã có trả lời */}
+      {hasReplies && (
+        <button
+          type="button"
+          onClick={handleToggle}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition"
+        >
+          <CornerDownRight className="w-3.5 h-3.5" />
+          {isOpen ? 'Ẩn trả lời' : `Xem ${totalReplies} trả lời`}
+        </button>
+      )}
 
-      {isOpen && (
-        <div className="mt-3 space-y-3">
+      {isOpen && hasReplies && (
+        <div className="space-y-3">
           {/* Nội dung reply */}
           {isLoading && (
             <div className="flex items-center gap-2 py-3 text-xs text-gray-400">
@@ -194,68 +203,50 @@ export const CommentReplies: React.FC<CommentRepliesProps> = ({
             </div>
           )}
 
-          {!isLoading && !isError && tree.length === 0 && (
-            <p className="text-xs text-gray-400 py-2">
-              Chưa có trả lời nào. Hãy là người đầu tiên trả lời!
-            </p>
-          )}
-
           {tree.length > 0 && (
             <div className="space-y-3">
               {tree.map((node) =>
                 renderNode(
                   node,
                   0,
-                  { commentId, targetType, targetId, focusReplyId, onFocusDone },
+                  { targetType, targetId, focusReplyId, onFocusDone },
                   handleStartReply,
                 ),
               )}
             </div>
           )}
+        </div>
+      )}
 
-          {/* Ô nhập trả lời */}
-          {isComposerOpen ? (
-            <div className="space-y-2">
-              {replyTo && (
-                <div className="flex items-center justify-between gap-2 rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
-                  <p className="text-[11px] text-gray-600 truncate">
-                    Đang trả lời <strong>{replyTo.user?.fullName ?? 'bình luận'}</strong>
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReplyTo(null)
-                      setIsComposerOpen(false)
-                    }}
-                    className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition shrink-0"
-                  >
-                    Huỷ
-                  </button>
-                </div>
-              )}
-              <CommentComposer
-                compact
-                autoFocus
-                placeholder={
-                  replyTo
-                    ? `Trả lời ${replyTo.user?.fullName ?? ''}...`
-                    : 'Viết trả lời của bạn...'
-                }
-                submitLabel="Gửi trả lời"
-                isSubmitting={addReplyMutation.isPending}
-                onSubmit={handleSubmitReply}
-              />
-            </div>
-          ) : (
-            <Button
-              size="small"
-              type="text"
-              className="!px-0 !text-xs !font-semibold !text-indigo-600"
-              onClick={() => handleStartReply()}
+      {/* Ô viết trả lời — hiện ngay khi bấm "Trả lời" */}
+      {composer.open && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 rounded-md bg-gray-50 border border-gray-200 px-3 py-2">
+            <p className="text-[11px] text-gray-600 truncate">
+              Đang trả lời <strong>{replyTo?.user?.fullName ?? 'bình luận'}</strong>
+            </p>
+            <button
+              type="button"
+              onClick={() => onCloseComposer?.()}
+              className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition shrink-0"
             >
-              Viết trả lời
-            </Button>
-          )}
+              Huỷ
+            </button>
+          </div>
+          <CommentComposer
+            // Đổi người được trả lời → tạo lại ô viết để focus đúng chỗ
+            key={replyTo?.id ?? 'root'}
+            compact
+            autoFocus
+            placeholder={
+              replyTo
+                ? `Trả lời ${replyTo.user?.fullName ?? ''}...`
+                : 'Viết trả lời của bạn...'
+            }
+            submitLabel="Gửi trả lời"
+            isSubmitting={addReplyMutation.isPending}
+            onSubmit={handleSubmitReply}
+          />
         </div>
       )}
     </div>

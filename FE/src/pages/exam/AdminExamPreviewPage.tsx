@@ -47,6 +47,7 @@ import {
   Check,
   Layers,
   FileCheck,
+  Lightbulb,
   UploadCloud,
   EyeOff,
   AlertTriangle,
@@ -353,7 +354,7 @@ export const AdminExamPreviewPage: React.FC = () => {
     const attempts = previewData?.totalAttempts || 0
     const confirmed = await confirmDialog({
       title: 'Chấm lại toàn bộ bài thi đã nộp?',
-      content: `⚠️ CẢNH BÁO QUAN TRỌNG:\n\n• Hệ thống sẽ tính lại điểm số cho TẤT CẢ ${attempts} bài thi đã nộp theo các đáp án hiện tại.\n• Điểm số cũ trên Bảng xếp hạng và Lịch sử thi sẽ được cập nhật lại.\n• Hãy dùng tính năng này sau khi bạn đã chỉnh sửa xong đáp án đúng!`,
+      content: `CẢNH BÁO QUAN TRỌNG:\n\n• Hệ thống sẽ tính lại điểm số cho TẤT CẢ ${attempts} bài thi đã nộp theo các đáp án hiện tại.\n• Điểm số cũ trên Bảng xếp hạng và Lịch sử thi sẽ được cập nhật lại.\n• Hãy dùng tính năng này sau khi bạn đã chỉnh sửa xong đáp án đúng!`,
       okText: 'Bắt đầu chấm lại',
       cancelText: 'Hủy',
       danger: true,
@@ -775,7 +776,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       setPreviewData((prev) => (prev ? { ...prev, published: true } : prev))
       toast.success('Đã phát hành đề thi thành công!')
       setTimeout(() => {
-        navigate('/admin/dashboard')
+        navigate('/admin/exams')
       }, 1200)
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Lỗi khi phát hành đề thi')
@@ -835,10 +836,10 @@ export const AdminExamPreviewPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="flex items-center justify-center py-24 px-4">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-600 font-medium">Đang tải cấu trúc đề thi để biên tập...</p>
+          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-600 font-medium">Đang tải cấu trúc đề thi để biên tập...</p>
         </div>
       </div>
     )
@@ -846,10 +847,10 @@ export const AdminExamPreviewPage: React.FC = () => {
 
   if (error || !previewData) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 max-w-md w-full text-center space-y-4">
-          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
-          <h2 className="text-lg font-bold text-slate-800">Không thể tải đề thi</h2>
+      <div className="flex items-center justify-center py-16 px-4">
+        <div className="bg-white p-6 rounded-xl shadow-xs border border-suna max-w-md w-full text-center space-y-3">
+          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+          <h2 className="text-base font-bold text-slate-800">Không thể tải đề thi</h2>
           <p className="text-xs text-slate-500">{error || 'Không tìm thấy dữ liệu đề thi này.'}</p>
           <button
             onClick={() => navigate('/exams')}
@@ -1021,17 +1022,17 @@ export const AdminExamPreviewPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <div className="pb-20">
       {/* Header Bar */}
-      <div className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 shadow-xs px-4 sm:px-8 py-3.5">
+      <div className="sticky top-14 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-suna dark:border-slate-800 rounded-xl shadow-xs px-4 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/admin/dashboard')}
+              onClick={() => navigate('/admin/exams')}
               className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               title="Quay lại danh sách quản lý đề thi"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -1055,7 +1056,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   </span>
                 )}
               </div>
-              <h1 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white line-clamp-1 mt-0.5">
+              <h1 className="text-sm sm:text-base font-bold text-sumi dark:text-white line-clamp-1 mt-0.5">
                 {previewData.title}
               </h1>
             </div>
@@ -1066,7 +1067,7 @@ export const AdminExamPreviewPage: React.FC = () => {
             {/* Lưu nháp & Thoát */}
             <button
               type="button"
-              onClick={() => navigate('/admin/dashboard')}
+              onClick={() => navigate('/admin/exams')}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition border border-slate-200 dark:border-slate-700 cursor-pointer shadow-xs"
               title="Tất cả thay đổi đã được tự động lưu. Bấm để trở về danh sách đề thi."
             >
@@ -1222,7 +1223,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-6 space-y-6">
         {/* Banner cảnh báo an toàn phiên làm bài & xung đột trực tiếp */}
         {(previewData.inProgressAttempts ?? 0) > 0 ? (
-          <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border-2 border-rose-300 rounded-3xl p-5 shadow-sm backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border-2 border-rose-300 rounded-xl p-5 shadow-sm backdrop-blur-sm">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3.5">
                 <div className="relative mt-0.5">
@@ -1343,7 +1344,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                 <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800">
                   {activeSection?.sessionType}
                 </span>
-                <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                <h2 className="text-base font-black text-slate-900 dark:text-white">
                   {activeSection?.sectionTitle.replace(/\s*\(\d+\s*phút\)/i, '').trim()}
                 </h2>
               </div>
@@ -1361,7 +1362,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                 title="Tải ảnh hoặc PDF bảng đáp án chuẩn (正答表) để tự động khớp đáp án cho các câu hỏi hiện tại"
               >
                 <FileCheck className="w-4 h-4 text-emerald-600" />
-                <span>{isBatchApplyingAnswerKey ? 'Đang khớp đáp án...' : '📥 Nạp đáp án từ ảnh/PDF 正答表'}</span>
+                <span>{isBatchApplyingAnswerKey ? 'Đang khớp đáp án...' : 'Nạp đáp án từ ảnh/PDF 正答表'}</span>
                 <input
                   type="file"
                   accept=".pdf,image/*"
@@ -1395,7 +1396,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-linear-to-r from-amber-500 via-orange-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition shadow-sm shadow-orange-500/10 flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
                 <Sparkles className="w-4 h-4 text-amber-200" />
-                <span>🤖 Quét & Thêm phần này bằng AI</span>
+                <span>Quét & Thêm phần này bằng AI</span>
               </button>
             </div>
           </div>
@@ -1450,12 +1451,12 @@ export const AdminExamPreviewPage: React.FC = () => {
         {/* DANH SÁCH CÂU HỎI THEO TỪNG MONDAI (CHUẨN HÓA JLPT ĐÍCH THỰC) */}
         {/* ========================================================= */}
         {activeSection?.questions.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-8 sm:p-12 shadow-sm space-y-8">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-suna dark:border-slate-800 p-6 sm:p-8 shadow-xs space-y-6">
             <div className="text-center max-w-md mx-auto space-y-2">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
                 <Sparkles className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 Phần này chưa có câu hỏi nào
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -1568,7 +1569,7 @@ export const AdminExamPreviewPage: React.FC = () => {
               return (
                 <div
                   key={mCode}
-                  className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden"
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
                 >
                   {/* Header của từng Mondai */}
                   <div className="bg-slate-100/80 px-6 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
@@ -1665,7 +1666,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                                 return (
                                   <div
                                     key={`passage-${p.id || cIdx}`}
-                                    className="bg-sky-50/50 rounded-3xl border-2 border-sky-200/90 p-5 space-y-4"
+                                    className="bg-sky-50/50 rounded-xl border-2 border-sky-200/90 p-5 space-y-4"
                                   >
                                     {/* Header Bài đọc dùng chung */}
                                     <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-sky-200">
@@ -1872,7 +1873,7 @@ export const AdminExamPreviewPage: React.FC = () => {
 
             {/* Các câu hỏi chưa gán Mondai chuẩn */}
             {unassignedQuestions.length > 0 && (
-              <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-100/70 px-6 py-3 border-b border-slate-200 font-bold text-xs text-slate-600">
                   Câu hỏi độc lập khác ({unassignedQuestions.length} câu)
                 </div>
@@ -1909,7 +1910,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       {/* ========================================================= */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[92vh] overflow-y-auto">
             {/* Header Modal */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 text-indigo-700">
@@ -2116,7 +2117,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       {/* ========================================================= */}
       {isAiSectionModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 text-indigo-700">
                 <Sparkles className="w-5 h-5 text-amber-500" />
@@ -2234,8 +2235,9 @@ export const AdminExamPreviewPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-indigo-700 bg-indigo-50/50 p-2 rounded-xl">
-                    💡 <strong>Gợi ý:</strong> Bạn có thể nạp cả file Audio MP3 và file PDF đề nghe để AI kết hợp chính xác cả tranh vẽ và mốc nghe.
+                  <p className="text-[11px] text-indigo-700 bg-indigo-50/50 p-2 rounded-lg flex items-start gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-px" />
+                    <span><strong>Gợi ý:</strong> Bạn có thể nạp cả file Audio MP3 và file PDF đề nghe để AI kết hợp chính xác cả tranh vẽ và mốc nghe.</span>
                   </p>
                 </div>
               ) : (
@@ -2297,8 +2299,9 @@ export const AdminExamPreviewPage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    💡 Hỗ trợ nạp cùng lúc nhiều file PDF (ví dụ: 1 file ngữ pháp + 1 file bài đọc hiểu riêng). AI sẽ tự ghép nối và đánh số câu hỏi liên tục.
+                  <p className="text-[11px] text-slate-500 flex items-start gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 shrink-0 mt-px text-amber-500" />
+                    <span>Hỗ trợ nạp cùng lúc nhiều file PDF (ví dụ: 1 file ngữ pháp + 1 file bài đọc hiểu riêng). AI sẽ tự ghép nối và đánh số câu hỏi liên tục.</span>
                   </p>
                 </div>
               )}
@@ -2496,7 +2499,7 @@ export const AdminExamPreviewPage: React.FC = () => {
           onClick={() => setZoomImageUrl(null)}
         >
           <div
-            className="relative max-w-5xl max-h-[92vh] bg-white rounded-3xl p-3 shadow-2xl flex flex-col items-center"
+            className="relative max-w-5xl max-h-[92vh] bg-white rounded-xl p-3 shadow-2xl flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -2518,7 +2521,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       {/* MODAL XÁC NHẬN HOÀN TÁC (ROLLBACK TO SNAPSHOT) */}
       {isRollbackModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                 <RotateCcw className="w-6 h-6" />

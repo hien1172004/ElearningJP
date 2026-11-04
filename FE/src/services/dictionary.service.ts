@@ -49,8 +49,14 @@ export const dictionaryService = {
   },
 
   // Chi tiết Hán tự
-  getKanjiDetail: async (character: string): Promise<ApiResponse<KanjiDetail>> => {
-    return axiosClient.get(`/dictionary/kanji/${encodeURIComponent(character)}`)
+  // allRelated = true → BE trả đủ allRelatedWords (mặc định chỉ 20 từ tiêu biểu)
+  getKanjiDetail: async (
+    character: string,
+    opts?: { allRelated?: boolean },
+  ): Promise<ApiResponse<KanjiDetail>> => {
+    return axiosClient.get(`/dictionary/kanji/${encodeURIComponent(character)}`, {
+      params: opts?.allRelated ? { allRelated: true } : undefined,
+    })
   },
 
   // Tìm kiếm Ngữ pháp phân trang

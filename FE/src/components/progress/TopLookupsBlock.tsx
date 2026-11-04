@@ -25,7 +25,7 @@ import type { TopLookup } from '@/types'
 // Loading / Empty
 // --------------------------------------------------------------------------
 const SkeletonBlock: React.FC = () => (
-  <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-4">
+  <div className="rounded-md p-4">
     <div className="animate-pulse space-y-2.5">
       <div className="h-5 w-44 bg-gray-200 rounded" />
       <div className="flex flex-wrap gap-1.5">
@@ -82,7 +82,7 @@ export const TopLookupsBlock: React.FC = () => {
   if (isLoading && !data) return <SkeletonBlock />
   if (isError && !data) {
     return (
-      <div className="bg-white rounded-md border border-rose-200 shadow-xs p-4">
+      <div className="rounded-md bg-rose-50/60 p-4">
         <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
           <span className="w-10 h-10 rounded-md bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
             <Search className="w-5 h-5" />
@@ -137,7 +137,7 @@ export const TopLookupsBlock: React.FC = () => {
       </div>
 
       {/* ---------- Chip + nút tra cứu ---------- */}
-      <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-3.5">
+      <div>
         {entries.length === 0 ? (
           <EmptyBlock />
         ) : (

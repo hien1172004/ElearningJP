@@ -103,4 +103,12 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("UPDATE Notification n SET n.read = true, n.updatedAt = :now " +
            "WHERE n.user.id = :userId AND n.read = false AND n.deleted = false")
     int markAllAsRead(@Param("userId") Long userId, @Param("now") Instant now);
+
+    /** Thông báo của 1 lần gửi hàng loạt — để đẩy realtime sau khi commit. */
+    @Query(value = """
+            SELECT * FROM notifications
+            WHERE type = 'ANNOUNCEMENT' AND deleted = false
+              AND data_json ->> 'broadcastId' = CAST(:broadcastId AS text)
+            """, nativeQuery = true)
+    List<Notification> findByBroadcastId(@Param("broadcastId") Long broadcastId);
 }

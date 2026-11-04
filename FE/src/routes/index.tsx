@@ -21,7 +21,14 @@ import {
   ExamHistoryPage,
   AdminExamPreviewPage,
   AdminExamCreatePage,
-  AdminDashboardPage,
+  AdminExamsPage,
+  AdminUsersPage,
+  AdminStatsPage,
+  AdminScenariosPage,
+  AdminScenarioEditorPage,
+  AdminModerationPage,
+  AdminBroadcastsPage,
+  TeacherStudentsPage,
   SpeakingLobbyPage,
   SpeakingPracticePage,
   ScenarioDetailPage,
@@ -37,6 +44,7 @@ import {
 } from '@/pages'
 import { AuthGatePage } from '@/pages/auth/AuthGatePage'
 import { ProtectedRoute } from './ProtectedRoute'
+import { AdminHomeRedirect } from './AdminHomeRedirect'
 
 // Wrapper để apply MainLayout cho protected routes
 const WithMainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
@@ -140,11 +148,38 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <AdminDashboardPage /> },
-      { path: 'dashboard', element: <AdminDashboardPage /> },
-      { path: 'exams', element: <AdminDashboardPage /> },
+      // /admin và /admin/dashboard: ADMIN → thống kê, TEACHER → danh sách đề thi
+      { index: true, element: <AdminHomeRedirect /> },
+      { path: 'dashboard', element: <AdminHomeRedirect /> },
+      { path: 'exams', element: <AdminExamsPage /> },
       { path: 'exams/:examId/preview', element: <AdminExamPreviewPage /> },
       { path: 'exams/create', element: <AdminExamCreatePage /> },
+      // Kịch bản luyện nói: ADMIN (tất cả) & TEACHER (của mình) — BE kiểm tra quyền theo người tạo
+      { path: 'scenarios', element: <AdminScenariosPage /> },
+      { path: 'scenarios/new', element: <AdminScenarioEditorPage /> },
+      { path: 'scenarios/:id', element: <AdminScenarioEditorPage /> },
+      // Kiểm duyệt bình luận: ADMIN (tất cả) & TEACHER (bài học trong khóa của mình) — BE kiểm tra phạm vi
+      { path: 'comments', element: <AdminModerationPage /> },
+      // Gửi thông báo hàng loạt: ADMIN (mọi đối tượng) & TEACHER (học viên khóa của mình)
+      { path: 'broadcasts', element: <AdminBroadcastsPage /> },
+      // Thống kê tổng quan: chỉ ADMIN
+      {
+        path: 'stats',
+        element: (
+          <ProtectedRoute roles={['ADMIN']}>
+            <AdminStatsPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Quản lý người dùng: chỉ ADMIN (TEACHER bị chuyển về trang chủ)
+      {
+        path: 'users',
+        element: (
+          <ProtectedRoute roles={['ADMIN']}>
+            <AdminUsersPage />
+          </ProtectedRoute>
+        ),
+      },
     ],
   },
 
@@ -163,6 +198,8 @@ export const router = createBrowserRouter([
     children: [
       { path: 'courses', element: <TeacherCoursesPage /> },
       { path: 'courses/:courseId', element: <TeacherCourseEditorPage /> },
+      // Theo dõi học viên: ADMIN mọi khóa, TEACHER khóa của mình
+      { path: 'students', element: <TeacherStudentsPage /> },
     ],
   },
 

@@ -4,7 +4,10 @@ import com.jp.elearningjp.entity.comment.Comment;
 import com.jp.elearningjp.shared.enums.CommentTargetType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +17,13 @@ import java.time.Instant;
 import java.util.Optional;
 
 @Repository
-public interface CommentRepository extends JpaRepository<Comment, Long> {
+public interface CommentRepository extends JpaRepository<Comment, Long>, JpaSpecificationExecutor<Comment> {
+
+    /** Tra cứu cho trang kiểm duyệt — nạp sẵn người viết để tránh N+1. */
+    @Override
+    @EntityGraph(attributePaths = "user")
+    Page<Comment> findAll(Specification<Comment> spec, Pageable pageable);
+
 
     /**
      * Lấy 1 comment chưa bị xoá (kèm user để hiển thị avatar / tên).

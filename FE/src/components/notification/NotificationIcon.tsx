@@ -9,6 +9,8 @@ import {
   ThumbsUp,
   Trophy,
   Bell,
+  ShieldAlert,
+  Megaphone,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -28,6 +30,8 @@ interface IconSpec {
 }
 
 const ICONS: Record<NotificationType, IconSpec> = {
+  COMMENT_MODERATED: { Icon: ShieldAlert, tone: 'bg-amber-50 text-amber-600' },
+  ANNOUNCEMENT: { Icon: Megaphone, tone: 'bg-violet-50 text-violet-600' },
   COMMUNITY_REPLY: {
     Icon: MessageCircle,
     tone: 'bg-indigo-50 text-indigo-600',

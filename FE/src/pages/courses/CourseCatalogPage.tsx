@@ -29,18 +29,18 @@ export const CourseCatalogPage: React.FC = () => {
   const courses = data?.items ?? []
   const filtered = debouncedKeyword
     ? courses.filter((c) =>
-        c.title.toLowerCase().includes(debouncedKeyword.toLowerCase()),
-      )
+      c.title.toLowerCase().includes(debouncedKeyword.toLowerCase()),
+    )
     : courses
 
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        badge="Khóa học tiếng Nhật"
+
         title={
           <span>
             Khoá học JLPT{' '}
-            <span className="text-indigo-300">từ N5 đến N1</span>
+            <span className="text-indigo-600">từ N5 đến N1</span>
           </span>
         }
         subtitle="Chọn khóa học phù hợp với trình độ của bạn và bắt đầu hành trình chinh phục tiếng Nhật."

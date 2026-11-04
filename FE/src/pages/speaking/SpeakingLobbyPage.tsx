@@ -301,22 +301,22 @@ export const SpeakingLobbyPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] text-slate-800">
+    <div className="min-h-screen text-slate-800">
       {/* ==================================================================== */}
       {/* Main Container 2 cột: Cột trái (Nội dung) + Cột phải (Lịch sử) */}
       {/* ==================================================================== */}
-      <div className="max-w-[1550px] mx-auto px-4 sm:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="max-w-6xl mx-auto px-3 sm:px-5 py-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* ================================================================ */}
           {/* CỘT TRÁI (8/12 cột): Luyện nói AI */}
           {/* ================================================================ */}
-          <div className="lg:col-span-8 space-y-5">
+          <div className="lg:col-span-8 space-y-4">
             {/* 1. Greeting Card chào buổi tối */}
-            <div className="relative bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center">
-              <div className="mb-4">
-                <MaziikoMascot size={84} showAura={true} showBadge={true} />
+            <div className="relative bg-white rounded-xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center">
+              <div className="mb-2">
+                <MaziikoMascot size={60} showAura={true} showBadge={true} />
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-[#1F51FF] mb-1">
+              <h2 className="text-base sm:text-lg font-bold text-[#1F51FF] mb-0.5">
                 Chào {username}!
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 font-medium">
@@ -329,7 +329,7 @@ export const SpeakingLobbyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
-                className="flex-1 py-3 px-6 rounded-full font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all bg-linear-to-r from-purple-600 via-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-500/25 hover:opacity-95 active:scale-[0.99] cursor-pointer"
+                className="flex-1 py-2 px-5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all bg-linear-to-r from-purple-600 via-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-500/25 hover:opacity-95 active:scale-[0.99] cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 fill-current" />
                 <span>Tạo tình huống</span>
@@ -338,7 +338,7 @@ export const SpeakingLobbyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/speaking/free')}
-                className="flex-1 py-3 px-6 rounded-full font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 active:scale-[0.99] cursor-pointer"
+                className="flex-1 py-2 px-5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 active:scale-[0.99] cursor-pointer"
               >
                 <span className="w-4 h-4 rounded-full bg-purple-600 text-white text-[10px] flex items-center justify-center font-bold">
                   AI
@@ -352,10 +352,10 @@ export const SpeakingLobbyPage: React.FC = () => {
             {/* ============================================================== */}
             <div
               onClick={() => handleOpenDrawer('COMMUNITY')}
-              className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs cursor-pointer hover:border-indigo-300 hover:shadow-sm transition group"
+              className="bg-white rounded-xl p-3 border border-slate-200/80 shadow-xs cursor-pointer hover:border-indigo-300 hover:shadow-sm transition group"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-sm sm:text-base text-slate-800 group-hover:text-indigo-600 transition">
+                <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition">
                   Khám phá
                 </span>
                 <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition" />
@@ -385,27 +385,27 @@ export const SpeakingLobbyPage: React.FC = () => {
             {/* ============================================================== */}
             {/* 4. Hội thoại theo chủ đề */}
             {/* ============================================================== */}
-            <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-              <h3 className="font-bold text-base text-slate-800 mb-4 text-left">
+            <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-xs">
+              <h3 className="font-bold text-sm text-slate-800 mb-3 text-left">
                 Hội thoại theo chủ đề
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                 {TOPIC_CATEGORIES.filter((t) => t.id !== 'COMMUNITY').map((topic) => (
                   <div
                     key={topic.id}
                     onClick={() => handleOpenDrawer(topic.id)}
                     className="rounded-xl overflow-hidden border border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group bg-slate-50 text-center"
                   >
-                    <div className="h-32 w-full overflow-hidden bg-slate-200">
+                    <div className="h-20 w-full overflow-hidden bg-slate-200">
                       <img
                         src={topic.image}
                         alt={topic.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    <div className="p-3">
-                      <h4 className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">
+                    <div className="px-2 py-2">
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">
                         {topic.name}
                       </h4>
                       <span className="text-xs text-slate-400 font-medium">
@@ -422,7 +422,7 @@ export const SpeakingLobbyPage: React.FC = () => {
           {/* CỘT PHẢI (4/12 cột): Lịch sử luyện tập */}
           {/* ================================================================ */}
           <div className="lg:col-span-4">
-            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs sticky top-20 text-left">
+            <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs sticky top-20 text-left">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                 <span className="font-bold text-sm text-slate-800">Lịch sử luyện tập</span>
                 {historySessions.length > 0 && (

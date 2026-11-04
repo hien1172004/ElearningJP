@@ -185,6 +185,8 @@ public final class ApiPaths {
         public static final String REPLIES = "/comments/{id}/replies";
         /** Vị trí comment (target, từ khóa/khóa học, thứ tự) — để mở thẳng từ thông báo. */
         public static final String LOCATION = "/comments/{id}/location";
+        /** Báo cáo vi phạm bình luận. */
+        public static final String REPORT = "/comments/{id}/report";
     }
 
     /** Reply endpoints. Reply lồng nhau qua {@code parentReplyId} trong payload. */
@@ -192,6 +194,23 @@ public final class ApiPaths {
         public static final String BY_ID = "/comment-replies/{id}";
         public static final String LIKE = "/comment-replies/{id}/like";
         public static final String DISLIKE = "/comment-replies/{id}/dislike";
+        /** Báo cáo vi phạm trả lời. */
+        public static final String REPORT = "/comment-replies/{id}/report";
+    }
+
+    /** Kiểm duyệt bình luận: ADMIN (mọi bình luận), TEACHER (bình luận trong bài học thuộc khóa của mình). */
+    public static final class AdminModeration {
+        public static final String BASE = "/admin/moderation";
+        public static final String REPORTS = "/reports";
+        public static final String COMMENTS = "/comments";
+        public static final String COMMENT_HIDE = "/comments/{id}/hide";
+        public static final String COMMENT_RESTORE = "/comments/{id}/restore";
+        public static final String COMMENT_DISMISS = "/comments/{id}/dismiss-reports";
+        public static final String COMMENT_BY_ID = "/comments/{id}";
+        public static final String REPLY_HIDE = "/replies/{id}/hide";
+        public static final String REPLY_RESTORE = "/replies/{id}/restore";
+        public static final String REPLY_DISMISS = "/replies/{id}/dismiss-reports";
+        public static final String REPLY_BY_ID = "/replies/{id}";
     }
 
     /**
@@ -222,6 +241,34 @@ public final class ApiPaths {
         public static final String RESULT = "/{id}/result";
         public static final String REVIEW = "/{id}/review";
         public static final String MY_HISTORY = "/my-history";
+    }
+
+    public static final class AdminDashboard {
+        public static final String BASE = "/admin/dashboard";
+        public static final String OVERVIEW = "/overview";
+    }
+
+    public static final class AdminBroadcast {
+        public static final String BASE = "/admin/broadcasts";
+        public static final String RECIPIENT_COUNT = "/recipient-count";
+    }
+
+    /** Theo dõi học viên: ADMIN mọi khóa, TEACHER khóa do mình tạo. */
+    public static final class TeacherStudents {
+        public static final String BASE = "/teacher/courses/{courseId}/students";
+        public static final String BY_USER = "/{userId}";
+    }
+
+    public static final class AdminScenario {
+        public static final String BASE = "/admin/scenarios";
+        public static final String BY_ID = "/{id}";
+    }
+
+    public static final class AdminUser {
+        public static final String BASE = "/admin/users";
+        public static final String BY_ID = "/{id}";
+        public static final String STATUS = "/{id}/status";
+        public static final String ROLES = "/{id}/roles";
     }
 
     public static final class AdminExam {

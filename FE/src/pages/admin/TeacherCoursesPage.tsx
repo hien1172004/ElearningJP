@@ -139,7 +139,7 @@ export const TeacherCoursesPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        badge="Quản lý khóa học"
+        // badge="Quản lý khóa học"
         title="Khoá học của tôi"
         subtitle={`Xin chào ${user?.fullName || user?.email || 'Giáo viên'}! Quản lý danh sách khóa học của bạn.`}
         actions={

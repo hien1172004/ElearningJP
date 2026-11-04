@@ -17,6 +17,7 @@ import com.jp.elearningjp.mapper.UserMapper;
 import com.jp.elearningjp.repository.user.RoleRepository;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.redis.TokenBlacklistService;
+import com.jp.elearningjp.service.redis.UserTokenRevocationService;
 import com.jp.elearningjp.shared.constants.PredefinedRole;
 import com.jp.elearningjp.entity.user.UserProfile;
 import com.jp.elearningjp.repository.user.UserProfileRepository;
@@ -54,6 +55,7 @@ public class AuthService {
     private final UserRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final TokenBlacklistService tokenBlacklistService;
+    private final UserTokenRevocationService userTokenRevocationService;
     private final RoleRepository roleRepository;
     private final UserProfileRepository userProfileRepository;
 
@@ -241,6 +243,11 @@ public class AuthService {
         User userEntity = userRepo.findUserByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        // Tài khoản bị khóa/vô hiệu hóa thì không được cấp token mới
+        if (userEntity.getStatus() != UserStatus.ACTIVE) {
+            throw new AppException(ErrorCode.USER_BANNED);
+        }
+
         return AuthResponse.builder()
                 .token(generateToken(userEntity))
                 .build();
@@ -285,6 +292,11 @@ public class AuthService {
         // Kiểm tra blacklist (Redis)
         String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
         if (tokenBlacklistService.isBlacklisted(jwtId))
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+
+        // Admin đã khóa tài khoản / đổi role sau khi token được cấp → token cũ hết hiệu lực
+        Long userId = signedJWT.getJWTClaimsSet().getLongClaim("userId");
+        if (userTokenRevocationService.isRevoked(userId, issueTime))
             throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         return signedJWT;

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { User } from '@/types'
 import { storage } from '@/utils/storage'
+import { queryClient } from '@/lib/queryClient'
 
 interface AuthState {
   user: User | null
@@ -57,6 +58,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearAuth: () => {
     storage.clearAll()
+    // Xoá toàn bộ cache server-state của phiên cũ (danh sách khóa học quản lý, profile, SRS…)
+    // để tài khoản đăng nhập tiếp theo trên cùng tab không thấy dữ liệu của người trước.
+    // Dùng clear() (không refetch) thay vì resetQueries(): refetch khi đã mất token sẽ dính 401
+    // → interceptor gọi lại clearAuth → lặp vô hạn.
+    queryClient.clear()
     set({
       user: null,
       accessToken: null,

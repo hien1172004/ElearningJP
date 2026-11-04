@@ -69,7 +69,7 @@ const JLPT_BADGES: Record<
   },
 }
 
-export const AdminDashboardPage: React.FC = () => {
+export const AdminExamsPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuthStore()
 
@@ -286,7 +286,7 @@ export const AdminDashboardPage: React.FC = () => {
   }, [exams, searchTerm, selectedLevel, selectedStatus, selectedExamType, sortBy])
 
   return (
-    <div className="space-y-6 pb-20 min-h-screen font-sans text-slate-900 bg-slate-50/50">
+    <div className="space-y-5 pb-20 font-sans text-slate-900">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
@@ -313,21 +313,21 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* 1. COMPACT ENTERPRISE HEADER */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* 1. HEADER PHẲNG (không banner) — đồng bộ PageHeader các trang quản trị */}
+      <div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-bold border border-indigo-100">
+              <span className="text-xs font-semibold text-indigo-600">
                 {user?.role?.includes('ADMIN') ? 'Quản trị viên' : 'Giáo viên JLPT'}
               </span>
-              <span className="text-xs text-slate-400">•</span>
-              <span className="text-xs text-slate-500 font-medium">Trung tâm khảo thí & đề thi</span>
+              <span className="text-xs text-gray-400">•</span>
+              <span className="text-xs text-nibi font-medium">Trung tâm khảo thí & đề thi</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold text-sumi tracking-tight">
               Quản lý đề thi & bài kiểm tra
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            <p className="text-sm text-nibi mt-0.5">
               Biên tập cấu trúc đề thi JLPT N1 ~ N5, bóc tách bằng AI và phát hành bài thi thử cho học viên.
             </p>
           </div>
@@ -1081,4 +1081,4 @@ export const AdminDashboardPage: React.FC = () => {
   )
 }
 
-export default AdminDashboardPage
+export default AdminExamsPage

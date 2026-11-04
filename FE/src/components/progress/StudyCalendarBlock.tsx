@@ -47,7 +47,7 @@ const TODAY_RING = 'ring-2 ring-offset-1 ring-orange-400'
 // Loading / Error
 // --------------------------------------------------------------------------
 const SkeletonBlock: React.FC = () => (
-  <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-4">
+  <div className="rounded-md p-4">
     <div className="animate-pulse space-y-3">
       <div className="h-5 w-44 bg-gray-200 rounded" />
       <div className="grid grid-cols-7 gap-1">
@@ -63,7 +63,7 @@ const ErrorBlock: React.FC<{ onRetry?: () => void; message?: string }> = ({
   onRetry,
   message,
 }) => (
-  <div className="bg-white rounded-md border border-rose-200 shadow-xs p-4">
+  <div className="rounded-md bg-rose-50/60 p-4">
     <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
       <span className="w-10 h-10 rounded-md bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
         <CalendarDays className="w-5 h-5" />
@@ -183,7 +183,7 @@ export const StudyCalendarBlock: React.FC = () => {
 
       <div className="space-y-3">
         {/* ---------- Lưới lịch ---------- */}
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-3.5">
+        <div>
           {/* Header thứ */}
           <div className="grid grid-cols-7 gap-1 mb-1.5">
             {weekdays.map((label) => (

@@ -38,7 +38,7 @@ import type { NotebookReviewItem, SrsRating } from '@/types'
 
 type ReviewMode = 'flashcard' | 'quiz' | 'speaking' | 'writing'
 
-// Mascot mèo của hệ thống (/mascot/standing.svg)
+// Mascot shiba của hệ thống (/mascot/standing.svg)
 const SystemMascot: React.FC<{ size?: number; className?: string }> = ({
   size = 140,
   className = '',
@@ -51,7 +51,7 @@ const SystemMascot: React.FC<{ size?: number; className?: string }> = ({
   />
 )
 
-// Huy hiệu kết quả Đúng/Sai kèm Mèo Mascot chuẩn Mazii (Ảnh đính kèm 2 & 3)
+// Huy hiệu kết quả Đúng/Sai kèm mascot shiba
 const QuizResultBadge: React.FC<{ isCorrect: boolean }> = ({ isCorrect }) => (
   <div className="relative shrink-0 w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
     <div
@@ -977,7 +977,7 @@ export const NotebookReviewPage: React.FC = () => {
             <div className="space-y-6 text-center my-auto">
               <h3 className="text-sm font-semibold text-gray-800">Nói lại từ ở dưới</h3>
 
-              {/* Chú mèo Anime Mascot */}
+              {/* Mascot shiba */}
               <SystemMascot size={150} className="mx-auto" />
 
               {/* Từ vựng + Loa nghe + Nghĩa */}
@@ -1147,7 +1147,7 @@ export const NotebookReviewPage: React.FC = () => {
                     Chọn đáp án tương ứng với từ sau
                   </h3>
 
-                  {/* Chú mèo Anime Mascot kèm Bong bóng thoại */}
+                  {/* Mascot shiba kèm Bong bóng thoại */}
                   <div className="flex items-center justify-center gap-4 py-2">
                     <SystemMascot size={140} />
                     <div className="relative bg-white border border-gray-200/90 rounded-2xl px-6 py-3 shadow-xs flex items-center gap-2 select-none before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90">
@@ -1256,7 +1256,7 @@ export const NotebookReviewPage: React.FC = () => {
                   Nghe và chọn câu trả lời đúng
                 </h3>
 
-                {/* Chú mèo Anime Mascot kèm Bong bóng thoại chứa biểu tượng âm thanh */}
+                {/* Mascot shiba kèm Bong bóng thoại chứa biểu tượng âm thanh */}
                 <div className="flex items-center justify-center gap-4 py-2">
                   <SystemMascot size={140} />
                   <button
@@ -1336,7 +1336,7 @@ export const NotebookReviewPage: React.FC = () => {
                   Điền đáp án đúng cho từ dưới đây
                 </h3>
 
-                {/* Chú mèo Anime Mascot kèm Bong bóng thoại chứa ý nghĩa từ vựng (Chuẩn Ảnh 3) */}
+                {/* Mascot shiba kèm Bong bóng thoại chứa ý nghĩa từ vựng (Chuẩn Ảnh 3) */}
                 <div className="flex items-center justify-center gap-4 py-2">
                   <SystemMascot size={140} />
                   <div className="relative bg-white border border-gray-200/90 rounded-2xl px-6 py-3 shadow-xs flex items-center gap-2 select-none before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90">
@@ -1528,7 +1528,7 @@ export const NotebookReviewPage: React.FC = () => {
                   }`}
                 >
                   <div className="max-w-3xl mx-auto w-full flex items-center justify-between gap-4">
-                    {/* Bên trái: Huy hiệu Mèo (✓ hoặc ✕) + Đúng/Sai + Chi tiết từ */}
+                    {/* Bên trái: Huy hiệu mascot (✓ hoặc ✕) + Đúng/Sai + Chi tiết từ */}
                     <div className="flex items-center gap-4 min-w-0">
                       <QuizResultBadge isCorrect={isQuizCorrect} />
 

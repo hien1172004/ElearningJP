@@ -411,7 +411,7 @@ export const SpeakingPracticePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F0F2F5] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-slate-600 font-semibold text-sm">Đang tải phòng luyện nói cùng Maziiko...</p>
       </div>
@@ -420,7 +420,7 @@ export const SpeakingPracticePage: React.FC = () => {
 
   if (error || !session) {
     return (
-      <div className="min-h-screen bg-[#F0F2F5] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <p className="text-slate-600 mb-4 font-semibold">{error || 'Không tìm thấy phiên luyện nói.'}</p>
         <button
           onClick={() => navigate('/speaking')}
@@ -436,12 +436,12 @@ export const SpeakingPracticePage: React.FC = () => {
   const situationText = session.scenario?.description || (isScenario ? session.title : 'Trò chuyện tự do cùng Maziiko')
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] text-slate-800 flex flex-col justify-between relative">
+    <div className="min-h-screen text-slate-800 flex flex-col justify-between relative">
       {/* ==================================================================== */}
       {/* 1. Header Mazii: < Quay lại | Tiêu đề | ⚙️ Cài đặt */}
       {/* ==================================================================== */}
       <div className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/speaking')}
@@ -450,7 +450,7 @@ export const SpeakingPracticePage: React.FC = () => {
               <ChevronLeft className="w-4 h-4 text-slate-500" />
               <span>Quay lại</span>
             </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-800 truncate max-w-xs sm:max-w-md">
+            <h1 className="text-sm sm:text-base font-bold text-slate-800 truncate max-w-xs sm:max-w-md">
               {session.title || 'Gọi món tại quán'}
             </h1>
           </div>
@@ -605,7 +605,7 @@ export const SpeakingPracticePage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 2. Khung trò chuyện trung tâm */}
       {/* ==================================================================== */}
-      <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-6 space-y-5">
+      <div className="flex-1 max-w-3xl w-full mx-auto px-3 sm:px-4 py-4 space-y-4">
         {/* Bong bóng giới thiệu ngữ cảnh tình huống (Screenshot 1: Tôi cùng một người bạn...) */}
         {situationText && (
           <div className="flex justify-center mb-6">
@@ -626,7 +626,7 @@ export const SpeakingPracticePage: React.FC = () => {
             // Tin nhắn của người học (Căn phải)
             return (
               <div key={index} className="flex justify-end items-start gap-2.5 animate-in fade-in">
-                <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-xs bg-white border border-slate-200/90 p-4 shadow-xs text-left">
+                <div className="max-w-[85%] sm:max-w-[75%] rounded-xl rounded-tr-xs bg-white border border-slate-200/90 p-3 shadow-xs text-left">
                   <div className="flex items-center justify-between mb-1.5 text-xs text-slate-400">
                     <span className="font-semibold text-slate-700">Bạn</span>
                     <span>{time}</span>
@@ -691,7 +691,7 @@ export const SpeakingPracticePage: React.FC = () => {
                 <MaziikoMascot size={36} />
               </div>
 
-              <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl rounded-tl-xs bg-white border border-slate-200/90 p-4 shadow-xs text-left space-y-2">
+              <div className="max-w-[85%] sm:max-w-[80%] rounded-xl rounded-tl-xs bg-white border border-slate-200/90 p-3 shadow-xs text-left space-y-2">
                 {/* Tên & thời gian */}
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-bold text-slate-800">Maziiko</span>
@@ -770,7 +770,7 @@ export const SpeakingPracticePage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 3. Thanh điều khiển nổi phía dưới (Screenshot 1) */}
       {/* ==================================================================== */}
-      <div className="sticky bottom-0 z-20 pb-4 px-4 bg-gradient-to-t from-[#F0F2F5] via-[#F0F2F5]/90 to-transparent pt-3">
+      <div className="sticky bottom-0 z-20 pb-4 px-4 bg-gradient-to-t from-kinari via-kinari/90 to-transparent pt-3">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
           {/* Hàng 3 nút tính năng nổi: 🎯 Nhiệm vụ | ⚡ Dịch nhanh | 🤖 Gợi ý */}
           <div className="flex items-center gap-2">
@@ -824,7 +824,7 @@ export const SpeakingPracticePage: React.FC = () => {
                 <>
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1 pr-2">
-                      <div className="text-slate-800 font-semibold text-sm sm:text-base leading-snug">
+                      <div className="text-slate-800 font-semibold text-sm leading-snug">
                         {suggestionList[currentSugIndex].ja}
                       </div>
                       {suggestionList[currentSugIndex].vi && (

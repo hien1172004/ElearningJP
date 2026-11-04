@@ -58,7 +58,7 @@ function medalStyle(rank: number): string {
 // Loading skeleton
 // --------------------------------------------------------------------------
 const SkeletonBlock: React.FC = () => (
-  <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-4">
+  <div className="rounded-md p-4">
     <div className="animate-pulse space-y-2.5">
       <div className="h-5 w-44 bg-gray-200 rounded" />
       {Array.from({ length: 5 }).map((_, i) => (
@@ -75,7 +75,7 @@ const ErrorBlock: React.FC<{ message?: string; onRetry?: () => void }> = ({
   message: msg,
   onRetry,
 }) => (
-  <div className="bg-white rounded-md border border-rose-200 shadow-xs p-4">
+  <div className="rounded-md bg-rose-50/60 p-4">
     <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
       <span className="w-10 h-10 rounded-md bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
         <Trophy className="w-5 h-5" />
@@ -317,10 +317,10 @@ export const LeaderboardBlock: React.FC = () => {
 
   return (
     <section className="space-y-3" aria-label="Bảng xếp hạng tuần">
-      {/* ---------- Header + bộ chọn tuần ---------- */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
+      {/* ---------- Header + bộ chọn tuần (tự xuống dòng khi hẹp, tiêu đề không bị bẻ chữ) ---------- */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div>
-          <h2 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+          <h2 className="text-base font-extrabold text-gray-900 flex items-center gap-2 whitespace-nowrap">
             <Trophy className="w-4 h-4 text-amber-500" />
             Bảng xếp hạng tuần
           </h2>
@@ -376,7 +376,7 @@ export const LeaderboardBlock: React.FC = () => {
       </div>
 
       {/* ---------- Bảng + hạng của tôi ---------- */}
-      <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-3.5">
+      <div>
         {entries.length === 0 ? (
           <EmptyBlock isCurrentWeek={viewingCurrentWeek} />
         ) : (
