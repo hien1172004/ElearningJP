@@ -5,6 +5,7 @@ import type { JlptLevel, SessionType, CourseSummary } from '@/types'
 import { courseService } from '@/services/course.service'
 import { useAuthStore } from '@/stores'
 import { isAdmin as checkIsAdmin, isTeacher as checkIsTeacher } from '@/utils/roles'
+import { JLPT_LEVEL_BORDER, JLPT_LEVEL_TEXT } from '@/utils/jlpt'
 import {
   FileText,
   Sparkles,
@@ -73,12 +74,13 @@ const getStandardSections = (level: JlptLevel): InitialSectionConfig[] => {
   ]
 }
 
+// Màu cấp độ lấy từ utils/jlpt (chỉ tô chữ + viền, không tô nền cả khối)
 const LEVEL_COLORS: Record<JlptLevel, { bg: string; text: string; border: string; desc: string }> = {
-  N5: { bg: 'bg-emerald-50 dark:bg-emerald-950/30', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-500', desc: 'Sơ cấp 1 (Cơ bản)' },
-  N4: { bg: 'bg-blue-50 dark:bg-blue-950/30', text: 'text-blue-700 dark:text-blue-400', border: 'border-blue-500', desc: 'Sơ cấp 2 (Giao tiếp cơ bản)' },
-  N3: { bg: 'bg-indigo-50 dark:bg-indigo-950/30', text: 'text-indigo-700 dark:text-indigo-400', border: 'border-indigo-500', desc: 'Trung cấp (Đời sống)' },
-  N2: { bg: 'bg-purple-50 dark:bg-purple-950/30', text: 'text-purple-700 dark:text-purple-400', border: 'border-purple-500', desc: 'Trung - Cao cấp (Công việc)' },
-  N1: { bg: 'bg-rose-50 dark:bg-rose-950/30', text: 'text-rose-700 dark:text-rose-400', border: 'border-rose-500', desc: 'Cao cấp (Chuyên sâu)' },
+  N5: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N5, border: JLPT_LEVEL_BORDER.N5, desc: 'Sơ cấp 1 (Cơ bản)' },
+  N4: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N4, border: JLPT_LEVEL_BORDER.N4, desc: 'Sơ cấp 2 (Giao tiếp cơ bản)' },
+  N3: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N3, border: JLPT_LEVEL_BORDER.N3, desc: 'Trung cấp (Đời sống)' },
+  N2: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N2, border: JLPT_LEVEL_BORDER.N2, desc: 'Trung - Cao cấp (Công việc)' },
+  N1: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N1, border: JLPT_LEVEL_BORDER.N1, desc: 'Cao cấp (Chuyên sâu)' },
 }
 
 export const AdminExamCreatePage: React.FC = () => {
@@ -212,8 +214,8 @@ export const AdminExamCreatePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/70 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="pb-8">
+      <div className="max-w-4xl mx-auto space-y-4">
         {/* Header điều hướng */}
         <div className="flex items-center justify-between">
           <button
@@ -225,23 +227,23 @@ export const AdminExamCreatePage: React.FC = () => {
             <span>Quay lại danh sách đề thi</span>
           </button>
 
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
             <Sparkles className="w-3.5 h-3.5" />
             Khởi tạo nhanh & Soạn thảo linh hoạt
           </span>
         </div>
 
         {/* Tiêu đề trang */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-sm">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
-              <FileText className="w-6 h-6" />
+        <div>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-kamenozoki dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 shrink-0 mt-0.5">
+              <FileText className="w-4 h-4" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-lg sm:text-xl font-bold text-sumi dark:text-white tracking-tight">
                 Tạo Đề Thi Mới
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-sm text-nibi dark:text-slate-400 leading-relaxed">
                 Nhập thông tin cơ bản để khởi tạo cấu trúc bài thi chuẩn JLPT. Sau khi khởi tạo, bạn có thể tự do{' '}
                 <strong className="text-slate-700 dark:text-slate-200">soạn câu hỏi bằng tay</strong> hoặc{' '}
                 <strong className="text-indigo-600 dark:text-indigo-400">sử dụng AI quét tự động</strong> ngay trong phòng biên soạn.
@@ -252,8 +254,8 @@ export const AdminExamCreatePage: React.FC = () => {
 
         {/* Thông báo lỗi nếu có */}
         {error && (
-          <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-sm flex items-start gap-3 shadow-xs">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+          <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-sm flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
             <div className="space-y-1">
               <p className="font-semibold">Đã xảy ra lỗi:</p>
               <p>{error}</p>
@@ -262,10 +264,10 @@ export const AdminExamCreatePage: React.FC = () => {
         )}
 
         {/* Form nhập thông tin cơ bản */}
-        <form onSubmit={handleCreateExam} className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6">
+        <form onSubmit={handleCreateExam} className="space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-suna dark:border-slate-800 shadow-xs space-y-5">
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <Award className="w-5 h-5 text-indigo-600" />
+              <Award className="w-4 h-4 text-indigo-600" />
               Thông tin đề thi
             </h2>
 
@@ -283,9 +285,9 @@ export const AdminExamCreatePage: React.FC = () => {
                       key={level}
                       type="button"
                       onClick={() => setJlptLevel(level)}
-                      className={`relative p-3.5 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`relative p-3 rounded-lg border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
                         isSelected
-                          ? `${meta.border} ${meta.bg} shadow-md shadow-indigo-500/10 scale-[1.02]`
+                          ? `${meta.border} ${meta.bg} shadow-xs`
                           : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
                       }`}
                     >
@@ -325,7 +327,7 @@ export const AdminExamCreatePage: React.FC = () => {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={`Ví dụ: Đề thi thử JLPT ${jlptLevel} - Đề số 1`}
                 required
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm font-medium transition"
+                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm font-medium transition"
               />
             </div>
 
@@ -407,11 +409,11 @@ export const AdminExamCreatePage: React.FC = () => {
           </div>
 
           {/* Cấu trúc phần thi sẽ khởi tạo */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-suna dark:border-slate-800 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="space-y-0.5">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-indigo-600" />
+                  <Layers className="w-4 h-4 text-indigo-600" />
                   Cấu trúc các phần thi tự động khởi tạo
                 </h2>
                 <p className="text-xs text-slate-500">
@@ -477,7 +479,7 @@ export const AdminExamCreatePage: React.FC = () => {
               type="button"
               onClick={() => navigate('/admin/exams')}
               disabled={isSubmitting}
-              className="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-lg border border-suna dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-kamenozoki dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
             >
               Hủy
             </button>
@@ -485,7 +487,7 @@ export const AdminExamCreatePage: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-3 rounded-xl bg-linear-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm transition shadow-md shadow-indigo-500/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm transition shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

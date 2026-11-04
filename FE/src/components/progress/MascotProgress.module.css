@@ -1,5 +1,5 @@
 /* ==========================================================================
- * MascotProgress — khung tròn 3 lớp: nền gradient → mèo → lớp nước đè lên mèo.
+ * MascotProgress — khung tròn 3 lớp: nền gradient → shiba → lớp nước đè lên shiba.
  *
  * Chỉ animate `transform` / `opacity` (không animate width/height/top...)
  * để tránh reflow. Mực nước hạ bằng cách dịch chuyển lớp nước full-height
@@ -21,19 +21,21 @@
   inset: 0;
 }
 
+/* Biển đêm xanh thẫm (2 state có nước) và sân khấu đỏ tối (đạt mục tiêu) —
+   nền tối để shiba cam nổi bật. */
 .bgDrowning {
-  background-image: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 48%, #0c4a6e 100%);
+  background-image: linear-gradient(180deg, #0b1f3a 0%, #123a63 55%, #0a2442 100%);
 }
 
 .bgStanding {
-  background-image: linear-gradient(160deg, #0ea5e9 0%, #38bdf8 46%, #0369a1 100%);
+  background-image: linear-gradient(180deg, #0e2a4d 0%, #1a4675 55%, #0d2c50 100%);
 }
 
 .bgFire {
-  background-image: linear-gradient(160deg, #fbbf24 0%, #f97316 52%, #b91c1c 100%);
+  background-image: radial-gradient(circle at 50% 30%, #a3241f 0%, #6b1414 48%, #2a0707 100%);
 }
 
-/* ---------- Lớp 2: ảnh mèo ---------- */
+/* ---------- Lớp 2: ảnh shiba ---------- */
 
 .catLayer {
   position: absolute;
@@ -63,7 +65,7 @@
   will-change: opacity, transform;
 }
 
-/* ---------- Lớp 3: nước (đè lên mèo) ---------- */
+/* ---------- Lớp 3: nước (đè lên shiba) ---------- */
 
 .water {
   position: absolute;

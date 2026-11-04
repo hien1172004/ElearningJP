@@ -8,5 +8,9 @@ public enum NotificationType {
     BADGE_UNLOCKED,
     COMMUNITY_REPLY,
     COMMUNITY_LIKE,
-    COMMUNITY_DISLIKE
+    COMMUNITY_DISLIKE,
+    /** Bình luận / trả lời của người dùng bị người kiểm duyệt ẩn hoặc xóa. */
+    COMMENT_MODERATED,
+    /** Thông báo hàng loạt do ADMIN / TEACHER gửi (notification_broadcasts). */
+    ANNOUNCEMENT
 }

@@ -127,6 +127,23 @@ export const NotificationBell: React.FC = () => {
     }
 
     const data = notification.dataJson
+
+    // Thông báo hàng loạt: mở đường dẫn đính kèm, hoặc trang khóa học liên quan
+    if (notification.type === 'ANNOUNCEMENT') {
+      const link =
+        // Chỉ đường dẫn trong ứng dụng ("/..."), chặn "//domain" (mở sang trang ngoài)
+        typeof data?.link === 'string' && data.link.startsWith('/') && !data.link.startsWith('//')
+          ? data.link
+          : data?.courseId
+            ? `/courses/${data.courseId}`
+            : null
+      if (link) {
+        handleOpenChange(false)
+        navigate(link)
+      }
+      return
+    }
+
     const isCommunity =
       notification.type === 'COMMUNITY_REPLY' ||
       notification.type === 'COMMUNITY_LIKE' ||

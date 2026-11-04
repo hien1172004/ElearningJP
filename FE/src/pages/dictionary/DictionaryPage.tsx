@@ -10,10 +10,12 @@ import {
   Clock,
   Trash2,
   ArrowRight,
-  Flame,
-  Award,
+  Languages,
   PenTool,
   Camera,
+  Brush,
+  BookText,
+  PencilLine,
 } from 'lucide-react'
 import type {
   JlptLevel,
@@ -28,6 +30,7 @@ import { CommentSection } from '@/components/comment'
 import { StudyTimerTracker } from '@/components/common'
 import { useRecordLookup } from '@/hooks/useRecordLookup'
 import { parseCommentFocus, parseDictionaryTargetId } from '@/utils/commentFocus'
+import { JLPT_LEVEL_BADGE, JLPT_LEVEL_TEXT } from '@/utils/jlpt'
 import {
   VocabDetailPanel,
   KanjiDetailPanel,
@@ -506,24 +509,15 @@ export const DictionaryPage: React.FC = () => {
       {/* Đếm thời gian học — component ẩn, không ảnh hưởng layout */}
       <StudyTimerTracker />
       {/* =========================================================================
-          1. HEADER TRA CỨU MAZII: Ô TÌM KIẾM TẬP TRUNG + DROPDOWN GỢI Ý TỨC THÌ
+          1. THANH TRA CỨU: Ô TÌM KIẾM + CÔNG CỤ AI + TAB + LỌC JLPT (một khối gọn, không banner)
          ========================================================================= */}
-      <div className="bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 rounded-md p-6 md:p-8 text-white shadow-xl relative">
-        <div className="max-w-3xl mx-auto space-y-4 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-indigo-200 text-xs font-semibold backdrop-blur-md">
-            <Sparkles className="w-4 h-4 text-amber-300" />
-            Tra từ điển thông minh chuẩn Mazii: <span className="text-white font-bold">{tabConfig.badge}</span>
-          </div>
-
-          <h1 className="text-2xl md:text-3xl font-extrabold text-color-brand tracking-tight">
-            Tra cứu Từ điển Tiếng Nhật
-          </h1>
-
-          {/* Ô tìm kiếm lớn & Dropdown Autocomplete */}
-          {activeTab !== 'kana' && (
-            <div ref={searchContainerRef} className="relative mt-4">
-              <div className="relative flex items-center bg-white rounded-md shadow-lg overflow-hidden border-2 border-white/20 focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-300/30 transition">
-                <Search className="w-5 h-5 text-gray-400 ml-4 shrink-0" />
+      <div className="bg-white rounded-xl border border-suna shadow-xs p-3 sm:p-4 space-y-3 sticky top-16 z-30">
+        {/* Ô tìm kiếm & Dropdown Autocomplete */}
+        {activeTab !== 'kana' && (
+          <div ref={searchContainerRef} className="relative">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0 flex items-center h-11 bg-white rounded-lg border border-suna focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15 transition">
+                <Search className="w-[18px] h-[18px] text-nibi ml-3 shrink-0" />
                 <input
                   type="text"
                   value={keyword}
@@ -544,7 +538,7 @@ export const DictionaryPage: React.FC = () => {
                     }
                   }}
                   placeholder={tabConfig.placeholder}
-                  className="w-full py-3.5 px-3 text-gray-900 text-base outline-hidden placeholder:text-gray-400 font-medium"
+                  className="flex-1 min-w-0 h-full px-2.5 bg-transparent text-sumi text-[15px] outline-hidden placeholder:text-gray-400"
                 />
                 {keyword && (
                   <button
@@ -553,58 +547,62 @@ export const DictionaryPage: React.FC = () => {
                       setKeyword('')
                       setIsDropdownOpen(false)
                     }}
-                    className="p-2 mr-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100 transition"
+                    className="p-1.5 text-gray-400 hover:text-sumi rounded-md hover:bg-gray-100 transition shrink-0"
                     title="Xoá từ khoá"
+                    aria-label="Xoá từ khoá"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setIsHandwritingOpen(true)}
-                  className="p-2 mr-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-md transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer"
-                  title="Nhận dạng chữ viết tay Kanji (AI)"
-                >
-                  <PenTool className="w-4 h-4" />
-                  <span className="hidden sm:inline text-xs font-bold">Vẽ Kanji</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAirWritingOpen(true)}
-                  className="p-2 mr-1 text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200/80 rounded-md transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer shadow-2xs group"
-                  title="Viết chữ Hán trên không qua Camera & AI (Zero-Contact Gesture Control)"
-                >
-                  <Camera className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
-                  <span className="hidden sm:inline text-xs font-bold bg-gradient-to-r from-sky-600 to-indigo-600 bg-clip-text text-transparent">
-                    Vẽ trên không AI
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsPracticeOpen(true)}
-                  className="p-2 mr-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 rounded-md transition flex items-center gap-1.5 px-3 shrink-0 cursor-pointer shadow-2xs"
-                  title="Luyện viết & Chấm điểm nét vẽ AI"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  <span className="hidden sm:inline text-xs font-bold">Luyện viết AI</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsDropdownOpen(false)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3.5 mr-1 rounded-md text-sm transition shrink-0"
-                >
-                  Tìm kiếm
-                </button>
+                <span className="w-px h-5 bg-suna mx-1.5 shrink-0" aria-hidden="true" />
+                <div className="flex items-center gap-1 pr-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsHandwritingOpen(true)}
+                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-white text-nibi hover:text-indigo-600 hover:border-indigo-300 hover:bg-kamenozoki transition flex items-center justify-center cursor-pointer"
+                    title="Nhận dạng chữ viết tay Kanji (AI)"
+                    aria-label="Nhận dạng chữ viết tay Kanji (AI)"
+                  >
+                    <PenTool className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAirWritingOpen(true)}
+                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-white text-nibi hover:text-indigo-600 hover:border-indigo-300 hover:bg-kamenozoki transition flex items-center justify-center cursor-pointer"
+                    title="Viết chữ Hán trên không qua Camera & AI"
+                    aria-label="Viết chữ Hán trên không qua Camera & AI"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPracticeOpen(true)}
+                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-white text-nibi hover:text-indigo-600 hover:border-indigo-300 hover:bg-kamenozoki transition flex items-center justify-center cursor-pointer"
+                    title="Luyện viết & Chấm điểm nét vẽ AI"
+                    aria-label="Luyện viết & Chấm điểm nét vẽ AI"
+                  >
+                    <PencilLine className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(false)}
+                className="h-11 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition shrink-0"
+              >
+                Tìm kiếm
+              </button>
+            </div>
 
-              {/* MAZII LIVE SUGGESTIONS DROPDOWN (Gợi ý tự động ngay khi gõ) */}
+              {/* Dropdown gợi ý tự động ngay khi gõ */}
               {isDropdownOpen && suggestions && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-2xl border border-gray-200 text-left overflow-hidden z-50 max-h-[460px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
                   {/* Nhóm Từ vựng */}
                   {suggestions.vocabularies && suggestions.vocabularies.length > 0 && (
                     <div className="p-2 border-b border-gray-100">
                       <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <span>📖 Từ vựng ({suggestions.vocabularies.length})</span>
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>Từ vựng ({suggestions.vocabularies.length})</span>
                       </div>
                       <div className="space-y-1">
                         {suggestions.vocabularies.map((v) => (
@@ -634,8 +632,9 @@ export const DictionaryPage: React.FC = () => {
                   {/* Nhóm Chữ Hán */}
                   {suggestions.kanjis && suggestions.kanjis.length > 0 && (
                     <div className="p-2 border-b border-gray-100">
-                      <div className="px-3 py-1.5 text-[11px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <span>🈸 Chữ Hán ({suggestions.kanjis.length})</span>
+                      <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                        <Brush className="w-3.5 h-3.5" />
+                        <span>Chữ Hán ({suggestions.kanjis.length})</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                         {suggestions.kanjis.map((k) => (
@@ -665,8 +664,9 @@ export const DictionaryPage: React.FC = () => {
                   {/* Nhóm Ngữ pháp */}
                   {suggestions.grammars && suggestions.grammars.length > 0 && (
                     <div className="p-2">
-                      <div className="px-3 py-1.5 text-[11px] font-bold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <span>📚 Ngữ pháp ({suggestions.grammars.length})</span>
+                      <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                        <BookText className="w-3.5 h-3.5" />
+                        <span>Ngữ pháp ({suggestions.grammars.length})</span>
                       </div>
                       <div className="space-y-1">
                         {suggestions.grammars.map((g) => (
@@ -701,112 +701,68 @@ export const DictionaryPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Gợi ý từ khóa mẫu nhanh */}
-              {tabConfig.suggestions.length > 0 && (
-                <div className="flex items-center justify-center gap-1.5 flex-wrap pt-2.5 text-xs text-indigo-200">
-                  <span className="font-medium">Gợi ý tra nhanh:</span>
-                  {tabConfig.suggestions.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => setKeyword(tag)}
-                      className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 hover:text-white transition backdrop-blur-xs font-semibold"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-      {/* =========================================================================
-          2. THANH CHUYỂN TAB & BỘ LỌC CẤP ĐỘ JLPT
-         ========================================================================= */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3 rounded-md border border-gray-200 shadow-xs sticky top-16 z-30 backdrop-blur-md">
-        {/* 4 Tab điều hướng chuyên biệt */}
-        <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto p-1 bg-gray-100 rounded-md">
-          <button
-            type="button"
-            onClick={() => setActiveTab('vocab')}
-            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'vocab'
-                ? 'bg-white text-indigo-600 shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            📖 Từ vựng
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('kanji')}
-            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'kanji'
-                ? 'bg-white text-indigo-600 shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            🈸 Chữ Hán
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('grammar')}
-            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'grammar'
-                ? 'bg-white text-indigo-600 shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            📚 Ngữ pháp
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('kana')}
-            className={`px-4 py-2 rounded text-xs md:text-sm font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeTab === 'kana'
-                ? 'bg-white text-indigo-600 shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            🌸 Bảng chữ cái
-          </button>
-        </div>
-
-        {/* Bộ lọc JLPT */}
-        {activeTab !== 'kana' && (
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
-            <span className="text-xs text-gray-400 font-semibold flex items-center gap-1 pl-2">
-              <Filter className="w-3.5 h-3.5" /> JLPT:
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelectedLevel(undefined)}
-              className={`px-2.5 py-1 rounded text-xs font-bold transition ${
-                selectedLevel === undefined
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              All
-            </button>
-            {(['N5', 'N4', 'N3', 'N2', 'N1'] as JlptLevel[]).map((lvl) => (
+        {/* Tab điều hướng + Bộ lọc JLPT */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {(
+              [
+                { key: 'vocab', label: 'Từ vựng', icon: BookOpen },
+                { key: 'kanji', label: 'Chữ Hán', icon: Brush },
+                { key: 'grammar', label: 'Ngữ pháp', icon: BookText },
+                { key: 'kana', label: 'Bảng chữ cái', icon: Languages },
+              ] as const
+            ).map(({ key, label, icon: Icon }) => (
               <button
-                key={lvl}
+                key={key}
                 type="button"
-                onClick={() => setSelectedLevel(selectedLevel === lvl ? undefined : lvl)}
-                className={`px-2.5 py-1 rounded text-xs font-bold transition ${
-                  selectedLevel === lvl
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                onClick={() => setActiveTab(key)}
+                className={`px-3 py-1.5 rounded-md text-sm transition flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === key
+                    ? 'bg-kamenozoki text-indigo-600 font-semibold'
+                    : 'text-nibi font-medium hover:text-sumi hover:bg-gray-50'
                 }`}
               >
-                {lvl}
+                <Icon className="w-4 h-4" /> {label}
               </button>
             ))}
           </div>
-        )}
+
+          {activeTab !== 'kana' && (
+            <div className="flex items-center gap-1 overflow-x-auto">
+              <span className="text-xs text-nibi font-semibold flex items-center gap-1 pr-1">
+                <Filter className="w-3.5 h-3.5" /> JLPT
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedLevel(undefined)}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap ${
+                  selectedLevel === undefined
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
+                }`}
+              >
+                Tất cả
+              </button>
+              {(['N5', 'N4', 'N3', 'N2', 'N1'] as JlptLevel[]).map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => setSelectedLevel(selectedLevel === lvl ? undefined : lvl)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition ${
+                    selectedLevel === lvl
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* =========================================================================
@@ -1151,189 +1107,210 @@ export const DictionaryPage: React.FC = () => {
         </div>
       ) : (
         /* =========================================================================
-            TRƯỜNG HỢP 3: MÀN HÌNH CHÍNH MAZII KHI CHƯA TRA CỨU (DISCOVERY HUB)
+            TRƯỜNG HỢP 3: MÀN HÌNH CHÍNH KHI CHƯA TRA CỨU (DISCOVERY HUB) — gộp 1 khối 2 cột
            ========================================================================= */
-        <div className="space-y-6">
-          {/* 1. Lịch sử tra cứu gần đây (Recent Searches) */}
-          {history.length > 0 && (
-            <div className="bg-white rounded-md p-6 border border-gray-200/80 shadow-xs space-y-4">
+        <div className="bg-white rounded-xl border border-suna shadow-xs grid grid-cols-1 lg:grid-cols-12">
+          {/* ===== CỘT TRÁI: Lịch sử + Gợi ý nhanh + Cấp độ JLPT ===== */}
+          <div className="lg:col-span-8 p-4 sm:p-5 space-y-5 min-w-0">
+            {/* 1. Lịch sử tra cứu gần đây */}
+            <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
                   <Clock className="w-4 h-4 text-indigo-600" />
-                  <span>Lịch sử tra cứu gần đây</span>
-                  <span className="text-xs text-gray-400 font-normal">({history.length})</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={clearAllHistory}
-                  className="text-xs text-gray-400 hover:text-rose-500 font-semibold flex items-center gap-1 transition"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Xoá lịch sử
-                </button>
+                  Lịch sử tra cứu gần đây
+                  {history.length > 0 && (
+                    <span className="text-xs text-gray-400 font-normal">({history.length})</span>
+                  )}
+                </h3>
+                {history.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllHistory}
+                    className="text-xs text-nibi hover:text-shu font-semibold flex items-center gap-1 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Xoá lịch sử
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-                {history.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => handleSelectHistory(item)}
-                    className="p-3 rounded-md border border-gray-200/80 hover:border-indigo-400 hover:bg-indigo-50/50 cursor-pointer group transition relative flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-extrabold text-sm text-gray-900 group-hover:text-indigo-600 transition truncate">
+              {history.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+                  {history.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => handleSelectHistory(item)}
+                      className="group relative min-w-0 p-2.5 rounded-md border border-suna hover:border-indigo-300 hover:bg-kamenozoki/50 cursor-pointer transition"
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <span className="font-bold text-sm text-sumi group-hover:text-indigo-600 transition truncate">
                           {item.title}
                         </span>
                         <button
                           type="button"
                           onClick={(e) => removeHistoryItem(item.id, e)}
-                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-rose-500 p-0.5 rounded transition"
+                          className="opacity-0 group-hover:opacity-100 -mr-1 text-gray-400 hover:text-shu p-0.5 rounded transition shrink-0"
+                          aria-label="Xoá khỏi lịch sử"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                       {item.subtitle && (
-                        <p className="text-[11px] text-gray-500 truncate">【{item.subtitle}】</p>
+                        <p className="text-[11px] text-nibi truncate">【{item.subtitle}】</p>
                       )}
                       {item.meaning && (
-                        <p className="text-xs text-gray-600 truncate mt-1">{item.meaning}</p>
+                        <p className="text-xs text-gray-600 truncate mt-0.5">{item.meaning}</p>
                       )}
-                    </div>
-                    <div className="pt-2 flex items-center justify-between text-[10px] text-gray-400">
-                      <span className="uppercase font-semibold text-indigo-600">
+                      <p className="mt-1 text-[10px] uppercase font-semibold tracking-wide text-indigo-600">
                         {item.tab === 'vocab' ? 'Từ vựng' : item.tab === 'kanji' ? 'Hán tự' : 'Ngữ pháp'}
-                      </span>
+                      </p>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-nibi">
+                  Chưa có lịch sử. Các từ bạn tra sẽ hiện ở đây để mở lại nhanh.
+                </p>
+              )}
+            </section>
+
+            {/* 2. Gợi ý tra nhanh (chuyển từ banner cũ xuống) */}
+            {tabConfig.suggestions.length > 0 && (
+              <section className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-semibold text-nibi mr-1">Gợi ý tra nhanh:</span>
+                {tabConfig.suggestions.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setKeyword(tag)}
+                    className="px-2.5 py-1 rounded-md border border-suna bg-kinari text-sm font-medium text-sumi hover:border-indigo-300 hover:text-indigo-600 transition"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </section>
+            )}
+
+            {/* 3. Khám phá từ vựng theo cấp độ JLPT */}
+            <section className="space-y-3 pt-4 border-t border-suna">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
+                <Filter className="w-4 h-4 text-indigo-600" />
+                Khám phá từ vựng theo cấp độ JLPT
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {(
+                  [
+                    { level: 'N5', label: 'Căn bản (Sơ cấp 1)' },
+                    { level: 'N4', label: 'Sơ cấp 2' },
+                    { level: 'N3', label: 'Trung cấp' },
+                    { level: 'N2', label: 'Trung cao cấp' },
+                    { level: 'N1', label: 'Cao cấp (Thành thạo)' },
+                  ] as const
+                ).map((item) => (
+                  <button
+                    key={item.level}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('vocab')
+                      setSelectedLevel(item.level as JlptLevel)
+                    }}
+                    className="text-left p-3 rounded-md border border-suna hover:border-indigo-300 hover:bg-kamenozoki/50 transition cursor-pointer"
+                  >
+                    <span className={`block font-extrabold text-lg leading-none ${JLPT_LEVEL_TEXT[item.level]}`}>
+                      {item.level}
+                    </span>
+                    <span className="block text-xs text-nibi mt-1.5">{item.label}</span>
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* 2. Khám phá nổi bật & Lối tắt nhanh */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Thẻ 1: Khám phá Chữ Hán tiêu biểu */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-md p-6 border border-amber-200/60 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
-                  <Flame className="w-4 h-4 text-amber-600" /> Chữ Hán hôm nay
-                </span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded bg-amber-200 text-amber-900">
-                  JLPT N5
-                </span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-md bg-white shadow-xs border border-amber-200 flex items-center justify-center text-4xl font-serif font-bold text-gray-900">
-                  日
-                </div>
-                <div>
-                  <h4 className="font-extrabold text-amber-900 text-lg uppercase">NHẬT</h4>
-                  <p className="text-xs text-gray-600">Mặt trời, ngày, Nhật Bản</p>
-                  <p className="text-[11px] text-gray-400 mt-1">4 nét • On: ニチ, ジツ • Kun: ひ, -び</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('kanji')
-                  setKeyword('日')
-                }}
-                className="w-full py-2.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                <span>Xem thứ tự nét vẽ & Từ ghép</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Thẻ 2: Khám phá Từ vựng thông dụng */}
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-md p-6 border border-indigo-200/60 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-indigo-600" /> Từ vựng thông dụng
-                </span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded bg-indigo-200 text-indigo-900">
-                  JLPT N5
-                </span>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-2">
-                  <h4 className="font-extrabold text-indigo-950 text-2xl font-sans">食べる</h4>
-                  <span className="text-sm text-gray-500">【たべる】</span>
-                </div>
-                <p className="text-xs text-amber-700 font-bold uppercase">THỰC</p>
-                <p className="text-xs text-gray-600 font-medium">Ăn (động từ nhóm 2)</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('vocab')
-                  setKeyword('食べる')
-                }}
-                className="w-full py-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                <span>Xem chi tiết & Ví dụ câu</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Thẻ 3: Khám phá Bảng chữ cái tương tác */}
-            <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-md p-6 border border-pink-200/60 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-pink-700 flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-pink-600" /> Bảng chữ cái tương tác
-                </span>
-                <span className="text-xs font-bold px-2 py-0.5 rounded bg-pink-200 text-pink-900">
-                  50 âm
-                </span>
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-extrabold text-pink-950 text-xl">Hiragana & Katakana</h4>
-                <p className="text-xs text-gray-600">
-                  Phát âm chuẩn từng chữ, nút đọc tuần tự cả hàng và tập viết nét SVG trực quan.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab('kana')}
-                className="w-full py-2.5 rounded-md bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs"
-              >
-                <span>Mở bảng chữ cái</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            </section>
           </div>
 
-          {/* 3. Lối tắt tìm kiếm theo cấp độ JLPT */}
-          <div className="bg-white rounded-md p-6 border border-gray-200/80 shadow-xs space-y-3">
-            <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-              <Filter className="w-4 h-4 text-indigo-600" />
-              Khám phá từ vựng theo Cấp độ JLPT
+          {/* ===== CỘT PHẢI: Khám phá nổi bật — 3 mục cùng khung, khác độ đậm màu chàm Ai ===== */}
+          <aside className="lg:col-span-4 p-4 sm:p-5 space-y-3 border-t lg:border-t-0 lg:border-l border-suna bg-kinari/50 rounded-b-xl lg:rounded-bl-none lg:rounded-r-xl">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
+              <Sparkles className="w-4 h-4 text-indigo-600" />
+              Khám phá nổi bật
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {(
-                [
-                  { level: 'N5', label: 'Căn bản (Sơ cấp 1)', color: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
-                  { level: 'N4', label: 'Sơ cấp 2', color: 'border-blue-200 bg-blue-50 text-blue-800' },
-                  { level: 'N3', label: 'Trung cấp', color: 'border-indigo-200 bg-indigo-50 text-indigo-800' },
-                  { level: 'N2', label: 'Trung cao cấp', color: 'border-purple-200 bg-purple-50 text-purple-800' },
-                  { level: 'N1', label: 'Cao cấp (Thành thạo)', color: 'border-rose-200 bg-rose-50 text-rose-800' },
-                ] as const
-              ).map((item) => (
-                <div
-                  key={item.level}
-                  onClick={() => {
-                    setActiveTab('vocab')
-                    setSelectedLevel(item.level as JlptLevel)
-                  }}
-                  className={`p-4 rounded-md border transition cursor-pointer hover:shadow-md ${item.color} flex flex-col justify-between`}
-                >
-                  <span className="font-extrabold text-xl">{item.level}</span>
-                  <span className="text-xs font-medium mt-1 opacity-90">{item.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+
+            {/* Chữ Hán hôm nay */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('kanji')
+                setKeyword('日')
+              }}
+              className="group w-full text-left flex items-center gap-3 p-3 rounded-md bg-white border border-suna hover:bg-kamenozoki/40 hover:shadow-xs transition cursor-pointer"
+            >
+              <span className="w-12 h-12 shrink-0 rounded-md bg-kamenozoki text-indigo-800 font-serif text-2xl font-bold flex items-center justify-center">
+                日
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
+                  <Brush className="w-3.5 h-3.5" /> Chữ Hán hôm nay
+                  <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${JLPT_LEVEL_BADGE.N5}`}>N5</span>
+                </span>
+                <span className="block mt-0.5 font-bold text-sumi truncate">
+                  NHẬT <span className="font-normal text-xs text-nibi">· Mặt trời, ngày, Nhật Bản</span>
+                </span>
+                <span className="block text-[11px] text-gray-400 truncate">4 nét • On: ニチ, ジツ • Kun: ひ, -び</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-800 group-hover:underline">
+                  Xem thứ tự nét vẽ & Từ ghép <ArrowRight className="w-3 h-3" />
+                </span>
+              </span>
+            </button>
+
+            {/* Từ vựng thông dụng */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('vocab')
+                setKeyword('食べる')
+              }}
+              className="group w-full text-left flex items-center gap-3 p-3 rounded-md bg-white border border-suna hover:bg-kamenozoki/40 hover:shadow-xs transition cursor-pointer"
+            >
+              <span className="w-12 h-12 shrink-0 rounded-md bg-kamenozoki text-indigo-600 font-serif text-2xl font-bold flex items-center justify-center">
+                食
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
+                  <BookOpen className="w-3.5 h-3.5" /> Từ vựng thông dụng
+                  <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${JLPT_LEVEL_BADGE.N5}`}>N5</span>
+                </span>
+                <span className="block mt-0.5 font-bold text-sumi truncate">
+                  食べる <span className="font-normal text-xs text-nibi">【たべる】</span>
+                </span>
+                <span className="block text-[11px] text-gray-400 truncate">THỰC · Ăn (động từ nhóm 2)</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 group-hover:underline">
+                  Xem chi tiết & Ví dụ câu <ArrowRight className="w-3 h-3" />
+                </span>
+              </span>
+            </button>
+
+            {/* Bảng chữ cái tương tác */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('kana')}
+              className="group w-full text-left flex items-center gap-3 p-3 rounded-md bg-white border border-suna hover:bg-kamenozoki/40 hover:shadow-xs transition cursor-pointer"
+            >
+              <span className="w-12 h-12 shrink-0 rounded-md bg-kamenozoki text-indigo-500 font-serif text-2xl font-bold flex items-center justify-center">
+                あ
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
+                  <Languages className="w-3.5 h-3.5" /> Bảng chữ cái
+                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-white text-nibi border border-suna">50 âm</span>
+                </span>
+                <span className="block mt-0.5 font-bold text-sumi truncate">Hiragana & Katakana</span>
+                <span className="block text-[11px] text-gray-400 line-clamp-2">
+                  Phát âm chuẩn từng chữ, đọc tuần tự cả hàng và tập viết nét trực quan.
+                </span>
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-500 group-hover:underline">
+                  Mở bảng chữ cái <ArrowRight className="w-3 h-3" />
+                </span>
+              </span>
+            </button>
+          </aside>
         </div>
       )}
 

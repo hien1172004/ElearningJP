@@ -433,4 +433,41 @@ public interface UserDailyStatsRepository extends JpaRepository<UserDailyStats, 
             WHERE user_id = :userId AND stat_date = :statDate
             """, nativeQuery = true)
     void updateGoalWords(Long userId, LocalDate statDate, int goalWords, int minStudySeconds);
+
+    // =========================================================
+    // THỐNG KÊ CHO DASHBOARD ADMIN
+    // Một dòng user_daily_stats chỉ tính là "có học" khi có ít nhất một hoạt động thật.
+    // =========================================================
+
+    /** Theo ngày trong [from, to]: [stat_date, số user hoạt động, tổng giây học, số user đạt mục tiêu]. */
+    @Query(value = """
+            SELECT s.stat_date,
+                   COUNT(*),
+                   COALESCE(SUM(s.study_seconds), 0),
+                   COUNT(*) FILTER (WHERE s.goal_met)
+            FROM user_daily_stats s
+            JOIN users u ON u.id = s.user_id AND u.deleted = false
+            WHERE s.stat_date BETWEEN :from AND :to
+              AND (s.study_seconds > 0 OR s.cards_reviewed > 0 OR s.lessons_completed > 0
+                   OR s.lookups > 0 OR s.new_items_learned > 0 OR s.xp_earned > 0)
+            GROUP BY s.stat_date
+            """, nativeQuery = true)
+    List<Object[]> aggregateActivityByDay(LocalDate from, LocalDate to);
+
+    /**
+     * 1 dòng so sánh kỳ hiện tại [from, to] với kỳ trước [prevFrom, from):
+     * [số user hoạt động (distinct) kỳ này, kỳ trước, tổng giây học kỳ này, kỳ trước].
+     */
+    @Query(value = """
+            SELECT COUNT(DISTINCT s.user_id) FILTER (WHERE s.stat_date >= :from),
+                   COUNT(DISTINCT s.user_id) FILTER (WHERE s.stat_date < :from),
+                   COALESCE(SUM(s.study_seconds) FILTER (WHERE s.stat_date >= :from), 0),
+                   COALESCE(SUM(s.study_seconds) FILTER (WHERE s.stat_date < :from), 0)
+            FROM user_daily_stats s
+            JOIN users u ON u.id = s.user_id AND u.deleted = false
+            WHERE s.stat_date BETWEEN :prevFrom AND :to
+              AND (s.study_seconds > 0 OR s.cards_reviewed > 0 OR s.lessons_completed > 0
+                   OR s.lookups > 0 OR s.new_items_learned > 0 OR s.xp_earned > 0)
+            """, nativeQuery = true)
+    List<Object[]> aggregateActivityPeriods(LocalDate prevFrom, LocalDate from, LocalDate to);
 }

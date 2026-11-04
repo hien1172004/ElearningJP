@@ -32,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,7 +64,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class KanjiSectionItemService extends AbstractSectionItemService {
 
-    private static final int MAX_RELATED_VOCAB_PER_REQUEST = 50;
+    // Chữ Hán phổ biến (人, 日, 大...) có thể có > 50 từ liên quan trong từ điển;
+    // giới hạn phải >= số từ auto-derive để giáo viên lưu được danh sách đầy đủ.
+    private static final int MAX_RELATED_VOCAB_PER_REQUEST = 200;
 
     private final LessonKanjiItemRepository kanjiItemRepository;
     private final LessonKanjiRelatedVocabRepository relatedVocabRepository;
@@ -404,7 +407,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
             return 0;
         }
         if (requests.size() > MAX_RELATED_VOCAB_PER_REQUEST) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw new AppException(ErrorCode.LESSON_KANJI_RELATED_VOCAB_TOO_MANY);
         }
 
         // Đếm tổng số vocab sẽ tạo (validate trước khi save)
@@ -418,7 +421,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         if (totalVocabs > MAX_RELATED_VOCAB_PER_REQUEST) {
             log.warn("[KANJI-ITEM] Too many related vocabs requested for kanji item id={}: {} > {}",
                     item.getId(), totalVocabs, MAX_RELATED_VOCAB_PER_REQUEST);
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw new AppException(ErrorCode.LESSON_KANJI_RELATED_VOCAB_TOO_MANY);
         }
 
         Set<Long> seenVocabIds = new HashSet<>();
@@ -443,82 +446,91 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     }
 
     /**
-     * Thay thế toàn bộ related vocab của 1 kanji item bằng danh sách mới.
-     * <p>Cách làm: soft-delete tất cả rv hiện tại → tạo mới theo {@code newRequests}.</p>
+     * Thay thế toàn bộ related vocab của 1 kanji item bằng danh sách mới (sync theo vocabId).
      *
-     * @return số lượng rv mới đã tạo.
+     * <ul>
+     *   <li>Bản ghi đang active nhưng không còn trong danh sách mới → soft-delete.</li>
+     *   <li>Bản ghi đã soft-delete trước đó và được chọn lại → {@code restore()} thay vì insert,
+     *       vì UNIQUE (kanji_item_id, vocab_id) áp cho cả dòng đã xoá mềm.</li>
+     *   <li>Vocab chưa từng gắn → insert mới.</li>
+     * </ul>
+     *
+     * @return số lượng rv được tạo mới hoặc khôi phục.
      */
     private int replaceRelatedVocab(LessonKanjiItem item, List<LessonKanjiRelatedVocabRequest> newRequests) {
         Long kanjiItemId = item.getId();
 
-        // 1) Load tất cả rv hiện tại (cả đã soft-delete, để biết key đã từng tồn tại)
-        List<LessonKanjiRelatedVocab> allExisting = relatedVocabRepository.findByKanjiItemId(kanjiItemId);
-
-        // 2) Build map vocabId -> rv (chỉ lấy rv chưa soft-delete)
-        Map<Long, LessonKanjiRelatedVocab> existingByVocabId = allExisting.stream()
-                .filter(rv -> !rv.isDeleted())
-                .collect(Collectors.toMap(rv -> rv.getVocab().getId(), Function.identity()));
-
-        // 3) Tính tập vocabId sẽ có sau update (từ newRequests)
-        Set<Long> targetVocabIds = new HashSet<>();
+        // 1) Validate toàn bộ request trước khi ghi DB
+        int totalVocabs = 0;
         for (LessonKanjiRelatedVocabRequest req : newRequests) {
             if (req == null || !req.isValid()) {
                 throw new AppException(ErrorCode.INVALID_REQUEST);
             }
-            if (req.getVocabIds() != null) {
-                for (Long vid : req.getVocabIds()) {
-                    if (vid != null && vid > 0) {
-                        targetVocabIds.add(vid);
-                    }
-                }
-            }
-        }
-
-        // 4) Soft-delete rv nào không còn trong target
-        List<LessonKanjiRelatedVocab> toDelete = existingByVocabId.values().stream()
-                .filter(rv -> !targetVocabIds.contains(rv.getVocab().getId()))
-                .toList();
-        if (!toDelete.isEmpty()) {
-            toDelete.forEach(LessonKanjiRelatedVocab::softDelete);
-            relatedVocabRepository.saveAll(toDelete);
-            log.info("[KANJI-ITEM] Soft-deleted {} existing related vocab(s) for kanji item id={}",
-                    toDelete.size(), kanjiItemId);
-        }
-
-        // 5) Nếu request rỗng → chỉ xoá, không tạo mới
-        if (newRequests.isEmpty()) {
-            return 0;
-        }
-
-        // 6) Validate tổng số vocab
-        int totalVocabs = 0;
-        for (LessonKanjiRelatedVocabRequest req : newRequests) {
             totalVocabs += req.countVocabs();
         }
         if (totalVocabs > MAX_RELATED_VOCAB_PER_REQUEST) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            log.warn("[KANJI-ITEM] Too many related vocabs requested for kanji item id={}: {} > {}",
+                    kanjiItemId, totalVocabs, MAX_RELATED_VOCAB_PER_REQUEST);
+            throw new AppException(ErrorCode.LESSON_KANJI_RELATED_VOCAB_TOO_MANY);
         }
 
-        // 7) Tạo mới CHỈ những vocabId chưa có trong existing (tránh unique conflict)
-        int created = 0;
+        // 2) Tất cả dòng hiện có (kể cả đã soft-delete) theo vocabId
+        Map<Long, LessonKanjiRelatedVocab> rowsByVocabId = relatedVocabRepository.findByKanjiItemId(kanjiItemId)
+                .stream()
+                .collect(Collectors.toMap(rv -> rv.getVocab().getId(), Function.identity(),
+                        (a, b) -> a.isDeleted() ? b : a));
+
+        // 3) Danh sách đích (giữ thứ tự, bỏ trùng) — newVocab được tạo/reuse ở bước này
+        Map<Long, LessonKanjiRelatedVocab> targets = new LinkedHashMap<>();
         for (LessonKanjiRelatedVocabRequest req : newRequests) {
-            List<LessonKanjiRelatedVocab> rvs = buildRelatedVocabs(item, req);
-            for (LessonKanjiRelatedVocab rv : rvs) {
-                Long vocabId = rv.getVocab().getId();
-                if (existingByVocabId.containsKey(vocabId)) {
-                    // Đã có → skip (giữ nguyên, không insert mới)
-                    log.info("[KANJI-ITEM] vocabId={} already exists for kanji item id={} — kept",
-                            vocabId, kanjiItemId);
-                    continue;
-                }
-                relatedVocabRepository.save(rv);
-                created++;
-                existingByVocabId.put(vocabId, rv); // cập nhật map để check duplicate trong cùng request
+            for (LessonKanjiRelatedVocab rv : buildRelatedVocabs(item, req)) {
+                targets.putIfAbsent(rv.getVocab().getId(), rv);
             }
         }
-        log.info("[KANJI-ITEM] Replaced related vocab for kanji item id={} → {} new entry(s), {} kept, {} deleted",
-                kanjiItemId, created, existingByVocabId.size() - created, toDelete.size());
-        return created;
+
+        // 4) Soft-delete các dòng active không còn được chọn
+        List<LessonKanjiRelatedVocab> changed = new ArrayList<>();
+        int deleted = 0;
+        for (LessonKanjiRelatedVocab row : rowsByVocabId.values()) {
+            if (!row.isDeleted() && !targets.containsKey(row.getVocab().getId())) {
+                row.softDelete();
+                changed.add(row);
+                deleted++;
+            }
+        }
+
+        // 5) Insert mới / khôi phục / giữ nguyên
+        int created = 0;
+        int restored = 0;
+        for (Map.Entry<Long, LessonKanjiRelatedVocab> entry : targets.entrySet()) {
+            LessonKanjiRelatedVocab candidate = entry.getValue();
+            LessonKanjiRelatedVocab existing = rowsByVocabId.get(entry.getKey());
+            if (existing == null) {
+                changed.add(candidate);
+                created++;
+                continue;
+            }
+            boolean dirty = false;
+            if (existing.isDeleted()) {
+                existing.restore();
+                restored++;
+                dirty = true;
+            }
+            if (candidate.getNote() != null) {
+                existing.setNote(candidate.getNote());
+                dirty = true;
+            }
+            if (dirty) {
+                changed.add(existing);
+            }
+        }
+        if (!changed.isEmpty()) {
+            relatedVocabRepository.saveAll(changed);
+        }
+
+        log.info("[KANJI-ITEM] Synced related vocab for kanji item id={} → {} created, {} restored, {} deleted, {} total",
+                kanjiItemId, created, restored, deleted, targets.size());
+        return created + restored;
     }
 
     /**

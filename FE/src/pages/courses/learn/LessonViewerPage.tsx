@@ -353,7 +353,7 @@ export const LessonViewerPage: React.FC = () => {
           badge={course?.jlptLevel ? `JLPT ${course.jlptLevel}` : undefined}
           title={
             <div className="text-left md:text-center">
-              <p className="text-sm text-indigo-200/70 font-normal mb-1">{course?.title}</p>
+              <p className="text-sm text-nibi font-normal mb-1">{course?.title}</p>
               <div className="flex items-center gap-3 flex-wrap justify-start md:justify-center">
                 {course?.jlptLevel && (
                   <Tag color="purple" className="!m-0 font-bold text-xs">

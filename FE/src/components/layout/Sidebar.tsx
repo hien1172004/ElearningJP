@@ -14,6 +14,11 @@ import {
   FileText,
   Mic,
   Layers,
+  Users,
+  PieChart,
+  ShieldAlert,
+  Megaphone,
+  UserCheck,
 } from 'lucide-react'
 import { Tooltip, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
@@ -32,6 +37,8 @@ interface NavChildItem {
   label: string
   icon?: React.ReactNode
   match?: (pathname: string) => boolean
+  /** Chỉ hiện cho user có ít nhất 1 role trong danh sách (vd: chỉ ADMIN). */
+  requiresRoles?: readonly string[]
 }
 
 interface NavItem {
@@ -117,10 +124,48 @@ const navItems: NavItem[] = [
         match: isActiveOrStartsWith('/teacher/courses'),
       },
       {
+        to: '/teacher/students',
+        label: 'Học viên',
+        icon: <UserCheck className="w-4 h-4" />,
+        match: isActiveOrStartsWith('/teacher/students'),
+      },
+      {
         to: '/admin/exams',
         label: 'Đề thi',
         icon: <FileText className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin'),
+        match: isActiveOrStartsWith('/admin/exams'),
+      },
+      {
+        to: '/admin/broadcasts',
+        label: 'Gửi thông báo',
+        icon: <Megaphone className="w-4 h-4" />,
+        match: isActiveOrStartsWith('/admin/broadcasts'),
+      },
+      {
+        to: '/admin/comments',
+        label: 'Kiểm duyệt bình luận',
+        icon: <ShieldAlert className="w-4 h-4" />,
+        match: isActiveOrStartsWith('/admin/comments'),
+      },
+      {
+        to: '/admin/scenarios',
+        label: 'Kịch bản luyện nói',
+        icon: <Mic className="w-4 h-4" />,
+        match: isActiveOrStartsWith('/admin/scenarios'),
+      },
+      {
+        to: '/admin/stats',
+        label: 'Thống kê',
+        icon: <PieChart className="w-4 h-4" />,
+        match: isActiveOrStartsWith('/admin/stats'),
+        requiresRoles: ['ADMIN'],
+      },
+      {
+        to: '/admin/users',
+        label: 'Người dùng',
+        icon: <Users className="w-4 h-4" />,
+        match: isActiveOrStartsWith('/admin/users'),
+        requiresRoles: ['ADMIN'],
       },
     ],
   },
@@ -409,7 +454,16 @@ export const Sidebar: React.FC = () => {
       if (item.requiresAuth) return isAuthenticated
       return true
     })
-    .map((item) => {
+    .map((rawItem) => {
+      // Ẩn mục con yêu cầu role mà user không có (vd: "Người dùng" chỉ cho ADMIN).
+      const item: NavItem = rawItem.children
+        ? {
+            ...rawItem,
+            children: rawItem.children.filter(
+              (child) => !child.requiresRoles?.length || hasRole(user, child.requiresRoles),
+            ),
+          }
+        : rawItem
       // Badge số thẻ SRS đến hạn trên mục "Ôn tập SRS".
       if (item.to === '/srs' && dueCount > 0) {
         return {

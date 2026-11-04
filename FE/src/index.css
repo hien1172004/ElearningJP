@@ -1,62 +1,106 @@
 @import "tailwindcss";
 
 /* =====================================================================
-   THEME — Chủ đề "Wine / Rose" (đỏ rượu vang + hồng đất trên nền trắng)
-   Trích xuất từ design/theme.png. Override biến Tailwind v4 để đổi màu
-   toàn app mà không cần sửa từng component (indigo -> wine, purple -> rose,
-   blue -> plum cho các gradient ấm).
+   THEME — Chủ đề "和色" (màu truyền thống Nhật) trên nền giấy mộc.
+   Tỷ lệ 60–30–10: ~60% nền kinari + trắng, ~30% chữ sumi + chàm, ~10% đỏ son.
+   Override biến Tailwind v4 để đổi màu toàn app mà không sửa từng component:
+     indigo, blue -> 藍 Ai (chàm)   ·   purple -> 紺 Kon (chàm đậm, cho gradient)
+     gray, slate  -> thang xám ấm (50 = kinari, 200 = suna, 500 = nibi, 900 = sumi)
    ===================================================================== */
 @theme {
-  /* Primary: Wine / Burgundy (was indigo) */
-  --color-indigo-50: #faf2f1;
-  --color-indigo-100: #fadbd7;
-  --color-indigo-200: #f0c4c0;
-  --color-indigo-300: #e2a7a2;
-  --color-indigo-400: #d1948a;
-  --color-indigo-500: #bf615f;
-  --color-indigo-600: #a4393b;
-  --color-indigo-700: #863233;
-  --color-indigo-800: #6a292a;
-  --color-indigo-900: #572325;
-  --color-indigo-950: #3b1618;
+  /* Token đặt tên theo bảng màu — dùng trực tiếp: bg-kinari, text-sumi, border-suna, text-shu… */
+  --color-ai: #2e5c8a;          /* 藍色 Ai — chủ đạo: nút, link, tab đang chọn, focus */
+  --color-kamenozoki: #e6eef5;  /* 瓶覗 — chủ đạo nhạt: nền chip, hover, thẻ gợi ý */
+  --color-shu: #d9534f;         /* 朱色 Shu — điểm nhấn: nút ☆ Lưu, dấu nhấn nhỏ (dùng rất ít) */
+  --color-kinari: #faf7f0;      /* 生成り — nền toàn trang */
+  --color-shiro: #ffffff;       /* 白 — thẻ, ô tìm kiếm */
+  --color-suna: #e7e0d2;        /* 砂色 — đường kẻ, viền thẻ */
+  --color-sumi: #1f2430;        /* 墨 — chữ chính, chữ Nhật, tiêu đề */
+  --color-nibi: #6b6f78;        /* 鈍色 — chữ phụ: cách đọc, nghĩa phụ, ghi chú */
 
-  /* Secondary: Rose / Mauve (was purple) */
-  --color-purple-50: #faf1ef;
-  --color-purple-100: #f8dcd8;
-  --color-purple-200: #efc3be;
-  --color-purple-300: #e3a8a0;
-  --color-purple-400: #d29289;
-  --color-purple-500: #bf6a5f;
-  --color-purple-600: #ae4d42;
-  --color-purple-700: #954037;
-  --color-purple-800: #76352d;
-  --color-purple-900: #5f2c26;
-  --color-purple-950: #3f1d18;
+  /* Màu cấp độ JLPT — chỉ dùng cho nhãn nhỏ, không tô cả khối (xem utils/jlpt.ts) */
+  --color-jlpt-n5: #7a9a4e;     /* 抹茶 matcha */
+  --color-jlpt-n4: #4e9a8a;     /* 若竹 wakatake */
+  --color-jlpt-n3: #2e5c8a;     /* 藍 ai */
+  --color-jlpt-n2: #7b6ba8;     /* 藤 fuji */
+  --color-jlpt-n1: #9e3d3f;     /* 臙脂 enji */
 
-  /* Accent: Deep Plum (was blue, cho gradient ấm rose -> wine -> plum) */
-  --color-blue-50: #f4f3f7;
-  --color-blue-100: #e9e7ee;
-  --color-blue-200: #d3d0dd;
-  --color-blue-300: #b2adc2;
-  --color-blue-400: #8a83a5;
-  --color-blue-500: #685f86;
-  --color-blue-600: #494360;
-  --color-blue-700: #3c364e;
-  --color-blue-800: #2e2a3c;
-  --color-blue-900: #221f2e;
-  --color-blue-950: #16141f;
+  /* Primary: 藍 Ai (was indigo) — 100 = kamenozoki, 600 = ai */
+  --color-indigo-50: #f2f6fa;
+  --color-indigo-100: #e6eef5;
+  --color-indigo-200: #c9d9e8;
+  --color-indigo-300: #9fbbd6;
+  --color-indigo-400: #6b95bd;
+  --color-indigo-500: #4574a2;
+  --color-indigo-600: #2e5c8a;
+  --color-indigo-700: #264d74;
+  --color-indigo-800: #1f3f5f;
+  --color-indigo-900: #19334d;
+  --color-indigo-950: #0f2133;
+
+  /* Blue dùng chung thang Ai để gradient indigo→blue đồng bộ */
+  --color-blue-50: #f2f6fa;
+  --color-blue-100: #e6eef5;
+  --color-blue-200: #c9d9e8;
+  --color-blue-300: #9fbbd6;
+  --color-blue-400: #6b95bd;
+  --color-blue-500: #4574a2;
+  --color-blue-600: #2e5c8a;
+  --color-blue-700: #264d74;
+  --color-blue-800: #1f3f5f;
+  --color-blue-900: #19334d;
+  --color-blue-950: #0f2133;
+
+  /* Secondary: 紺 Kon — chàm đậm (was purple), cho gradient ai → kon */
+  --color-purple-50: #f1f3f8;
+  --color-purple-100: #e2e7f0;
+  --color-purple-200: #c3cddf;
+  --color-purple-300: #98a8c6;
+  --color-purple-400: #6b7fa6;
+  --color-purple-500: #4b5f88;
+  --color-purple-600: #34476f;
+  --color-purple-700: #2b3a5b;
+  --color-purple-800: #232f4a;
+  --color-purple-900: #1c263c;
+  --color-purple-950: #121828;
+
+  /* Neutral ấm: 50 kinari · 200 suna · 500 nibi · 900 sumi */
+  --color-gray-50: #faf7f0;
+  --color-gray-100: #f3eee4;
+  --color-gray-200: #e7e0d2;
+  --color-gray-300: #d5cdbd;
+  --color-gray-400: #a3a29f;
+  --color-gray-500: #6b6f78;
+  --color-gray-600: #555963;
+  --color-gray-700: #3f434d;
+  --color-gray-800: #2c303a;
+  --color-gray-900: #1f2430;
+  --color-gray-950: #14171f;
+
+  /* Slate dùng chung thang xám ấm */
+  --color-slate-50: #faf7f0;
+  --color-slate-100: #f3eee4;
+  --color-slate-200: #e7e0d2;
+  --color-slate-300: #d5cdbd;
+  --color-slate-400: #a3a29f;
+  --color-slate-500: #6b6f78;
+  --color-slate-600: #555963;
+  --color-slate-700: #3f434d;
+  --color-slate-800: #2c303a;
+  --color-slate-900: #1f2430;
+  --color-slate-950: #14171f;
 }
 
 :root {
-  --text: #5f5867;
-  --text-h: #2e2a3c;
-  --color-brand: #f3f4f6;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #a4393b;
-  --accent-bg: rgba(164, 57, 59, 0.1);
-  --accent-border: rgba(164, 57, 59, 0.5);
+  --text: #6b6f78; /* nibi */
+  --text-h: #1f2430; /* sumi */
+  --color-brand: #e6eef5; /* kamenozoki */
+  --bg: #faf7f0; /* kinari */
+  --border: #e7e0d2; /* suna */
+  --code-bg: #f3eee4;
+  --accent: #2e5c8a; /* ai */
+  --accent-bg: rgba(46, 92, 138, 0.1);
+  --accent-border: rgba(46, 92, 138, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
@@ -116,7 +160,7 @@ body {
 .ant-input:focus,
 .ant-input-affix-wrapper:focus,
 .ant-input-affix-wrapper-focused {
-  border-color: #a4393b !important;
+  border-color: #2e5c8a !important; /* ai */
 }
 
 /* JLPT Japanese Typography */

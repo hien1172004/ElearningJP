@@ -199,6 +199,22 @@ public class NotificationService {
         return notificationRepository.softDeleteByReplyIds(ids, Instant.now(clock));
     }
 
+    /**
+     * Đẩy realtime (STOMP qua Redis) mọi thông báo của 1 lần gửi hàng loạt.
+     * Gọi SAU khi transaction chèn thông báo đã commit; lỗi đẩy realtime không ảnh hưởng
+     * bản ghi đã lưu (người nhận vẫn thấy khi mở danh sách thông báo).
+     *
+     * @return số thông báo đã đẩy
+     */
+    @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
+    public int pushBroadcast(Long broadcastId) {
+        List<Notification> notifications = notificationRepository.findByBroadcastId(broadcastId);
+        for (Notification n : notifications) {
+            notificationPublisher.publishToUser(n.getUser().getId(), toResponse(n));
+        }
+        return notifications.size();
+    }
+
     // ============================================================
     // MAPPING
     // ============================================================

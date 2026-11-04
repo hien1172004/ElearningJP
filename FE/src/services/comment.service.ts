@@ -5,6 +5,7 @@ import type {
   CommentListResponse,
   CommentLocation,
   CommentReactionState,
+  CommentReportPayload,
   CommentReplyItem,
   CommentReplyListResponse,
   CommentTargetType,
@@ -118,5 +119,21 @@ export const commentService = {
     replyId: number,
   ): Promise<ApiResponse<CommentReactionState>> => {
     return axiosClient.post(`/comment-replies/${replyId}/dislike`)
+  },
+
+  /** Báo cáo vi phạm bình luận (mỗi người 1 lần, không tự báo cáo — BE trả 409/400). */
+  reportComment: async (
+    commentId: number,
+    payload: CommentReportPayload,
+  ): Promise<ApiResponse<void>> => {
+    return axiosClient.post(`/comments/${commentId}/report`, payload)
+  },
+
+  /** Báo cáo vi phạm trả lời. */
+  reportReply: async (
+    replyId: number,
+    payload: CommentReportPayload,
+  ): Promise<ApiResponse<void>> => {
+    return axiosClient.post(`/comment-replies/${replyId}/report`, payload)
   },
 }

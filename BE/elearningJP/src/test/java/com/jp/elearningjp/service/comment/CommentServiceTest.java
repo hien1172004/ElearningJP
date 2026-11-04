@@ -17,6 +17,7 @@ import com.jp.elearningjp.repository.comment.CommentLikeRepository;
 import com.jp.elearningjp.repository.comment.CommentReplyDislikeRepository;
 import com.jp.elearningjp.repository.comment.CommentReplyLikeRepository;
 import com.jp.elearningjp.repository.comment.CommentReplyRepository;
+import com.jp.elearningjp.repository.comment.CommentReportRepository;
 import com.jp.elearningjp.repository.comment.CommentRepository;
 import com.jp.elearningjp.repository.content.GrammarPointRepository;
 import com.jp.elearningjp.repository.content.VocabularyRepository;
@@ -70,6 +71,7 @@ class CommentServiceTest {
     @Mock CommentReplyRepository commentReplyRepository;
     @Mock CommentReplyLikeRepository commentReplyLikeRepository;
     @Mock CommentReplyDislikeRepository commentReplyDislikeRepository;
+    @Mock CommentReportRepository commentReportRepository;
     @Mock LessonRepository lessonRepository;
     @Mock VocabularyRepository vocabularyRepository;
     @Mock WritingCharacterRepository writingCharacterRepository;
@@ -148,17 +150,52 @@ class CommentServiceTest {
     }
 
     @Test
-    void deleteReply_adminRemovesWholeSubtreeAndDecrementsByDeletedCount() {
+    void deleteReply_adminRemovesWholeSubtreeAndDecrementsByVisibleCount() {
         when(currentUserService.isAdmin()).thenReturn(true);
         CommentReply reply = CommentReply.builder().comment(comment).user(author).content("r").build();
         reply.setId(7L);
         when(commentReplyRepository.findByIdAndDeletedFalse(7L)).thenReturn(Optional.of(reply));
-        when(commentReplyRepository.softDeleteSubtree(eq(7L), any())).thenReturn(3); // reply + 2 con cháu
+        when(commentReplyRepository.countVisibleActiveInSubtree(7L)).thenReturn(3); // reply + 2 con cháu
+        when(commentReplyRepository.softDeleteSubtree(eq(7L), any())).thenReturn(3);
 
         service.deleteReply(7L);
 
         verify(commentRepository).decrementReplyCountBy(COMMENT_ID, 3);
         verify(commentRepository, never()).decrementReplyCount(anyLong());
+    }
+
+    /** Reply bị ẩn đã được trừ reply_count lúc ẩn → xoá nhánh không được trừ lần 2. */
+    @Test
+    void deleteReply_subtreeWithHiddenReply_doesNotDoubleDecrement() {
+        when(currentUserService.getCurrentUser()).thenReturn(author);
+        CommentReply reply = CommentReply.builder().comment(comment).user(author).content("r").build();
+        reply.setId(7L);
+        when(commentReplyRepository.findByIdAndDeletedFalse(7L)).thenReturn(Optional.of(reply));
+        when(commentReplyRepository.findActiveSubtreeIds(7L)).thenReturn(List.of(7L, 8L, 9L));
+        when(commentReplyRepository.countVisibleActiveInSubtree(7L)).thenReturn(2); // 9 đang bị ẩn
+        when(commentReplyRepository.softDeleteSubtree(eq(7L), any())).thenReturn(3);
+
+        service.deleteReply(7L);
+
+        verify(commentRepository).decrementReplyCountBy(COMMENT_ID, 2);
+        verify(commentReportRepository).closeOpenReportsOfReplies(eq(List.of(7L, 8L, 9L)), eq("RESOLVED"), eq(AUTHOR_ID), any());
+    }
+
+    @Test
+    void deleteComment_byAdmin_notifiesAuthorAndClosesReports() {
+        when(currentUserService.isAdmin()).thenReturn(true);
+
+        service.deleteComment(COMMENT_ID);
+
+        verify(commentReportRepository).closeOpenReportsOfComment(eq(COMMENT_ID), eq("RESOLVED"), eq(VIEWER_ID), any());
+        ArgumentCaptor<Object> events = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, times(2)).publishEvent(events.capture());
+        com.jp.elearningjp.shared.event.comment.CommentModeratedEvent moderated = events.getAllValues().stream()
+                .filter(com.jp.elearningjp.shared.event.comment.CommentModeratedEvent.class::isInstance)
+                .map(com.jp.elearningjp.shared.event.comment.CommentModeratedEvent.class::cast)
+                .findFirst().orElseThrow();
+        assertThat(moderated.getRecipientUserId()).isEqualTo(AUTHOR_ID);
+        assertThat(moderated.getAction()).isEqualTo(com.jp.elearningjp.shared.event.comment.CommentModeratedEvent.Action.DELETED);
     }
 
     @Test

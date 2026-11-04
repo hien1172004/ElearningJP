@@ -106,3 +106,12 @@ export interface CommentReplyListResponse {
   size: number
   totalPages: number
 }
+
+/** Lý do báo cáo vi phạm — khớp enum `ReportReason` ở BE. */
+export type ReportReason = 'SPAM' | 'OFFENSIVE' | 'WRONG_INFO' | 'OFF_TOPIC' | 'OTHER'
+
+/** Khớp `CommentReportRequest` ở BE (POST /comments/{id}/report, /comment-replies/{id}/report). */
+export interface CommentReportPayload {
+  reason: ReportReason
+  detail?: string
+}

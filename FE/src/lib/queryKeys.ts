@@ -56,6 +56,8 @@ export const QUERY_KEYS = {
     kana: (type: string) => ['dictionary', 'kana', type] as const,
   },
   comment: {
+    /** Key gốc — mọi danh sách bình luận / trả lời (vd sau khi kiểm duyệt). */
+    all: ['comments'] as const,
     /** Key gốc — mọi trang bình luận của 1 target (dùng để invalidate / setQueriesData). */
     listByTarget: (targetType: string, targetId: number | string) =>
       ['comments', 'list', targetType, targetId] as const,
@@ -73,6 +75,41 @@ export const QUERY_KEYS = {
     /** Vị trí bình luận (mở thẳng từ thông báo). */
     location: (commentId: number, replyId: number | null) =>
       ['comments', 'location', commentId, replyId] as const,
+  },
+  adminDashboard: {
+    overview: (days: number) => ['admin-dashboard', 'overview', days] as const,
+  },
+  adminBroadcast: {
+    /** Key gốc — invalidate sau khi gửi. */
+    all: ['admin-broadcasts'] as const,
+    history: (page: number, size: number) => ['admin-broadcasts', 'history', page, size] as const,
+    recipientCount: (params: Record<string, unknown>) => ['admin-broadcasts', 'recipient-count', params] as const,
+    recipientCountDisabled: ['admin-broadcasts', 'recipient-count', 'disabled'] as const,
+  },
+  courseStudents: {
+    list: (courseId: number, params: Record<string, unknown>) =>
+      ['course-students', courseId, 'list', params] as const,
+    detail: (courseId: number, userId: number) => ['course-students', courseId, 'detail', userId] as const,
+    disabled: ['course-students', 'disabled'] as const,
+  },
+  adminModeration: {
+    /** Key gốc — invalidate sau mỗi thao tác kiểm duyệt. */
+    all: ['admin-moderation'] as const,
+    queue: (params: Record<string, unknown>) => ['admin-moderation', 'queue', params] as const,
+    browse: (params: Record<string, unknown>) => ['admin-moderation', 'browse', params] as const,
+  },
+  adminScenario: {
+    /** Key gốc — invalidate sau khi tạo/sửa/xóa kịch bản. */
+    all: ['admin-scenarios'] as const,
+    list: (params: Record<string, unknown>) => ['admin-scenarios', 'list', params] as const,
+    detail: (id: number) => ['admin-scenarios', 'detail', id] as const,
+    /** Key khi query chi tiết bị tắt (trang tạo mới). */
+    detailDisabled: ['admin-scenarios', 'detail', 'disabled'] as const,
+  },
+  adminUser: {
+    /** Key gốc — invalidate sau khi khóa/mở khóa hoặc đổi vai trò. */
+    all: ['admin-users'] as const,
+    list: (params: Record<string, unknown>) => ['admin-users', 'list', params] as const,
   },
   notification: {
     /** Key gốc — invalidate `all` sẽ quét cả list/unread/recent. */

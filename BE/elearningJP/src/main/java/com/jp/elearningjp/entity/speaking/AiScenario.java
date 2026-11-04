@@ -1,6 +1,7 @@
 package com.jp.elearningjp.entity.speaking;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.persitence.BaseEntity;
 import jakarta.persistence.*;
@@ -65,4 +66,9 @@ public class AiScenario extends BaseEntity {
 
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
+
+    /** Người tạo; null = kịch bản hệ thống (seed) hoặc do khách chưa đăng nhập tạo. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private User createdBy;
 }

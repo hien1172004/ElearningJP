@@ -69,12 +69,15 @@ public class CourseService {
     }
 
     /**
-     * Dành cho Quản trị viên xem toàn bộ khóa học (kể cả chưa xuất bản)
+     * Danh sách khóa học cho trang quản lý (kể cả chưa xuất bản):
+     * ADMIN thấy toàn bộ; TEACHER chỉ thấy khóa học do chính mình tạo.
      */
     @Transactional(readOnly = true)
     public PageResponse<CourseResponse> getAllCoursesForAdmin(int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Course> coursePage = courseRepository.findByDeletedFalse(pageable);
+        Page<Course> coursePage = currentUserService.isAdmin()
+                ? courseRepository.findByDeletedFalse(pageable)
+                : courseRepository.findByCreatedByIdAndDeletedFalse(currentUserService.getCurrentUserId(), pageable);
 
         return toCoursePageResponse(coursePage, page, size);
     }

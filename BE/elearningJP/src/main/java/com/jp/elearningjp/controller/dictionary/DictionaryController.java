@@ -91,10 +91,13 @@ public class DictionaryController {
 
     @Operation(summary = "Xem chi tiết Hán tự (Kanji)", description = "Lấy chi tiết Hán tự, thứ tự các nét vẽ vector SVG và các từ vựng liên quan gom nhóm theo âm đọc On/Kun.")
     @GetMapping(ApiPaths.Dictionary.KANJI)
-    public ApiResponse<KanjiDetailResponse> getKanjiDetail(@PathVariable String character) {
+    public ApiResponse<KanjiDetailResponse> getKanjiDetail(
+            @PathVariable String character,
+            @RequestParam(defaultValue = "false") boolean allRelated
+    ) {
         return ApiResponse.<KanjiDetailResponse>builder()
                 .success(true)
-                .data(dictionaryService.getKanjiDetail(character))
+                .data(dictionaryService.getKanjiDetail(character, allRelated))
                 .build();
     }
 

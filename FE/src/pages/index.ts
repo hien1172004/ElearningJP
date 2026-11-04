@@ -14,8 +14,6 @@ export * from './srs/SrsDeckPage'
 // Course pages
 export * from './courses/CourseCatalogPage'
 export * from './courses/CourseDetailPage'
-export * from './courses/teacher/TeacherCoursesPage'
-export * from './courses/teacher/TeacherCourseEditorPage'
 export * from './courses/learn/LessonViewerPage'
 
 // Exam pages
@@ -27,7 +25,16 @@ export * from './exam/ExamHistoryPage'
 export * from './exam/AdminExamPreviewPage'
 export * from './exam/AdminExamCreatePage'
 export * from './exam/LeaderboardPage'
-export * from './admin/AdminDashboardPage'
+export * from './admin/AdminExamsPage'
+export * from './admin/AdminUsersPage'
+export * from './admin/AdminStatsPage'
+export * from './admin/AdminScenariosPage'
+export * from './admin/AdminScenarioEditorPage'
+export * from './admin/AdminModerationPage'
+export * from './admin/AdminBroadcastsPage'
+export * from './admin/TeacherStudentsPage'
+export * from './admin/TeacherCoursesPage'
+export * from './admin/TeacherCourseEditorPage'
 
 // Speaking AI practice pages
 export * from './speaking/SpeakingLobbyPage'

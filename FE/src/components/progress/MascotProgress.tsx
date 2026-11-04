@@ -8,13 +8,13 @@ import {
 import styles from './MascotProgress.module.css'
 
 /**
- * MascotProgress — mèo mascot có hiệu ứng nước, phản ánh tiến độ học trong ngày.
+ * MascotProgress — mascot shiba có hiệu ứng nước, phản ánh tiến độ học trong ngày.
  *
  * <p><b>3 lớp</b> trong khung tròn {@code overflow-hidden}:</p>
  * <ol>
  *   <li>Nền gradient theo state (xanh đậm → xanh vừa → đỏ cam).</li>
- *   <li>Ảnh mèo SVG (đổi theo state).</li>
- *   <li>Lớp nước <b>đè lên mèo</b> — thân mèo trông như chìm dưới nước.</li>
+ *   <li>Ảnh shiba SVG (đổi theo state).</li>
+ *   <li>Lớp nước <b>đè lên shiba</b> — thân shiba trông như chìm dưới nước.</li>
  * </ol>
  *
  * <p><b>Công thức mực nước:</b> {@code water% = MAX_WATER * (1 - ratio)} —
@@ -126,7 +126,7 @@ export const MascotProgress: React.FC<MascotProgressProps> = ({
       {/* ---------- Lớp 1: nền gradient ---------- */}
       <div className={cn(styles.bg, STATE_BG_CLASS[state])} aria-hidden="true" />
 
-      {/* ---------- Lớp 2: ảnh mèo ---------- */}
+      {/* ---------- Lớp 2: ảnh shiba ---------- */}
       <div className={styles.catLayer} aria-hidden="true">
         <img
           // `key` buộc remount khi đổi state → ảnh mới fade vào.
@@ -138,7 +138,7 @@ export const MascotProgress: React.FC<MascotProgressProps> = ({
         />
       </div>
 
-      {/* ---------- Lớp 3: nước (đè lên mèo) ---------- */}
+      {/* ---------- Lớp 3: nước (đè lên shiba) ---------- */}
       <div
         className={cn(styles.water, state === 'fire' && styles.waterHidden)}
         style={{ transform: `translate3d(0, ${waterOffsetPct}%, 0)` }}

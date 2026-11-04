@@ -8,6 +8,7 @@ import com.jp.elearningjp.repository.speaking.AiScenarioRepository;
 import com.jp.elearningjp.service.speaking.AiScenarioService;
 import com.jp.elearningjp.service.speaking.mapper.AiSpeakingMapper;
 import com.jp.elearningjp.shared.enums.JlptLevel;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class AiScenarioServiceImpl implements AiScenarioService {
     private final AiScenarioRepository scenarioRepository;
     private final AiSpeakingMapper speakingMapper;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final CurrentUserService currentUserService;
 
     @Override
     public List<AiScenarioResponse> getScenarios(String topicId, JlptLevel jlptLevel) {
@@ -79,6 +81,8 @@ public class AiScenarioServiceImpl implements AiScenarioService {
                 .tips(objectMapper.createArrayNode())
                 .isPremium(false)
                 .thumbnailUrl("https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&auto=format&fit=crop&q=80")
+                // Ghi nhận người tạo nếu đã đăng nhập (khách vẫn tạo được như trước, created_by = null)
+                .createdBy(currentUserService.getCurrentUserOrNull())
                 .build();
 
         scenario = scenarioRepository.save(scenario);

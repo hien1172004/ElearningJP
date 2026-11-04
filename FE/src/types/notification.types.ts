@@ -19,6 +19,10 @@ export type NotificationType =
   | 'COMMUNITY_REPLY'
   | 'COMMUNITY_LIKE'
   | 'COMMUNITY_DISLIKE'
+  /** Bình luận / trả lời bị người kiểm duyệt ẩn hoặc xóa */
+  | 'COMMENT_MODERATED'
+  /** Thông báo hàng loạt do ADMIN / TEACHER gửi */
+  | 'ANNOUNCEMENT'
 
 /** Dữ liệu đính kèm — dùng để điều hướng khi click (vd reply bình luận). */
 export interface NotificationData {
@@ -26,6 +30,9 @@ export interface NotificationData {
   replyId?: number
   targetType?: 'LESSON' | 'VOCABULARY' | 'KANJI' | 'GRAMMAR'
   targetId?: number
+  /** ANNOUNCEMENT: khóa học liên quan / đường dẫn trong ứng dụng */
+  courseId?: number
+  link?: string
   [key: string]: unknown
 }
 

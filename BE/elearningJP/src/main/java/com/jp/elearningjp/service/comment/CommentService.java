@@ -22,12 +22,15 @@ import com.jp.elearningjp.repository.comment.CommentLikeRepository;
 import com.jp.elearningjp.repository.comment.CommentReplyDislikeRepository;
 import com.jp.elearningjp.repository.comment.CommentReplyLikeRepository;
 import com.jp.elearningjp.repository.comment.CommentReplyRepository;
+import com.jp.elearningjp.repository.comment.CommentReportRepository;
 import com.jp.elearningjp.repository.comment.CommentRepository;
 import com.jp.elearningjp.repository.content.GrammarPointRepository;
 import com.jp.elearningjp.repository.content.VocabularyRepository;
 import com.jp.elearningjp.repository.content.WritingCharacterRepository;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.shared.enums.CommentTargetType;
+import com.jp.elearningjp.shared.enums.ReportStatus;
+import com.jp.elearningjp.shared.event.comment.CommentModeratedEvent;
 import com.jp.elearningjp.shared.event.comment.CommentReactionEvent;
 import com.jp.elearningjp.shared.event.comment.CommentRepliedEvent;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
@@ -77,6 +80,7 @@ public class CommentService {
     CommentReplyRepository commentReplyRepository;
     CommentReplyLikeRepository commentReplyLikeRepository;
     CommentReplyDislikeRepository commentReplyDislikeRepository;
+    CommentReportRepository commentReportRepository;
 
     LessonRepository lessonRepository;
     VocabularyRepository vocabularyRepository;
@@ -306,8 +310,14 @@ public class CommentService {
 
         comment.softDelete();
         commentRepository.save(comment);
+        // Nội dung đã gỡ → các báo cáo đang mở coi như đã xử lý
+        commentReportRepository.closeOpenReportsOfComment(commentId, ReportStatus.RESOLVED.name(), user.getId(), Instant.now());
         // Dọn thông báo trỏ tới comment đã xoá (listener AFTER_COMMIT ở module thông báo)
         eventPublisher.publishEvent(CommentDeletedEvent.builder().commentId(commentId).build());
+        // Admin gỡ bình luận của người khác → báo cho người viết
+        if (!isOwner(comment.getUser(), user.getId())) {
+            publishModeratedDeleted(comment.getUser(), user, CommentModeratedEvent.Scope.COMMENT, comment.getContent(), comment);
+        }
 
         log.info("[COMMENT] Soft-deleted comment id={} by userId={} (admin={})",
                 commentId, user.getId(), !isOwner(comment.getUser(), user.getId()));
@@ -325,13 +335,19 @@ public class CommentService {
         ensureOwnerOrAdmin(reply.getUser(), user.getId(), ErrorCode.COMMENT_REPLY_FORBIDDEN);
 
         List<Long> subtreeIds = commentReplyRepository.findActiveSubtreeIds(replyId);
+        // reply_count chỉ đếm reply đang hiển thị: reply bị ẩn (HIDDEN) đã được trừ lúc ẩn
+        int visible = commentReplyRepository.countVisibleActiveInSubtree(replyId);
         int deleted = commentReplyRepository.softDeleteSubtree(replyId, Instant.now());
-        commentRepository.decrementReplyCountBy(reply.getComment().getId(), deleted);
+        commentRepository.decrementReplyCountBy(reply.getComment().getId(), visible);
         if (!subtreeIds.isEmpty()) {
+            commentReportRepository.closeOpenReportsOfReplies(subtreeIds, ReportStatus.RESOLVED.name(), user.getId(), Instant.now());
             eventPublisher.publishEvent(CommentDeletedEvent.builder()
                     .commentId(reply.getComment().getId())
                     .replyIds(subtreeIds)
                     .build());
+        }
+        if (!isOwner(reply.getUser(), user.getId())) {
+            publishModeratedDeleted(reply.getUser(), user, CommentModeratedEvent.Scope.REPLY, reply.getContent(), reply.getComment());
         }
 
         log.info("[COMMENT] Soft-deleted reply id={} (+{} descendant(s)) by userId={}",
@@ -562,6 +578,20 @@ public class CommentService {
                 .replyId(replyId)
                 .targetType(targetType)
                 .targetId(targetId)
+                .build());
+    }
+
+    /** Admin xoá nội dung của người khác → thông báo cho người viết (listener AFTER_COMMIT). */
+    private void publishModeratedDeleted(User author, User moderator, CommentModeratedEvent.Scope scope,
+                                         String content, Comment root) {
+        eventPublisher.publishEvent(CommentModeratedEvent.builder()
+                .recipientUserId(ownerId(author))
+                .moderatorUserId(moderator.getId())
+                .action(CommentModeratedEvent.Action.DELETED)
+                .scope(scope)
+                .contentPreview(content)
+                .targetType(root.getTargetType())
+                .targetId(root.getTargetId())
                 .build());
     }
 

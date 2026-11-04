@@ -83,13 +83,8 @@ export const StatCard: React.FC<StatCardProps> = ({
         : 'text-gray-500 bg-gray-100'
 
   return (
-    <div
-      className={cn(
-        'bg-white rounded-md border border-gray-200/80 shadow-xs p-3.5',
-        'flex flex-col gap-1.5',
-        className,
-      )}
-    >
+    // Bố cục dọc (icon + delta trên, số liệu dưới); không viền — nền giấy nhạt
+    <div className={cn('bg-kinari rounded-md p-3.5 flex flex-col gap-1.5', className)}>
       <div className="flex items-start justify-between gap-2">
         <span
           className={cn(
@@ -113,14 +108,12 @@ export const StatCard: React.FC<StatCardProps> = ({
         )}
       </div>
 
-      <div>
-        <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold text-nibi uppercase tracking-wide truncate">
           {label}
         </p>
-        <p className="text-xl font-extrabold text-gray-900 mt-0.5 tabular-nums">
-          {value}
-        </p>
-        {hint && <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>}
+        <p className="text-xl font-extrabold text-sumi mt-0.5 tabular-nums">{value}</p>
+        {hint && <p className="text-[11px] text-nibi mt-0.5 truncate">{hint}</p>}
       </div>
     </div>
   )

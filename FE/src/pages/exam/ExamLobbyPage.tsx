@@ -5,6 +5,7 @@ import { examService } from '@/services'
 import type { ExamSummary, ExamDetail, JlptLevel, AttemptType } from '@/types'
 import { useAuthStore } from '@/stores'
 import { isTeacherOrAdmin as checkTeacherOrAdmin } from '@/utils/roles'
+import { JLPT_LEVEL_BADGE } from '@/utils/jlpt'
 import { 
   Award, Clock, HelpCircle, CheckCircle2, ChevronRight, 
   Flame, BookOpen, Headphones, Play, X, Loader2, Sparkles, Filter, ShieldCheck, Edit3
@@ -102,44 +103,13 @@ export const ExamLobbyPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-[1560px] mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
-      {/* Banner Giới thiệu */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 text-white p-6 sm:p-8 md:p-10 mb-8 shadow-xl">
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-indigo-200 text-xs font-bold uppercase tracking-wider mb-4 border border-white/10">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Phòng Thi Thử JLPT Trực Tuyến Chuẩn Quốc Tế</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight mb-3 sm:mb-4 leading-tight">
-            Chinh Phục Kỳ Thi JLPT <br className="hidden md:inline" />
-            <span className="text-amber-300">Tự Tin Đạt Điểm Cao</span>
-          </h1>
-          <p className="text-indigo-100/90 text-xs sm:text-sm md:text-base leading-relaxed mb-5 font-medium">
-            Hệ thống mô phỏng đề thi thật 100%: đầy đủ các ca thi, tính giờ độc lập, chống dính điểm liệt, 
-            bài đọc tờ rơi đồ họa sắc nét và nghe lại từng câu kèm transcript chi tiết.
-          </p>
-          <div className="flex flex-wrap gap-3 text-xs md:text-sm font-semibold">
-            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Chấm điểm Scaled Score chuẩn</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Kiểm soát điểm liệt từng phần</span>
-            </div>
-          </div>
-        </div>
-        <div className="absolute right-0 bottom-0 opacity-10 md:opacity-20 translate-x-12 translate-y-12">
-          <Award className="w-80 h-80 text-white" />
-        </div>
-      </div>
-
+    <div className="pb-8">
       {/* Grid 2 Cột Giống Mazii: Cột Trái Đề Thi + Cột Phải Bảng Xếp Hạng */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
         {/* CỘT TRÁI (8 CỘT TRÊN DESKTOP): BỘ LỌC + DANH SÁCH BÀI THI */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
           {/* Tabs Lọc Cấp Độ N1 - N5 và Nút chức năng */}
-          <div className="flex items-center justify-between flex-wrap gap-4 bg-white p-3 sm:p-4 rounded-3xl border border-gray-200/90 shadow-xs">
+          <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-2.5 rounded-xl border border-suna shadow-xs">
             <div className="flex items-center gap-1.5 flex-wrap">
               <div className="px-2 text-xs font-bold text-gray-400 flex items-center gap-1.5 uppercase">
                 <Filter className="w-3.5 h-3.5" />
@@ -149,7 +119,7 @@ export const ExamLobbyPage: React.FC = () => {
                 <button
                   key={lvl}
                   onClick={() => setSelectedLevel(lvl)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                     selectedLevel === lvl
                       ? 'bg-indigo-600 text-white shadow-xs font-black'
                       : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-100'
@@ -163,8 +133,8 @@ export const ExamLobbyPage: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               {isTeacherOrAdmin && (
                 <button
-                  onClick={() => navigate('/admin/dashboard')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                  onClick={() => navigate('/admin/exams')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition cursor-pointer"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Quản trị đề thi</span>
@@ -173,7 +143,7 @@ export const ExamLobbyPage: React.FC = () => {
 
               <button
                 onClick={() => navigate('/admin/exams/create')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Tạo đề thi mới</span>
@@ -181,7 +151,7 @@ export const ExamLobbyPage: React.FC = () => {
 
               <button
                 onClick={() => navigate('/exam-history')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 font-bold text-xs shadow-xs transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 font-bold text-xs shadow-xs transition cursor-pointer"
               >
                 <Clock className="w-3.5 h-3.5 text-indigo-500" />
                 <span>Lịch sử thi</span>
@@ -191,38 +161,32 @@ export const ExamLobbyPage: React.FC = () => {
 
           {/* Danh sách đề thi */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-3xl border border-gray-200/80">
-              <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mb-4" />
+            <div className="flex flex-col items-center justify-center py-14 text-gray-400 bg-white rounded-xl border border-suna">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
               <p className="font-semibold text-sm">Đang tải danh sách đề thi...</p>
             </div>
           ) : error ? (
-            <div className="p-6 bg-red-50 border border-red-200 rounded-3xl text-red-600 text-center font-medium">
+            <div className="p-5 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm text-center font-medium">
               {error}
             </div>
           ) : exams.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-3xl border border-gray-200/80 shadow-xs p-8">
-              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-800 mb-1">Chưa có đề thi nào ở cấp độ này</h3>
+            <div className="text-center py-12 bg-white rounded-xl border border-suna shadow-xs p-6">
+              <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-gray-800 mb-1">Chưa có đề thi nào ở cấp độ này</h3>
               <p className="text-sm text-gray-500 max-w-md mx-auto">
                 Hệ thống đang cập nhật thêm đề thi mới. Bạn vui lòng chọn cấp độ khác để trải nghiệm!
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3">
               {exams.map((exam) => (
                 <div
                   key={exam.id}
-                  className="bg-white rounded-3xl border border-gray-200/90 hover:border-indigo-300 hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden group"
+                  className="bg-white rounded-xl border border-suna hover:border-indigo-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group"
                 >
-                  <div className="p-5 sm:p-6">
-                    <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
-                      <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
-                        exam.jlptLevel === 'N5' ? 'bg-emerald-100 text-emerald-800' :
-                        exam.jlptLevel === 'N4' ? 'bg-teal-100 text-teal-800' :
-                        exam.jlptLevel === 'N3' ? 'bg-blue-100 text-blue-800' :
-                        exam.jlptLevel === 'N2' ? 'bg-purple-100 text-purple-800' :
-                        'bg-rose-100 text-rose-800'
-                      }`}>
+                  <div className="p-4">
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-black uppercase tracking-wider ${JLPT_LEVEL_BADGE[exam.jlptLevel]}`}>
                         JLPT {exam.jlptLevel}
                       </span>
                       <span className="text-xs font-bold text-gray-400">
@@ -230,31 +194,31 @@ export const ExamLobbyPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 mb-3">
+                    <h3 className="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 mb-2.5">
                       {exam.title}
                     </h3>
 
-                    <div className="grid grid-cols-2 gap-2.5 text-xs font-semibold text-gray-600 bg-slate-50 p-3 rounded-2xl mb-4">
+                    <div className="grid grid-cols-2 gap-2 text-xs font-semibold text-gray-600 bg-kinari p-2.5 rounded-lg">
                       <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-indigo-500 shrink-0" />
+                        <Clock className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                         <span>{exam.totalDurationMinutes} phút</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <HelpCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <HelpCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>{exam.totalQuestions} câu hỏi</span>
                       </div>
                       <div className="flex items-center gap-1.5 col-span-2">
-                        <Award className="w-4 h-4 text-amber-500 shrink-0" />
+                        <Award className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                         <span>Điểm đỗ: {exam.overallPassingScore}/{exam.totalScaledMaxScore} điểm</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0 flex items-center gap-2">
+                  <div className="px-4 pb-4 pt-0 flex items-center gap-2">
                     <button
                       onClick={() => handleOpenStartModal(exam)}
                       disabled={loadingDetailId === exam.id}
-                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-2xl font-bold text-sm shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
+                      className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-lg font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
                     >
                       {loadingDetailId === exam.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -267,7 +231,7 @@ export const ExamLobbyPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigate(`/admin/exams/${exam.id}/preview`)}
-                        className="p-3 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-2xl transition border border-gray-200 hover:border-indigo-200 cursor-pointer"
+                        className="p-2 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 rounded-lg transition border border-gray-200 hover:border-indigo-200 cursor-pointer"
                         title="Biên soạn / Chỉnh sửa đề thi"
                       >
                         <Edit3 className="w-4 h-4" />
@@ -291,13 +255,13 @@ export const ExamLobbyPage: React.FC = () => {
       {/* Modal Chọn Chế Độ Thi (Full Exam hoặc Practice Section) */}
       {selectedExam && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+          <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
                   JLPT {selectedExam.jlptLevel}
                 </span>
-                <h3 className="text-lg font-black text-gray-900 line-clamp-1">
+                <h3 className="text-base font-black text-gray-900 line-clamp-1">
                   {selectedExam.title}
                 </h3>
               </div>
@@ -309,7 +273,7 @@ export const ExamLobbyPage: React.FC = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                   1. Chọn Chế độ làm bài:
@@ -321,7 +285,7 @@ export const ExamLobbyPage: React.FC = () => {
                       setAttemptType('FULL_EXAM')
                       setSelectedSectionId(null)
                     }}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
+                    className={`p-3 rounded-xl border text-left transition-all ${
                       attemptType === 'FULL_EXAM'
                         ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-600'
                         : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
@@ -344,7 +308,7 @@ export const ExamLobbyPage: React.FC = () => {
                         setSelectedSectionId(selectedExam.sections[0].id)
                       }
                     }}
-                    className={`p-4 rounded-2xl border text-left transition-all ${
+                    className={`p-3 rounded-xl border text-left transition-all ${
                       attemptType === 'PRACTICE_SECTION'
                         ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-600'
                         : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
@@ -390,14 +354,14 @@ export const ExamLobbyPage: React.FC = () => {
                           key={sec.id}
                           type="button"
                           onClick={() => setSelectedSectionId(sec.id)}
-                          className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                          className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
                             selectedSectionId === sec.id
                               ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-xs'
                               : 'border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50'
                           }`}
                         >
                           <div className="flex items-center gap-3.5">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                            <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
                               {sec.sessionType === 'LISTENING' ? (
                                 <Headphones className="w-5 h-5" />
                               ) : (
@@ -428,7 +392,7 @@ export const ExamLobbyPage: React.FC = () => {
               )}
             </div>
 
-            <div className="p-6 bg-slate-50 border-t border-gray-100 flex items-center justify-end gap-3">
+            <div className="px-5 py-4 bg-slate-50 border-t border-gray-100 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setSelectedExam(null)}
@@ -462,11 +426,11 @@ export const ExamLobbyPage: React.FC = () => {
       {/* Modal Yêu Cầu Đăng Nhập Trước Khi Vào Thi */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 p-6 sm:p-7 text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4 shadow-xs">
-              <Award className="w-8 h-8" />
+          <div className="bg-white rounded-xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
+              <Award className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-black text-gray-900 mb-2">
+            <h3 className="text-lg font-black text-gray-900 mb-2">
               Yêu cầu đăng nhập
             </h3>
             <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mb-6 font-medium">
@@ -476,14 +440,14 @@ export const ExamLobbyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowLoginModal(false)}
-                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition cursor-pointer"
               >
                 Để sau
               </button>
               <button
                 type="button"
                 onClick={() => navigate('/login?redirect=/exams')}
-                className="flex-1 py-3 px-4 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-indigo-500/25 transition cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-indigo-500/25 transition cursor-pointer"
               >
                 Đăng nhập ngay
               </button>

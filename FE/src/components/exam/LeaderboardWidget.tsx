@@ -78,11 +78,11 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
 
   return (
     <div
-      className={`bg-white rounded-3xl border border-slate-200/90 shadow-sm p-4 sm:p-5 space-y-4 ${className}`}
+      className={`bg-white rounded-xl border border-suna shadow-xs p-4 space-y-3 ${className}`}
     >
       {/* 1. HEADER: TIÊU ĐỀ + NHÃN JLPT */}
       <div className="flex items-center justify-between pb-1">
-        <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+        <h2 className="text-base font-black text-slate-900 tracking-tight">
           Bảng xếp hạng
         </h2>
 

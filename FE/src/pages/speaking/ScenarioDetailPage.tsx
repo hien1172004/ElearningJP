@@ -360,7 +360,7 @@ export const ScenarioDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm font-semibold text-slate-600">Đang tải tình huống...</span>
@@ -371,7 +371,7 @@ export const ScenarioDetailPage: React.FC = () => {
 
   if (!scenario) {
     return (
-      <div className="min-h-screen bg-[#F0F2F5] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <p className="text-slate-600 mb-4 font-medium">Không tìm thấy tình huống này.</p>
         <button
           onClick={() => navigate('/speaking')}
@@ -384,12 +384,12 @@ export const ScenarioDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] text-slate-800 pb-16">
+    <div className="min-h-screen text-slate-800 pb-16">
       {/* ==================================================================== */}
       {/* 1. Header điều hướng Mazii: < Quay lại | Tiêu đề | Báo cáo */}
       {/* ==================================================================== */}
       <div className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-[1550px] mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/speaking')}
@@ -398,7 +398,7 @@ export const ScenarioDetailPage: React.FC = () => {
               <ChevronLeft className="w-4 h-4 text-slate-500" />
               <span>Quay lại</span>
             </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-800 truncate">
+            <h1 className="text-sm sm:text-base font-bold text-slate-800 truncate">
               {scenario.title}
             </h1>
           </div>
@@ -419,12 +419,12 @@ export const ScenarioDetailPage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 2. Nội dung 2 cột: Cột trái Tổng quan (35%) | Cột phải Luyện tập (65%) */}
       {/* ==================================================================== */}
-      <div className="max-w-[1550px] mx-auto px-4 sm:px-8 mt-5">
+      <div className="max-w-6xl mx-auto px-3 sm:px-5 mt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* ------------------------------------------------------------------ */}
           {/* CỘT TRÁI: TỔNG QUAN (4/12 cols ~35%) */}
           {/* ------------------------------------------------------------------ */}
-          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-5">
+          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-5">
             {/* Tiêu đề mục Tổng quan */}
             <div className="flex items-center gap-2 text-slate-800 border-b border-slate-100 pb-3">
               <LayoutGrid className="w-5 h-5 text-slate-700" />
@@ -486,7 +486,7 @@ export const ScenarioDetailPage: React.FC = () => {
                 type="button"
                 onClick={handleStartPractice}
                 disabled={isStartingSession}
-                className="w-full py-3.5 rounded-full bg-linear-to-r from-[#8B5CF6] via-[#6366F1] to-[#3B82F6] hover:from-[#7C3AED] hover:to-[#2563EB] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-60"
+                className="w-full py-2.5 rounded-full bg-linear-to-r from-[#8B5CF6] via-[#6366F1] to-[#3B82F6] hover:from-[#7C3AED] hover:to-[#2563EB] text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-60"
               >
                 {isStartingSession ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -503,10 +503,10 @@ export const ScenarioDetailPage: React.FC = () => {
           {/* ------------------------------------------------------------------ */}
           {/* CỘT PHẢI: LUYỆN TẬP TABS (8/12 cols ~65%) */}
           {/* ------------------------------------------------------------------ */}
-          <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs">
+          <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs">
             {/* Header Luyện tập & Tab Navigation */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
-              <h2 className="text-lg font-bold text-slate-800">Luyện tập</h2>
+              <h2 className="text-base font-bold text-slate-800">Luyện tập</h2>
 
               {/* 4 Tabs: Hội thoại | Từ vựng | Ngữ pháp | Mẹo */}
               <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100/70 border border-slate-200/60 self-start sm:self-auto">
@@ -607,7 +607,7 @@ export const ScenarioDetailPage: React.FC = () => {
                 </div>
 
                 {/* Khung đoạn chat màu tím nhạt (#F7F5FC / #F5F3FF) */}
-                <div className="bg-[#F7F5FC] rounded-2xl p-4 sm:p-6 space-y-4 min-h-[360px]">
+                <div className="bg-[#F7F5FC] rounded-xl p-3 sm:p-4 space-y-3 min-h-[300px]">
                   {scenario.sampleDialogue && scenario.sampleDialogue.length > 0 ? (
                     scenario.sampleDialogue.map((line: SampleDialogueLine, index: number) => {
                       const isUser = line.speaker === 'USER' || line.role === 'USER'
@@ -621,7 +621,7 @@ export const ScenarioDetailPage: React.FC = () => {
                           className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 shadow-xs transition-all ${
+                            className={`max-w-[85%] sm:max-w-[75%] rounded-xl p-3 shadow-xs transition-all ${
                               isUser
                                 ? 'bg-white rounded-tr-xs border border-slate-100'
                                 : 'bg-white rounded-tl-xs border border-slate-100'
@@ -889,7 +889,7 @@ export const ScenarioDetailPage: React.FC = () => {
                         >
                           {/* Row 1: Cấu trúc ngữ pháp + Nút + */}
                           <div className="flex items-center justify-between">
-                            <h4 className="font-bold text-sm sm:text-base text-slate-800 tracking-wide">
+                            <h4 className="font-bold text-sm text-slate-800 tracking-wide">
                               {item.pattern}
                             </h4>
                             <button

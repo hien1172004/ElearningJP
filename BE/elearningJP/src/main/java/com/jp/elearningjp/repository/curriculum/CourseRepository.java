@@ -19,6 +19,9 @@ public interface CourseRepository extends JpaRepository<Course, Long>, JpaSpecif
 
     Page<Course> findByDeletedFalse(Pageable pageable);
 
+    /** Khóa học (chưa xóa) do một giáo viên tạo — dùng cho trang quản lý của TEACHER. */
+    Page<Course> findByCreatedByIdAndDeletedFalse(Long createdById, Pageable pageable);
+
     Optional<Course> findByIdAndDeletedFalse(Long id);
 
     Optional<Course> findBySlugAndDeletedFalse(String slug);

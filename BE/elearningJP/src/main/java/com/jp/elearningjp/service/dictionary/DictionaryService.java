@@ -32,7 +32,15 @@ public interface DictionaryService {
     /**
      * Lấy chi tiết Hán tự kèm nét vẽ vector SVG và các từ vựng liên quan gom nhóm theo âm đọc On/Kun.
      */
-    KanjiDetailResponse getKanjiDetail(String character);
+    default KanjiDetailResponse getKanjiDetail(String character) {
+        return getKanjiDetail(character, false);
+    }
+
+    /**
+     * Như {@link #getKanjiDetail(String)}; {@code includeAllRelatedWords = true} trả về TOÀN BỘ
+     * {@code allRelatedWords} (không cắt 20 từ) — dùng cho màn soạn bài của giáo viên.
+     */
+    KanjiDetailResponse getKanjiDetail(String character, boolean includeAllRelatedWords);
 
     /**
      * Tìm kiếm điểm ngữ pháp phân trang kèm bộ lọc JLPT.

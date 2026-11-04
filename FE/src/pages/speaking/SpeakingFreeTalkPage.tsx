@@ -150,12 +150,12 @@ export const SpeakingFreeTalkPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] text-slate-800 flex flex-col justify-between">
+    <div className="min-h-screen text-slate-800 flex flex-col justify-between">
       {/* ==================================================================== */}
       {/* 1. Header Mazii: < Quay lại | Trò chuyện tự do | ⚙️ 📋 */}
       {/* ==================================================================== */}
       <div className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-[1550px] mx-auto px-4 sm:px-8 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/speaking')}
@@ -164,7 +164,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
               <ChevronLeft className="w-4 h-4 text-slate-500" />
               <span>Quay lại</span>
             </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-800">
+            <h1 className="text-sm sm:text-base font-bold text-slate-800">
               Trò chuyện tự do
             </h1>
           </div>
@@ -326,14 +326,14 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 2. Nội dung trung tâm: Mèo Maziiko + Lời chào tím + Gợi ý chủ đề */}
       {/* ==================================================================== */}
-      <div className="max-w-4xl mx-auto px-4 w-full flex-1 flex flex-col items-center justify-center py-10 text-center">
+      <div className="max-w-4xl mx-auto px-4 w-full flex-1 flex flex-col items-center justify-center py-6 text-center">
         {/* Mèo Maziiko với hào quang vũ trụ */}
         <div className="mb-6">
-          <MaziikoMascot size={110} showAura={true} showBadge={true} />
+          <MaziikoMascot size={76} showAura={true} showBadge={true} />
         </div>
 
         {/* Lời chào màu tím đặc trưng của Mazii */}
-        <h2 className="text-base sm:text-xl font-bold text-[#8B5CF6] max-w-xl leading-relaxed mb-8">
+        <h2 className="text-sm sm:text-base font-bold text-[#8B5CF6] max-w-xl leading-relaxed mb-5">
           Chào {username}! Hôm nay của bạn thế nào? Kể cho Maziiko nghe bằng tiếng Nhật nhé
         </h2>
 
@@ -367,7 +367,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 3. Capsule Input nổi phía dưới màn hình (1:1 Screenshot 2) */}
       {/* ==================================================================== */}
-      <div className="sticky bottom-0 z-20 pb-4 px-4 bg-gradient-to-t from-[#F0F2F5] via-[#F0F2F5]/90 to-transparent pt-4">
+      <div className="sticky bottom-0 z-20 pb-4 px-4 bg-gradient-to-t from-kinari via-kinari/90 to-transparent pt-4">
         <div className="max-w-2xl mx-auto flex flex-col items-center">
           {/* Capsule Container */}
           <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">

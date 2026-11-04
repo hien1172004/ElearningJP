@@ -17,9 +17,10 @@ import type {
   LessonKanjiItem,
   LessonKanjiItemCreateRequest,
   LessonKanjiItemUpdateRequest,
+  LessonKanjiRelatedVocab,
   LessonKanjiRelatedVocabRequest,
 } from '@/types'
-import type { KanjiSummary, KanjiDetail } from '@/types'
+import type { KanjiSummary, KanjiDetail, KanjiRelatedWord } from '@/types'
 import { useKanjiItemMutations, useKanjiItemDetail } from '@/hooks'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import { dictionaryService } from '@/services'
@@ -35,6 +36,23 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
+
+// 1 form "Thêm từ mới" (tạo vocab mới trong từ điển rồi gắn vào kanji item)
+interface NewVocabRow {
+  word: string
+  hiragana: string
+  romaji: string
+  meaningVi: string
+  partOfSpeech: string[]
+}
+
+const emptyNewVocab = (): NewVocabRow => ({
+  word: '',
+  hiragana: '',
+  romaji: '',
+  meaningVi: '',
+  partOfSpeech: [],
+})
 
 interface KanjiItemsEditorProps {
   lessonId: number
@@ -189,24 +207,15 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
 
   // Related vocabulary — chọn từ allRelatedWords của kanji (multi-select)
   const [relatedVocabIds, setRelatedVocabIds] = useState<number[]>([])
+  // Related vocab đang gắn với item (lúc mở edit) — dùng để hiện cả những từ không có
+  // trong allRelatedWords (VD: từ giáo viên tự tạo qua "Thêm từ mới").
+  const [itemRelatedVocabs, setItemRelatedVocabs] = useState<LessonKanjiRelatedVocab[]>([])
+  // true khi giáo viên đã đổi lựa chọn. Chưa đổi → không gửi relatedVocabulary để
+  // BE giữ nguyên (đặc biệt là chế độ auto-derive từ từ điển).
+  const [relatedDirty, setRelatedDirty] = useState(false)
 
-  // Form tạo vocab mới
-  const [newVocab, setNewVocab] = useState<{
-    word: string
-    hiragana: string
-    romaji: string
-    meaningVi: string
-    meaningEn: string
-    partOfSpeech: string[]
-  }>({
-    word: '',
-    hiragana: '',
-    romaji: '',
-    meaningVi: '',
-    meaningEn: '',
-    partOfSpeech: [],
-  })
-  const [showNewVocab, setShowNewVocab] = useState(false)
+  // Các form tạo vocab mới — mỗi lần bấm "Thêm từ mới" thêm 1 form (giống "Thêm ví dụ")
+  const [newVocabs, setNewVocabs] = useState<NewVocabRow[]>([])
 
   // 5 loại từ chuẩn — BE lưu thành 1 string CSV
   const PART_OF_SPEECH_OPTIONS = useMemo(
@@ -225,8 +234,30 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
 
   const queryClient = useQueryClient()
 
+  const addNewVocab = () => setNewVocabs((prev) => [...prev, emptyNewVocab()])
+  const updateNewVocab = (idx: number, patch: Partial<NewVocabRow>) =>
+    setNewVocabs((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
+  const removeNewVocab = (idx: number) =>
+    setNewVocabs((prev) => prev.filter((_, i) => i !== idx))
+
+  /** Danh sách để chọn = toàn bộ từ liên quan trong từ điển + từ đang gắn với item mà từ điển không có */
+  const relatedCandidates = useMemo<KanjiRelatedWord[]>(() => {
+    const base = selectedKanji?.allRelatedWords ?? []
+    const known = new Set(base.map((w) => w.vocabId))
+    const extras: KanjiRelatedWord[] = itemRelatedVocabs
+      .filter((rv) => rv.vocabId != null && !known.has(rv.vocabId))
+      .map((rv) => ({
+        vocabId: rv.vocabId,
+        word: rv.word,
+        hiragana: rv.hiragana ?? '',
+        meaningVi: rv.meaningVi ?? '',
+      }))
+    return [...extras, ...base]
+  }, [selectedKanji, itemRelatedVocabs])
+
   /** Chọn / bỏ chọn 1 vocab từ allRelatedWords (multi-select) */
   const handleToggleRelatedVocab = (vocabId: number) => {
+    setRelatedDirty(true)
     setRelatedVocabIds((prev) =>
       prev.includes(vocabId)
         ? prev.filter((id) => id !== vocabId)
@@ -283,7 +314,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     if (!k) return
     form.setFieldsValue({ character: k.character })
     try {
-      const res = await dictionaryService.getKanjiDetail(k.character)
+      const res = await dictionaryService.getKanjiDetail(k.character, { allRelated: true })
       const detail = (res.data as KanjiDetail) ?? null
       setSelectedKanji(detail)
     } catch {
@@ -299,7 +330,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     if (!trimmed) return
     form.setFieldsValue({ character: trimmed[0] })
     try {
-      const res = await dictionaryService.getKanjiDetail(trimmed[0])
+      const res = await dictionaryService.getKanjiDetail(trimmed[0], { allRelated: true })
       const detail = (res.data as KanjiDetail) ?? null
       if (detail) {
         setSelectedKanji(detail)
@@ -316,9 +347,13 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     }
   }
 
+  // Chỉ dùng ở chế độ tạo mới (BE không cho đổi kanji của item đã tồn tại)
   const handleClearKanji = () => {
     setSelectedKanji(null)
     form.setFieldsValue({ character: '' })
+    // Từ đã chọn thuộc kanji cũ → bỏ hết
+    setRelatedVocabIds([])
+    setRelatedDirty(false)
   }
 
   // ========================================================================
@@ -330,7 +365,9 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     const allVocabIds = allRVs
       .map((rv) => rv.vocabId)
       .filter((v): v is number => v != null)
+    setItemRelatedVocabs(allRVs)
     setRelatedVocabIds(allVocabIds)
+    setRelatedDirty(false)
   }
 
   // ========================================================================
@@ -340,15 +377,9 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     setEditing(null)
     form.resetFields()
     setRelatedVocabIds([])
-    setNewVocab({
-      word: '',
-      hiragana: '',
-      romaji: '',
-      meaningVi: '',
-      meaningEn: '',
-      partOfSpeech: [],
-    })
-    setShowNewVocab(false)
+    setItemRelatedVocabs([])
+    setRelatedDirty(false)
+    setNewVocabs([])
     setSelectedKanji(null)
     setKanjiSearchKw('')
     setKanjiSearchOptions([])
@@ -368,7 +399,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     // Load kanji detail
     if (item.character) {
       try {
-        const res = await dictionaryService.getKanjiDetail(item.character)
+        const res = await dictionaryService.getKanjiDetail(item.character, { allRelated: true })
         setSelectedKanji((res.data as KanjiDetail) ?? null)
       } catch {
         setSelectedKanji(null)
@@ -395,16 +426,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
       // fallback: dùng item trong list
     }
 
-    await loadRelatedVocabIds(fullItem)
-    setNewVocab({
-      word: '',
-      hiragana: '',
-      romaji: '',
-      meaningVi: '',
-      meaningEn: '',
-      partOfSpeech: [],
-    })
-    setShowNewVocab(false)
+    loadRelatedVocabIds(fullItem)
+    setNewVocabs([])
     setIsOpen(true)
   }
 
@@ -412,15 +435,9 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     setIsOpen(false)
     setEditing(null)
     setRelatedVocabIds([])
-    setNewVocab({
-      word: '',
-      hiragana: '',
-      romaji: '',
-      meaningVi: '',
-      meaningEn: '',
-      partOfSpeech: [],
-    })
-    setShowNewVocab(false)
+    setItemRelatedVocabs([])
+    setRelatedDirty(false)
+    setNewVocabs([])
     setSelectedKanji(null)
     setKanjiSearchKw('')
     setKanjiSearchOptions([])
@@ -440,43 +457,53 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
       }
       const v = parsed.data
 
-      // Build relatedVocabulary payload — 1 entry duy nhất
+      // Build relatedVocabulary payload:
+      // entry 1 = các vocab có sẵn được tick; mỗi form "Thêm từ mới" = 1 entry riêng
+      // (BE chỉ nhận 1 newVocab / entry).
       const relatedPayload: LessonKanjiRelatedVocabRequest[] = []
 
       const validVocabIds = relatedVocabIds.filter((id): id is number => id != null && id > 0)
-      const hasNewVocab =
-        newVocab.word.trim() && newVocab.hiragana.trim()
-
-      if (validVocabIds.length > 0 || hasNewVocab) {
-        const entry: LessonKanjiRelatedVocabRequest = {}
-
-        if (validVocabIds.length > 0) {
-          entry.vocabIds = validVocabIds
-        }
-
-        if (hasNewVocab) {
-          entry.newVocab = {
-            word: newVocab.word.trim(),
-            hiragana: newVocab.hiragana.trim(),
-            romaji: newVocab.romaji.trim() || undefined,
-            meaningVi: newVocab.meaningVi.trim() || undefined,
-            meaningEn: newVocab.meaningEn.trim() || undefined,
-            partOfSpeech:
-              newVocab.partOfSpeech.length > 0
-                ? newVocab.partOfSpeech.join(',')
-                : undefined,
-          }
-        }
-
-        relatedPayload.push(entry)
+      if (validVocabIds.length > 0) {
+        relatedPayload.push({ vocabIds: validVocabIds })
       }
 
+      // Form để trống hoàn toàn → bỏ qua; đã nhập gì đó thì bắt buộc đủ Từ vựng + Hiragana
+      const filledNewVocabs = newVocabs.filter(
+        (r) =>
+          r.word.trim() ||
+          r.hiragana.trim() ||
+          r.romaji.trim() ||
+          r.meaningVi.trim() ||
+          r.partOfSpeech.length > 0,
+      )
+      const incompleteIdx = newVocabs.findIndex(
+        (r) => filledNewVocabs.includes(r) && (!r.word.trim() || !r.hiragana.trim()),
+      )
+      if (incompleteIdx >= 0) {
+        message.error(`Từ mới #${incompleteIdx + 1} cần nhập đủ cả Từ vựng và Hiragana`)
+        return
+      }
+      for (const r of filledNewVocabs) {
+        relatedPayload.push({
+          newVocab: {
+            word: r.word.trim(),
+            hiragana: r.hiragana.trim(),
+            romaji: r.romaji.trim() || undefined,
+            meaningVi: r.meaningVi.trim() || undefined,
+            partOfSpeech: r.partOfSpeech.length > 0 ? r.partOfSpeech.join(',') : undefined,
+          },
+        })
+      }
+      const hasNewVocab = filledNewVocabs.length > 0
+
       if (editing) {
+        // Chưa đổi lựa chọn → không gửi (BE giữ nguyên); đã đổi → gửi danh sách mới,
+        // [] = xoá hết lựa chọn của giáo viên (BE quay về danh sách tự động từ từ điển).
         const payload: LessonKanjiItemUpdateRequest = {
           note: v.note,
           orderIndex: v.orderIndex,
           relatedVocabulary:
-            relatedPayload.length > 0 ? relatedPayload : undefined,
+            relatedDirty || hasNewVocab ? relatedPayload : undefined,
         }
         await updateKanjiItem.mutateAsync({ id: editing.id, payload })
       } else {
@@ -698,13 +725,15 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-700 uppercase tracking-wider">
                   <Link2 className="w-3.5 h-3.5" /> Kanji đã chọn
                 </div>
-                <button
-                  type="button"
-                  onClick={handleClearKanji}
-                  className="text-[11px] text-amber-700 hover:text-rose-600 inline-flex items-center gap-1"
-                >
-                  <XIcon className="w-3 h-3" /> Đổi Kanji
-                </button>
+                {!editing && (
+                  <button
+                    type="button"
+                    onClick={handleClearKanji}
+                    className="text-[11px] text-amber-700 hover:text-rose-600 inline-flex items-center gap-1"
+                  >
+                    <XIcon className="w-3 h-3" /> Đổi Kanji
+                  </button>
+                )}
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-16 h-16 rounded bg-white text-amber-900 font-serif font-bold text-4xl flex items-center justify-center border-2 border-amber-300 shrink-0">
@@ -775,10 +804,10 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
                   </span>
                 )}
               </div>
-              {/* Nút "Thêm từ mới" → toggle form (giữ nguyên logic cũ) */}
+              {/* Mỗi lần bấm "Thêm từ mới" → thêm 1 form (giống "Thêm ví dụ") */}
               <button
                 type="button"
-                onClick={() => setShowNewVocab((v) => !v)}
+                onClick={addNewVocab}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[11px] font-bold hover:bg-indigo-700"
                 title="Thêm vocab mới chưa có trong từ điển"
               >
@@ -787,15 +816,15 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
             </div>
 
             {/* Multi-select từ allRelatedWords */}
-            {selectedKanji?.allRelatedWords &&
-            selectedKanji.allRelatedWords.length > 0 ? (
+            {relatedCandidates.length > 0 ? (
               <div className="space-y-1.5">
                 <div className="text-[11px] text-gray-500 px-1">
                   Chọn các từ vựng liên quan tới chữ Kanji này (
-                  {selectedKanji.allRelatedWords.length} tùy chọn):
+                  {relatedCandidates.length} tùy chọn). Bỏ chọn hết = dùng danh
+                  sách tự động từ từ điển.
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-72 overflow-y-auto pr-1">
-                  {selectedKanji.allRelatedWords.map((w) => {
+                  {relatedCandidates.map((w) => {
                     const checked = relatedVocabIds.includes(w.vocabId)
                     return (
                       <label
@@ -851,84 +880,71 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
               </div>
             )}
 
-            {/* Form tạo vocab mới — giữ nguyên logic */}
-            {showNewVocab && (
-              <div className="rounded border border-indigo-300 bg-white p-3 space-y-2">
-                <div className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider mb-1">
-                  Tạo từ mới
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    placeholder="Từ vựng (VD: 学生) *"
-                    value={newVocab.word}
-                    onChange={(e) =>
-                      setNewVocab((v) => ({ ...v, word: e.target.value }))
-                    }
-                    status={
-                      !newVocab.word.trim() && showNewVocab ? 'error' : ''
-                    }
-                  />
-                  <Input
-                    placeholder="Hiragana (VD: がくせい) *"
-                    value={newVocab.hiragana}
-                    onChange={(e) =>
-                      setNewVocab((v) => ({ ...v, hiragana: e.target.value }))
-                    }
-                    status={
-                      !newVocab.hiragana.trim() && showNewVocab ? 'error' : ''
-                    }
-                  />
-                  <Input
-                    placeholder="Romaji (VD: gakusei)"
-                    value={newVocab.romaji}
-                    onChange={(e) =>
-                      setNewVocab((v) => ({ ...v, romaji: e.target.value }))
-                    }
-                  />
-                  <Select
-                    mode="multiple"
-                    allowClear
-                    size="middle"
-                    className="!w-full"
-                    placeholder="Chọn loại từ (có thể chọn nhiều)"
-                    value={newVocab.partOfSpeech}
-                    onChange={(vals: string[]) =>
-                      setNewVocab((v) => ({ ...v, partOfSpeech: vals }))
-                    }
-                    options={PART_OF_SPEECH_OPTIONS}
-                    maxTagCount="responsive"
-                  />
-                  <Input
-                    placeholder="Nghĩa VI"
-                    value={newVocab.meaningVi}
-                    onChange={(e) =>
-                      setNewVocab((v) => ({
-                        ...v,
-                        meaningVi: e.target.value,
-                      }))
-                    }
-                    className="!col-span-2"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setNewVocab({
-                        word: '',
-                        hiragana: '',
-                        romaji: '',
-                        meaningVi: '',
-                        meaningEn: '',
-                        partOfSpeech: [],
-                      })
-                    }
-                    className="text-[11px] text-gray-400 hover:text-rose-600"
+            {/* Các form tạo vocab mới — mỗi form có nút X để xoá & đóng */}
+            {newVocabs.length > 0 && (
+              <div className="space-y-2">
+                {newVocabs.map((row, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded border border-indigo-300 bg-white p-2 space-y-1.5"
                   >
-                    <XIcon className="w-3 h-3 inline mr-0.5" />
-                    Xoá
-                  </button>
-                </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-indigo-600 uppercase">
+                        Từ mới #{idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeNewVocab(idx)}
+                        className="text-gray-400 hover:text-rose-600 p-0.5"
+                        title="Xoá từ mới này"
+                      >
+                        <XIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        size="small"
+                        placeholder="Từ vựng (VD: 学生) *"
+                        value={row.word}
+                        onChange={(e) => updateNewVocab(idx, { word: e.target.value })}
+                        status={!row.word.trim() ? 'error' : ''}
+                      />
+                      <Input
+                        size="small"
+                        placeholder="Hiragana (VD: がくせい) *"
+                        value={row.hiragana}
+                        onChange={(e) => updateNewVocab(idx, { hiragana: e.target.value })}
+                        status={!row.hiragana.trim() ? 'error' : ''}
+                      />
+                      <Input
+                        size="small"
+                        placeholder="Romaji (VD: gakusei)"
+                        value={row.romaji}
+                        onChange={(e) => updateNewVocab(idx, { romaji: e.target.value })}
+                      />
+                      <Select
+                        mode="multiple"
+                        allowClear
+                        size="small"
+                        className="!w-full"
+                        placeholder="Chọn loại từ (có thể chọn nhiều)"
+                        value={row.partOfSpeech}
+                        onChange={(vals: string[]) =>
+                          updateNewVocab(idx, { partOfSpeech: vals })
+                        }
+                        options={PART_OF_SPEECH_OPTIONS}
+                        maxTagCount="responsive"
+                      />
+                      <Input
+                        size="small"
+                        placeholder="Nghĩa VI"
+                        value={row.meaningVi}
+                        onChange={(e) => updateNewVocab(idx, { meaningVi: e.target.value })}
+                        className="!col-span-2"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

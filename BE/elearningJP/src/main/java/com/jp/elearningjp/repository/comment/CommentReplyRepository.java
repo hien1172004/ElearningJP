@@ -5,7 +5,10 @@ import java.time.Instant;
 import com.jp.elearningjp.entity.comment.CommentReply;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +17,13 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface CommentReplyRepository extends JpaRepository<CommentReply, Long> {
+public interface CommentReplyRepository extends JpaRepository<CommentReply, Long>, JpaSpecificationExecutor<CommentReply> {
+
+    /** Tra cứu cho trang kiểm duyệt — nạp sẵn người viết và bình luận gốc để tránh N+1. */
+    @Override
+    @EntityGraph(attributePaths = {"user", "comment"})
+    Page<CommentReply> findAll(Specification<CommentReply> spec, Pageable pageable);
+
 
     @Query("""
             SELECT r FROM CommentReply r
@@ -63,6 +72,20 @@ public interface CommentReplyRepository extends JpaRepository<CommentReply, Long
             SELECT id FROM subtree WHERE deleted = FALSE
             """, nativeQuery = true)
     List<Long> findActiveSubtreeIds(@Param("replyId") Long replyId);
+
+    /**
+     * Số reply chưa xoá VÀ đang hiển thị trong nhánh (gồm chính reply đó) — dùng để trừ
+     * reply_count khi xoá nhánh. Reply đang ẩn (HIDDEN) đã được trừ lúc ẩn nên không trừ lại.
+     */
+    @Query(value = """
+            WITH RECURSIVE subtree AS (
+                SELECT id, deleted, status FROM comment_replies WHERE id = :replyId
+                UNION
+                SELECT r.id, r.deleted, r.status FROM comment_replies r JOIN subtree s ON r.parent_reply_id = s.id
+            )
+            SELECT COUNT(*) FROM subtree WHERE deleted = FALSE AND status = 'VISIBLE'
+            """, nativeQuery = true)
+    int countVisibleActiveInSubtree(@Param("replyId") Long replyId);
 
     @Modifying
     @Query(value = """
