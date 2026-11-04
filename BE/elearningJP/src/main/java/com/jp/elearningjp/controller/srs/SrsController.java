@@ -105,7 +105,25 @@ public class SrsController {
                 .build();
     }
 
-    @Operation(summary = "Xem thống kê SRS của cá nhân", description = "Trả về tổng số thẻ, số thẻ cần ôn hôm nay, số thẻ đang học và số thẻ đã thành thạo.")
+    @Operation(summary = "Xoá (lưu trữ) thẻ khỏi sổ ôn", description = "Thẻ chuyển sang ARCHIVED: ẩn khỏi hàng ôn/thống kê, giữ lịch sử ôn. Có thể thêm lại hoặc khôi phục.")
+    @DeleteMapping(ApiPaths.Srs.ITEM)
+    public ApiResponse<Void> archiveItem(@PathVariable Long id) {
+        srsService.archiveItem(id);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .build();
+    }
+
+    @Operation(summary = "Khôi phục thẻ đã lưu trữ", description = "Đưa thẻ ARCHIVED về NEW để học lại từ đầu (giữ số lần quên và lịch sử ôn).")
+    @PostMapping(ApiPaths.Srs.RESTORE)
+    public ApiResponse<SrsDueItemResponse> restoreItem(@PathVariable Long id) {
+        return ApiResponse.<SrsDueItemResponse>builder()
+                .success(true)
+                .data(srsService.restoreItem(id))
+                .build();
+    }
+
+    @Operation(summary = "Xem thống kê SRS của cá nhân", description = "Trả về tổng số thẻ, số thẻ cần ôn hôm nay, và số thẻ theo từng trạng thái (NEW/LEARNING/REVIEWING/RELEARNING/MASTERED/ARCHIVED).")
     @GetMapping(ApiPaths.Srs.STATS)
     public ApiResponse<SrsStatsResponse> getStatistics() {
         return ApiResponse.<SrsStatsResponse>builder()
@@ -114,7 +132,7 @@ public class SrsController {
                 .build();
     }
 
-    @Operation(summary = "Dự báo số thẻ cần ôn", description = "Trả về số thẻ đến hạn của hôm nay (gồm thẻ quá hạn) và 4 ngày tiếp theo.")
+    @Operation(summary = "Dự báo số thẻ cần ôn", description = "Lịch tuần hiện tại (Thứ 2 → Chủ nhật): số thẻ đến hạn mỗi ngày (hôm nay gồm thẻ quá hạn + thẻ mới), số thẻ đã ôn ở ngày đã qua và hôm nay.")
     @GetMapping(ApiPaths.Srs.FORECAST)
     public ApiResponse<SrsForecastResponse> getForecast() {
         return ApiResponse.<SrsForecastResponse>builder()

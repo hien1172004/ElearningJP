@@ -90,6 +90,7 @@ public enum ErrorCode {
     GRAMMAR_NOT_FOUND(3006, "Corresponding grammar point not found", HttpStatus.NOT_FOUND),
     INVALID_SRS_REQUEST(3007, "Invalid SRS add request (need to select vocab, kanji or grammar)", HttpStatus.BAD_REQUEST),
     INVALID_REQUEST(3008, "Invalid request payload", HttpStatus.BAD_REQUEST),
+    SRS_ITEM_ARCHIVED(3009, "Srs item is archived, restore it before reviewing", HttpStatus.BAD_REQUEST),
 
     // COMMENT MODULE (4000 - 4099)
     COMMENT_NOT_FOUND(4000, "Comment not found", HttpStatus.NOT_FOUND),

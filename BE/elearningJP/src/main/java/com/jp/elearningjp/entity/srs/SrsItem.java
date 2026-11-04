@@ -66,10 +66,14 @@ public class SrsItem extends SoftDeletableEntity {
     @Column(name = "last_reviewed_at")
     private Instant lastReviewedAt;
 
+    /** Thời điểm thẻ được ôn lần đầu (rời trạng thái NEW) — dùng tính hạn mức thẻ mới mỗi ngày. */
+    @Column(name = "introduced_at")
+    private Instant introducedAt;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private SrsStatus status = SrsStatus.LEARNING;
+    private SrsStatus status = SrsStatus.NEW;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vocab_id")

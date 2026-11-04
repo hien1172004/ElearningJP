@@ -30,6 +30,14 @@ public interface SrsService {
     SrsReviewResultResponse reviewCard(Long userId, Long srsItemId, SrsReviewRequest request);
     SrsReviewResultResponse reviewCard(Long srsItemId, SrsReviewRequest request);
 
+    /** Lưu trữ thẻ (người dùng xoá khỏi sổ ôn): ẩn khỏi hàng ôn, giữ lịch sử. */
+    void archiveItem(Long userId, Long srsItemId);
+    void archiveItem(Long srsItemId);
+
+    /** Khôi phục thẻ đã lưu trữ về NEW để học lại từ đầu. */
+    SrsDueItemResponse restoreItem(Long userId, Long srsItemId);
+    SrsDueItemResponse restoreItem(Long srsItemId);
+
     SrsStatsResponse getStatistics(Long userId);
     SrsStatsResponse getStatistics();
 

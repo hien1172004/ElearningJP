@@ -33,3 +33,8 @@ spring:
 server:
   port: ${PORT:8080}
 
+
+# Chính sách SRS
+srs:
+  new-cards-per-day: ${SRS_NEW_CARDS_PER_DAY:20}
+  archive-after-days: ${SRS_ARCHIVE_AFTER_DAYS:30}

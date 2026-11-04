@@ -1018,7 +1018,7 @@ public class QuizService {
                             .intervalDays(0)
                             .repetitionCount(0)
                             .lapseCount(0)
-                            .status(SrsStatus.LEARNING)
+                            .status(SrsStatus.NEW)
                             .nextReviewAt(Instant.now())
                             .build());
         } else if (question.getCharacter() != null) {
@@ -1031,20 +1031,35 @@ public class QuizService {
                             .intervalDays(0)
                             .repetitionCount(0)
                             .lapseCount(0)
-                            .status(SrsStatus.LEARNING)
+                            .status(SrsStatus.NEW)
                             .nextReviewAt(Instant.now())
                             .build());
         }
 
         if (srsItem == null) return;
 
+        // Thẻ đã lưu trữ: làm quiz trúng từ này → kích hoạt lại, học từ đầu (giữ lapse)
+        if (srsItem.getStatus() == SrsStatus.ARCHIVED) {
+            srsItem.setStatus(SrsStatus.NEW);
+            srsItem.setRepetitionCount(0);
+            srsItem.setIntervalDays(0);
+            srsItem.setEaseFactor(Sm2Algorithm.DEFAULT_EF);
+            srsItem.setIntroducedAt(null);
+        }
+        if (srsItem.getIntroducedAt() == null) {
+            srsItem.setIntroducedAt(Instant.now());
+        }
+
         BigDecimal prevEf = srsItem.getEaseFactor();
         Integer prevInterval = srsItem.getIntervalDays();
 
+        java.time.ZoneId zone = java.time.ZoneId.of(com.jp.elearningjp.config.TimeConfig.APP_ZONE);
         Sm2Algorithm.CalculationResult calc = Sm2Algorithm.calculate(
                 prevEf, prevInterval,
                 srsItem.getRepetitionCount(), srsItem.getLapseCount(),
-                rating
+                srsItem.getStatus(),
+                rating,
+                java.time.Clock.system(zone), zone
         );
 
         srsItem.setEaseFactor(calc.getNewEf());
