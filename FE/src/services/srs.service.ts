@@ -35,7 +35,7 @@ export const srsService = {
     return axiosClient.get('/srs/stats')
   },
 
-  /** Dự báo số thẻ cần ôn (hôm nay + 4 ngày tiếp theo). */
+  /** Lịch ôn tập tuần hiện tại (Thứ 2 → Chủ nhật). */
   getForecast: async (): Promise<ApiResponse<SrsForecast>> => {
     return axiosClient.get('/srs/forecast')
   },
@@ -51,6 +51,16 @@ export const srsService = {
     payload: SrsReviewRequest,
   ): Promise<ApiResponse<SrsReviewResult>> => {
     return axiosClient.post(`/srs/items/${id}/review`, payload)
+  },
+
+  /** Xoá (lưu trữ) thẻ khỏi sổ ôn — giữ lịch sử, có thể khôi phục / thêm lại. */
+  archiveItem: async (id: number): Promise<ApiResponse<void>> => {
+    return axiosClient.delete(`/srs/items/${id}`)
+  },
+
+  /** Khôi phục thẻ đã lưu trữ về NEW để học lại từ đầu. */
+  restoreItem: async (id: number): Promise<ApiResponse<SrsDueItem>> => {
+    return axiosClient.post(`/srs/items/${id}/restore`)
   },
 
   /** Thêm lẻ 1 từ vựng / chữ Hán / ngữ pháp vào SRS. */

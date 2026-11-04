@@ -7,9 +7,13 @@ import type { SrsStats } from '@/types'
 const EMPTY_STATS: SrsStats = {
   totalItems: 0,
   dueTodayCount: 0,
+  newTodayCount: 0,
+  newCount: 0,
   learningCount: 0,
   reviewingCount: 0,
+  relearningCount: 0,
   masteredCount: 0,
+  archivedCount: 0,
 }
 
 /**

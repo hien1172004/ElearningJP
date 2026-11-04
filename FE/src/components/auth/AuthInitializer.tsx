@@ -3,70 +3,77 @@ import { storage } from '@/utils/storage'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { userService } from '@/services/user.service'
 import {
-  decodeJwt,
   extractEmailFromToken,
   extractRolesFromToken,
   extractUserIdFromToken,
 } from '@/utils/jwt'
+import { refreshAccessToken, secondsUntilExpiry } from '@/utils/tokenRefresh'
 import type { User } from '@/types'
 
+/** Refresh chủ động trước khi token hết hạn bao nhiêu giây. */
+const REFRESH_AHEAD_SECONDS = 60
+
+/** Dựng user tạm từ JWT (offline) — BE vẫn là nguồn sự thật về quyền. */
+function userFromToken(token: string): User | null {
+  const roles = extractRolesFromToken(token)
+  const userId = extractUserIdFromToken(token)
+  if (userId == null && roles.length === 0) return null
+  return {
+    id: userId ?? 0,
+    email: extractEmailFromToken(token),
+    fullName: '',
+    role: roles[0] ?? 'STUDENT',
+    roles,
+  }
+}
+
 /**
- * AuthInitializer — chạy 1 lần khi app mount.
+ * AuthInitializer — khôi phục phiên đăng nhập khi app mount và giữ phiên sống.
  *
- * Mục tiêu: giữ user đăng nhập qua reload trang mà KHÔNG cần BE phản hồi
- * thành công (vì mạng chập chờn / BE restart / endpoint lỗi sẽ xoá nhầm
- * session).
- *
- * Ưu tiên:
- * 1. Nếu không có accessToken → set initialized, return.
- * 2. Decode JWT offline (BE là nguồn sự thật về quyền; chỉ dùng để hiển thị UI).
- * 3. Đồng thời gọi BE (/users/me) để nạp thêm thông tin chi tiết (fullName, avatarUrl).
- * 4. Chỉ khi token hết hạn mới clearAuth.
+ * 1. Không có accessToken → initialized.
+ * 2. Token đã hết hạn → thử `/auth/refresh` (BE cho phép trong cửa sổ refreshable-duration).
+ *    Thành công → tiếp tục; thất bại → clearAuth (về trạng thái khách, không bị kẹt
+ *    ở trạng thái "đã đăng nhập nhưng không có user").
+ * 3. Phục hồi user từ JWT ngay (offline), đồng thời nạp profile đầy đủ từ `/users/me`.
+ * 4. Hẹn giờ refresh chủ động trước khi token hết hạn (giữ cả kết nối WebSocket hợp lệ).
  */
 export const AuthInitializer = ({ children }: { children: ReactNode }) => {
   const setInitialized = useAuthStore((s) => s.setInitialized)
   const setUser = useAuthStore((s) => s.setUser)
+  const accessToken = useAuthStore((s) => s.accessToken)
   const ran = useRef(false)
 
+  // ---------------- Khôi phục phiên khi mount ----------------
   useEffect(() => {
     if (ran.current) return
     ran.current = true
 
-    const accessToken = storage.getAccessToken()
-    if (!accessToken) {
-      setInitialized(true)
-      return
-    }
-
-    // --------------------------------------------------------------
-    // Bước 1: phục hồi user từ JWT (offline, tức thì)
-    // --------------------------------------------------------------
-    const payload = decodeJwt(accessToken)
-    const roles = extractRolesFromToken(accessToken)
-    const userId = extractUserIdFromToken(accessToken)
-    const email = extractEmailFromToken(accessToken)
-
-    // Kiểm tra exp nhanh: nếu token hết hạn rồi
-    if (payload?.exp && typeof payload.exp === 'number') {
-      const nowSec = Math.floor(Date.now() / 1000)
-      if (payload.exp <= nowSec) {
+    const restore = async () => {
+      let token = storage.getAccessToken()
+      if (!token) {
         setInitialized(true)
         return
       }
-    }
 
-    if (userId != null || roles.length > 0) {
-      const initialUser: User = {
-        id: userId ?? 0,
-        email,
-        fullName: '',
-        role: roles[0] ?? 'STUDENT',
-        roles,
+      const remaining = secondsUntilExpiry(token)
+      if (remaining != null && remaining <= 0) {
+        try {
+          token = await refreshAccessToken()
+        } catch {
+          useAuthStore.getState().clearAuth()
+          setInitialized(true)
+          return
+        }
+      }
+
+      const initialUser = userFromToken(token)
+      if (!initialUser) {
+        setInitialized(true)
+        return
       }
       setUser(initialUser)
       setInitialized(true)
 
-      // Bước 2: Nạp thông tin đầy đủ từ API /users/me
       userService
         .getMyProfile()
         .then((res) => {
@@ -85,11 +92,23 @@ export const AuthInitializer = ({ children }: { children: ReactNode }) => {
         .catch(() => {
           // Lỗi mạng hoặc server sẽ được interceptor xử lý
         })
-      return
     }
 
-    setInitialized(true)
+    void restore()
   }, [setInitialized, setUser])
+
+  // ---------------- Refresh chủ động trước khi hết hạn ----------------
+  useEffect(() => {
+    const remaining = secondsUntilExpiry(accessToken)
+    if (remaining == null || remaining <= 0) return
+
+    const delayMs = Math.max(remaining - REFRESH_AHEAD_SECONDS, 5) * 1000
+    const timer = window.setTimeout(() => {
+      // Lỗi (vd hết cửa sổ refresh) để interceptor xử lý ở request kế tiếp
+      refreshAccessToken().catch(() => undefined)
+    }, delayMs)
+    return () => window.clearTimeout(timer)
+  }, [accessToken])
 
   return <>{children}</>
 }

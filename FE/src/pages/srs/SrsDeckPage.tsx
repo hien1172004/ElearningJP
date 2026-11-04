@@ -7,20 +7,32 @@ import {
   ChevronRight,
   Loader2,
   RefreshCw,
+  RotateCcw,
+  Trash2,
   Zap,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { SrsForecastBar } from '@/components/srs'
 import { useSrsItems } from '@/hooks/useSrsItems'
-import type { SrsStatus } from '@/types'
+import { useSrsStats } from '@/hooks/useSrsStats'
+import { useArchiveSrsItem, useRestoreSrsItem } from '@/hooks/useSrsItemActions'
+import type { SrsDueItem, SrsStats, SrsStatus } from '@/types'
 
 const PAGE_SIZE = 20
 
-const STATUS_FILTERS: Array<{ value: SrsStatus | undefined; label: string }> = [
-  { value: undefined, label: 'Tất cả' },
-  { value: 'LEARNING', label: 'Đang học' },
-  { value: 'REVIEWING', label: 'Đang ôn' },
-  { value: 'MASTERED', label: 'Thành thạo' },
+const STATUS_FILTERS: Array<{
+  value: SrsStatus | undefined
+  label: string
+  count: (s: SrsStats) => number
+}> = [
+  { value: undefined, label: 'Tất cả', count: (s) => s.totalItems },
+  { value: 'NEW', label: 'Mới', count: (s) => s.newCount },
+  { value: 'LEARNING', label: 'Đang học', count: (s) => s.learningCount },
+  { value: 'RELEARNING', label: 'Học lại', count: (s) => s.relearningCount },
+  { value: 'REVIEWING', label: 'Đang ôn', count: (s) => s.reviewingCount },
+  { value: 'MASTERED', label: 'Thành thạo', count: (s) => s.masteredCount },
+  { value: 'ARCHIVED', label: 'Lưu trữ', count: (s) => s.archivedCount },
 ]
 
 const ITEM_TYPE_LABEL: Record<string, string> = {
@@ -29,16 +41,59 @@ const ITEM_TYPE_LABEL: Record<string, string> = {
   GRAMMAR: 'Ngữ pháp',
 }
 
-const STATUS_META: Record<SrsStatus, { label: string; className: string }> = {
-  LEARNING: { label: 'Đang học', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  REVIEWING: { label: 'Đang ôn', className: 'bg-sky-50 text-sky-700 border-sky-200' },
-  MASTERED: { label: 'Thành thạo', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+const STATUS_META: Record<SrsStatus, { label: string; hint: string; className: string }> = {
+  NEW: {
+    label: 'Mới',
+    hint: 'Chưa ôn lần nào. Mỗi ngày chỉ đưa một số thẻ mới vào phiên ôn.',
+    className: 'bg-violet-50 text-violet-700 border-violet-200',
+  },
+  LEARNING: {
+    label: 'Đang học',
+    hint: 'Đang học lần đầu, khoảng ôn dưới 6 ngày.',
+    className: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  RELEARNING: {
+    label: 'Học lại',
+    hint: 'Đã từng nhớ nhưng bị quên, đang học lại.',
+    className: 'bg-rose-50 text-rose-700 border-rose-200',
+  },
+  REVIEWING: {
+    label: 'Đang ôn',
+    hint: 'Đã nhớ, khoảng ôn từ 6 ngày và đang giãn dần.',
+    className: 'bg-sky-50 text-sky-700 border-sky-200',
+  },
+  MASTERED: {
+    label: 'Thành thạo',
+    hint: 'Nhớ lâu dài, khoảng ôn từ 21 ngày.',
+    className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  ARCHIVED: {
+    label: 'Lưu trữ',
+    hint: 'Đã xoá hoặc quá hạn ôn hơn 30 ngày. Khôi phục để học lại từ đầu.',
+    className: 'bg-slate-100 text-slate-500 border-slate-200',
+  },
 }
 
-const formatDate = (iso: string): string => {
-  const d = new Date(iso)
+/** Mốc "Thành thạo" (ngày) để vẽ thanh tiến độ. */
+const MASTERED_DAYS = 21
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** "Ôn lại: 06/11 (sau 6 ngày)" / "Đến hạn hôm nay" / "Quá hạn 3 ngày". */
+const describeNextReview = (item: SrsDueItem): string => {
+  if (item.status === 'ARCHIVED') return 'Đã lưu trữ'
+  if (item.status === 'NEW') return 'Chờ học'
+  const d = new Date(item.nextReviewAt)
   if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const target = new Date(d)
+  target.setHours(0, 0, 0, 0)
+  const diffDays = Math.round((target.getTime() - startOfToday.getTime()) / DAY_MS)
+  if (diffDays < 0) return `Quá hạn ${-diffDays} ngày`
+  if (diffDays === 0) return 'Đến hạn hôm nay'
+  const label = d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+  return `Ôn lại: ${label} (sau ${diffDays} ngày)`
 }
 
 /**
@@ -55,6 +110,25 @@ export const SrsDeckPage: React.FC = () => {
     size: PAGE_SIZE,
   })
 
+  const { data: stats } = useSrsStats()
+  const archive = useArchiveSrsItem()
+  const restore = useRestoreSrsItem()
+
+  const handleArchive = (item: SrsDueItem) => {
+    if (!window.confirm(`Xoá "${item.frontText}" khỏi sổ ôn? Bạn có thể khôi phục trong tab Lưu trữ.`)) return
+    archive.mutate(item.srsItemId, {
+      onSuccess: () => toast.success('Đã chuyển thẻ vào Lưu trữ'),
+      onError: () => toast.error('Không thể xoá thẻ'),
+    })
+  }
+
+  const handleRestore = (item: SrsDueItem) => {
+    restore.mutate(item.srsItemId, {
+      onSuccess: () => toast.success('Đã khôi phục thẻ, học lại từ đầu'),
+      onError: () => toast.error('Không thể khôi phục thẻ'),
+    })
+  }
+
   const items = data?.items ?? []
   const totalPages = data?.totalPages ?? 0
   const totalElements = data?.totalElements ?? 0
@@ -69,7 +143,10 @@ export const SrsDeckPage: React.FC = () => {
           </span>
           <div>
             <h1 className="text-lg font-bold text-slate-900">Sổ tay SRS</h1>
-            <p className="text-xs text-slate-500">{totalElements} thẻ trong sổ tay ôn tập</p>
+            <p className="text-xs text-slate-500">
+              {stats?.totalItems ?? totalElements} thẻ đang ôn
+              {stats && stats.archivedCount > 0 && ` · ${stats.archivedCount} thẻ lưu trữ`}
+            </p>
           </div>
         </div>
         <Link
@@ -78,6 +155,11 @@ export const SrsDeckPage: React.FC = () => {
         >
           <Zap className="w-4 h-4" />
           Ôn ngay
+          {stats && stats.dueTodayCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-xs tabular-nums">
+              {stats.dueTodayCount}
+            </span>
+          )}
         </Link>
       </header>
 
@@ -92,6 +174,7 @@ export const SrsDeckPage: React.FC = () => {
           <button
             key={f.label}
             type="button"
+            title={f.value ? STATUS_META[f.value].hint : 'Tất cả thẻ đang ôn (không gồm lưu trữ)'}
             onClick={() => {
               setStatus(f.value)
               setPage(0)
@@ -104,6 +187,7 @@ export const SrsDeckPage: React.FC = () => {
             )}
           >
             {f.label}
+            {stats && <span className="ml-1.5 tabular-nums opacity-70">{f.count(stats)}</span>}
           </button>
         ))}
       </div>
@@ -134,7 +218,9 @@ export const SrsDeckPage: React.FC = () => {
       {/* ===== Empty ===== */}
       {!isLoading && !isError && items.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-slate-500">Chưa có thẻ nào trong sổ tay.</p>
+          <p className="text-slate-500">
+            {status === 'ARCHIVED' ? 'Không có thẻ nào trong Lưu trữ.' : 'Chưa có thẻ nào trong sổ tay.'}
+          </p>
           <Link
             to="/dictionary"
             className="mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
@@ -147,7 +233,11 @@ export const SrsDeckPage: React.FC = () => {
       {/* ===== List ===== */}
       {items.length > 0 && (
         <ul className="space-y-3">
-          {items.map((item) => (
+          {items.map((item) => {
+            const meta = STATUS_META[item.status] ?? STATUS_META.LEARNING
+            const progress = Math.min(100, Math.round((item.intervalDays / MASTERED_DAYS) * 100))
+            const archived = item.status === 'ARCHIVED'
+            return (
             <li
               key={item.srsItemId}
               className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 transition"
@@ -164,24 +254,58 @@ export const SrsDeckPage: React.FC = () => {
                 {item.reading && (
                   <div className="text-xs text-slate-500 truncate">{item.reading}</div>
                 )}
+                {!archived && item.status !== 'NEW' && (
+                  <div
+                    className="mt-2 h-1 w-full max-w-[200px] rounded-full bg-slate-100 overflow-hidden"
+                    title={`Khoảng ôn ${item.intervalDays} ngày / ${MASTERED_DAYS} ngày để thành thạo`}
+                  >
+                    <div className="h-full rounded-full bg-emerald-400" style={{ width: `${progress}%` }} />
+                  </div>
+                )}
               </div>
 
               <div className="hidden sm:flex flex-col items-end gap-1 shrink-0">
                 <span
                   className={cn(
                     'px-2 py-0.5 rounded-md text-[10px] font-semibold border',
-                    STATUS_META[item.status].className,
+                    meta.className,
                   )}
+                  title={meta.hint}
                 >
-                  {STATUS_META[item.status].label}
+                  {meta.label}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
                   <CalendarDays className="w-3 h-3" />
-                  {formatDate(item.nextReviewAt)}
+                  {describeNextReview(item)}
                 </span>
               </div>
+
+              {archived ? (
+                <button
+                  type="button"
+                  onClick={() => handleRestore(item)}
+                  disabled={restore.isPending}
+                  title="Khôi phục để học lại từ đầu"
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-50"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Khôi phục
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleArchive(item)}
+                  disabled={archive.isPending}
+                  title="Xoá khỏi sổ ôn (chuyển vào Lưu trữ)"
+                  aria-label="Xoá thẻ"
+                  className="shrink-0 p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </li>
-          ))}
+            )
+          })}
         </ul>
       )}
 
