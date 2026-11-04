@@ -721,11 +721,10 @@ class QuizServiceTest {
             verify(srsItemRepository, times(1)).save(srsCaptor.capture());
             SrsItem saved = srsCaptor.getValue();
             assertThat(saved.getVocab().getId()).isEqualTo(200L);
-            assertThat(saved.getEaseFactor()).isEqualByComparingTo(new BigDecimal("2.50"));
-            assertThat(saved.getStatus()).isEqualTo(SrsStatus.LEARNING);
-            // EASY (2s < 3s) → interval=3, status=REVIEWING
+            assertThat(saved.getEaseFactor()).isEqualByComparingTo(new BigDecimal("2.60"));
+            // EASY (2s < 3s) → interval=3, EF +0.10, status=LEARNING (chưa đạt ngưỡng REVIEWING 6 ngày)
             assertThat(saved.getIntervalDays()).isEqualTo(3);
-            assertThat(saved.getStatus()).isEqualTo(SrsStatus.REVIEWING);
+            assertThat(saved.getStatus()).isEqualTo(SrsStatus.LEARNING);
             verify(srsReviewLogRepository, times(1)).save(any());
         }
 
@@ -777,11 +776,11 @@ class QuizServiceTest {
             ArgumentCaptor<SrsItem> srsCaptor = ArgumentCaptor.forClass(SrsItem.class);
             verify(srsItemRepository).save(srsCaptor.capture());
             SrsItem saved = srsCaptor.getValue();
-            // AGAIN: lapseCount=1, repetition=0, interval=1, status=LEARNING
+            // AGAIN trên thẻ REVIEWING: lapseCount=1, repetition=0, interval=0 (ôn lại ngay), status=RELEARNING
             assertThat(saved.getLapseCount()).isEqualTo(1);
             assertThat(saved.getRepetitionCount()).isZero();
-            assertThat(saved.getIntervalDays()).isEqualTo(1);
-            assertThat(saved.getStatus()).isEqualTo(SrsStatus.LEARNING);
+            assertThat(saved.getIntervalDays()).isZero();
+            assertThat(saved.getStatus()).isEqualTo(SrsStatus.RELEARNING);
         }
 
         @Test
@@ -858,8 +857,8 @@ class QuizServiceTest {
         }
 
         @Test
-        @DisplayName("MATCHING accuracy 50% → HARD rating")
-        void matchingPartialCorrect_hardRating() {
+        @DisplayName("MATCHING accuracy 50% → AGAIN rating (RELEARNING)")
+        void matchingHalfCorrect_againRating() {
             Vocabulary vocab = Vocabulary.builder().word("A").build();
             vocab.setId(200L);
 
@@ -912,9 +911,9 @@ class QuizServiceTest {
             ArgumentCaptor<SrsItem> srsCaptor = ArgumentCaptor.forClass(SrsItem.class);
             verify(srsItemRepository).save(srsCaptor.capture());
             SrsItem saved = srsCaptor.getValue();
-            // 50% → HARD (60-99% range) → repetition tăng 1, lapse không tăng
-            assertThat(saved.getRepetitionCount()).isEqualTo(3);
-            assertThat(saved.getLapseCount()).isZero();
+            // 50% (< 60%) → AGAIN → thẻ REVIEWING chuyển RELEARNING, repetition về 0, lapse +1
+            assertThat(saved.getRepetitionCount()).isZero();
+            assertThat(saved.getLapseCount()).isEqualTo(1);
         }
     }
 

@@ -11,8 +11,12 @@
 /** Đánh giá chất lượng SM-2 (điểm q = 1/3/4/5). */
 export type SrsRating = 'AGAIN' | 'HARD' | 'GOOD' | 'EASY'
 
-/** Trạng thái thẻ. */
-export type SrsStatus = 'LEARNING' | 'REVIEWING' | 'MASTERED'
+/**
+ * Trạng thái vòng đời thẻ:
+ * NEW → LEARNING → REVIEWING (≥ 6 ngày) → MASTERED (≥ 21 ngày);
+ * quên (AGAIN) → RELEARNING; quá hạn > 30 ngày / người dùng xoá → ARCHIVED.
+ */
+export type SrsStatus = 'NEW' | 'LEARNING' | 'REVIEWING' | 'RELEARNING' | 'MASTERED' | 'ARCHIVED'
 
 /** Loại nội dung thẻ (polymorphic target). */
 export type SrsItemType = 'VOCABULARY' | 'CHARACTER' | 'GRAMMAR'
@@ -67,11 +71,18 @@ export interface SrsReviewResult {
 
 /** Thống kê SRS (GET /srs/stats). */
 export interface SrsStats {
+  /** Tổng thẻ đang hoạt động (không gồm ARCHIVED). */
   totalItems: number
+  /** Thẻ cần làm hôm nay = thẻ ôn đến hạn + thẻ mới trong hạn mức. */
   dueTodayCount: number
+  /** Số thẻ mới sẽ học hôm nay (đã áp hạn mức/ngày). */
+  newTodayCount: number
+  newCount: number
   learningCount: number
   reviewingCount: number
+  relearningCount: number
   masteredCount: number
+  archivedCount: number
 }
 
 /** Payload thêm thẻ lẻ (POST /srs/items). */
@@ -93,13 +104,17 @@ export interface SrsBatchAddRequest {
 export interface SrsForecastDay {
   /** Ngày (yyyy-MM-dd). */
   date: string
-  /** Số thẻ đến hạn trong ngày đó (hôm nay gồm cả thẻ quá hạn). */
+  /** Số thẻ đến hạn trong ngày (hôm nay gồm thẻ quá hạn + thẻ mới; ngày đã qua = 0). */
   count: number
+  /** Số thẻ đã ôn trong ngày (ngày đã qua và hôm nay). */
+  reviewedCount: number
   /** true nếu là ngày hôm nay. */
   today: boolean
+  /** true nếu là ngày đã qua trong tuần. */
+  past: boolean
 }
 
-/** Dự báo số thẻ cần ôn: hôm nay + 4 ngày tiếp theo. */
+/** Lịch ôn tập tuần hiện tại: Thứ 2 → Chủ nhật (7 phần tử). */
 export interface SrsForecast {
   days: SrsForecastDay[]
 }

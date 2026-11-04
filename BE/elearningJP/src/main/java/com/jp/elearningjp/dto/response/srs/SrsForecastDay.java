@@ -20,6 +20,11 @@ import java.time.LocalDate;
 public class SrsForecastDay {
 
     LocalDate date;
+    /** Số thẻ đến hạn trong ngày (hôm nay gồm cả thẻ quá hạn + thẻ mới trong hạn mức; ngày đã qua = 0). */
     int count;
+    /** Số thẻ đã ôn trong ngày (ngày đã qua và hôm nay). */
+    int reviewedCount;
     boolean today;
+    /** Ngày đã qua trong tuần. */
+    boolean past;
 }

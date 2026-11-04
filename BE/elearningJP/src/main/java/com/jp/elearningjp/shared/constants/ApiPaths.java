@@ -114,6 +114,8 @@ public final class ApiPaths {
         public static final String BATCH = "/batch";
         public static final String LESSON_ADD_ALL = "/lessons/{lessonId}/add-all";
         public static final String REVIEW = "/items/{id}/review";
+        public static final String ITEM = "/items/{id}";
+        public static final String RESTORE = "/items/{id}/restore";
         public static final String STATS = "/stats";
         public static final String FORECAST = "/forecast";
         public static final String SAVED_IDS = "/saved-ids";

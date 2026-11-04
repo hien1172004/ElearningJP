@@ -5,6 +5,7 @@ import com.jp.elearningjp.shared.enums.SrsStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,9 +15,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Quy ước: thẻ {@code ARCHIVED} không tham gia hàng ôn, thống kê, nhắc ôn, {@code saved-ids}.
+ * Thẻ {@code NEW} được lấy riêng để áp hạn mức thẻ mới mỗi ngày.
+ */
 @Repository
 public interface SrsItemRepository extends JpaRepository<SrsItem, Long> {
 
+    /** Thẻ ôn đến hạn (không gồm NEW và ARCHIVED). */
     @Query("SELECT s FROM SrsItem s " +
            "LEFT JOIN FETCH s.vocab " +
            "LEFT JOIN FETCH s.character " +
@@ -24,6 +30,8 @@ public interface SrsItemRepository extends JpaRepository<SrsItem, Long> {
            "WHERE s.user.id = :userId " +
            "  AND s.nextReviewAt <= :now " +
            "  AND s.deleted = false " +
+           "  AND s.status NOT IN (com.jp.elearningjp.shared.enums.SrsStatus.NEW, " +
+           "                       com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED) " +
            "ORDER BY s.nextReviewAt ASC")
     List<SrsItem> findDueCards(
             @Param("userId") Long userId,
@@ -31,49 +39,67 @@ public interface SrsItemRepository extends JpaRepository<SrsItem, Long> {
             Pageable pageable
     );
 
+    /** Thẻ mới chờ học, thẻ thêm trước học trước. */
+    @Query("SELECT s FROM SrsItem s " +
+           "LEFT JOIN FETCH s.vocab " +
+           "LEFT JOIN FETCH s.character " +
+           "LEFT JOIN FETCH s.grammar " +
+           "WHERE s.user.id = :userId " +
+           "  AND s.deleted = false " +
+           "  AND s.status = com.jp.elearningjp.shared.enums.SrsStatus.NEW " +
+           "ORDER BY s.id ASC")
+    List<SrsItem> findNewCards(@Param("userId") Long userId, Pageable pageable);
+
+    /** Đếm thẻ ôn đến hạn (không gồm NEW và ARCHIVED). */
     @Query("SELECT COUNT(s) FROM SrsItem s " +
            "WHERE s.user.id = :userId " +
            "  AND s.nextReviewAt <= :now " +
-           "  AND s.deleted = false")
+           "  AND s.deleted = false " +
+           "  AND s.status NOT IN (com.jp.elearningjp.shared.enums.SrsStatus.NEW, " +
+           "                       com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED)")
     long countDueCards(@Param("userId") Long userId, @Param("now") Instant now);
 
-    long countByUserIdAndDeletedFalse(Long userId);
+    /** Số thẻ đã được học lần đầu kể từ {@code since} (để trừ vào hạn mức thẻ mới trong ngày). */
+    @Query("SELECT COUNT(s) FROM SrsItem s " +
+           "WHERE s.user.id = :userId " +
+           "  AND s.deleted = false " +
+           "  AND s.introducedAt >= :since")
+    long countIntroducedSince(@Param("userId") Long userId, @Param("since") Instant since);
+
+    /** Tổng số thẻ đang hoạt động (không gồm ARCHIVED). */
+    @Query("SELECT COUNT(s) FROM SrsItem s " +
+           "WHERE s.user.id = :userId " +
+           "  AND s.deleted = false " +
+           "  AND s.status <> com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED")
+    long countActiveItems(@Param("userId") Long userId);
 
     long countByUserIdAndStatusAndDeletedFalse(Long userId, SrsStatus status);
-
-    boolean existsByUserIdAndVocabIdAndDeletedFalse(Long userId, Long vocabId);
-
-    boolean existsByUserIdAndCharacterIdAndDeletedFalse(Long userId, Long characterId);
-
-    boolean existsByUserIdAndGrammarIdAndDeletedFalse(Long userId, Long grammarId);
 
     Optional<SrsItem> findByUserIdAndVocabIdAndDeletedFalse(Long userId, Long vocabId);
 
     Optional<SrsItem> findByUserIdAndCharacterIdAndDeletedFalse(Long userId, Long characterId);
 
+    Optional<SrsItem> findByUserIdAndGrammarIdAndDeletedFalse(Long userId, Long grammarId);
+
     Optional<SrsItem> findByIdAndUserIdAndDeletedFalse(Long id, Long userId);
 
     /**
      * Đếm số thẻ đến hạn, gom theo user — cho job nhắc SRS hằng ngày.
+     * Gồm cả thẻ NEW (người dùng có thẻ mới chờ học cũng nên được nhắc), không gồm ARCHIVED.
      *
-     * <p><b>Vì sao 1 query thay vì N query?</b> Job cần biết mọi user có thẻ đến hạn;
-     * nếu duyệt từng user rồi gọi {@code countDueCards} sẽ thành N+1. Query này trả về
-     * đúng những user có nhu cầu nhắc, kèm số thẻ.</p>
-     *
-     * @param now mốc thời gian hiện tại
      * @return mỗi phần tử là {@code Object[]{userId (Long), dueCount (Long)}}
      */
     @Query("SELECT s.user.id, COUNT(s) FROM SrsItem s " +
            "WHERE s.nextReviewAt <= :now " +
            "  AND s.deleted = false " +
+           "  AND s.status <> com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED " +
            "GROUP BY s.user.id")
     List<Object[]> countDueCardsGroupByUser(@Param("now") Instant now);
 
     /**
-     * Liệt kê toàn bộ thẻ SRS của user (phân trang), có thể lọc theo trạng thái.
-     * {@code status = null} → không lọc, trả về tất cả.
-     * <p>Sắp xếp theo {@code next_review_at} tăng dần (thẻ sắp đến hạn lên đầu),
-     * dùng {@code id} làm tie-breaker để thứ tự ổn định.</p>
+     * Liệt kê thẻ SRS của user (phân trang).
+     * {@code status = null} → mọi thẻ đang hoạt động (không gồm ARCHIVED);
+     * {@code status = ARCHIVED} → danh sách thẻ đã lưu trữ.
      */
     @Query("SELECT s FROM SrsItem s " +
            "LEFT JOIN FETCH s.vocab " +
@@ -81,19 +107,35 @@ public interface SrsItemRepository extends JpaRepository<SrsItem, Long> {
            "LEFT JOIN FETCH s.grammar " +
            "WHERE s.user.id = :userId " +
            "  AND s.deleted = false " +
-           "  AND (:status IS NULL OR s.status = :status) " +
+           "  AND ((:status IS NULL AND s.status <> com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED) " +
+           "       OR s.status = :status) " +
            "ORDER BY s.nextReviewAt ASC, s.id ASC")
     Page<SrsItem> findByUserIdAndStatus(
             @Param("userId") Long userId,
             @Param("status") SrsStatus status,
-                        Pageable pageable);
+            Pageable pageable);
 
-    @Query("SELECT s.vocab.id FROM SrsItem s WHERE s.user.id = :userId AND s.vocab IS NOT NULL AND s.deleted = false")
+    /**
+     * Tự động lưu trữ thẻ quá hạn ôn trước {@code cutoff}.
+     * Không đụng thẻ NEW (thẻ mới chờ do hạn mức ngày không phải lỗi của người học).
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE SrsItem s SET s.status = com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED " +
+           "WHERE s.deleted = false " +
+           "  AND s.nextReviewAt < :cutoff " +
+           "  AND s.status NOT IN (com.jp.elearningjp.shared.enums.SrsStatus.NEW, " +
+           "                       com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED)")
+    int archiveOverdue(@Param("cutoff") Instant cutoff);
+
+    @Query("SELECT s.vocab.id FROM SrsItem s WHERE s.user.id = :userId AND s.vocab IS NOT NULL " +
+           "AND s.deleted = false AND s.status <> com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED")
     Set<Long> findSavedVocabIds(@Param("userId") Long userId);
 
-    @Query("SELECT s.character.id FROM SrsItem s WHERE s.user.id = :userId AND s.character IS NOT NULL AND s.deleted = false")
+    @Query("SELECT s.character.id FROM SrsItem s WHERE s.user.id = :userId AND s.character IS NOT NULL " +
+           "AND s.deleted = false AND s.status <> com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED")
     Set<Long> findSavedCharacterIds(@Param("userId") Long userId);
 
-    @Query("SELECT s.grammar.id FROM SrsItem s WHERE s.user.id = :userId AND s.grammar IS NOT NULL AND s.deleted = false")
+    @Query("SELECT s.grammar.id FROM SrsItem s WHERE s.user.id = :userId AND s.grammar IS NOT NULL " +
+           "AND s.deleted = false AND s.status <> com.jp.elearningjp.shared.enums.SrsStatus.ARCHIVED")
     Set<Long> findSavedGrammarIds(@Param("userId") Long userId);
 }

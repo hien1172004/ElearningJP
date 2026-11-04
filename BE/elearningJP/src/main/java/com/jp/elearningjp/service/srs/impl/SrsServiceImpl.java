@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.srs.impl;
 
+import com.jp.elearningjp.config.SrsProperties;
 import com.jp.elearningjp.config.TimeConfig;
 import com.jp.elearningjp.dto.request.srs.SrsBatchCreateRequest;
 import com.jp.elearningjp.dto.request.srs.SrsItemCreateRequest;
@@ -13,10 +14,7 @@ import com.jp.elearningjp.dto.response.srs.SrsStatsResponse;
 import com.jp.elearningjp.entity.content.GrammarPoint;
 import com.jp.elearningjp.entity.content.Vocabulary;
 import com.jp.elearningjp.entity.content.WritingCharacter;
-import com.jp.elearningjp.entity.curriculum.LessonGrammarItem;
-import com.jp.elearningjp.entity.curriculum.LessonKanjiItem;
 import com.jp.elearningjp.entity.curriculum.LessonSection;
-import com.jp.elearningjp.entity.curriculum.LessonVocabularyItem;
 import com.jp.elearningjp.entity.srs.SrsItem;
 import com.jp.elearningjp.entity.srs.SrsReviewLog;
 import com.jp.elearningjp.entity.user.User;
@@ -50,11 +48,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -73,25 +75,27 @@ public class SrsServiceImpl implements SrsService {
     LessonGrammarItemRepository lessonGrammarItemRepository;
     UserRepository userRepository;
     CurrentUserService currentUserService;
+    SrsProperties srsProperties;
     Clock clock;
 
     @Override
     @Transactional(readOnly = true)
     public List<SrsDueItemResponse> getDueCards(Long userId, int limit) {
-        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
-        LocalDate today = LocalDate.now(clock);
-        Instant endOfDay = today.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
-
         int pageLimit = Math.min(Math.max(limit, 1), 100);
-        List<SrsItem> dueItems = srsItemRepository.findDueCards(
-                userId,
-                endOfDay,
-                PageRequest.of(0, pageLimit)
-        );
 
-        return dueItems.stream()
-                .map(this::mapToDueItemResponse)
-                .toList();
+        // 1. Thẻ ôn đến hạn (LEARNING / REVIEWING / RELEARNING / MASTERED) được ưu tiên
+        List<SrsItem> cards = new ArrayList<>(srsItemRepository.findDueCards(
+                userId, endOfToday(), PageRequest.of(0, pageLimit)));
+
+        // 2. Bù thêm thẻ NEW trong phạm vi hạn mức thẻ mới còn lại của hôm nay
+        int remainingSlots = pageLimit - cards.size();
+        int newQuota = remainingNewQuota(userId);
+        if (remainingSlots > 0 && newQuota > 0) {
+            cards.addAll(srsItemRepository.findNewCards(
+                    userId, PageRequest.of(0, Math.min(remainingSlots, newQuota))));
+        }
+
+        return cards.stream().map(this::mapToDueItemResponse).toList();
     }
 
     @Override
@@ -103,41 +107,30 @@ public class SrsServiceImpl implements SrsService {
             throw new AppException(ErrorCode.INVALID_SRS_REQUEST);
         }
 
-        SrsItem.SrsItemBuilder builder = SrsItem.builder()
-                .user(user)
-                .cardType(SrsCardType.STANDARD)
-                .repetitionCount(0)
-                .lapseCount(0)
-                .easeFactor(new BigDecimal("2.50"))
-                .intervalDays(0)
-                .nextReviewAt(Instant.now())
-                .status(SrsStatus.LEARNING);
-
+        Optional<SrsItem> existing;
+        Supplier<SrsItem> creator;
         if (request.getVocabId() != null) {
-            if (srsItemRepository.existsByUserIdAndVocabIdAndDeletedFalse(userId, request.getVocabId())) {
-                throw new AppException(ErrorCode.SRS_ITEM_ALREADY_EXISTS);
-            }
             Vocabulary vocab = vocabularyRepository.findByIdAndDeletedFalse(request.getVocabId())
                     .orElseThrow(() -> new AppException(ErrorCode.VOCAB_NOT_FOUND));
-            builder.vocab(vocab);
+            existing = srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(userId, vocab.getId());
+            creator = () -> newCard(user).vocab(vocab).build();
         } else if (request.getCharacterId() != null) {
-            if (srsItemRepository.existsByUserIdAndCharacterIdAndDeletedFalse(userId, request.getCharacterId())) {
-                throw new AppException(ErrorCode.SRS_ITEM_ALREADY_EXISTS);
-            }
             WritingCharacter character = writingCharacterRepository.findByIdAndDeletedFalse(request.getCharacterId())
                     .orElseThrow(() -> new AppException(ErrorCode.CHARACTER_NOT_FOUND));
-            builder.character(character);
+            existing = srsItemRepository.findByUserIdAndCharacterIdAndDeletedFalse(userId, character.getId());
+            creator = () -> newCard(user).character(character).build();
         } else {
-            if (srsItemRepository.existsByUserIdAndGrammarIdAndDeletedFalse(userId, request.getGrammarId())) {
-                throw new AppException(ErrorCode.SRS_ITEM_ALREADY_EXISTS);
-            }
             GrammarPoint grammar = grammarPointRepository.findByIdAndDeletedFalse(request.getGrammarId())
                     .orElseThrow(() -> new AppException(ErrorCode.GRAMMAR_NOT_FOUND));
-            builder.grammar(grammar);
+            existing = srsItemRepository.findByUserIdAndGrammarIdAndDeletedFalse(userId, grammar.getId());
+            creator = () -> newCard(user).grammar(grammar).build();
         }
 
-        SrsItem savedItem = srsItemRepository.save(builder.build());
-        return mapToDueItemResponse(savedItem);
+        List<SrsItem> toSave = new ArrayList<>(1);
+        if (!addOrReactivate(existing, creator, toSave)) {
+            throw new AppException(ErrorCode.SRS_ITEM_ALREADY_EXISTS);
+        }
+        return mapToDueItemResponse(srsItemRepository.save(toSave.get(0)));
     }
 
     @Override
@@ -150,55 +143,19 @@ public class SrsServiceImpl implements SrsService {
                 .findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
 
         List<SrsItem> toSave = new ArrayList<>();
-        Instant now = Instant.now();
 
         for (LessonSection section : sections) {
             switch (section.getSectionType()) {
-                case KANJI -> {
-                    List<LessonKanjiItem> kanjiItems = lessonKanjiItemRepository
-                            .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
-                    for (LessonKanjiItem item : kanjiItems) {
-                        WritingCharacter character = item.getCharacter();
-                        Long charId = character.getId();
-                        if (!srsItemRepository.existsByUserIdAndCharacterIdAndDeletedFalse(userId, charId)) {
-                            toSave.add(SrsItem.builder()
-                                    .user(user)
-                                    .character(character)
-                                    .nextReviewAt(now)
-                                    .build());
-                        }
-                    }
-                }
-                case VOCABULARY -> {
-                    List<LessonVocabularyItem> vocabItems = lessonVocabularyItemRepository
-                            .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
-                    for (LessonVocabularyItem item : vocabItems) {
-                        Vocabulary vocab = item.getVocab();
-                        Long vocabId = vocab.getId();
-                        if (!srsItemRepository.existsByUserIdAndVocabIdAndDeletedFalse(userId, vocabId)) {
-                            toSave.add(SrsItem.builder()
-                                    .user(user)
-                                    .vocab(vocab)
-                                    .nextReviewAt(now)
-                                    .build());
-                        }
-                    }
-                }
-                case GRAMMAR -> {
-                    List<LessonGrammarItem> grammarItems = lessonGrammarItemRepository
-                            .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
-                    for (LessonGrammarItem item : grammarItems) {
-                        GrammarPoint grammar = item.getGrammar();
-                        Long grammarId = grammar.getId();
-                        if (!srsItemRepository.existsByUserIdAndGrammarIdAndDeletedFalse(userId, grammarId)) {
-                            toSave.add(SrsItem.builder()
-                                    .user(user)
-                                    .grammar(grammar)
-                                    .nextReviewAt(now)
-                                    .build());
-                        }
-                    }
-                }
+                case KANJI -> lessonKanjiItemRepository
+                        .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId())
+                        .forEach(item -> addCharacter(user, item.getCharacter(), toSave));
+                case VOCABULARY -> lessonVocabularyItemRepository
+                        .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId())
+                        .forEach(item -> addVocab(user, item.getVocab(), toSave));
+                case GRAMMAR -> lessonGrammarItemRepository
+                        .findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId())
+                        .forEach(item -> addGrammar(user, item.getGrammar(), toSave));
+                default -> { /* section khác không tạo thẻ SRS */ }
             }
         }
 
@@ -217,35 +174,23 @@ public class SrsServiceImpl implements SrsService {
 
         User user = getUser(userId);
         List<SrsItem> toSave = new ArrayList<>();
-        Instant now = Instant.now();
 
         if (request.getVocabIds() != null) {
             for (Long vocabId : request.getVocabIds()) {
-                if (!srsItemRepository.existsByUserIdAndVocabIdAndDeletedFalse(userId, vocabId)) {
-                    vocabularyRepository.findByIdAndDeletedFalse(vocabId).ifPresent(v -> {
-                        toSave.add(SrsItem.builder().user(user).vocab(v).nextReviewAt(now).build());
-                    });
-                }
+                vocabularyRepository.findByIdAndDeletedFalse(vocabId)
+                        .ifPresent(v -> addVocab(user, v, toSave));
             }
         }
-
         if (request.getCharacterIds() != null) {
             for (Long charId : request.getCharacterIds()) {
-                if (!srsItemRepository.existsByUserIdAndCharacterIdAndDeletedFalse(userId, charId)) {
-                    writingCharacterRepository.findByIdAndDeletedFalse(charId).ifPresent(c -> {
-                        toSave.add(SrsItem.builder().user(user).character(c).nextReviewAt(now).build());
-                    });
-                }
+                writingCharacterRepository.findByIdAndDeletedFalse(charId)
+                        .ifPresent(c -> addCharacter(user, c, toSave));
             }
         }
-
         if (request.getGrammarIds() != null) {
             for (Long grammarId : request.getGrammarIds()) {
-                if (!srsItemRepository.existsByUserIdAndGrammarIdAndDeletedFalse(userId, grammarId)) {
-                    grammarPointRepository.findByIdAndDeletedFalse(grammarId).ifPresent(g -> {
-                        toSave.add(SrsItem.builder().user(user).grammar(g).nextReviewAt(now).build());
-                    });
-                }
+                grammarPointRepository.findByIdAndDeletedFalse(grammarId)
+                        .ifPresent(g -> addGrammar(user, g, toSave));
             }
         }
 
@@ -262,30 +207,36 @@ public class SrsServiceImpl implements SrsService {
 
         SrsItem srsItem = srsItemRepository.findByIdAndUserIdAndDeletedFalse(srsItemId, userId)
                 .orElseThrow(() -> new AppException(ErrorCode.SRS_ITEM_NOT_FOUND));
+        if (srsItem.getStatus() == SrsStatus.ARCHIVED) {
+            throw new AppException(ErrorCode.SRS_ITEM_ARCHIVED);
+        }
 
         BigDecimal prevEf = srsItem.getEaseFactor();
         Integer prevInterval = srsItem.getIntervalDays();
+        Instant now = Instant.now(clock);
 
-        // Áp dụng thuật toán SM-2
-        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
         Sm2Algorithm.CalculationResult calc = Sm2Algorithm.calculate(
                 prevEf,
                 prevInterval,
                 srsItem.getRepetitionCount(),
                 srsItem.getLapseCount(),
+                srsItem.getStatus(),
                 request.getRating(),
                 clock,
-                zone
+                appZone()
         );
 
-        // Cập nhật SrsItem
+        // Lần ôn đầu tiên: thẻ rời trạng thái NEW → tính vào hạn mức thẻ mới hôm nay
+        if (srsItem.getIntroducedAt() == null) {
+            srsItem.setIntroducedAt(now);
+        }
         srsItem.setEaseFactor(calc.getNewEf());
         srsItem.setIntervalDays(calc.getNewInterval());
         srsItem.setRepetitionCount(calc.getNewRepetitionCount());
         srsItem.setLapseCount(calc.getNewLapseCount());
         srsItem.setStatus(calc.getNewStatus());
         srsItem.setNextReviewAt(calc.getNextReviewAt());
-        srsItem.setLastReviewedAt(Instant.now());
+        srsItem.setLastReviewedAt(now);
         srsItemRepository.save(srsItem);
 
         // Ghi Log vào srs_review_logs
@@ -301,7 +252,7 @@ public class SrsServiceImpl implements SrsService {
                 .newStatus(calc.getNewStatus())
                 .responseTimeMs(request.getResponseTimeMs())
                 .clientEventId(request.getClientEventId())
-                .reviewedAt(Instant.now())
+                .reviewedAt(now)
                 .build();
         srsReviewLogRepository.save(logEntity);
 
@@ -327,25 +278,136 @@ public class SrsServiceImpl implements SrsService {
     }
 
     @Override
+    @Transactional
+    public void archiveItem(Long userId, Long srsItemId) {
+        SrsItem item = srsItemRepository.findByIdAndUserIdAndDeletedFalse(srsItemId, userId)
+                .orElseThrow(() -> new AppException(ErrorCode.SRS_ITEM_NOT_FOUND));
+        if (item.getStatus() != SrsStatus.ARCHIVED) {
+            item.setStatus(SrsStatus.ARCHIVED);
+            srsItemRepository.save(item);
+        }
+    }
+
+    @Override
+    @Transactional
+    public SrsDueItemResponse restoreItem(Long userId, Long srsItemId) {
+        SrsItem item = srsItemRepository.findByIdAndUserIdAndDeletedFalse(srsItemId, userId)
+                .orElseThrow(() -> new AppException(ErrorCode.SRS_ITEM_NOT_FOUND));
+        if (item.getStatus() == SrsStatus.ARCHIVED) {
+            resetToNew(item);
+            item = srsItemRepository.save(item);
+        }
+        return mapToDueItemResponse(item);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public SrsStatsResponse getStatistics(Long userId) {
-        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
-        LocalDate today = LocalDate.now(clock);
-        Instant endOfDay = today.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
-
-        long totalItems = srsItemRepository.countByUserIdAndDeletedFalse(userId);
-        long dueToday = srsItemRepository.countDueCards(userId, endOfDay);
-        long learning = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.LEARNING);
-        long reviewing = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.REVIEWING);
-        long mastered = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.MASTERED);
+        long newCount = srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.NEW);
+        long newToday = Math.min(newCount, remainingNewQuota(userId));
 
         return SrsStatsResponse.builder()
-                .totalItems(totalItems)
-                .dueTodayCount(dueToday)
-                .learningCount(learning)
-                .reviewingCount(reviewing)
-                .masteredCount(mastered)
+                .totalItems(srsItemRepository.countActiveItems(userId))
+                .dueTodayCount(srsItemRepository.countDueCards(userId, endOfToday()) + newToday)
+                .newTodayCount(newToday)
+                .newCount(newCount)
+                .learningCount(srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.LEARNING))
+                .reviewingCount(srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.REVIEWING))
+                .relearningCount(srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.RELEARNING))
+                .masteredCount(srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.MASTERED))
+                .archivedCount(srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.ARCHIVED))
                 .build();
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers: tạo / kích hoạt lại thẻ
+    // ------------------------------------------------------------------
+
+    /** Builder thẻ mới với giá trị khởi tạo chuẩn. */
+    private SrsItem.SrsItemBuilder newCard(User user) {
+        return SrsItem.builder()
+                .user(user)
+                .cardType(SrsCardType.STANDARD)
+                .repetitionCount(0)
+                .lapseCount(0)
+                .easeFactor(Sm2Algorithm.DEFAULT_EF)
+                .intervalDays(0)
+                .nextReviewAt(Instant.now(clock))
+                .status(SrsStatus.NEW);
+    }
+
+    /**
+     * Thêm thẻ vào {@code toSave} nếu chưa có, hoặc kích hoạt lại nếu đang ARCHIVED.
+     *
+     * @return {@code false} nếu thẻ đang hoạt động (đã tồn tại)
+     */
+    private boolean addOrReactivate(Optional<SrsItem> existing, Supplier<SrsItem> creator, List<SrsItem> toSave) {
+        if (existing.isEmpty()) {
+            toSave.add(creator.get());
+            return true;
+        }
+        SrsItem item = existing.get();
+        if (item.getStatus() == SrsStatus.ARCHIVED) {
+            resetToNew(item);
+            toSave.add(item);
+            return true;
+        }
+        return false;
+    }
+
+    /** Đưa thẻ lưu trữ về NEW: học lại từ đầu, giữ lapseCount và lịch sử ôn để thống kê. */
+    private void resetToNew(SrsItem item) {
+        item.setStatus(SrsStatus.NEW);
+        item.setRepetitionCount(0);
+        item.setIntervalDays(0);
+        item.setEaseFactor(Sm2Algorithm.DEFAULT_EF);
+        item.setNextReviewAt(Instant.now(clock));
+        item.setIntroducedAt(null);
+    }
+
+    private void addVocab(User user, Vocabulary vocab, List<SrsItem> toSave) {
+        if (alreadyQueued(toSave, s -> s.getVocab() != null && s.getVocab().getId().equals(vocab.getId()))) return;
+        addOrReactivate(srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(user.getId(), vocab.getId()),
+                () -> newCard(user).vocab(vocab).build(), toSave);
+    }
+
+    private void addCharacter(User user, WritingCharacter character, List<SrsItem> toSave) {
+        if (alreadyQueued(toSave, s -> s.getCharacter() != null && s.getCharacter().getId().equals(character.getId()))) return;
+        addOrReactivate(srsItemRepository.findByUserIdAndCharacterIdAndDeletedFalse(user.getId(), character.getId()),
+                () -> newCard(user).character(character).build(), toSave);
+    }
+
+    private void addGrammar(User user, GrammarPoint grammar, List<SrsItem> toSave) {
+        if (alreadyQueued(toSave, s -> s.getGrammar() != null && s.getGrammar().getId().equals(grammar.getId()))) return;
+        addOrReactivate(srsItemRepository.findByUserIdAndGrammarIdAndDeletedFalse(user.getId(), grammar.getId()),
+                () -> newCard(user).grammar(grammar).build(), toSave);
+    }
+
+    /** Tránh tạo trùng khi cùng một mục xuất hiện nhiều lần trong một lô. */
+    private boolean alreadyQueued(List<SrsItem> toSave, Predicate<SrsItem> sameTarget) {
+        return toSave.stream().anyMatch(sameTarget);
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers: thời gian & hạn mức
+    // ------------------------------------------------------------------
+
+    private ZoneId appZone() {
+        return ZoneId.of(TimeConfig.APP_ZONE);
+    }
+
+    private Instant startOfToday() {
+        return LocalDate.now(clock).atStartOfDay(appZone()).toInstant();
+    }
+
+    private Instant endOfToday() {
+        return LocalDate.now(clock).atTime(23, 59, 59, 999_000_000).atZone(appZone()).toInstant();
+    }
+
+    /** Số thẻ NEW còn được phép học hôm nay. */
+    private int remainingNewQuota(Long userId) {
+        long introducedToday = srsItemRepository.countIntroducedSince(userId, startOfToday());
+        return (int) Math.max(0, srsProperties.getNewCardsPerDay() - introducedToday);
     }
 
     private SrsDueItemResponse mapToDueItemResponse(SrsItem item) {
@@ -431,6 +493,18 @@ public class SrsServiceImpl implements SrsService {
     }
 
     @Override
+    @Transactional
+    public void archiveItem(Long srsItemId) {
+        archiveItem(currentUserService.getCurrentUserId(), srsItemId);
+    }
+
+    @Override
+    @Transactional
+    public SrsDueItemResponse restoreItem(Long srsItemId) {
+        return restoreItem(currentUserService.getCurrentUserId(), srsItemId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public SrsStatsResponse getStatistics() {
         return getStatistics(currentUserService.getCurrentUserId());
@@ -464,22 +538,42 @@ public class SrsServiceImpl implements SrsService {
     @Override
     @Transactional(readOnly = true)
     public SrsForecastResponse getForecast(Long userId) {
-        ZoneId zone = ZoneId.of(TimeConfig.APP_ZONE);
+        ZoneId zone = appZone();
         LocalDate today = LocalDate.now(clock);
+        LocalDate monday = today.with(DayOfWeek.MONDAY);
+        // Thẻ NEW chỉ tính vào hôm nay, trong phạm vi hạn mức còn lại
+        long newToday = Math.min(
+                srsItemRepository.countByUserIdAndStatusAndDeletedFalse(userId, SrsStatus.NEW),
+                remainingNewQuota(userId));
 
-        List<SrsForecastDay> days = new ArrayList<>(5);
+        // Lịch tuần: Thứ 2 → Chủ nhật của tuần hiện tại
+        List<SrsForecastDay> days = new ArrayList<>(7);
         long prevCumulative = 0;
-        for (int i = 0; i < 5; i++) {
-            LocalDate day = today.plusDays(i);
-            // Mốc cuối ngày = 00:00 ngày hôm sau (theo múi giờ VN).
-            Instant endOfDay = day.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
-            long cumulative = srsItemRepository.countDueCards(userId, endOfDay);
+        for (int i = 0; i < 7; i++) {
+            LocalDate day = monday.plusDays(i);
+            Instant dayStart = day.atStartOfDay(zone).toInstant();
+            Instant nextDayStart = day.plusDays(1).atStartOfDay(zone).toInstant();
+            boolean isPast = day.isBefore(today);
+            boolean isToday = day.equals(today);
+
+            int due = 0;
+            if (!isPast) {
+                Instant endOfDay = day.atTime(23, 59, 59, 999_000_000).atZone(zone).toInstant();
+                long cumulative = srsItemRepository.countDueCards(userId, endOfDay);
+                // Hôm nay: toàn bộ thẻ đến hạn (gồm quá hạn) + thẻ mới; ngày sau: phần tăng thêm
+                due = (int) (cumulative - prevCumulative + (isToday ? newToday : 0));
+                prevCumulative = cumulative;
+            }
+            int reviewed = day.isAfter(today) ? 0
+                    : (int) srsReviewLogRepository.countReviewedItemsBetween(userId, dayStart, nextDayStart);
+
             days.add(SrsForecastDay.builder()
                     .date(day)
-                    .count((int) (cumulative - prevCumulative))
-                    .today(i == 0)
+                    .count(due)
+                    .reviewedCount(reviewed)
+                    .today(isToday)
+                    .past(isPast)
                     .build());
-            prevCumulative = cumulative;
         }
 
         return SrsForecastResponse.builder().days(days).build();
