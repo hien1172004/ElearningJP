@@ -79,3 +79,7 @@ AI/**/scratch/
 test_crop_output/
 /crop_jlpt.py
 __pycache__/
+
+# Claude Code (local only)
+CLAUDE.md
+docs/PROGRESS.md
