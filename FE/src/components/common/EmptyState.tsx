@@ -6,6 +6,8 @@ interface EmptyStateProps {
   title: string
   description?: string
   action?: React.ReactNode
+  /** Bọc trong thẻ nền trắng có viền — dùng khi đặt thẳng trên nền trang để không bị chìm */
+  card?: boolean
   className?: string
 }
 
@@ -14,13 +16,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   action,
+  card = false,
   className,
 }) => {
   return (
     <div
       className={`flex flex-col items-center justify-center py-16 px-4 text-center ${
-        className ?? ''
-      }`}
+        card ? 'bg-white rounded-xl border border-suna shadow-xs' : ''
+      } ${className ?? ''}`}
     >
       <div className="w-16 h-16 rounded-md bg-gray-100 text-gray-400 flex items-center justify-center mb-4">
         {icon ?? <Inbox className="w-8 h-8" />}

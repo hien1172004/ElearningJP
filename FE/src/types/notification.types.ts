@@ -23,6 +23,8 @@ export type NotificationType =
   | 'COMMENT_MODERATED'
   /** Thông báo hàng loạt do ADMIN / TEACHER gửi */
   | 'ANNOUNCEMENT'
+  /** Khóa học đã đăng ký được chuyển giữa bản nháp và xuất bản */
+  | 'COURSE_STATUS_CHANGED'
 
 /** Dữ liệu đính kèm — dùng để điều hướng khi click (vd reply bình luận). */
 export interface NotificationData {
@@ -30,7 +32,7 @@ export interface NotificationData {
   replyId?: number
   targetType?: 'LESSON' | 'VOCABULARY' | 'KANJI' | 'GRAMMAR'
   targetId?: number
-  /** ANNOUNCEMENT: khóa học liên quan / đường dẫn trong ứng dụng */
+  /** ANNOUNCEMENT / COURSE_STATUS_CHANGED: khóa học liên quan / đường dẫn trong ứng dụng */
   courseId?: number
   link?: string
   [key: string]: unknown

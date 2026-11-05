@@ -17,11 +17,17 @@ import {
   type SummaryRangePreset,
 } from '@/utils/progress'
 import { todayIso } from '@/utils/week'
+import {
+  GOAL_PERIOD_LABEL,
+  goalPeriodForPreset,
+  monthlyGoalFromDaily,
+} from '@/utils/progressGoal'
 
 /**
  * ProgressSummaryBlock — Khối 1: tổng hợp tiến độ.
  *
- * Hiển thị 6 thẻ số liệu + mascot động viên kèm thẻ "Mục tiêu ngày",
+ * Hiển thị 6 thẻ số liệu + mascot động viên kèm thẻ mục tiêu theo kỳ lọc
+ * (ngày / tuần / tháng; toàn thời gian và khác dùng mục tiêu tuần),
  * cùng bộ lọc khoảng thời gian.
  *
  * <p><b>Hai khái niệm được tách bạch:</b></p>
@@ -76,6 +82,13 @@ interface ProgressSummaryBlockProps {
   from?: string
   to?: string
   onRangeChange?: (range: ProgressRange) => void
+  /** Mục tiêu từ/tuần đã chọn; null → suy ra từ mục tiêu ngày × 7. */
+  weeklyGoalWords?: number | null
+  /**
+   * Số từ mới của tuần này — chỉ cần khi kỳ là "Toàn thời gian"/"Khác"
+   * (lúc đó mascot so với mục tiêu tuần, không theo số liệu của kỳ).
+   */
+  currentWeekWordsLearned?: number
 }
 
 // --------------------------------------------------------------------------
@@ -158,6 +171,8 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
   from,
   to,
   onRangeChange,
+  weeklyGoalWords = null,
+  currentWeekWordsLearned,
 }) => {
   // "Khác" chỉ mở ô chọn ngày; chưa chọn xong thì số liệu vẫn giữ theo kỳ cũ.
   const [customOpen, setCustomOpen] = React.useState(preset === 'custom')
@@ -184,12 +199,30 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
   if (isError && !summary) return <ErrorBlock onRefetch={onRefetch} />
   if (!summary) return <EmptyBlock />
 
-  // --- Thẻ "Mục tiêu ngày" ---
-  // Dùng `wordsLearnedToday` (tiến độ HÔM NAY) chứ không phải tổng của cả kỳ.
-  // BE trả về 0 nếu user chưa có dữ liệu hôm nay (field mới, an toàn với BE cũ).
-  const goalWords = summary.goalWords
-  const wordsToday = summary.wordsLearnedToday ?? 0
-  const todayGoalMet = summary.goalMetToday ?? wordsToday >= goalWords
+  // --- Thẻ mục tiêu cạnh mascot: theo kỳ đang lọc ---
+  // Ngày  → từ mới HÔM NAY / mục tiêu ngày.
+  // Tuần  → từ mới của kỳ (tuần này) / mục tiêu tuần.
+  // Tháng → từ mới của kỳ (tháng này) / mục tiêu ngày × 30.
+  // Toàn thời gian / Khác → từ mới tuần này / mục tiêu tuần.
+  const dailyGoal = summary.goalWords
+  const goalPeriod = goalPeriodForPreset(preset)
+  let learnedWords: number
+  let goalWords: number
+  if (goalPeriod === 'day') {
+    // BE trả về 0 nếu user chưa có dữ liệu hôm nay (field mới, an toàn với BE cũ).
+    learnedWords = summary.wordsLearnedToday ?? 0
+    goalWords = dailyGoal
+  } else if (goalPeriod === 'month') {
+    learnedWords = summary.wordsLearned
+    goalWords = monthlyGoalFromDaily(dailyGoal)
+  } else {
+    learnedWords = preset === 'week' ? summary.wordsLearned : (currentWeekWordsLearned ?? 0)
+    goalWords = weeklyGoalWords ?? dailyGoal * 7
+  }
+  const goalMet =
+    goalPeriod === 'day'
+      ? (summary.goalMetToday ?? learnedWords >= goalWords)
+      : learnedWords >= goalWords
 
   return (
     <section className="space-y-3" aria-label="Tổng hợp tiến độ học tập">
@@ -296,35 +329,35 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
 
         {/* Mascot cạnh danh */}
         <div className="flex flex-col items-center justify-center gap-2 bg-kinari rounded-md p-4">
-          <MascotProgress learned={wordsToday} goal={goalWords} size={128} />
+          <MascotProgress learned={learnedWords} goal={goalWords} size={128} />
           <div className="w-full max-w-[240px] text-center">
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-              Mục tiêu ngày
+              {GOAL_PERIOD_LABEL[goalPeriod]}
             </p>
 
-            {/* Số từ MỚI học hôm nay / mục tiêu */}
+            {/* Số từ MỚI học trong kỳ mục tiêu / mục tiêu */}
             <p className="text-xl font-extrabold text-gray-900 mt-0.5 tabular-nums">
-              {wordsToday}
+              {learnedWords}
               <span className="text-sm font-bold text-gray-400">
                 /{goalWords}
               </span>
             </p>
 
-            {/* Thanh tiến độ mục tiêu hôm nay */}
+            {/* Thanh tiến độ mục tiêu */}
             <div className="h-1.5 w-full bg-gray-100 rounded-full mt-2 overflow-hidden">
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-500',
-                  todayGoalMet
+                  goalMet
                     ? 'bg-emerald-500'
-                    : wordsToday > 0
+                    : learnedWords > 0
                       ? 'bg-blue-500'
                       : 'bg-gray-300',
                 )}
                 style={{
                   width: `${Math.min(
                     100,
-                    Math.round((wordsToday / Math.max(goalWords, 1)) * 100),
+                    Math.round((learnedWords / Math.max(goalWords, 1)) * 100),
                   )}%`,
                 }}
               />
@@ -333,9 +366,9 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
             <Tooltip title="Từ đã học = số từ MỚI tra lần đầu. Tra lại từ cũ chỉ tăng số lần tra từ.">
               <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 mt-1.5 cursor-help">
                 <Info className="w-3 h-3" />
-                {todayGoalMet
+                {goalMet
                   ? 'Đã đạt mục tiêu!'
-                  : `Cần thêm ${Math.max(goalWords - wordsToday, 0)} từ`}
+                  : `Cần thêm ${Math.max(goalWords - learnedWords, 0)} từ`}
               </span>
             </Tooltip>
 

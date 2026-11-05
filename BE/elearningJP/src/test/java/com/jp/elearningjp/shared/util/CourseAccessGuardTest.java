@@ -162,4 +162,66 @@ class CourseAccessGuardTest {
             assertEquals(ErrorCode.FORBIDDEN_LESSON_ACCESS, ex.getErrorCode());
         }
     }
+
+    @Nested
+    @DisplayName("requireContentAccess / canViewUnpublished (xem nội dung không cần đăng ký)")
+    class RequireContentAccess {
+
+        @Test
+        @DisplayName("ADMIN → xem mọi khóa, không cần đăng ký")
+        void admin_canPreviewAnyCourse() {
+            when(currentUserService.isAdmin()).thenReturn(true);
+
+            assertDoesNotThrow(() -> courseAccessGuard.requireContentAccess(course));
+            verify(enrollmentRepository, never())
+                    .existsByUserIdAndCourseIdAndDeletedFalse(
+                            org.mockito.ArgumentMatchers.anyLong(),
+                            org.mockito.ArgumentMatchers.anyLong());
+        }
+
+        @Test
+        @DisplayName("Giáo viên chủ khóa → xem khóa của mình, không cần đăng ký")
+        void owner_canPreviewOwnCourse() {
+            when(currentUserService.isAdmin()).thenReturn(false);
+            when(currentUserService.getCurrentUserId()).thenReturn(owner.getId());
+
+            assertDoesNotThrow(() -> courseAccessGuard.requireContentAccess(course));
+        }
+
+        @Test
+        @DisplayName("Giáo viên KHÁC chưa đăng ký → throw COURSE_NOT_ENROLLED")
+        void otherTeacher_notEnrolled_throws() {
+            when(currentUserService.isAdmin()).thenReturn(false);
+            when(currentUserService.getCurrentUserId()).thenReturn(otherTeacher.getId());
+            when(enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(otherTeacher.getId(), 100L))
+                    .thenReturn(false);
+
+            AppException ex = assertThrows(AppException.class,
+                    () -> courseAccessGuard.requireContentAccess(course));
+            assertEquals(ErrorCode.COURSE_NOT_ENROLLED, ex.getErrorCode());
+        }
+
+        @Test
+        @DisplayName("Học viên đã đăng ký → pass")
+        void studentEnrolled_passes() {
+            when(currentUserService.isAdmin()).thenReturn(false);
+            when(currentUserService.getCurrentUserId()).thenReturn(student.getId());
+            when(enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(student.getId(), 100L))
+                    .thenReturn(true);
+
+            assertDoesNotThrow(() -> courseAccessGuard.requireContentAccess(course));
+        }
+
+        @Test
+        @DisplayName("Khóa chưa xuất bản: chủ khóa thấy, giáo viên khác (chưa đăng ký) và khách thì không")
+        void canViewUnpublished_onlyOwnerAdminOrEnrolled() {
+            when(currentUserService.isAdmin()).thenReturn(false);
+            when(enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(otherTeacher.getId(), 100L))
+                    .thenReturn(false);
+
+            assertEquals(true, courseAccessGuard.canViewUnpublished(course, owner.getId()));
+            assertEquals(false, courseAccessGuard.canViewUnpublished(course, otherTeacher.getId()));
+            assertEquals(false, courseAccessGuard.canViewUnpublished(course, null));
+        }
+    }
 }

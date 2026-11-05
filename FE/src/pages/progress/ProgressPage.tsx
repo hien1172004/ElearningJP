@@ -35,6 +35,15 @@ const ProgressDashboard: React.FC = () => {
   )
 
   const { data, isLoading, isError, refetch } = useProgressSummary(queryParams)
+  const { data: goal } = useProgressGoal()
+
+  // "Toàn thời gian"/"Khác": mascot so với mục tiêu tuần → cần số từ mới của tuần này.
+  const needCurrentWeek = range.preset === 'all' || range.preset === 'custom'
+  const currentWeek = useMemo(() => resolvePresetRange('week'), [])
+  const { data: weekSummary } = useProgressSummary(
+    { from: currentWeek.from, to: currentWeek.to },
+    { enabled: needCurrentWeek },
+  )
 
   return (
     <div className="space-y-4 pb-12">
@@ -50,6 +59,8 @@ const ProgressDashboard: React.FC = () => {
             from={range.from}
             to={range.to}
             onRangeChange={setRange}
+            weeklyGoalWords={goal?.weeklyGoalWords ?? null}
+            currentWeekWordsLearned={needCurrentWeek ? weekSummary?.wordsLearned : undefined}
           />
         </div>
         <div className="xl:col-span-6 2xl:col-span-5 min-w-0 pt-5 xl:pt-0 xl:pl-5 border-t xl:border-t-0 xl:border-l border-suna">

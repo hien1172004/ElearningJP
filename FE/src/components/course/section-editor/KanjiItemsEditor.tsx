@@ -30,10 +30,16 @@ import { KanjiHandwritingModal } from '@/components/dictionary'
 // Schema + types
 // =============================================================================
 const schema = z.object({
-  character: z.string().min(1, 'Vui lòng nhập chữ Kanji').max(8),
+  character: z
+    .string({ error: 'Vui lòng chọn một chữ Kanji từ từ điển' })
+    .min(1, 'Vui lòng chọn một chữ Kanji từ từ điển')
+    .max(8, 'Chữ Kanji không hợp lệ'),
   note: z.string().optional(),
   orderIndex: z.number().int().min(1).optional(),
 })
+
+/** Sửa: không đổi được chữ Kanji (BE update không nhận character) → không bắt buộc trường này */
+const editSchema = schema.omit({ character: true })
 
 type FormValues = z.infer<typeof schema>
 
@@ -450,7 +456,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
   const handleSubmit = async () => {
     try {
       const values = (await form.validateFields()) as FormValues
-      const parsed = schema.safeParse(values)
+      // Khi sửa, ô Kanji bị ẩn và có thể chưa render xong (đang tải chi tiết) → dùng editSchema
+      const parsed = (editing ? editSchema : schema).safeParse(values)
       if (!parsed.success) {
         message.error(parsed.error.issues[0].message)
         return
@@ -508,7 +515,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         await updateKanjiItem.mutateAsync({ id: editing.id, payload })
       } else {
         const payload: LessonKanjiItemCreateRequest = {
-          character: v.character,
+          // Nhánh tạo mới đã kiểm tra bằng `schema` (bắt buộc character)
+          character: values.character,
           note: v.note,
           orderIndex: v.orderIndex,
           relatedVocabulary:

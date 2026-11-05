@@ -128,8 +128,8 @@ export const NotificationBell: React.FC = () => {
 
     const data = notification.dataJson
 
-    // Thông báo hàng loạt: mở đường dẫn đính kèm, hoặc trang khóa học liên quan
-    if (notification.type === 'ANNOUNCEMENT') {
+    // Thông báo hàng loạt / đổi trạng thái khóa học: mở đường dẫn đính kèm, hoặc trang khóa học liên quan
+    if (notification.type === 'ANNOUNCEMENT' || notification.type === 'COURSE_STATUS_CHANGED') {
       const link =
         // Chỉ đường dẫn trong ứng dụng ("/..."), chặn "//domain" (mở sang trang ngoài)
         typeof data?.link === 'string' && data.link.startsWith('/') && !data.link.startsWith('//')

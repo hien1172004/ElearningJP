@@ -5,7 +5,7 @@ import { Button as AntdButton, Input, Select, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { PageHeader, EmptyState, confirmDialog } from '@/components/common'
+import { BackButton, EmptyState, confirmDialog } from '@/components/common'
 import { useBroadcastHistory, useCourses, useRecipientCount, useSendBroadcast } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { isAdmin } from '@/utils/roles'
@@ -166,16 +166,8 @@ export const AdminBroadcastsPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-      <PageHeader
-        // badge="Quản trị"
-        title="Gửi thông báo"
-        subtitle={
-          admin
-            ? 'Gửi thông báo tới toàn bộ người dùng, theo vai trò hoặc học viên của một khóa học.'
-            : 'Gửi thông báo tới học viên các khóa học của bạn.'
-        }
-        variant="indigo"
-      />
+      {/* Mở từ trang học viên (có ?courseId) → cho quay lại trang đó */}
+      {presetCourseId && <BackButton to={`/teacher/students?courseId=${presetCourseId}`} />}
 
       {/* ======================== Soạn thông báo ======================== */}
       <section className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">

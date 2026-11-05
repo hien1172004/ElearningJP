@@ -3,7 +3,8 @@ import { Sparkles } from 'lucide-react'
 
 interface PageHeaderProps {
   badge?: string
-  title: React.ReactNode
+  /** Bỏ trống để chỉ hiển thị hàng nút thao tác */
+  title?: React.ReactNode
   subtitle?: React.ReactNode
   actions?: React.ReactNode
   /** Màu chữ của badge. Mặc định: indigo. */

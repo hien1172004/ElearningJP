@@ -10,7 +10,6 @@ import { useCourses, useDeleteCourse } from '@/hooks'
 import { courseService } from '@/services'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { useAuthStore } from '@/stores'
 import type { CourseSummary } from '@/types'
 
 function statusBadge(published: boolean, archivedAt?: string | null) {
@@ -19,10 +18,30 @@ function statusBadge(published: boolean, archivedAt?: string | null) {
   return <Tag className="rounded-md" color="default">Bản nháp</Tag>
 }
 
+/** Ảnh bìa khóa học; chưa có ảnh hoặc ảnh lỗi → ô chữ cái đầu của tiêu đề. */
+const CourseThumb: React.FC<{ src?: string; title?: string }> = ({ src, title }) => {
+  const [failed, setFailed] = useState(false)
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="w-10 h-10 rounded object-cover border border-indigo-200 shrink-0"
+      />
+    )
+  }
+  return (
+    <div className="w-10 h-10 rounded bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center justify-center border border-indigo-200 shrink-0">
+      {title?.[0] ?? '日'}
+    </div>
+  )
+}
+
 export const TeacherCoursesPage: React.FC = () => {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const user = useAuthStore((s) => s.user)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCourse, setEditingCourse] = useState<CourseSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null)
@@ -59,9 +78,7 @@ export const TeacherCoursesPage: React.FC = () => {
       key: 'title',
       render: (_, record) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center justify-center border border-indigo-200 shrink-0">
-            {record.title?.[0] ?? '日'}
-          </div>
+          <CourseThumb src={record.thumbnailUrl} title={record.title} />
           <div>
             <p className="font-semibold text-sm text-gray-900">{record.title}</p>
             {/* <p className="text-xs text-gray-400">/{record.slug}</p> */}
@@ -139,9 +156,8 @@ export const TeacherCoursesPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        // badge="Quản lý khóa học"
-        title="Khoá học của tôi"
-        subtitle={`Xin chào ${user?.fullName || user?.email || 'Giáo viên'}! Quản lý danh sách khóa học của bạn.`}
+        // Cùng khung với nội dung bên dưới để nút thao tác thẳng mép phải bảng
+        className="max-w-7xl mx-auto px-3 sm:px-4"
         actions={
           <AntdButton
             type="primary"

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BackButton } from '@/components/common'
 import { examService } from '../../services/exam.service'
 import type { ExamAttemptHistory } from '../../types/exam.types'
 import {
@@ -64,24 +65,9 @@ export const ExamHistoryPage: React.FC = () => {
   return (
     <div className="pb-8">
       <div className="max-w-6xl mx-auto space-y-4">
-        {/* Header Title */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="w-7 h-7 rounded-lg bg-kamenozoki dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                <History className="w-4 h-4" />
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                Hồ sơ học tập
-              </span>
-            </div>
-            <h1 className="text-lg sm:text-xl font-bold text-sumi dark:text-white">
-              Lịch sử thi thử JLPT
-            </h1>
-            <p className="text-sm text-nibi dark:text-slate-400 mt-0.5">
-              Xem lại toàn bộ kết quả, phiếu điểm và bảng đối chiếu đáp án chi tiết các kỳ thi đã làm.
-            </p>
-          </div>
+        {/* Header: nút quay lại + hành động */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <BackButton to="/exams" />
 
           <button
             onClick={() => navigate('/exams')}

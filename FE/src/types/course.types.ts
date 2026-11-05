@@ -37,7 +37,6 @@ export interface CourseDetail extends CourseSummary {
 
 export interface CourseCreateRequest {
   title: string
-  slug: string
   jlptLevel: JlptLevel
   description?: string
   thumbnailUrl?: string
@@ -46,7 +45,6 @@ export interface CourseCreateRequest {
 
 export interface CourseUpdateRequest {
   title?: string
-  slug?: string
   jlptLevel?: JlptLevel
   description?: string
   thumbnailUrl?: string

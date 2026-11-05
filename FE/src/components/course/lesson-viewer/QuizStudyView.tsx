@@ -17,6 +17,8 @@ interface QuizStudyViewProps {
   onComplete?: () => void
   /** Báo cho parent là section QUIZ đã "xong" (chỉ khi passed). */
   onSectionDone?: () => void
+  /** Admin / giáo viên chủ khóa xem trước (chưa đăng ký): chỉ xem câu hỏi, không nộp bài */
+  previewMode?: boolean
 }
 
 // ============================================================================
@@ -42,7 +44,7 @@ function getMatchingData(q: QuizQuestionApi): QuizMatchingData | null {
 // Component
 // ============================================================================
 
-export const QuizStudyView: React.FC<QuizStudyViewProps> = ({ lessonId, onComplete, onSectionDone }) => {
+export const QuizStudyView: React.FC<QuizStudyViewProps> = ({ lessonId, onComplete, onSectionDone, previewMode = false }) => {
   const { data: quiz, isLoading, isError } = useLessonQuiz(lessonId)
   const submitQuiz = useSubmitQuiz(lessonId)
 
@@ -279,6 +281,10 @@ export const QuizStudyView: React.FC<QuizStudyViewProps> = ({ lessonId, onComple
             Câu tiếp theo
             <ChevronRight className="w-4 h-4" />
           </button>
+        ) : previewMode ? (
+          <span className="text-xs font-semibold text-slate-500">
+            Chế độ xem trước — không nộp bài
+          </span>
         ) : (
           <AntdButton
             type="primary"

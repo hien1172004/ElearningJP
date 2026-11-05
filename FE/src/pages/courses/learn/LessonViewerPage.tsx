@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react'
-import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2,
   AlertTriangle,
@@ -14,7 +14,7 @@ import {
   EditOutlined,
   FileTextOutlined,
 } from '@ant-design/icons'
-import { PageHeader, LoadingState, StudyTimerTracker } from '@/components/common'
+import { PageHeader, LoadingState, StudyTimerTracker, BackButton } from '@/components/common'
 import { CommentSection } from '@/components/comment'
 import {
   LessonNavSidebar,
@@ -31,6 +31,8 @@ import {
 } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { toSlug } from '@/utils'
+import { getLessonDepth, nextLessonState } from '@/utils/lessonNav'
+import { canPreviewCourse } from '@/utils/roles'
 import { parseCommentFocus } from '@/utils/commentFocus'
 import type {
   LessonSectionType,
@@ -75,7 +77,17 @@ export const LessonViewerPage: React.FC = () => {
   )
 
   const navigate = useNavigate()
+  const location = useLocation()
+
+  /** Quay lại trang khóa học: lùi lịch sử nếu vào từ trang khóa học, ngược lại mở trang khóa học. */
+  const backToCourse = () => {
+    const depth = getLessonDepth(location.state)
+    const idx = (window.history.state as { idx?: number } | null)?.idx
+    if (depth > 0 && typeof idx === 'number' && idx >= depth) navigate(-depth)
+    else navigate(`/courses/${cId}`)
+  }
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
 
   const { data: course } = useCourseDetail(cId)
   const {
@@ -107,6 +119,7 @@ export const LessonViewerPage: React.FC = () => {
       nextParams.set('lessonId', String(lId))
       navigate(`/learn/${courseSlug}/${lessonSlug}?${nextParams.toString()}`, {
         replace: true,
+        state: location.state, // giữ lessonDepth (nút quay lại)
       })
     }
   }, [course, lesson, cId, lId, params.courseSlug, params.lessonSlug, qCourseId, qLessonId, searchParams, navigate])
@@ -117,6 +130,9 @@ export const LessonViewerPage: React.FC = () => {
   // Tự động start khi đã đăng ký khóa + không có lỗi. Giáo viên/admin xem bài (chưa đăng ký)
   // không gọi /start — BE chỉ ghi tiến độ cho học viên nên sẽ trả 403.
   const isEnrolled = course?.isEnrolled ?? false
+  // Admin (mọi khóa) / giáo viên chủ khóa chưa đăng ký → chế độ xem trước:
+  // mở mọi phần, không ghi tiến độ, không nộp quiz
+  const isPreview = !isEnrolled && canPreviewCourse(user, course?.createdByUserId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (lId && isAuthenticated && isEnrolled && !isError) {
@@ -216,6 +232,7 @@ export const LessonViewerPage: React.FC = () => {
    * Nếu lesson không có cả 3 dạng lý thuyết → QUIZ mở luôn (chỉ cần 0 dạng prerequisite).
    */
   const lockedMap = useMemo<Record<PageKind, boolean>>(() => {
+    if (isPreview) return { KANJI: false, VOCAB: false, GRAMMAR: false, QUIZ: false }
     const hasKanji = navItems.some((it) => it.kind === 'KANJI')
     const hasVocab = navItems.some((it) => it.kind === 'VOCAB')
     const hasGrammar = navItems.some((it) => it.kind === 'GRAMMAR')
@@ -230,7 +247,7 @@ export const LessonViewerPage: React.FC = () => {
       GRAMMAR: !(kanjiDone && vocabDone),
       QUIZ: !(kanjiDone && vocabDone && grammarDone),
     }
-  }, [navItems, sectionDone])
+  }, [navItems, sectionDone, isPreview])
 
   // Defensive: nếu trang hiện tại bị khóa (vd: pageIdx trỏ tới QUIZ mà chưa đủ điều kiện)
   // → tự động nhảy về trang đầu tiên KHÔNG bị khóa.
@@ -332,11 +349,13 @@ export const LessonViewerPage: React.FC = () => {
       const cSlug = course?.slug ?? String(cId)
       navigate(
         `/learn/${cSlug}/${toSlug(nextLesson.title)}?courseId=${cId}&lessonId=${nextLesson.id}`,
+        { state: nextLessonState(location.state) },
       )
     }
   }
 
   const handleComplete = () => {
+    if (isPreview) return // xem trước: không ghi tiến độ
     if (!isLessonCompleteable && !isCompleted) return
     completeLesson.mutate()
   }
@@ -368,7 +387,9 @@ export const LessonViewerPage: React.FC = () => {
           }
           variant="indigo"
           actions={
-            isCompleted ? (
+            isPreview ? (
+              <Tag color="gold" className="!m-0 font-bold">Chế độ xem trước</Tag>
+            ) : isCompleted ? (
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-sm font-bold">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                 Đã hoàn thành
@@ -431,6 +452,9 @@ export const LessonViewerPage: React.FC = () => {
     <div className="pb-12">
       {/* Đếm thời gian học — component ẩn, không ảnh hưởng layout */}
       <StudyTimerTracker />
+      {/* Vào từ trang khóa học → lùi đúng số bài đã đi để về trang khóa học cũ (giữ lịch sử phía trước);
+          vào thẳng (thông báo, link…) → mở trang khóa học */}
+      <BackButton onClick={backToCourse} label="Quay lại khóa học" className="mb-2" />
       {/* Header */}
       <PageHeader
         title={
@@ -442,11 +466,18 @@ export const LessonViewerPage: React.FC = () => {
           </div>
         }
         actions={
-          course?.jlptLevel && (
-            <Tag color="purple" className="!m-0 font-bold text-sm !px-3 !py-0.5">
-              JLPT {course.jlptLevel}
-            </Tag>
-          )
+          <div className="flex items-center gap-2">
+            {isPreview && (
+              <Tag color="gold" className="!m-0 font-bold text-sm !px-3 !py-0.5">
+                Chế độ xem trước
+              </Tag>
+            )}
+            {course?.jlptLevel && (
+              <Tag color="purple" className="!m-0 font-bold text-sm !px-3 !py-0.5">
+                JLPT {course.jlptLevel}
+              </Tag>
+            )}
+          </div>
         }
         variant="indigo"
       />
@@ -460,7 +491,7 @@ export const LessonViewerPage: React.FC = () => {
               courseSlug={course?.slug ?? ''}
               lessons={lessons}
               currentLessonId={lId}
-              isEnrolled={course?.isEnrolled ?? false}
+              isEnrolled={isEnrolled || isPreview}
             />
             {/* Page navigator cho 4 dạng bài */}
             <PageNavigator
@@ -496,6 +527,7 @@ export const LessonViewerPage: React.FC = () => {
               {currentPage?.kind === 'QUIZ' && (
                 <QuizStudyView
                   lessonId={lId}
+                  previewMode={isPreview}
                   onComplete={handleComplete}
                   onSectionDone={() => markSectionDone('QUIZ')}
                 />

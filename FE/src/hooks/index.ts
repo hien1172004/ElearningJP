@@ -6,7 +6,7 @@ export { useResetPassword } from './useResetPassword'
 export { useValidateResetToken } from './useValidateResetToken'
 export { useUserProfile, useUpdateProfile, useChangeAvatar, USER_PROFILE_QUERY_KEY } from './useUserProfile'
 export { useChangePassword } from './useChangePassword'
-export { useAdminUsers, useUpdateUserStatus, useUpdateUserRoles } from './useAdminUsers'
+export { useAdminUsers, useUpdateUserStatus, useCreateUser } from './useAdminUsers'
 export { useAdminDashboard } from './useAdminDashboard'
 export {
   useAdminScenarios,

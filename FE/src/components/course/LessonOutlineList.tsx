@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Circle, PlayCircle, Sparkles, ChevronRight } from 'lucide-react'
 import { toSlug } from '@/utils'
+import { LESSON_FROM_COURSE_STATE } from '@/utils/lessonNav'
 import type { LessonOutline, ProgressStatus } from '@/types'
 
 interface LessonOutlineListProps {
@@ -60,7 +61,7 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
             <div
               onClick={() => {
                 if (onSelect) onSelect(lesson)
-                else if (isEnrolled) navigate(href)
+                else if (isEnrolled) navigate(href, { state: LESSON_FROM_COURSE_STATE })
               }}
               className={`flex items-center gap-3 p-3.5 rounded-md border border-gray-200/80 hover:border-indigo-300 hover:bg-indigo-50/30 transition cursor-pointer ${
                 isEnrolled ? '' : 'opacity-80'

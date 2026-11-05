@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { Button as AntdButton, Input, Modal, Pagination, Segmented, Select, Tabs } from 'antd'
 import { toast } from 'sonner'
-import { PageHeader, LoadingState, EmptyState, SearchInput, confirmDialog } from '@/components/common'
+import { LoadingState, EmptyState, SearchInput, confirmDialog } from '@/components/common'
+import { WHITE_TAB_BAR_CLASS, WHITE_TAB_BAR_STYLE } from '@/lib/antd'
 import { ModerationItemCard, TARGET_TYPE_LABELS } from '@/components/admin'
 import {
   useModerationAction,
@@ -17,7 +18,6 @@ import type {
   CommentTargetType,
   ModerationAction,
   ModerationItem,
-  ModerationKind,
   ModerationReportStatus,
   PageResponse,
 } from '@/types'
@@ -63,6 +63,7 @@ const ItemList: React.FC<{
           title="Không tải được dữ liệu"
           description="Kiểm tra kết nối hoặc quyền truy cập rồi thử lại."
           action={<AntdButton onClick={onRetry}>Thử lại</AntdButton>}
+          card
         />
       )
     }
@@ -73,6 +74,7 @@ const ItemList: React.FC<{
           icon={<ShieldAlert className="w-10 h-10 text-slate-300" />}
           title={emptyTitle}
           description={emptyDescription}
+          card
         />
       )
     }
@@ -113,21 +115,20 @@ export const AdminModerationPage: React.FC = () => {
   const [handledStatus, setHandledStatus] = useState<Exclude<ModerationReportStatus, 'OPEN'>>('RESOLVED')
   const [handledPage, setHandledPage] = useState(1)
 
-  const [kind, setKind] = useState<ModerationKind>('COMMENT')
   const [browseStatus, setBrowseStatus] = useState<'VISIBLE' | 'HIDDEN' | undefined>()
   const [targetType, setTargetType] = useState<CommentTargetType | undefined>()
   const [keywordInput, setKeywordInput] = useState('')
   const [keyword, setKeyword] = useState('')
   const [browsePage, setBrowsePage] = useState(1)
 
-  // Hộp thoại nhập ghi chú khi ẩn / xóa
-  const [pending, setPending] = useState<{ item: ModerationItem; action: 'hide' | 'delete' } | null>(null)
+  // Hộp thoại nhập ghi chú khi ẩn (kiểm duyệt chỉ ẩn, không xóa)
+  const [pending, setPending] = useState<{ item: ModerationItem; action: 'hide' } | null>(null)
   const [note, setNote] = useState('')
 
   const openQueue = useModerationQueue({ status: 'OPEN', page: openPage, size: PAGE_SIZE })
   const handledQueue = useModerationQueue({ status: handledStatus, page: handledPage, size: PAGE_SIZE })
+  // Tra cứu gộp cả bình luận gốc lẫn trả lời (không lọc theo loại)
   const browse = useModerationBrowse({
-    kind,
     status: browseStatus,
     targetType,
     keyword: keyword || undefined,
@@ -145,7 +146,7 @@ export const AdminModerationPage: React.FC = () => {
     )
 
   const handleAction = async (item: ModerationItem, action: ModerationAction) => {
-    if (action === 'hide' || action === 'delete') {
+    if (action === 'hide') {
       setNote('')
       setPending({ item, action })
       return
@@ -176,20 +177,12 @@ export const AdminModerationPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-      <PageHeader
-        // badge="Quản trị"
-        title="Kiểm duyệt bình luận"
-        subtitle={
-          admin
-            ? 'Xử lý báo cáo vi phạm và kiểm duyệt mọi bình luận trong hệ thống.'
-            : 'Xử lý báo cáo vi phạm và kiểm duyệt bình luận trong các bài học thuộc khóa của bạn.'
-        }
-        variant="amber"
-      />
 
       <Tabs
         activeKey={tab}
         onChange={(k) => setTab(k as TabKey)}
+        tabBarStyle={WHITE_TAB_BAR_STYLE}
+        className={WHITE_TAB_BAR_CLASS}
         items={[
           {
             key: 'open',
@@ -221,7 +214,7 @@ export const AdminModerationPage: React.FC = () => {
                     setHandledPage(1)
                   }}
                   options={[
-                    { label: 'Đã ẩn / xóa', value: 'RESOLVED' },
+                    { label: 'Đã ẩn', value: 'RESOLVED' },
                     { label: 'Không vi phạm', value: 'REJECTED' },
                   ]}
                 />
@@ -245,17 +238,6 @@ export const AdminModerationPage: React.FC = () => {
             children: (
               <div className="space-y-4">
                 <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
-                  <Segmented
-                    value={kind}
-                    onChange={(v) => {
-                      setKind(v as ModerationKind)
-                      setBrowsePage(1)
-                    }}
-                    options={[
-                      { label: 'Bình luận', value: 'COMMENT' },
-                      { label: 'Trả lời', value: 'REPLY' },
-                    ]}
-                  />
                   <SearchInput
                     placeholder="Nội dung, tên hoặc email người viết"
                     value={keywordInput}
@@ -317,10 +299,9 @@ export const AdminModerationPage: React.FC = () => {
 
       <Modal
         open={!!pending}
-        title={pending?.action === 'delete' ? 'Xóa nội dung này?' : 'Ẩn nội dung này?'}
-        okText={pending?.action === 'delete' ? 'Xóa' : 'Ẩn'}
+        title="Ẩn nội dung này?"
+        okText="Ẩn"
         cancelText="Huỷ"
-        okButtonProps={{ danger: pending?.action === 'delete' }}
         confirmLoading={moderate.isPending}
         onOk={() => pending && runAction(pending.item, pending.action, note.trim() || undefined)}
         onCancel={() => setPending(null)}
@@ -328,9 +309,7 @@ export const AdminModerationPage: React.FC = () => {
         destroyOnHidden
       >
         <p className="text-sm text-slate-600 mb-3">
-          {pending?.action === 'delete'
-            ? 'Nội dung sẽ bị xóa (kèm các trả lời bên dưới nếu là trả lời). Người viết sẽ nhận được thông báo.'
-            : 'Nội dung sẽ bị gỡ khỏi trang công khai, có thể khôi phục lại sau. Người viết sẽ nhận được thông báo.'}
+          Nội dung sẽ bị gỡ khỏi trang công khai, có thể khôi phục lại sau. Người viết sẽ nhận được thông báo.
         </p>
         <Input.TextArea
           value={note}

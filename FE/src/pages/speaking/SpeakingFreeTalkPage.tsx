@@ -2,7 +2,6 @@ import { toast } from 'sonner'
 import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronLeft,
   Settings2,
   FileText,
   Sparkles,
@@ -17,6 +16,7 @@ import { MaziikoMascot } from '@/components/speaking/MaziikoMascot'
 import { speakingService } from '@/services/speaking.service'
 import { useAuthStore } from '@/stores'
 import { useSpeechRecognition, cleanDuplicateSpeech } from '@/hooks/useSpeechRecognition'
+import { BackButton } from '@/components/common'
 
 const FREE_TALK_TOPICS = [
   { id: 'anime', text: '好きなアニメ', sub: 'Anime yêu thích' },
@@ -154,16 +154,10 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 1. Header Mazii: < Quay lại | Trò chuyện tự do | ⚙️ 📋 */}
       {/* ==================================================================== */}
-      <div className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between">
+      <div className="sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between bg-white rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/speaking')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition shadow-2xs"
-            >
-              <ChevronLeft className="w-4 h-4 text-slate-500" />
-              <span>Quay lại</span>
-            </button>
+            <BackButton to="/speaking" />
             <h1 className="text-sm sm:text-base font-bold text-slate-800">
               Trò chuyện tự do
             </h1>

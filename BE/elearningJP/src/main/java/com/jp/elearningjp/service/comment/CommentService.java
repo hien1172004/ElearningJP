@@ -14,6 +14,7 @@ import com.jp.elearningjp.dto.response.comment.CommentResponse;
 import com.jp.elearningjp.entity.comment.Comment;
 import com.jp.elearningjp.entity.comment.CommentReply;
 import com.jp.elearningjp.entity.curriculum.Course;
+import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
@@ -104,7 +105,8 @@ public class CommentService {
         Page<Comment> result = commentRepository.findByTarget(targetType, targetId, toPageable(page, size));
 
         Long currentUserId = currentUserIdOrNull();
-        List<CommentResponse> items = toCommentResponses(result.getContent(), currentUserId);
+        boolean moderator = isModerator(targetType, targetId, currentUserId);
+        List<CommentResponse> items = toCommentResponses(result.getContent(), currentUserId, moderator);
 
         return CommentListResponse.builder()
                 .items(items)
@@ -128,9 +130,10 @@ public class CommentService {
                 .findByCommentIdOrderByCreatedAtAsc(commentId, PageRequest.of(0, DETAIL_REPLY_LIMIT))
                 .getContent();
 
+        boolean moderator = isModerator(comment.getTargetType(), comment.getTargetId(), currentUserId);
         return CommentDetailResponse.builder()
-                .comment(toCommentResponses(List.of(comment), currentUserId).get(0))
-                .replies(toReplyResponses(replies, currentUserId))
+                .comment(toCommentResponses(List.of(comment), currentUserId, moderator).get(0))
+                .replies(toReplyResponses(replies, currentUserId, moderator))
                 .build();
     }
 
@@ -138,13 +141,14 @@ public class CommentService {
     public CommentReplyListResponse getRepliesByComment(Long commentId,
                                                         int page,
                                                         int size) {
-        getVisibleComment(commentId);
+        Comment comment = getVisibleComment(commentId);
         Page<CommentReply> result = commentReplyRepository
                 .findByCommentIdOrderByCreatedAtAsc(commentId, toPageable(page, size));
 
         Long currentUserId = currentUserIdOrNull();
+        boolean moderator = isModerator(comment.getTargetType(), comment.getTargetId(), currentUserId);
         return CommentReplyListResponse.builder()
-                .items(toReplyResponses(result.getContent(), currentUserId))
+                .items(toReplyResponses(result.getContent(), currentUserId, moderator))
                 .total(result.getTotalElements())
                 .page(result.getNumber() + 1)
                 .size(result.getSize())
@@ -220,7 +224,8 @@ public class CommentService {
         log.info("[COMMENT] Created comment id={} targetType={} targetId={} by userId={}",
                 saved.getId(), targetType, targetId, user.getId());
 
-        return toCommentResponse(saved, user.getId(), false, false);
+        return toCommentResponse(saved, user.getId(), false, false,
+                isModerator(targetType, targetId, user.getId()));
     }
 
     @Transactional
@@ -274,7 +279,8 @@ public class CommentService {
                 .replyContent(saved.getContent())
                 .build());
 
-        return toReplyResponse(saved, user.getId(), false, false);
+        return toReplyResponse(saved, user.getId(), false, false,
+                isModerator(comment.getTargetType(), comment.getTargetId(), user.getId()));
     }
 
     // ============================================================
@@ -298,7 +304,8 @@ public class CommentService {
         Comment saved = commentRepository.save(comment);
 
         log.info("[COMMENT] Updated comment id={} by userId={}", commentId, user.getId());
-        return toCommentResponses(List.of(saved), user.getId()).get(0);
+        return toCommentResponses(List.of(saved), user.getId(),
+                isModerator(saved.getTargetType(), saved.getTargetId(), user.getId())).get(0);
     }
 
     /** Xoá mềm comment — chủ bình luận hoặc admin (gỡ bình luận vi phạm). */
@@ -463,7 +470,7 @@ public class CommentService {
     // ============================================================
 
     /** Trạng thái like/dislike của user lấy bằng 2 query cho cả trang, không phải 2 query mỗi comment. */
-    private List<CommentResponse> toCommentResponses(List<Comment> comments, Long currentUserId) {
+    private List<CommentResponse> toCommentResponses(List<Comment> comments, Long currentUserId, boolean moderator) {
         Set<Long> liked = Set.of();
         Set<Long> disliked = Set.of();
         if (currentUserId != null && !comments.isEmpty()) {
@@ -475,11 +482,11 @@ public class CommentService {
         Set<Long> finalDisliked = disliked;
         return comments.stream()
                 .map(c -> toCommentResponse(c, currentUserId,
-                        finalLiked.contains(c.getId()), finalDisliked.contains(c.getId())))
+                        finalLiked.contains(c.getId()), finalDisliked.contains(c.getId()), moderator))
                 .toList();
     }
 
-    private List<CommentReplyResponse> toReplyResponses(List<CommentReply> replies, Long currentUserId) {
+    private List<CommentReplyResponse> toReplyResponses(List<CommentReply> replies, Long currentUserId, boolean moderator) {
         Set<Long> liked = Set.of();
         Set<Long> disliked = Set.of();
         if (currentUserId != null && !replies.isEmpty()) {
@@ -491,11 +498,12 @@ public class CommentService {
         Set<Long> finalDisliked = disliked;
         return replies.stream()
                 .map(r -> toReplyResponse(r, currentUserId,
-                        finalLiked.contains(r.getId()), finalDisliked.contains(r.getId())))
+                        finalLiked.contains(r.getId()), finalDisliked.contains(r.getId()), moderator))
                 .toList();
     }
 
-    private CommentResponse toCommentResponse(Comment c, Long currentUserId, boolean liked, boolean disliked) {
+    private CommentResponse toCommentResponse(Comment c, Long currentUserId, boolean liked, boolean disliked,
+                                              boolean moderator) {
         boolean isOwner = isOwner(c.getUser(), currentUserId);
         return CommentResponse.builder()
                 .id(c.getId())
@@ -511,12 +519,14 @@ public class CommentService {
                 .disliked(disliked)
                 .owner(isOwner)
                 .deletable(isOwner || isAdmin(currentUserId))
+                .moderator(moderator)
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }
 
-    private CommentReplyResponse toReplyResponse(CommentReply r, Long currentUserId, boolean liked, boolean disliked) {
+    private CommentReplyResponse toReplyResponse(CommentReply r, Long currentUserId, boolean liked, boolean disliked,
+                                                 boolean moderator) {
         boolean isOwner = isOwner(r.getUser(), currentUserId);
         return CommentReplyResponse.builder()
                 .id(r.getId())
@@ -531,6 +541,7 @@ public class CommentService {
                 .disliked(disliked)
                 .owner(isOwner)
                 .deletable(isOwner || isAdmin(currentUserId))
+                .moderator(moderator)
                 .createdAt(r.getCreatedAt())
                 .updatedAt(r.getUpdatedAt())
                 .build();
@@ -650,6 +661,22 @@ public class CommentService {
 
     private boolean isAdmin(Long currentUserId) {
         return currentUserId != null && currentUserService.isAdmin();
+    }
+
+    /**
+     * Người xem có quyền kiểm duyệt bình luận của target này không — cùng điều kiện với
+     * {@code CommentModerationService.ensureCanModerate}: admin, hoặc giáo viên tạo khóa học
+     * chứa bài học. Người kiểm duyệt tự xử lý vi phạm nên FE không hiện nút báo cáo cho họ.
+     */
+    private boolean isModerator(CommentTargetType targetType, Long targetId, Long currentUserId) {
+        if (currentUserId == null) return false;
+        if (currentUserService.isAdmin()) return true;
+        if (targetType != CommentTargetType.LESSON) return false;
+        return lessonRepository.findByIdAndDeletedFalse(targetId)
+                .map(Lesson::getCourse)
+                .map(Course::getCreatedBy)
+                .map(owner -> currentUserId.equals(owner.getId()))
+                .orElse(false);
     }
 
     private static Long ownerId(User user) {

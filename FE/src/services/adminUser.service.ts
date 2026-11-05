@@ -1,5 +1,6 @@
 import { axiosClient } from './api/axiosClient'
 import type {
+  AdminCreateUserRequest,
   AdminUser,
   AdminUserListParams,
   ApiResponse,
@@ -24,8 +25,8 @@ export const adminUserService = {
     return axiosClient.patch(`/admin/users/${id}/status`, { status })
   },
 
-  /** Gán lại role (USER luôn được BE giữ lại). */
-  updateRoles: async (id: number, roles: string[]): Promise<ApiResponse<AdminUser>> => {
-    return axiosClient.put(`/admin/users/${id}/roles`, { roles })
+  /** Cấp phát tài khoản giáo viên / quản trị viên (đúng 1 role). */
+  createUser: async (payload: AdminCreateUserRequest): Promise<ApiResponse<AdminUser>> => {
+    return axiosClient.post('/admin/users', payload)
   },
 }

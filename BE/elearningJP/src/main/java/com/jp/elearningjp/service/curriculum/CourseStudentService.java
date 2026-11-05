@@ -188,6 +188,7 @@ public class CourseStudentService {
     private static StudentProgress toStudent(Object[] r, int totalLessons) {
         int completed = (int) toLong(r[6]);
         Double avg = r[9] == null ? null : round1(toDouble(r[9]));
+        Double avgExam = r[10] == null ? null : round1(toDouble(r[10]));
         return StudentProgress.builder()
                 .userId(toLong(r[0]))
                 .fullName((String) r[1])
@@ -201,6 +202,7 @@ public class CourseStudentService {
                 .progressPercent(percent(completed, totalLessons))
                 .lastActiveAt(toInstant(r[8]))
                 .avgQuizScore(avg)
+                .avgExamScore(avgExam)
                 .build();
     }
 

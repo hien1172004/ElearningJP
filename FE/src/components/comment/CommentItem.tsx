@@ -198,9 +198,9 @@ export const CommentItem: React.FC<CommentItemProps> = ({
           <span className="text-[11px] text-gray-400">
             {formatRelativeTime(comment.createdAt)}
           </span>
-          {comment.updatedAt !== comment.createdAt && !isEditing && (
+          {/* {comment.updatedAt !== comment.createdAt && !isEditing && (
             <span className="text-[10px] text-gray-400 italic">đã sửa</span>
-          )}
+          )} */}
         </div>
 
         {/* Nội dung (hoặc ô sửa nội tuyến) */}
@@ -322,8 +322,8 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               </>
             )}
 
-            {/* Báo cáo vi phạm: không hiện với bình luận của chính mình */}
-            {!comment.owner && (
+            {/* Báo cáo vi phạm: không hiện với bình luận của chính mình, hay khi người xem là người kiểm duyệt */}
+            {!comment.owner && !comment.moderator && (
               <Tooltip title="Báo cáo vi phạm">
                 <button
                   type="button"

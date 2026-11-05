@@ -18,7 +18,7 @@ import { playSmartAudio } from '@/utils'
 // Form schema
 // ============================================================================
 const baseSchema = z.object({
-  grammarId: z.number().int().positive('Vui lòng chọn 1 ngữ pháp từ từ điển'),
+  grammarId: z.number({ error: 'Vui lòng chọn 1 ngữ pháp từ từ điển' }).int().positive('Vui lòng chọn 1 ngữ pháp từ từ điển'),
   customStructure: z.string().max(500).optional(),
   customMeaning: z.string().max(2000).optional(),
   note: z.string().max(2000).optional(),

@@ -267,7 +267,7 @@ export const DictionaryPage: React.FC = () => {
               }
             }
           })
-          .catch(() => {})
+          .catch(() => { })
       } else {
         setSuggestions(null)
         setIsDropdownOpen(false)
@@ -594,112 +594,112 @@ export const DictionaryPage: React.FC = () => {
               </button>
             </div>
 
-              {/* Dropdown gợi ý tự động ngay khi gõ */}
-              {isDropdownOpen && suggestions && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-2xl border border-gray-200 text-left overflow-hidden z-50 max-h-[460px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
-                  {/* Nhóm Từ vựng */}
-                  {suggestions.vocabularies && suggestions.vocabularies.length > 0 && (
-                    <div className="p-2 border-b border-gray-100">
-                      <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <BookOpen className="w-3.5 h-3.5" />
-                        <span>Từ vựng ({suggestions.vocabularies.length})</span>
-                      </div>
-                      <div className="space-y-1">
-                        {suggestions.vocabularies.map((v) => (
-                          <div
-                            key={v.id}
-                            onClick={() => handleSelectSuggestion('vocab', v.word, v.id)}
-                            className="px-3 py-2 rounded-md hover:bg-indigo-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
-                          >
-                            <div className="flex items-baseline gap-2">
-                              <span className="font-extrabold text-gray-900 text-base">{v.word}</span>
-                              <span className="text-xs text-gray-500">【{v.hiragana}】</span>
-                              {v.hanViet && (
-                                <span className="text-[10px] font-bold text-amber-700 uppercase bg-amber-50 px-1.5 py-0.5 rounded">
-                                  {v.hanViet}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-xs text-gray-600 line-clamp-1 max-w-[200px]">
-                              {v.meaningVi}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+            {/* Dropdown gợi ý tự động ngay khi gõ */}
+            {isDropdownOpen && suggestions && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-md shadow-2xl border border-gray-200 text-left overflow-hidden z-50 max-h-[460px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+                {/* Nhóm Từ vựng */}
+                {suggestions.vocabularies && suggestions.vocabularies.length > 0 && (
+                  <div className="p-2 border-b border-gray-100">
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Từ vựng ({suggestions.vocabularies.length})</span>
                     </div>
-                  )}
-
-                  {/* Nhóm Chữ Hán */}
-                  {suggestions.kanjis && suggestions.kanjis.length > 0 && (
-                    <div className="p-2 border-b border-gray-100">
-                      <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <Brush className="w-3.5 h-3.5" />
-                        <span>Chữ Hán ({suggestions.kanjis.length})</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                        {suggestions.kanjis.map((k) => (
-                          <div
-                            key={k.id}
-                            onClick={() => handleSelectSuggestion('kanji', k.character, undefined, k.character)}
-                            className="px-3 py-2 rounded-md hover:bg-amber-50/80 cursor-pointer flex items-center gap-3 transition"
-                          >
-                            <div className="w-9 h-9 rounded bg-amber-100 text-amber-900 font-serif font-bold text-lg flex items-center justify-center shrink-0">
-                              {k.character}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-xs text-amber-800 uppercase">
-                                  {k.hanViet || 'Hán tự'}
-                                </span>
-                                <span className="text-[10px] text-gray-400">{k.strokeCount} nét</span>
-                              </div>
-                              <p className="text-xs text-gray-600 line-clamp-1">{k.meaningVi}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Nhóm Ngữ pháp */}
-                  {suggestions.grammars && suggestions.grammars.length > 0 && (
-                    <div className="p-2">
-                      <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
-                        <BookText className="w-3.5 h-3.5" />
-                        <span>Ngữ pháp ({suggestions.grammars.length})</span>
-                      </div>
-                      <div className="space-y-1">
-                        {suggestions.grammars.map((g) => (
-                          <div
-                            key={g.id}
-                            onClick={() => handleSelectSuggestion('grammar', g.title, g.id)}
-                            className="px-3 py-2 rounded-md hover:bg-purple-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-gray-900">{g.title}</span>
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
-                                {g.jlptLevel}
+                    <div className="space-y-1">
+                      {suggestions.vocabularies.map((v) => (
+                        <div
+                          key={v.id}
+                          onClick={() => handleSelectSuggestion('vocab', v.word, v.id)}
+                          className="px-3 py-2 rounded-md hover:bg-indigo-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
+                        >
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-extrabold text-gray-900 text-base">{v.word}</span>
+                            <span className="text-xs text-gray-500">【{v.hiragana}】</span>
+                            {v.hanViet && (
+                              <span className="text-[10px] font-bold text-amber-700 uppercase bg-amber-50 px-1.5 py-0.5 rounded">
+                                {v.hanViet}
                               </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-600 line-clamp-1 max-w-[200px]">
+                            {v.meaningVi}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Nhóm Chữ Hán */}
+                {suggestions.kanjis && suggestions.kanjis.length > 0 && (
+                  <div className="p-2 border-b border-gray-100">
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <Brush className="w-3.5 h-3.5" />
+                      <span>Chữ Hán ({suggestions.kanjis.length})</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                      {suggestions.kanjis.map((k) => (
+                        <div
+                          key={k.id}
+                          onClick={() => handleSelectSuggestion('kanji', k.character, undefined, k.character)}
+                          className="px-3 py-2 rounded-md hover:bg-amber-50/80 cursor-pointer flex items-center gap-3 transition"
+                        >
+                          <div className="w-9 h-9 rounded bg-amber-100 text-amber-900 font-serif font-bold text-lg flex items-center justify-center shrink-0">
+                            {k.character}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-xs text-amber-800 uppercase">
+                                {k.hanViet || 'Hán tự'}
+                              </span>
+                              <span className="text-[10px] text-gray-400">{k.strokeCount} nét</span>
                             </div>
-                            <span className="text-xs text-gray-600 line-clamp-1 max-w-[200px]">
-                              {g.meaningVi}
+                            <p className="text-xs text-gray-600 line-clamp-1">{k.meaningVi}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Nhóm Ngữ pháp */}
+                {suggestions.grammars && suggestions.grammars.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-3 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <BookText className="w-3.5 h-3.5" />
+                      <span>Ngữ pháp ({suggestions.grammars.length})</span>
+                    </div>
+                    <div className="space-y-1">
+                      {suggestions.grammars.map((g) => (
+                        <div
+                          key={g.id}
+                          onClick={() => handleSelectSuggestion('grammar', g.title, g.id)}
+                          className="px-3 py-2 rounded-md hover:bg-purple-50/80 cursor-pointer flex items-center justify-between gap-2 transition"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-gray-900">{g.title}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                              {g.jlptLevel}
                             </span>
                           </div>
-                        ))}
-                      </div>
+                          <span className="text-xs text-gray-600 line-clamp-1 max-w-[200px]">
+                            {g.meaningVi}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Không tìm thấy mục nào */}
-                  {(!suggestions.vocabularies?.length &&
-                    !suggestions.kanjis?.length &&
-                    !suggestions.grammars?.length) && (
+                {/* Không tìm thấy mục nào */}
+                {(!suggestions.vocabularies?.length &&
+                  !suggestions.kanjis?.length &&
+                  !suggestions.grammars?.length) && (
                     <div className="p-6 text-center text-xs text-gray-500">
                       Không tìm thấy gợi ý nào cho từ khóa &quot;{keyword}&quot;. Bấm Enter để tìm kiếm đầy đủ.
                     </div>
                   )}
-                </div>
-              )}
+              </div>
+            )}
 
           </div>
         )}
@@ -719,13 +719,12 @@ export const DictionaryPage: React.FC = () => {
                 key={key}
                 type="button"
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-md text-sm transition flex items-center gap-1.5 whitespace-nowrap ${
-                  activeTab === key
-                    ? 'bg-kamenozoki text-indigo-600 font-semibold'
-                    : 'text-nibi font-medium hover:text-sumi hover:bg-gray-50'
-                }`}
+                className={`px-3 py-1.5 rounded-md text-xs transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === key
+                  ? 'bg-kamenozoki text-indigo-600 font-semibold'
+                  : 'text-nibi font-medium hover:text-sumi hover:bg-gray-50'
+                  }`}
               >
-                <Icon className="w-4 h-4" /> {label}
+                {label}
               </button>
             ))}
           </div>
@@ -738,11 +737,10 @@ export const DictionaryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelectedLevel(undefined)}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap ${
-                  selectedLevel === undefined
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
-                }`}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap ${selectedLevel === undefined
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
+                  }`}
               >
                 Tất cả
               </button>
@@ -751,11 +749,10 @@ export const DictionaryPage: React.FC = () => {
                   key={lvl}
                   type="button"
                   onClick={() => setSelectedLevel(selectedLevel === lvl ? undefined : lvl)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition ${
-                    selectedLevel === lvl
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
-                  }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition ${selectedLevel === lvl
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
+                    }`}
                 >
                   {lvl}
                 </button>
@@ -801,11 +798,10 @@ export const DictionaryPage: React.FC = () => {
                       <div
                         key={v.id}
                         onClick={() => setSelectedVocabId(v.id)}
-                        className={`p-3.5 rounded-md border transition cursor-pointer select-none ${
-                          isSelected
-                            ? 'bg-indigo-50/90 border-indigo-500 shadow-xs ring-2 ring-indigo-200'
-                            : 'bg-white border-gray-200/80 hover:border-indigo-300 hover:bg-slate-50/60'
-                        }`}
+                        className={`p-3.5 rounded-md border transition cursor-pointer select-none ${isSelected
+                          ? 'bg-indigo-50/90 border-indigo-500 shadow-xs ring-2 ring-indigo-200'
+                          : 'bg-white border-gray-200/80 hover:border-indigo-300 hover:bg-slate-50/60'
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <div className="flex items-baseline gap-2">
@@ -857,11 +853,10 @@ export const DictionaryPage: React.FC = () => {
                       <div
                         key={k.id}
                         onClick={() => setSelectedKanjiChar(k.character)}
-                        className={`p-3 rounded-md border transition cursor-pointer flex items-center justify-between gap-3 ${
-                          isSelected
-                            ? 'bg-indigo-50/90 border-indigo-500 shadow-xs ring-2 ring-indigo-200'
-                            : 'bg-white border-gray-200/80 hover:border-indigo-300 hover:bg-slate-50/60'
-                        }`}
+                        className={`p-3 rounded-md border transition cursor-pointer flex items-center justify-between gap-3 ${isSelected
+                          ? 'bg-indigo-50/90 border-indigo-500 shadow-xs ring-2 ring-indigo-200'
+                          : 'bg-white border-gray-200/80 hover:border-indigo-300 hover:bg-slate-50/60'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-md bg-amber-100/60 border border-amber-200 flex items-center justify-center text-2xl font-bold text-gray-900 font-serif shrink-0">
@@ -913,11 +908,10 @@ export const DictionaryPage: React.FC = () => {
                       <div
                         key={g.id}
                         onClick={() => setSelectedGrammarId(g.id)}
-                        className={`p-3.5 rounded-md border transition cursor-pointer ${
-                          isSelected
-                            ? 'bg-purple-50/90 border-purple-500 shadow-xs ring-2 ring-purple-200'
-                            : 'bg-white border-gray-200/80 hover:border-purple-300 hover:bg-slate-50/60'
-                        }`}
+                        className={`p-3.5 rounded-md border transition cursor-pointer ${isSelected
+                          ? 'bg-purple-50/90 border-purple-500 shadow-xs ring-2 ring-purple-200'
+                          : 'bg-white border-gray-200/80 hover:border-purple-300 hover:bg-slate-50/60'
+                          }`}
                       >
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="font-extrabold text-gray-900 text-base font-sans line-clamp-1">
@@ -1315,7 +1309,7 @@ export const DictionaryPage: React.FC = () => {
       )}
 
       {/* Modal nhận dạng chữ viết tay Kanji bằng AI */}
-            {/* Modal Viết chữ Hán trên không qua Camera */}
+      {/* Modal Viết chữ Hán trên không qua Camera */}
       <KanjiAirWritingModal
         isOpen={isAirWritingOpen}
         onClose={() => setIsAirWritingOpen(false)}

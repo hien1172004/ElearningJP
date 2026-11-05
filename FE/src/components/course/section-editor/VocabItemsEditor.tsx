@@ -11,6 +11,7 @@ import {
   type VocabularyDetail,
 } from '@/types'
 import { useVocabItemMutations, useVocabItemDetail } from '@/hooks'
+import { MediaUploadField } from '@/components/common'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
 
@@ -18,7 +19,7 @@ import { playSmartAudio } from '@/utils'
 // Form schema (client-side validation trước khi gửi BE)
 // ============================================================================
 const baseSchema = z.object({
-  vocabId: z.number().int().positive('Vui lòng chọn 1 từ vựng từ từ điển'),
+  vocabId: z.number({ error: 'Vui lòng chọn 1 từ vựng từ từ điển' }).int().positive('Vui lòng chọn 1 từ vựng từ từ điển'),
   customHiragana: z.string().max(100).optional(),
   customRomaji: z.string().max(150).optional(),
   customAudioUrl: z.string().max(500).optional(),
@@ -944,15 +945,15 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
                 name="customAudioUrl"
                 label={
                   <span className="flex items-center gap-1">
-                    <Volume2 className="w-3 h-3" /> URL Audio
+                    <Volume2 className="w-3 h-3" /> Audio
                   </span>
                 }
                 className="!mb-0"
               >
-                <Input placeholder="https://..." />
+                <MediaUploadField accept="audio" folder="elearningJP/lessons/audios" />
               </Form.Item>
-              <Form.Item name="imageUrl" label="URL ảnh minh hoạ" className="!mb-0">
-                <Input placeholder="https://..." />
+              <Form.Item name="imageUrl" label="Ảnh minh hoạ" className="!mb-0">
+                <MediaUploadField accept="image" folder="elearningJP/lessons/images" />
               </Form.Item>
               <Form.Item
                 name="customMeaning"

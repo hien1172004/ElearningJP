@@ -37,6 +37,7 @@ export interface ModerationQueueParams {
 }
 
 export interface ModerationBrowseParams {
+  /** Bỏ trống = gộp cả bình luận gốc và trả lời */
   kind?: ModerationKind
   status?: Exclude<ModerationContentStatus, 'DELETED'>
   targetType?: CommentTargetType

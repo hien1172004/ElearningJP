@@ -84,13 +84,15 @@ public class QuizService {
 
     /**
      * Lấy đề thi trắc nghiệm của bài học.
-     * BẢO MẬT: Bắt buộc đã đăng ký khóa học, và ẨN HOÀN TOÀN isCorrect.
+     * BẢO MẬT: cùng quyền xem nội dung bài học (học viên đã đăng ký, admin, hoặc giáo viên
+     * chủ khóa xem trước bài của mình), và ẨN HOÀN TOÀN isCorrect.
+     * Nộp bài vẫn bắt buộc đã đăng ký (xem {@link #submitQuiz}).
      */
     @Transactional(readOnly = true)
     public LessonQuizResponse getLessonQuiz(Long lessonId) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-        courseAccessGuard.requireEnrolledInLesson(lesson);
+        courseAccessGuard.requireLessonContentAccess(lesson);
 
         Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));

@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.user;
 
+import com.jp.elearningjp.dto.request.user.AdminCreateUserRequest;
 import com.jp.elearningjp.dto.request.user.AdminUpdateUserRolesRequest;
 import com.jp.elearningjp.dto.request.user.AdminUpdateUserStatusRequest;
 import com.jp.elearningjp.dto.response.user.AdminUserResponse;
@@ -26,6 +27,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.HashSet;
 import java.util.List;
@@ -51,6 +53,7 @@ class AdminUserServiceTest {
     @Mock RoleRepository roleRepository;
     @Mock CurrentUserService currentUserService;
     @Mock UserTokenRevocationService userTokenRevocationService;
+    @Mock PasswordEncoder passwordEncoder;
 
     @InjectMocks AdminUserService service;
 
@@ -277,5 +280,54 @@ class AdminUserServiceTest {
 
     private static AdminUpdateUserRolesRequest rolesReq(String... roles) {
         return AdminUpdateUserRolesRequest.builder().roles(new HashSet<>(Set.of(roles))).build();
+    }
+
+    // ============================================================
+    // createUser — cấp phát tài khoản giáo viên / quản trị viên
+    // ============================================================
+
+    private static AdminCreateUserRequest createReq(String role) {
+        return AdminCreateUserRequest.builder()
+                .email("  gv@test.local ").fullName(" Giáo viên A ").password("matkhau123").role(role).build();
+    }
+
+    @Test
+    void createUser_teacher_savesActiveVerifiedAccount_withSingleTeacherRole() {
+        when(userRepository.existsByEmail("gv@test.local")).thenReturn(false);
+        when(passwordEncoder.encode("matkhau123")).thenReturn("HASHED");
+
+        AdminUserResponse res = service.createUser(createReq("teacher"));
+
+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(saved.capture());
+        User u = saved.getValue();
+        assertThat(u.getEmail()).isEqualTo("gv@test.local");
+        assertThat(u.getFullName()).isEqualTo("Giáo viên A");
+        assertThat(u.getPassword()).isEqualTo("HASHED");
+        assertThat(u.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(u.getEmailVerifiedAt()).isNotNull();
+        // Mỗi tài khoản chỉ có 1 role — không gán kèm USER
+        assertThat(u.getRoles()).containsExactly(teacherRole);
+        assertThat(res.getRoles()).containsExactly("TEACHER");
+    }
+
+    @Test
+    void createUser_emailExists_throwsUserExisted_andDoesNotSave() {
+        when(userRepository.existsByEmail("gv@test.local")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.createUser(createReq("ADMIN")))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.USER_EXISTED);
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void createUser_plainUserRole_throwsRoleInvalid() {
+        when(userRepository.existsByEmail("gv@test.local")).thenReturn(false);
+
+        assertThatThrownBy(() -> service.createUser(createReq("USER")))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ROLE_INVALID);
+        verify(userRepository, never()).save(any());
     }
 }

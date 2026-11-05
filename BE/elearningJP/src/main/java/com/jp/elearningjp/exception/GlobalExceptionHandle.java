@@ -43,7 +43,7 @@ public class GlobalExceptionHandle {
 
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        String enumKey = e.getFieldError() != null ? e.getFieldError().getDefaultMessage() : "Validation error";
+        String enumKey = e.getFieldError() != null ? e.getFieldError().getDefaultMessage() : "Dữ liệu không hợp lệ";
         ErrorCode errorCode;
         try {
             errorCode = ErrorCode.valueOf(enumKey);
@@ -67,7 +67,7 @@ public class GlobalExceptionHandle {
         return ResponseEntity.badRequest().body(
                 ApiResponse.builder()
                         .code(400)
-                        .message("Invalid JSON request body format")
+                        .message("Dữ liệu gửi lên không đúng định dạng")
                         .build());
     }
 

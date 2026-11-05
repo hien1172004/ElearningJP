@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Megaphone,
   type LucideIcon,
+  GraduationCap,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { NotificationType } from '@/types'
@@ -32,6 +33,7 @@ interface IconSpec {
 const ICONS: Record<NotificationType, IconSpec> = {
   COMMENT_MODERATED: { Icon: ShieldAlert, tone: 'bg-amber-50 text-amber-600' },
   ANNOUNCEMENT: { Icon: Megaphone, tone: 'bg-violet-50 text-violet-600' },
+  COURSE_STATUS_CHANGED: { Icon: GraduationCap, tone: 'bg-sky-50 text-sky-600' },
   COMMUNITY_REPLY: {
     Icon: MessageCircle,
     tone: 'bg-indigo-50 text-indigo-600',

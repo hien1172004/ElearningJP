@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import { Link, useNavigate } from 'react-router-dom'
-import { Layers, Loader2, RefreshCw, Sparkles, Trophy, RotateCcw } from 'lucide-react'
+import { Loader2, RefreshCw, Sparkles, Trophy, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { SrsFlashcard, SrsRatingButtons, SrsForecastBar } from '@/components/srs'
 import { useSrsDue } from '@/hooks/useSrsDue'
@@ -133,61 +133,51 @@ export const SrsReviewPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto pb-16">
-      {/* ===== Header ===== */}
-      <header className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <span className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <Layers className="w-5 h-5" />
-          </span>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Ôn tập SRS</h1>
-            <p className="text-xs text-slate-500">Lặp lại ngắt quãng — nhớ lâu hơn</p>
+      {/* ===== Thanh điều khiển: dự báo ôn tập + Sổ tay/Thoát + số thẻ mỗi phiên ===== */}
+      <section className="bg-white rounded-xl border border-suna shadow-xs p-4 mb-6 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* flex-1: lưới 7 ngày giãn hết phần còn lại của hàng; màn hẹp thì nút xuống dòng */}
+          <SrsForecastBar className="flex-1 min-w-[15rem]" />
+          <div className="flex items-center gap-1">
+            <Link
+              to="/srs/deck"
+              className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
+            >
+              Sổ tay
+            </Link>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
+            >
+              Thoát
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Link
-            to="/srs/deck"
-            className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
-          >
-            Sổ tay
-          </Link>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition"
-          >
-            Thoát
-          </button>
-        </div>
-      </header>
 
-      {/* ===== Dự báo ôn tập ===== */}
-      <div className="mb-5">
-        <SrsForecastBar />
-      </div>
-
-      {/* ===== Chọn số thẻ mỗi phiên ===== */}
-      <div className="flex items-center gap-3 mb-5">
-        <span className="text-xs font-semibold text-slate-500">Số thẻ mỗi phiên:</span>
-        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-          {LIMIT_OPTIONS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => handleLimitChange(n)}
-              className={cn(
-                'px-3 py-1 rounded-md text-xs font-semibold transition',
-                limit === n
-                  ? 'bg-white text-indigo-600 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700',
-              )}
-            >
-              {n}
-            </button>
-          ))}
+        {/* Chọn số thẻ mỗi phiên */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-slate-500">Số thẻ mỗi phiên:</span>
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            {LIMIT_OPTIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => handleLimitChange(n)}
+                className={cn(
+                  'px-3 py-1 rounded-md text-xs font-semibold transition',
+                  limit === n
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700',
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-slate-400">thẻ</span>
         </div>
-        <span className="text-xs text-slate-400">thẻ</span>
-      </div>
+      </section>
 
       {/* ===== Loading ===== */}
       {phase === 'loading' && (

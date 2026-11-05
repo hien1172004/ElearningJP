@@ -50,6 +50,8 @@ export interface CommentItem {
   owner: boolean
   /** Được xoá: chủ bình luận hoặc admin */
   deletable?: boolean
+  /** Người xem là người kiểm duyệt (admin, hoặc giáo viên chủ khóa) → không hiện nút báo cáo */
+  moderator?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -69,6 +71,8 @@ export interface CommentReplyItem {
   owner: boolean
   /** Được xoá: chủ trả lời hoặc admin */
   deletable?: boolean
+  /** Người xem là người kiểm duyệt (admin, hoặc giáo viên chủ khóa) → không hiện nút báo cáo */
+  moderator?: boolean
   createdAt: string
   updatedAt: string
 }

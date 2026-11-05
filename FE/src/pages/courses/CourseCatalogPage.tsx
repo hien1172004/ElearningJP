@@ -36,14 +36,6 @@ export const CourseCatalogPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-
-        title={
-          <span>
-            Khoá học JLPT{' '}
-            <span className="text-indigo-600">từ N5 đến N1</span>
-          </span>
-        }
-        subtitle="Chọn khóa học phù hợp với trình độ của bạn và bắt đầu hành trình chinh phục tiếng Nhật."
         actions={
           !isAuthenticated && (
             <Link to="/login">

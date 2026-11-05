@@ -65,6 +65,11 @@ public class CommentModerationService {
 
     static final int MAX_PAGE_SIZE = 100;
     static final int MAX_RECENT_DETAILS = 5;
+    /**
+     * Tra cứu gộp (kind = null) phải đọc {@code offset + size} dòng đầu của mỗi bảng để trộn,
+     * nên giới hạn độ sâu tối đa để tránh truy vấn quá lớn khi page rất lớn.
+     */
+    static final int MAX_BROWSE_ALL_WINDOW = 5000;
 
     CommentRepository commentRepository;
     CommentReplyRepository commentReplyRepository;
@@ -136,12 +141,15 @@ public class CommentModerationService {
     }
 
     /**
-     * Tra cứu mọi bình luận (kind = COMMENT) hoặc trả lời (kind = REPLY) chưa xóa, lọc theo
-     * trạng thái hiển thị, loại nội dung và từ khóa (nội dung / tên / email người viết).
+     * Tra cứu bình luận (kind = COMMENT), trả lời (kind = REPLY) hoặc cả hai (kind = null) chưa xóa,
+     * lọc theo trạng thái hiển thị, loại nội dung và từ khóa (nội dung / tên / email người viết).
      */
     @Transactional(readOnly = true)
     public PageResponse<ModerationItemResponse> browse(Kind kind, ContentStatus status, CommentTargetType targetType,
                                                        String keyword, int page, int size) {
+        if (kind == null) {
+            return browseAll(status, targetType, keyword, page, size);
+        }
         Pageable pageable = PageRequest.of(Math.max(page, 1) - 1, clampSize(size),
                 Sort.by(Sort.Direction.DESC, "createdAt"));
         Long teacherId = teacherScopeId();
@@ -175,6 +183,83 @@ public class CommentModerationService {
             result = comments;
         }
         return toPage(items, page, pageable.getPageSize(), result.getTotalElements(), result.getTotalPages());
+    }
+
+    /**
+     * Tra cứu gộp bình luận gốc + trả lời, phân trang chính xác theo createdAt giảm dần.
+     *
+     * <p>Hai loại nằm ở 2 bảng với Specification riêng, nên không phân trang trực tiếp được.
+     * Cách làm: lấy {@code offset + size} dòng đầu của mỗi bảng (cùng thứ tự), trộn 2 danh sách
+     * đã sắp xếp rồi cắt đúng đoạn {@code [offset, offset + size)}. Bộ lọc giữ nguyên như khi
+     * tra cứu từng loại. Độ sâu bị giới hạn bởi {@link #MAX_BROWSE_ALL_WINDOW}.</p>
+     */
+    private PageResponse<ModerationItemResponse> browseAll(ContentStatus status, CommentTargetType targetType,
+                                                           String keyword, int page, int size) {
+        int pageSize = clampSize(size);
+        long offset = (long) (Math.max(page, 1) - 1) * pageSize;
+        Long teacherId = teacherScopeId();
+
+        // Cần offset + pageSize dòng đầu mỗi bảng; quá giới hạn thì chỉ lấy để đếm tổng
+        boolean tooDeep = offset + pageSize > MAX_BROWSE_ALL_WINDOW;
+        int window = tooDeep ? 1 : (int) (offset + pageSize);
+        Pageable top = PageRequest.of(0, window,
+                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
+
+        Page<Comment> comments = commentRepository.findAll(
+                commentSpec(status, targetType, keyword, teacherId), top);
+        Page<CommentReply> replies = commentReplyRepository.findAll(
+                replySpec(status, targetType, keyword, teacherId), top);
+
+        long total = comments.getTotalElements() + replies.getTotalElements();
+        int totalPages = (int) ((total + pageSize - 1) / pageSize);
+        if (tooDeep) {
+            log.warn("Moderation browseAll vượt giới hạn độ sâu: page={}, size={}", page, pageSize);
+            return toPage(List.of(), page, pageSize, total, totalPages);
+        }
+
+        // Trộn 2 danh sách đã sắp xếp (createdAt giảm dần; trùng thời gian thì bình luận gốc trước, rồi id giảm dần)
+        List<Object> merged = new ArrayList<>(comments.getContent().size() + replies.getContent().size());
+        merged.addAll(comments.getContent());
+        merged.addAll(replies.getContent());
+        merged.sort(Comparator.comparing(CommentModerationService::createdAtOf, Comparator.reverseOrder())
+                .thenComparing(o -> o instanceof CommentReply ? 1 : 0)
+                .thenComparing(CommentModerationService::idOf, Comparator.reverseOrder()));
+        List<Object> slice = merged.subList((int) Math.min(offset, merged.size()),
+                (int) Math.min(offset + pageSize, merged.size()));
+
+        List<Comment> pageComments = slice.stream()
+                .filter(Comment.class::isInstance).map(Comment.class::cast).toList();
+        List<CommentReply> pageReplies = slice.stream()
+                .filter(CommentReply.class::isInstance).map(CommentReply.class::cast).toList();
+        TargetLabels labels = loadTargetLabels(pageComments,
+                pageReplies.stream().map(CommentReply::getComment).toList());
+        Map<Long, Long> commentCounts = toCountMap(pageComments.isEmpty() ? List.of()
+                : commentReportRepository.countOpenByCommentIds(ids(pageComments, Comment::getId)));
+        Map<Long, Long> replyCounts = toCountMap(pageReplies.isEmpty() ? List.of()
+                : commentReportRepository.countOpenByReplyIds(ids(pageReplies, CommentReply::getId)));
+
+        List<ModerationItemResponse> items = slice.stream().map(o -> {
+            ModerationItemResponse item;
+            if (o instanceof CommentReply r) {
+                item = toItem(r, labels);
+                item.setReportCount(replyCounts.getOrDefault(r.getId(), 0L));
+            } else {
+                Comment c = (Comment) o;
+                item = toItem(c, labels);
+                item.setReportCount(commentCounts.getOrDefault(c.getId(), 0L));
+            }
+            return item;
+        }).toList();
+        return toPage(items, page, pageSize, total, totalPages);
+    }
+
+    private static Instant createdAtOf(Object o) {
+        Instant t = o instanceof CommentReply r ? r.getCreatedAt() : ((Comment) o).getCreatedAt();
+        return t != null ? t : Instant.EPOCH;
+    }
+
+    private static Long idOf(Object o) {
+        return o instanceof CommentReply r ? r.getId() : ((Comment) o).getId();
     }
 
     // =========================================================

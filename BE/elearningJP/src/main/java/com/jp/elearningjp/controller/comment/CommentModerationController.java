@@ -50,9 +50,10 @@ public class CommentModerationController {
 
     @GetMapping(ApiPaths.AdminModeration.COMMENTS)
     @Operation(summary = "[Admin/Teacher] Tra cứu bình luận",
-            description = "kind: COMMENT (mặc định) | REPLY; status: VISIBLE | HIDDEN; lọc theo loại nội dung và từ khóa (nội dung, tên, email người viết)")
+            description = "kind: COMMENT | REPLY, bỏ trống = gộp cả bình luận và trả lời (phân trang chung theo thời gian); "
+                    + "status: VISIBLE | HIDDEN; lọc theo loại nội dung và từ khóa (nội dung, tên, email người viết)")
     public ApiResponse<PageResponse<ModerationItemResponse>> browse(
-            @RequestParam(defaultValue = "COMMENT") ModerationItemResponse.Kind kind,
+            @RequestParam(required = false) ModerationItemResponse.Kind kind,
             @RequestParam(required = false) ContentStatus status,
             @RequestParam(required = false) CommentTargetType targetType,
             @RequestParam(required = false) String keyword,
