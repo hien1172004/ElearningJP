@@ -11,7 +11,6 @@ import {
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
-  ArrowLeftOutlined,
   PlusOutlined,
   MoreOutlined,
   ReadOutlined,
@@ -48,6 +47,7 @@ import type {
   UpdateNotebookWordRequest,
   UpdateNotebookRequest,
 } from '@/types'
+import { BackButton } from '@/components/common'
 
 export const NotebookDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -284,14 +284,7 @@ export const NotebookDetailPage: React.FC = () => {
       {/* Thanh tiêu đề & Công cụ chuẩn Mazii */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-3 min-w-0">
-          {/* Nút Quay lại chuẩn Mazii */}
-          <button
-            type="button"
-            onClick={() => navigate('/notebooks')}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <ArrowLeftOutlined /> Quay lại
-          </button>
+          <BackButton to="/notebooks" className="shrink-0" />
 
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight truncate">
             {notebook.name}

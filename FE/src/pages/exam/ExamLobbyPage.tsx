@@ -1,6 +1,7 @@
 import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { BackButton } from '@/components/common'
 import { examService } from '@/services'
 import type { ExamSummary, ExamDetail, JlptLevel, AttemptType } from '@/types'
 import { useAuthStore } from '@/stores'
@@ -8,12 +9,14 @@ import { isTeacherOrAdmin as checkTeacherOrAdmin } from '@/utils/roles'
 import { JLPT_LEVEL_BADGE } from '@/utils/jlpt'
 import { 
   Award, Clock, HelpCircle, CheckCircle2, ChevronRight, 
-  Flame, BookOpen, Headphones, Play, X, Loader2, Sparkles, Filter, ShieldCheck, Edit3
+  Flame, BookOpen, Headphones, Play, X, Loader2, Filter, Edit3
 } from 'lucide-react'
 import { LeaderboardWidget } from '@/components'
 
 export const ExamLobbyPage: React.FC = () => {
   const navigate = useNavigate()
+  // Trang gọi tới có thể gửi kèm state.backTo để hiện nút quay lại (vd: quản lý đề thi)
+  const backTo = (useLocation().state as { backTo?: string } | null)?.backTo
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const isTeacherOrAdmin = checkTeacherOrAdmin(user)
@@ -104,6 +107,8 @@ export const ExamLobbyPage: React.FC = () => {
 
   return (
     <div className="pb-8">
+      {/* Mở từ trang quản lý đề thi ("Xem phòng thi") → cho quay lại trang đó */}
+      {backTo && <BackButton to={backTo} className="mb-3" />}
       {/* Grid 2 Cột Giống Mazii: Cột Trái Đề Thi + Cột Phải Bảng Xếp Hạng */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
         {/* CỘT TRÁI (8 CỘT TRÊN DESKTOP): BỘ LỌC + DANH SÁCH BÀI THI */}
@@ -131,24 +136,6 @@ export const ExamLobbyPage: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              {isTeacherOrAdmin && (
-                <button
-                  onClick={() => navigate('/admin/exams')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-xs transition cursor-pointer"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Quản trị đề thi</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => navigate('/admin/exams/create')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Tạo đề thi mới</span>
-              </button>
-
               <button
                 onClick={() => navigate('/exam-history')}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 font-bold text-xs shadow-xs transition cursor-pointer"

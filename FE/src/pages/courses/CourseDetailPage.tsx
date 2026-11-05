@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Users, BookOpen, GraduationCap, ArrowRight, LogIn, Award, FileCheck, Clock } from 'lucide-react'
 import { Button as AntdButton } from 'antd'
-import { PageHeader, LoadingState } from '@/components/common'
+import { PageHeader, LoadingState, BackButton } from '@/components/common'
 import { LessonOutlineList } from '@/components/course'
 import { CourseProgressBar } from '@/components/common'
 import { useCourseDetail, useEnrollCourse, useMyEnrollments } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { toSlug } from '@/utils'
+import { canPreviewCourse } from '@/utils/roles'
+import { LESSON_FROM_COURSE_STATE } from '@/utils/lessonNav'
 import { examService } from '@/services/exam.service'
 import type { ExamSummary } from '@/types/exam.types'
 
@@ -15,6 +17,7 @@ export const CourseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const courseId = Number(id)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
   const { data: course, isLoading, isError } = useCourseDetail(courseId)
   const { data: enrollments = [] } = useMyEnrollments(true)
   const enroll = useEnrollCourse()
@@ -30,6 +33,9 @@ export const CourseDetailPage: React.FC = () => {
 
   const myEnrollment = enrollments.find((e) => e.courseId === courseId)
   const isEnrolled = course?.isEnrolled ?? !!myEnrollment
+  // Admin (mọi khóa) / giáo viên chủ khóa được xem bài học mà không cần đăng ký
+  const isPreview = !isEnrolled && canPreviewCourse(user, course?.createdByUserId)
+  const canOpenLessons = isEnrolled || isPreview
 
   if (isLoading) return <LoadingState message="Đang tải thông tin khóa học..." fullHeight />
   if (isError || !course) {
@@ -48,18 +54,24 @@ export const CourseDetailPage: React.FC = () => {
   const lessons = course.lessons ?? []
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 space-y-4 pb-12">
+      <BackButton to="/courses" />
       {/* Hero */}
       <PageHeader
-        badge={`JLPT ${course.jlptLevel}`}
-        title={<span>{course.title}</span>}
+        title={<h1 className="text-xl sm:text-2xl font-bold text-sumi leading-tight">{course.title}</h1>}
         subtitle={
-          course.description ||
-          `Khóa học tiếng Nhật cấp độ ${course.jlptLevel} dành cho người học.`
+          // Mô tả dài → chỉ hiện tối đa 2 dòng, rê chuột để xem đầy đủ
+          <span
+            className="block max-w-3xl line-clamp-2"
+            title={course.description || undefined}
+          >
+            {course.description ||
+              `Khóa học tiếng Nhật cấp độ ${course.jlptLevel} dành cho người học.`}
+          </span>
         }
         variant="indigo"
         actions={
-          isAuthenticated && !isEnrolled ? (
+          isAuthenticated && !canOpenLessons ? (
             <AntdButton
               type="primary"
               size="large"
@@ -70,26 +82,29 @@ export const CourseDetailPage: React.FC = () => {
             >
               Đăng ký học ngay
             </AntdButton>
-          ) : isEnrolled && firstLesson ? (
-            <Link to={
-              course?.slug
-                ? `/learn/${course.slug}/${toSlug(firstLesson.title)}?courseId=${courseId}&lessonId=${firstLesson.id}`
-                : `/learn/${courseId}/${firstLesson.id}`
-            }>
+          ) : canOpenLessons && firstLesson ? (
+            <Link
+              to={
+                course?.slug
+                  ? `/learn/${course.slug}/${toSlug(firstLesson.title)}?courseId=${courseId}&lessonId=${firstLesson.id}`
+                  : `/learn/${courseId}/${firstLesson.id}`
+              }
+              state={LESSON_FROM_COURSE_STATE}
+            >
               <AntdButton
                 type="primary"
                 size="large"
                 icon={<ArrowRight className="w-5 h-5" />}
                 className="!rounded-md !font-bold"
               >
-                Vào học ngay
+                {isPreview ? 'Xem bài học' : 'Vào học ngay'}
               </AntdButton>
             </Link>
           ) : null
         }
       />
 
-      <div className="max-w-5xl mx-auto px-3 sm:px-4 space-y-6">
+      <div className="space-y-6">
         {/* Stats + Progress */}
         <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="text-center">
@@ -197,9 +212,9 @@ export const CourseDetailPage: React.FC = () => {
             lessons={lessons}
             courseId={courseId}
             courseSlug={course?.slug ?? ''}
-            isEnrolled={isEnrolled}
+            isEnrolled={canOpenLessons}
           />
-          {!isEnrolled && (
+          {!canOpenLessons && (
             <div className="mt-4 p-4 bg-gray-50 rounded-md text-center text-sm text-gray-600">
               <p>Vui lòng đăng ký khóa học để xem chi tiết bài học.</p>
               {!isAuthenticated && (

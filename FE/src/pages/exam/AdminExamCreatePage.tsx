@@ -7,18 +7,17 @@ import { useAuthStore } from '@/stores'
 import { isAdmin as checkIsAdmin, isTeacher as checkIsTeacher } from '@/utils/roles'
 import { JLPT_LEVEL_BORDER, JLPT_LEVEL_TEXT } from '@/utils/jlpt'
 import {
-  FileText,
   Sparkles,
   ArrowRight,
   Clock,
   Layers,
   BookOpen,
-  ArrowLeft,
   CheckCircle2,
   AlertCircle,
   HelpCircle,
   Award,
 } from 'lucide-react'
+import { BackButton } from '@/components/common'
 
 interface InitialSectionConfig {
   sessionType: SessionType
@@ -218,38 +217,7 @@ export const AdminExamCreatePage: React.FC = () => {
       <div className="max-w-4xl mx-auto space-y-4">
         {/* Header điều hướng */}
         <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate('/admin/exams')}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại danh sách đề thi</span>
-          </button>
-
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-300">
-            <Sparkles className="w-3.5 h-3.5" />
-            Khởi tạo nhanh & Soạn thảo linh hoạt
-          </span>
-        </div>
-
-        {/* Tiêu đề trang */}
-        <div>
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-kamenozoki dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 shrink-0 mt-0.5">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-lg sm:text-xl font-bold text-sumi dark:text-white tracking-tight">
-                Tạo Đề Thi Mới
-              </h1>
-              <p className="text-sm text-nibi dark:text-slate-400 leading-relaxed">
-                Nhập thông tin cơ bản để khởi tạo cấu trúc bài thi chuẩn JLPT. Sau khi khởi tạo, bạn có thể tự do{' '}
-                <strong className="text-slate-700 dark:text-slate-200">soạn câu hỏi bằng tay</strong> hoặc{' '}
-                <strong className="text-indigo-600 dark:text-indigo-400">sử dụng AI quét tự động</strong> ngay trong phòng biên soạn.
-              </p>
-            </div>
-          </div>
+          <BackButton to="/admin/exams" />
         </div>
 
         {/* Thông báo lỗi nếu có */}

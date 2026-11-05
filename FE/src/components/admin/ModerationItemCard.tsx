@@ -1,6 +1,6 @@
 import React from 'react'
 import { Avatar, Button as AntdButton, Tag, Tooltip } from 'antd'
-import { Eye, EyeOff, ExternalLink, Flag, ShieldCheck, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, ExternalLink, Flag, ShieldCheck } from 'lucide-react'
 import { REPORT_REASON_LABELS } from '@/components/comment'
 import { formatRelativeTime } from '@/utils/format'
 import { TARGET_TYPE_LABELS } from './moderationLabels'
@@ -50,7 +50,7 @@ export const ModerationItemCard: React.FC<ModerationItemCardProps> = ({
             <span className="text-xs text-slate-400">· {formatRelativeTime(item.createdAt)}</span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Tag className="rounded-md !m-0">{item.kind === 'REPLY' ? 'Trả lời' : 'Bình luận'}</Tag>
+            <Tag className="rounded-md !m-0">Bình luận</Tag>
             <Tag color={status.color} className="rounded-md !m-0">
               {status.label}
             </Tag>
@@ -135,15 +135,6 @@ export const ModerationItemCard: React.FC<ModerationItemCardProps> = ({
               Khôi phục
             </AntdButton>
           )}
-          <AntdButton
-            size="small"
-            danger
-            icon={<Trash2 className="w-4 h-4" />}
-            disabled={busy}
-            onClick={() => onAction(item, 'delete')}
-          >
-            Xóa
-          </AntdButton>
         </div>
       )}
     </article>

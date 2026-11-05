@@ -176,6 +176,20 @@ class QuizServiceTest {
         }
 
         @Test
+        @DisplayName("Xem quiz dùng quyền xem nội dung (admin/giáo viên xem trước được), không bắt buộc đăng ký")
+        void usesContentAccess_notEnrollment() {
+            when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
+            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
+                    .thenReturn(List.of());
+
+            service.getLessonQuiz(10L);
+
+            verify(courseAccessGuard).requireLessonContentAccess(lesson);
+            verify(courseAccessGuard, never()).requireEnrolledInLesson(any());
+        }
+
+        @Test
         @DisplayName("Lesson không tồn tại → LESSON_NOT_FOUND")
         void lessonNotFound_throws() {
             when(lessonRepository.findByIdAndDeletedFalse(99L)).thenReturn(Optional.empty());

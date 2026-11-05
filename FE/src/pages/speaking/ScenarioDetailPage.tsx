@@ -2,7 +2,6 @@ import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  ChevronLeft,
   LayoutGrid,
   Sparkles,
   Play,
@@ -27,6 +26,7 @@ import { FuriganaText } from '@/components/speaking/FuriganaText'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { getBestJapaneseVoice } from '@/utils'
 import type { AiScenario, SampleDialogueLine, ScenarioVocab } from '@/types/speaking.types'
+import { BackButton } from '@/components/common'
 
 type ActiveTab = 'dialogue' | 'vocabulary' | 'grammar' | 'tips'
 
@@ -388,16 +388,10 @@ export const ScenarioDetailPage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 1. Header điều hướng Mazii: < Quay lại | Tiêu đề | Báo cáo */}
       {/* ==================================================================== */}
-      <div className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-4 bg-white rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/speaking')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition shadow-2xs"
-            >
-              <ChevronLeft className="w-4 h-4 text-slate-500" />
-              <span>Quay lại</span>
-            </button>
+            <BackButton to="/speaking" />
             <h1 className="text-sm sm:text-base font-bold text-slate-800 truncate">
               {scenario.title}
             </h1>

@@ -1,19 +1,15 @@
-import React, { useEffect, useState } from 'react'
-import { Modal, Form, Input, Select, Switch, App } from 'antd'
+import React, { useEffect } from 'react'
+import { Modal, Form, Input, Select, App } from 'antd'
 import { Save, BookPlus, BookOpen } from 'lucide-react'
 import { z } from 'zod'
 import type { CourseCreateRequest, CourseDetail, CourseUpdateRequest, JlptLevel } from '@/types'
 import { useCreateCourse, useUpdateCourse } from '@/hooks'
+import { MediaUploadField } from '@/components/common'
 
 const JLPT_LEVELS: JlptLevel[] = ['N5', 'N4', 'N3', 'N2', 'N1']
 
 const baseSchema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tiêu đề').max(200),
-  slug: z
-    .string()
-    .min(1, 'Vui lòng nhập slug')
-    .max(120)
-    .regex(/^[a-z0-9-]+$/, 'Slug chỉ gồm chữ thường, số và dấu -'),
   jlptLevel: z.enum(['N5', 'N4', 'N3', 'N2', 'N1']),
   description: z.string().max(2000).optional().or(z.literal('')),
   thumbnailUrl: z.string().url('URL không hợp lệ').optional().or(z.literal('')),
@@ -28,17 +24,6 @@ interface CourseFormModalProps {
   onSuccess?: (saved: boolean) => void
 }
 
-function slugify(input: string): string {
-  return input
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 80)
-}
-
 export const CourseFormModal: React.FC<CourseFormModalProps> = ({
   open,
   course,
@@ -48,7 +33,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
   const isEdit = !!course
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
-  const [title, setTitle] = useState<string>('')
 
   const create = useCreateCourse()
   const update = useUpdateCourse(course?.id ?? 0)
@@ -59,12 +43,10 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       if (course) {
         form.setFieldsValue({
           title: course.title,
-          slug: course.slug,
           jlptLevel: course.jlptLevel,
           description: course.description ?? '',
           thumbnailUrl: course.thumbnailUrl ?? '',
         })
-        setTitle(course.title)
       } else {
         form.resetFields()
         form.setFieldsValue({
@@ -72,7 +54,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           description: '',
           thumbnailUrl: '',
         })
-        setTitle('')
       }
     }
   }, [open, course, form])
@@ -89,7 +70,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       if (isEdit && course) {
         const payload: CourseUpdateRequest = {
           title: v.title,
-          slug: v.slug,
           jlptLevel: v.jlptLevel,
           description: v.description || undefined,
           thumbnailUrl: v.thumbnailUrl || undefined,
@@ -99,7 +79,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       } else {
         const payload: CourseCreateRequest = {
           title: v.title,
-          slug: v.slug,
           jlptLevel: v.jlptLevel,
           description: v.description || undefined,
           thumbnailUrl: v.thumbnailUrl || undefined,
@@ -152,35 +131,9 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           <Input
             placeholder="VD: Tiếng Nhật N5 - Nền tảng cho người mới bắt đầu"
             size="large"
-            onChange={(e) => {
-              const v = e.target.value
-              setTitle(v)
-              if (!isEdit) {
-                form.setFieldValue('slug', slugify(v))
-              }
-            }}
           />
         </Form.Item>
 
-        <Form.Item
-          name="slug"
-          label="Slug (URL thân thiện)"
-          extra={
-            <span className="text-xs text-gray-500">
-              URL: /courses/<strong>{form.getFieldValue('slug') || '...'}</strong>
-            </span>
-          }
-          rules={[
-            { required: true, message: 'Vui lòng nhập slug' },
-            { pattern: /^[a-z0-9-]+$/, message: 'Chỉ gồm chữ thường, số và dấu -' },
-          ]}
-        >
-          <Input
-            placeholder="vd: tieng-nhat-n5"
-            size="large"
-            disabled={isEdit}
-          />
-        </Form.Item>
 
         <Form.Item
           name="jlptLevel"
@@ -211,7 +164,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
 
         <Form.Item
           name="thumbnailUrl"
-          label="URL ảnh bìa (tuỳ chọn)"
+          label="Ảnh bìa (tuỳ chọn)"
           rules={[
             {
               type: 'url',
@@ -219,14 +172,10 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
             },
           ]}
         >
-          <Input
-            size="large"
-            placeholder="https://..."
-            prefix={title ? <span className="text-xs text-gray-400">IMG</span> : undefined}
-          />
+          <MediaUploadField accept="image" folder="elearningJP/courses/thumbnails" />
         </Form.Item>
 
-        {isEdit && (
+        {/* {isEdit && (
           <Form.Item label="Trạng thái xuất bản">
             <Switch
               checked={course?.published ?? false}
@@ -238,7 +187,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
               Dùng nút "Xuất bản / Bản nháp" trong trang chi tiết khoá học.
             </span>
           </Form.Item>
-        )}
+        )} */}
       </Form>
     </Modal>
   )

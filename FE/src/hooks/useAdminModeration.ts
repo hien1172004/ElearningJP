@@ -56,7 +56,10 @@ export function useModerationQueue(params: ModerationQueueParams) {
   })
 }
 
-/** Tra cứu bình luận / trả lời. */
+/**
+ * Tra cứu bình luận. Không truyền `kind` → BE gộp cả bình luận gốc lẫn trả lời,
+ * phân trang chung theo thời gian (mới nhất trước).
+ */
 export function useModerationBrowse(params: ModerationBrowseParams) {
   return useQuery<PageResponse<ModerationItem>>({
     queryKey: QUERY_KEYS.adminModeration.browse({ ...params }),

@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  BookMarked,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
+import { BackButton } from '@/components/common'
 import { SrsForecastBar } from '@/components/srs'
 import { useSrsItems } from '@/hooks/useSrsItems'
 import { useSrsStats } from '@/hooks/useSrsStats'
@@ -131,24 +131,12 @@ export const SrsDeckPage: React.FC = () => {
 
   const items = data?.items ?? []
   const totalPages = data?.totalPages ?? 0
-  const totalElements = data?.totalElements ?? 0
 
   return (
     <div className="max-w-4xl mx-auto pb-16">
       {/* ===== Header ===== */}
       <header className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-3">
-          <span className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <BookMarked className="w-5 h-5" />
-          </span>
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">Sổ tay SRS</h1>
-            <p className="text-xs text-slate-500">
-              {stats?.totalItems ?? totalElements} thẻ đang ôn
-              {stats && stats.archivedCount > 0 && ` · ${stats.archivedCount} thẻ lưu trữ`}
-            </p>
-          </div>
-        </div>
+        <BackButton to="/srs" />
         <Link
           to="/srs"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition"

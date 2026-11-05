@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button, Spin, Tag, message } from 'antd'
-import { BookOutlined, DownloadOutlined, ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons'
+import { BookOutlined, DownloadOutlined, CheckOutlined } from '@ant-design/icons'
 import { notebookService } from '@/services/notebook.service'
 import type { Notebook } from '@/types'
+import { BackButton } from '@/components/common'
 
 export const NotebookShareRedirectPage: React.FC = () => {
   const { shareCode } = useParams<{ shareCode: string }>()
@@ -77,14 +78,7 @@ export const NotebookShareRedirectPage: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto py-12 px-4 space-y-6">
-      <Button
-        type="text"
-        icon={<ArrowLeftOutlined />}
-        onClick={() => navigate('/notebooks')}
-        className="text-gray-600 font-medium"
-      >
-        Về sổ tay của tôi
-      </Button>
+      <BackButton to="/notebooks" />
 
       <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm text-center space-y-4">
         <div className="w-16 h-16 mx-auto bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 border border-blue-100">

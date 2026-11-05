@@ -95,43 +95,61 @@ public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long
      *   shiftRange(quizId, fromIndex=2, toIndex=3) → [Q1(1), Q2(3), Q3(4)]
      *   set Q4.orderIndex=2 → [Q1(1), Q4(2), Q2(3), Q3(4)]   ✓</p>
      *
+     * <p>Ghi 2 pha (xem {@link #markRangeAsShiftedNegative}) vì UNIQUE INDEX
+     * (quiz_id, order_index) của Postgres được kiểm tra theo TỪNG DÒNG: một lệnh
+     * {@code SET order_index = order_index + 1} sẽ va chạm với dòng kế bên chưa kịp dời.</p>
+     *
      * @return số bản ghi bị ảnh hưởng
      */
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-            UPDATE QuizQuestion qq
-               SET qq.orderIndex = qq.orderIndex + 1
-             WHERE qq.quiz.id = :quizId
-               AND qq.orderIndex >= :fromIndex
-               AND qq.orderIndex <= :toIndex
-               AND qq.deleted = false
-               AND qq.id <> :excludeId
-            """)
-    int shiftOrderIndexesUpInRangeExcluding(
-            @Param("quizId") Long quizId,
-            @Param("fromIndex") Integer fromIndex,
-            @Param("toIndex") Integer toIndex,
-            @Param("excludeId") Long excludeId);
+    default int shiftOrderIndexesUpInRangeExcluding(Long quizId, Integer fromIndex, Integer toIndex, Long excludeId) {
+        int shifted = markRangeAsShiftedNegative(quizId, fromIndex, toIndex, excludeId, 1);
+        restoreNegativeOrderIndexes(quizId);
+        return shifted;
+    }
 
     /**
      * Dời tất cả câu hỏi có orderIndex trong [fromIndex, toIndex] xuống -1.
      * Dùng khi UPDATE câu hỏi di chuyển orderIndex để tạo chỗ trống tại toIndex.
+     * Ghi 2 pha như {@link #shiftOrderIndexesUpInRangeExcluding}.
+     */
+    default int shiftOrderIndexesDownInRangeExcluding(Long quizId, Integer fromIndex, Integer toIndex, Long excludeId) {
+        int shifted = markRangeAsShiftedNegative(quizId, fromIndex, toIndex, excludeId, -1);
+        restoreNegativeOrderIndexes(quizId);
+        return shifted;
+    }
+
+    /**
+     * Pha 1: gán orderIndex = -(orderIndex + delta) cho các câu trong [fromIndex, toIndex].
+     * Giá trị âm không trùng với bất kỳ orderIndex dương nào và khác nhau từng câu,
+     * nên không vi phạm UNIQUE INDEX. Chỉ dùng qua các hàm shift ở trên.
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             UPDATE QuizQuestion qq
-               SET qq.orderIndex = qq.orderIndex - 1
+               SET qq.orderIndex = -(qq.orderIndex + :delta)
              WHERE qq.quiz.id = :quizId
                AND qq.orderIndex >= :fromIndex
                AND qq.orderIndex <= :toIndex
                AND qq.deleted = false
                AND qq.id <> :excludeId
             """)
-    int shiftOrderIndexesDownInRangeExcluding(
+    int markRangeAsShiftedNegative(
             @Param("quizId") Long quizId,
             @Param("fromIndex") Integer fromIndex,
             @Param("toIndex") Integer toIndex,
-            @Param("excludeId") Long excludeId);
+            @Param("excludeId") Long excludeId,
+            @Param("delta") int delta);
+
+    /** Pha 2: đổi dấu các orderIndex âm (đã đánh dấu ở pha 1) về giá trị dương mới. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE QuizQuestion qq
+               SET qq.orderIndex = -qq.orderIndex
+             WHERE qq.quiz.id = :quizId
+               AND qq.orderIndex < 0
+               AND qq.deleted = false
+            """)
+    int restoreNegativeOrderIndexes(@Param("quizId") Long quizId);
 
     // ========================================================================
     // ADJACENT SWAP HELPERS — tương tự các item repository khác

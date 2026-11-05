@@ -1,5 +1,6 @@
 package com.jp.elearningjp.controller.user;
 
+import com.jp.elearningjp.dto.request.user.AdminCreateUserRequest;
 import com.jp.elearningjp.dto.request.user.AdminUpdateUserRolesRequest;
 import com.jp.elearningjp.dto.request.user.AdminUpdateUserStatusRequest;
 import com.jp.elearningjp.dto.response.user.AdminUserResponse;
@@ -42,6 +43,20 @@ public class AdminUserController {
         return ApiResponse.<PageResponse<AdminUserResponse>>builder()
                 .success(true)
                 .data(adminUserService.getUsers(keyword, role, status, page, size))
+                .build();
+    }
+
+    @PostMapping
+    @Operation(summary = "[Admin] Cấp phát tài khoản giáo viên / quản trị viên",
+            description = "Tạo tài khoản đăng nhập bằng email + mật khẩu với đúng 1 vai trò: TEACHER hoặc ADMIN. "
+                    + "Tài khoản ở trạng thái ACTIVE, coi như đã xác thực email. Email đã tồn tại → lỗi USER_EXISTED.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<AdminUserResponse> createUser(@Valid @RequestBody AdminCreateUserRequest request) {
+        return ApiResponse.<AdminUserResponse>builder()
+                .success(true)
+                .message("Tạo tài khoản thành công")
+                .data(adminUserService.createUser(request))
                 .build();
     }
 

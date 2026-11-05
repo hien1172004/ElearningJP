@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Circle, ChevronLeft, ChevronRight, Award, FileCheck } from 'lucide-react'
 import { toSlug } from '@/utils'
+import { nextLessonState } from '@/utils/lessonNav'
 import type { LessonOutline, ProgressStatus } from '@/types'
 import type { ExamSummary } from '@/types/exam.types'
 import { examService } from '@/services/exam.service'
@@ -31,6 +32,7 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
   isEnrolled,
 }) => {
   const navigate = useNavigate()
+  const location = useLocation()
   const [courseExams, setCourseExams] = useState<ExamSummary[]>([])
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
     const lessonSlug = toSlug(lessonTitle)
     navigate(
       `/learn/${courseSlug}/${lessonSlug}?courseId=${courseId}&lessonId=${lessonId}`,
+      { state: nextLessonState(location.state) },
     )
   }
   const currentIdx = lessons.findIndex((l) => l.id === currentLessonId)

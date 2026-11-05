@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MessageSquareText, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Button as AntdButton, Select, Table, Tag, Tooltip } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
-import { PageHeader, EmptyState, SearchInput, confirmDialog } from '@/components/common'
+import { EmptyState, SearchInput, confirmDialog } from '@/components/common'
 import { SCENARIO_TOPICS, scenarioTopicName } from '@/components/admin'
 import { useAdminScenarios, useDeleteScenario } from '@/hooks'
 import { useAuthStore } from '@/stores'
@@ -147,26 +147,6 @@ export const AdminScenariosPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
-      <PageHeader
-        // badge="Quản trị"
-        title="Kịch bản luyện nói"
-        subtitle={
-          admin
-            ? 'Quản lý toàn bộ kịch bản: kịch bản hệ thống, của giáo viên và của cộng đồng.'
-            : 'Quản lý các kịch bản luyện nói do bạn tạo.'
-        }
-        variant="emerald"
-        actions={
-          <AntdButton
-            type="primary"
-            icon={<Plus className="w-4 h-4" />}
-            onClick={() => navigate('/admin/scenarios/new')}
-          >
-            Tạo kịch bản
-          </AntdButton>
-        }
-      />
-
       <div className="flex flex-col md:flex-row gap-3">
         <SearchInput
           placeholder="Tìm theo tiêu đề hoặc mô tả"
@@ -200,6 +180,14 @@ export const AdminScenariosPage: React.FC = () => {
           options={LEVELS.map((l) => ({ value: l, label: l }))}
           className="md:w-40"
         />
+        <AntdButton
+          type="primary"
+          icon={<Plus className="w-4 h-4" />}
+          onClick={() => navigate('/admin/scenarios/new')}
+          className="md:ml-auto"
+        >
+          Tạo kịch bản
+        </AntdButton>
       </div>
 
       {isError ? (

@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, MessageSquareText, Plus, Trash2 } from 'lucide-react'
+import { MessageSquareText, Plus, Trash2 } from 'lucide-react'
 import { Button as AntdButton, Form, Input, Select, Switch } from 'antd'
 import type { AxiosError } from 'axios'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { PageHeader, LoadingState, EmptyState } from '@/components/common'
+import { BackButton, LoadingState, EmptyState, MediaUploadField } from '@/components/common'
 import { SCENARIO_TOPICS } from '@/components/admin'
 import { useAdminScenario, useCreateScenario, useUpdateScenario } from '@/hooks'
 import { toScenarioErrorMessage } from '@/hooks/useAdminScenarios'
@@ -202,11 +202,7 @@ export const AdminScenarioEditorPage: React.FC = () => {
     else createScenario.mutate(payload, { onSuccess })
   }
 
-  const backButton = (
-    <AntdButton icon={<ArrowLeft className="w-4 h-4" />} onClick={() => navigate('/admin/scenarios')}>
-      Danh sách
-    </AntdButton>
-  )
+  const backButton = <BackButton to="/admin/scenarios" />
 
   if (isEdit && isLoading) {
     return (
@@ -235,13 +231,7 @@ export const AdminScenarioEditorPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
-      <PageHeader
-        // badge="Quản trị"
-        title={isEdit ? 'Sửa kịch bản luyện nói' : 'Tạo kịch bản luyện nói'}
-        subtitle="AI sẽ nhập vai theo kịch bản này và theo dõi người học hoàn thành từng nhiệm vụ."
-        variant="emerald"
-        actions={backButton}
-      />
+      <div>{backButton}</div>
 
       <Form<FormValues>
         form={form}
@@ -298,8 +288,8 @@ export const AdminScenarioEditorPage: React.FC = () => {
             />
           </Form.Item>
           <div className="grid md:grid-cols-[1fr_auto] gap-x-4 items-end">
-            <Form.Item name="thumbnailUrl" label="Ảnh bìa (URL, không bắt buộc)">
-              <Input maxLength={500} placeholder="https://..." />
+            <Form.Item name="thumbnailUrl" label="Ảnh bìa (không bắt buộc)">
+              <MediaUploadField accept="image" folder="elearningJP/scenarios/thumbnails" />
             </Form.Item>
             <Form.Item name="isPremium" label="Premium" valuePropName="checked">
               <Switch />

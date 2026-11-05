@@ -16,9 +16,14 @@ interface QuizPanelProps {
   lessonId: number
   /** Tên lesson để hiển thị trong title các modal. */
   lessonTitle?: string
+  /**
+   * true: hiện thẳng danh sách câu hỏi trong trang (không gian soạn khóa học).
+   * false (mặc định): thẻ tóm tắt, bấm vào mở hộp thoại quản lý câu hỏi.
+   */
+  inline?: boolean
 }
 
-export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _lessonTitle }) => {
+export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _lessonTitle, inline = false }) => {
   const { message } = App.useApp()
   // Trang này dành cho Admin/Teacher → dùng endpoint /quiz/manage
   // (trả kèm đáp án đúng, explanation). Học viên dùng /quiz (ẩn đáp án).
@@ -122,12 +127,233 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
     const targetIndex = direction === 'up' ? idx - 1 : idx + 1
     if (targetIndex < 0 || targetIndex >= arr.length) return
     const newOrder = [...arr]
-    ;[newOrder[idx], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[idx]]
+      ;[newOrder[idx], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[idx]]
     try {
       await reorderQuiz.mutateAsync(newOrder.map((q) => q.id))
     } catch {
       /* lỗi đã toast trong hook */
     }
+  }
+
+  // Danh sách câu hỏi (dùng chung cho hộp thoại và chế độ inline)
+  const questionList = (
+    <div className="py-2 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-cyan-700 uppercase tracking-wider">
+          Danh sách câu hỏi ({questions.length})
+        </p>
+        <Button
+          type="primary"
+          size="small"
+          icon={<Plus className="w-3 h-3" />}
+          onClick={() => {
+            setEditingQuestion(null)
+            setQuestionFormOpen(true)
+          }}
+          className="rounded!"
+        >
+          Thêm câu hỏi
+        </Button>
+      </div>
+
+      {questions.length === 0 && (
+        <div className="py-4 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-md">
+          Chưa có câu hỏi nào. Bấm "Thêm câu hỏi" để tạo.
+        </div>
+      )}
+
+      <div className={inline ? 'space-y-2' : 'space-y-2 max-h-105 overflow-y-auto pr-1'}>
+        {questionsFull.map((q, idx) => {
+          const qType = (q.questionType ?? 'MULTIPLE_CHOICE') as string
+          const correctOpt = q.options?.find((o) => o.correct)
+          // idx trong mảng đã sort theo orderIndex từ BE (findByQuizIdAndDeletedFalseOrderByOrderIndexAsc)
+          // → dùng idx trực tiếp để enable/disable nút ↑/↓
+          const isFirst = idx === 0
+          const isLast = idx === questionsFull.length - 1
+          const isReordering = reorderQuiz.isPending
+          return (
+            <div
+              key={q.id}
+              onClick={() => setViewingQuestion(q)}
+              className="flex items-start gap-2 p-2.5 bg-white rounded-md border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 transition group cursor-pointer"
+            >
+              <div className="shrink-0 w-7 h-7 rounded bg-cyan-50 text-cyan-700 font-bold text-xs flex items-center justify-center">
+                #{q.orderIndex ?? '?'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-gray-900 line-clamp-2">
+                  {q.questionText}
+                </p>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  {QUIZ_TYPE_LABEL[qType] ?? qType}
+                  {qType === 'MULTIPLE_CHOICE' && correctOpt && (
+                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">
+                      ✓ {correctOpt.optionText}
+                    </span>
+                  )}
+                  {qType === 'FILL_IN_THE_BLANK' && q.correctTextAnswer && (
+                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">
+                      ✓ {q.correctTextAnswer}
+                    </span>
+                  )}
+                </p>
+              </div>
+              {/* Nút ↑/↓ reorder — luôn hiển thị để dễ thao tác.
+                  Enable/disable theo vị trí đầu/cuối. */}
+              {/* <div
+                className="flex flex-col gap-0.5 shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleReorderQuestion('up', q.id)}
+                  disabled={isFirst || isReordering}
+                  className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  title="Di chuyển lên"
+                >
+                  <ChevronUp className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleReorderQuestion('down', q.id)}
+                  disabled={isLast || isReordering}
+                  className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  title="Di chuyển xuống"
+                >
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+              </div> */}
+              <div
+                className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* <button
+                  type="button"
+                  onClick={() => setViewingQuestion(q)}
+                  className="p-1 text-gray-400 hover:text-cyan-600 rounded"
+                  title="Xem chi tiết"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                </button> */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingQuestion(q as unknown as LessonQuizItem)
+                    setQuestionFormOpen(true)
+                  }}
+                  className="p-1 text-gray-400 hover:text-indigo-600 rounded"
+                  title="Sửa"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    Modal.confirm({
+                      title: 'Xoá câu hỏi?',
+                      content: 'Hành động này không thể hoàn tác.',
+                      okText: 'Xoá',
+                      cancelText: 'Huỷ',
+                      okButtonProps: { danger: true },
+                      onOk: () => deleteQuizItem.mutate(q.id),
+                    })
+                  }}
+                  className="p-1 text-gray-400 hover:text-rose-600 rounded"
+                  title="Xoá"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  // Các hộp thoại phụ: xem / tạo / sửa câu hỏi, đổi tiêu đề
+  const dialogs = (
+    <>
+      {/* ============== Modal: xem chi tiết 1 câu hỏi ============== */}
+      <QuestionViewModal
+        question={viewingQuestion}
+        onClose={() => setViewingQuestion(null)}
+      />
+
+      {/* ============== Modal: form tạo/sửa 1 câu hỏi ============== */}
+      <QuestionFormModal
+        open={questionFormOpen}
+        lessonId={lessonId}
+        editing={editingQuestion}
+        onClose={() => {
+          setQuestionFormOpen(false)
+          setEditingQuestion(null)
+        }}
+      />
+
+      {/* ============== Modal: tạo câu hỏi đầu tiên (khi 404) ============== */}
+      <QuestionFormModal
+        open={isCreateOpen}
+        lessonId={lessonId}
+        editing={null}
+        onClose={closeCreate}
+      />
+
+      {/* ============== Modal: đổi tiêu đề ============== */}
+      <Modal
+        open={isRenameOpen}
+        onCancel={closeRename}
+        onOk={handleRename}
+        title="Đổi tiêu đề Quiz"
+        okText="Lưu"
+        cancelText="Huỷ"
+        destroyOnHidden
+      >
+        <div className="py-2 space-y-2">
+          <label className="text-xs font-semibold text-gray-700">Tiêu đề mới</label>
+          <Input
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            placeholder="VD: Bài kiểm tra cuối khóa"
+            size="large"
+          />
+          {/* <p className="text-[11px] text-amber-600">
+          ⚠ Tính năng này cần BE hỗ trợ PUT /lessons/{'{id}'}/quiz
+        </p> */}
+        </div>
+      </Modal>
+    </>
+  )
+
+  if (inline) {
+    return (
+      <>
+        <div className="bg-white rounded-xl border border-suna shadow-xs p-4 space-y-3">
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <BookOpen className="w-5 h-5 text-cyan-600 shrink-0" />
+            <h2 className="flex-1 min-w-0 truncate text-base font-bold text-sumi">
+              {isNotFound ? 'Câu hỏi cuối bài' : quizTitle || 'Bài kiểm tra'}
+            </h2>
+            {quiz && total > 0 && (
+              <button
+                type="button"
+                onClick={handleDeleteAll}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-rose-50 hover:text-rose-600"
+                title="Xoá toàn bộ câu hỏi"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Xoá tất cả
+              </button>
+            )}
+          </div>
+          {isLoading ? (
+            <p className="py-6 text-center text-xs text-gray-400">Đang tải quiz...</p>
+          ) : (
+            questionList
+          )}
+        </div>
+        {dialogs}
+      </>
+    )
   }
 
   return (
@@ -226,188 +452,10 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
         width={920}
         destroyOnHidden
       >
-        <div className="py-2 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-cyan-700 uppercase tracking-wider">
-              Danh sách câu hỏi ({questions.length})
-            </p>
-            <Button
-              type="primary"
-              size="small"
-              icon={<Plus className="w-3 h-3" />}
-              onClick={() => {
-                setEditingQuestion(null)
-                setQuestionFormOpen(true)
-              }}
-              className="rounded!"
-            >
-              Thêm câu hỏi
-            </Button>
-          </div>
-
-          {questions.length === 0 && (
-            <div className="py-4 text-center text-xs text-gray-400 border border-dashed border-gray-200 rounded-md">
-              Chưa có câu hỏi nào. Bấm "Thêm câu hỏi" để tạo.
-            </div>
-          )}
-
-          <div className="space-y-2 max-h-105 overflow-y-auto pr-1">
-            {questionsFull.map((q, idx) => {
-              const qType = (q.questionType ?? 'MULTIPLE_CHOICE') as string
-              const correctOpt = q.options?.find((o) => o.correct)
-              // idx trong mảng đã sort theo orderIndex từ BE (findByQuizIdAndDeletedFalseOrderByOrderIndexAsc)
-              // → dùng idx trực tiếp để enable/disable nút ↑/↓
-              const isFirst = idx === 0
-              const isLast = idx === questionsFull.length - 1
-              const isReordering = reorderQuiz.isPending
-              return (
-                <div
-                  key={q.id}
-                  onClick={() => setViewingQuestion(q)}
-                  className="flex items-start gap-2 p-2.5 bg-white rounded-md border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 transition group cursor-pointer"
-                >
-                  <div className="shrink-0 w-7 h-7 rounded bg-cyan-50 text-cyan-700 font-bold text-xs flex items-center justify-center">
-                    #{q.orderIndex ?? '?'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm text-gray-900 line-clamp-2">
-                      {q.questionText}
-                    </p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">
-                      {QUIZ_TYPE_LABEL[qType] ?? qType}
-                      {qType === 'MULTIPLE_CHOICE' && correctOpt && (
-                        <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">
-                          ✓ {correctOpt.optionText}
-                        </span>
-                      )}
-                      {qType === 'FILL_IN_THE_BLANK' && q.correctTextAnswer && (
-                        <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">
-                          ✓ {q.correctTextAnswer}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  {/* Nút ↑/↓ reorder — luôn hiển thị để dễ thao tác.
-                      Enable/disable theo vị trí đầu/cuối. */}
-                  <div
-                    className="flex flex-col gap-0.5 shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleReorderQuestion('up', q.id)}
-                      disabled={isFirst || isReordering}
-                      className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                      title="Di chuyển lên"
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleReorderQuestion('down', q.id)}
-                      disabled={isLast || isReordering}
-                      className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                      title="Di chuyển xuống"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div
-                    className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* <button
-                      type="button"
-                      onClick={() => setViewingQuestion(q)}
-                      className="p-1 text-gray-400 hover:text-cyan-600 rounded"
-                      title="Xem chi tiết"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                    </button> */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingQuestion(q as unknown as LessonQuizItem)
-                        setQuestionFormOpen(true)
-                      }}
-                      className="p-1 text-gray-400 hover:text-indigo-600 rounded"
-                      title="Sửa"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        Modal.confirm({
-                          title: 'Xoá câu hỏi?',
-                          content: 'Hành động này không thể hoàn tác.',
-                          okText: 'Xoá',
-                          cancelText: 'Huỷ',
-                          okButtonProps: { danger: true },
-                          onOk: () => deleteQuizItem.mutate(q.id),
-                        })
-                      }}
-                      className="p-1 text-gray-400 hover:text-rose-600 rounded"
-                      title="Xoá"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        {questionList}
       </Modal>
 
-      {/* ============== Modal: xem chi tiết 1 câu hỏi ============== */}
-      <QuestionViewModal
-        question={viewingQuestion}
-        onClose={() => setViewingQuestion(null)}
-      />
-
-      {/* ============== Modal: form tạo/sửa 1 câu hỏi ============== */}
-      <QuestionFormModal
-        open={questionFormOpen}
-        lessonId={lessonId}
-        editing={editingQuestion}
-        onClose={() => {
-          setQuestionFormOpen(false)
-          setEditingQuestion(null)
-        }}
-      />
-
-      {/* ============== Modal: tạo câu hỏi đầu tiên (khi 404) ============== */}
-      <QuestionFormModal
-        open={isCreateOpen}
-        lessonId={lessonId}
-        editing={null}
-        onClose={closeCreate}
-      />
-
-      {/* ============== Modal: đổi tiêu đề ============== */}
-      <Modal
-        open={isRenameOpen}
-        onCancel={closeRename}
-        onOk={handleRename}
-        title="Đổi tiêu đề Quiz"
-        okText="Lưu"
-        cancelText="Huỷ"
-        destroyOnHidden
-      >
-        <div className="py-2 space-y-2">
-          <label className="text-xs font-semibold text-gray-700">Tiêu đề mới</label>
-          <Input
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            placeholder="VD: Bài kiểm tra cuối khóa"
-            size="large"
-          />
-          {/* <p className="text-[11px] text-amber-600">
-            ⚠ Tính năng này cần BE hỗ trợ PUT /lessons/{'{id}'}/quiz
-          </p> */}
-        </div>
-      </Modal>
+      {dialogs}
     </>
   )
 }
@@ -476,18 +524,16 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
                 return (
                   <div
                     key={o.id ?? idx}
-                    className={`flex items-start gap-2 p-2 rounded border-2 transition ${
-                      isCorrect
-                        ? 'border-emerald-400 bg-emerald-50'
-                        : 'border-gray-200 bg-white'
-                    }`}
+                    className={`flex items-start gap-2 p-2 rounded border-2 transition ${isCorrect
+                      ? 'border-emerald-400 bg-emerald-50'
+                      : 'border-gray-200 bg-white'
+                      }`}
                   >
                     <div
-                      className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                        isCorrect
-                          ? 'bg-emerald-500 text-white'
-                          : 'bg-gray-200 text-gray-600'
-                      }`}
+                      className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${isCorrect
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gray-200 text-gray-600'
+                        }`}
                     >
                       {isCorrect ? <Check className="w-3.5 h-3.5" /> : String.fromCharCode(65 + idx)}
                     </div>
@@ -942,11 +988,10 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
                 type="button"
                 onClick={() => setQuestionType(t)}
                 disabled={!!editing}
-                className={`px-3 py-2 rounded text-xs font-bold border-2 transition ${
-                  questionType === t
-                    ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-cyan-300'
-                } ${editing ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className={`px-3 py-2 rounded text-xs font-bold border-2 transition ${questionType === t
+                  ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-cyan-300'
+                  } ${editing ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 {QUIZ_TYPE_LABEL[t]}
               </button>
@@ -965,8 +1010,9 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
               placeholder="VD: Nghĩa của từ '勉強' là gì?"
             />
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2">
+          {/* Ô thứ tự chỉ hiện khi sửa; thêm mới → BE tự gán vào cuối danh sách */}
+          <div className={editing ? 'grid grid-cols-3 gap-2' : undefined}>
+            <div className={editing ? 'col-span-2' : undefined}>
               <label className="text-xs font-semibold text-gray-700 mb-1 block">Giải thích (tuỳ chọn)</label>
               <Input
                 value={explanation}
@@ -974,16 +1020,17 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
                 placeholder="Hiển thị sau khi HV nộp bài"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-700 mb-1 block">Thứ tự</label>
-              <InputNumber
-                min={1}
-                value={orderIndex}
-                onChange={(v) => setOrderIndex(v ?? undefined)}
-                className="w-full!"
-                placeholder="Tự gán"
-              />
-            </div>
+            {editing && (
+              <div>
+                <label className="text-xs font-semibold text-gray-700 mb-1 block">Thứ tự</label>
+                <InputNumber
+                  min={1}
+                  value={orderIndex}
+                  onChange={(v) => setOrderIndex(v ?? undefined)}
+                  className="w-full!"
+                />
+              </div>
+            )}
           </div>
         </div>
 

@@ -21,5 +21,7 @@ public class CourseResponse {
     String thumbnailUrl;
     boolean published;
     Integer totalLessons;
+    /** Số học viên đang đăng ký (bỏ đăng ký / tài khoản đã xóa) */
+    Long totalEnrollments;
     Instant createdAt;
 }

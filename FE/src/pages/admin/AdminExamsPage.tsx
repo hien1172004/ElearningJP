@@ -28,7 +28,6 @@ import {
   Layers,
   ArrowUpDown,
 } from 'lucide-react'
-import { useAuthStore } from '@/stores'
 import { examService } from '@/services'
 import type { ExamSummary } from '@/types'
 
@@ -71,7 +70,6 @@ const JLPT_BADGES: Record<
 
 export const AdminExamsPage: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
 
   // State dữ liệu
   const [exams, setExams] = useState<ExamSummary[]>([])
@@ -315,23 +313,7 @@ export const AdminExamsPage: React.FC = () => {
 
       {/* 1. HEADER PHẲNG (không banner) — đồng bộ PageHeader các trang quản trị */}
       <div>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold text-indigo-600">
-                {user?.role?.includes('ADMIN') ? 'Quản trị viên' : 'Giáo viên JLPT'}
-              </span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-nibi font-medium">Trung tâm khảo thí & đề thi</span>
-            </div>
-            <h1 className="text-lg sm:text-xl font-bold text-sumi tracking-tight">
-              Quản lý đề thi & bài kiểm tra
-            </h1>
-            <p className="text-sm text-nibi mt-0.5">
-              Biên tập cấu trúc đề thi JLPT N1 ~ N5, bóc tách bằng AI và phát hành bài thi thử cho học viên.
-            </p>
-          </div>
-
+        <div className="flex flex-col md:flex-row md:items-center justify-end gap-3">
           {/* Cụm nút hành động chính */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
             <button
@@ -346,7 +328,7 @@ export const AdminExamsPage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => navigate('/exams')}
+              onClick={() => navigate('/exams', { state: { backTo: '/admin/exams' } })}
               className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
               <Eye className="w-4 h-4 text-slate-500" />

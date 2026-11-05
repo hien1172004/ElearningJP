@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { BackButton } from '@/components/common'
 import { examService } from '../../services/exam.service'
 import type { ExamResult } from '../../types/exam.types'
 import {
@@ -95,6 +96,8 @@ export const ExamResultPage: React.FC = () => {
   return (
     <div className="pb-8">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Trang trước có thể là phòng thi → luôn về lịch sử thi */}
+        <BackButton to="/exam-history" label="Quay lại lịch sử thi" useHistory={false} />
         {/* Certificate Card Header */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xs border border-suna dark:border-slate-700/60 overflow-hidden relative">
           {/* Top banner accent */}

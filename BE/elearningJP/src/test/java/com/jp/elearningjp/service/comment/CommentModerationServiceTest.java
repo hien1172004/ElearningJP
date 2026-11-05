@@ -18,18 +18,25 @@ import com.jp.elearningjp.shared.enums.CommentTargetType;
 import com.jp.elearningjp.shared.enums.ContentStatus;
 import com.jp.elearningjp.shared.event.comment.CommentDeletedEvent;
 import com.jp.elearningjp.shared.event.comment.CommentModeratedEvent;
+import com.jp.elearningjp.dto.response.comment.ModerationItemResponse;
+import com.jp.elearningjp.shared.response.PageResponse;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -251,5 +258,65 @@ class CommentModerationServiceTest {
         lessonComment.softDelete();
 
         assertRejected(() -> service.hideReply(7L, null), ErrorCode.COMMENT_REPLY_NOT_FOUND);
+    }
+
+    // ============================================================
+    // Tra cứu gộp (kind = null): phân trang chung bình luận + trả lời
+    // ============================================================
+
+    private static Instant at(long minute) {
+        return Instant.parse("2026-01-01T00:00:00Z").plusSeconds(minute * 60);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void stubBrowseSources(List<Comment> comments, List<CommentReply> replies) {
+        when(commentRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(comments, inv.getArgument(1), comments.size()));
+        when(replyRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(replies, inv.getArgument(1), replies.size()));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void browseAll_mergesByCreatedAtAndSlicesExactPage() {
+        loginAs(ADMIN_ID, true);
+        Comment c1 = comment(1L, CommentTargetType.LESSON, LESSON_ID);
+        c1.setCreatedAt(at(10));
+        Comment c2 = comment(2L, CommentTargetType.LESSON, LESSON_ID);
+        c2.setCreatedAt(at(7));
+        CommentReply r1 = CommentReply.builder().comment(lessonComment).user(user(AUTHOR_ID)).content("r1").build();
+        r1.setId(11L);
+        r1.setCreatedAt(at(9));
+        CommentReply r2 = CommentReply.builder().comment(lessonComment).user(user(AUTHOR_ID)).content("r2").build();
+        r2.setId(12L);
+        r2.setCreatedAt(at(6));
+        stubBrowseSources(List.of(c1, c2), List.of(r1, r2));
+
+        // Thứ tự gộp: c1(10) → r1(9) → c2(7) → r2(6); trang 2, size 2 → [c2, r2]
+        PageResponse<ModerationItemResponse> page2 = service.browse(null, null, null, null, 2, 2);
+
+        assertThat(page2.getItems()).extracting(ModerationItemResponse::getKind, ModerationItemResponse::getId)
+                .containsExactly(tuple(ModerationItemResponse.Kind.COMMENT, 2L),
+                        tuple(ModerationItemResponse.Kind.REPLY, 12L));
+        assertThat(page2.getTotalElements()).isEqualTo(4);
+        assertThat(page2.getTotalPages()).isEqualTo(2);
+
+        // Mỗi bảng chỉ cần đọc offset + size = 4 dòng đầu
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(commentRepository).findAll(any(Specification.class), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isZero();
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(4);
+    }
+
+    @Test
+    void browseAll_tooDeep_returnsEmptyItemsButKeepsTotals() {
+        loginAs(ADMIN_ID, true);
+        stubBrowseSources(List.of(lessonComment), List.of());
+
+        int deepPage = CommentModerationService.MAX_BROWSE_ALL_WINDOW; // offset vượt giới hạn
+        PageResponse<ModerationItemResponse> res = service.browse(null, null, null, null, deepPage, 10);
+
+        assertThat(res.getItems()).isEmpty();
+        assertThat(res.getTotalElements()).isEqualTo(1);
     }
 }

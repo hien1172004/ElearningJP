@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.user;
 
+import com.jp.elearningjp.dto.request.user.AdminCreateUserRequest;
 import com.jp.elearningjp.dto.request.user.AdminUpdateUserRolesRequest;
 import com.jp.elearningjp.dto.request.user.AdminUpdateUserStatusRequest;
 import com.jp.elearningjp.dto.response.user.AdminUserResponse;
@@ -27,20 +28,25 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Nghiệp vụ quản lý người dùng dành cho ADMIN: tra cứu, khóa/mở khóa, phân quyền.
+ * Nghiệp vụ quản lý người dùng dành cho ADMIN: tra cứu, cấp phát tài khoản, khóa/mở khóa, phân quyền.
  */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AdminUserService {
+
+    /** Role được cấp khi admin cấp phát tài khoản (mỗi tài khoản chỉ có 1 role). */
+    static final Set<String> PROVISIONABLE_ROLES = Set.of(PredefinedRole.TEACHER_ROLE, PredefinedRole.ADMIN_ROLE);
 
     /** Các role hợp lệ có thể gán qua trang quản trị. */
     static final Set<String> ASSIGNABLE_ROLES = Set.of(
@@ -52,6 +58,39 @@ public class AdminUserService {
     RoleRepository roleRepository;
     CurrentUserService currentUserService;
     UserTokenRevocationService userTokenRevocationService;
+    PasswordEncoder passwordEncoder;
+
+    /**
+     * Admin cấp phát tài khoản đăng nhập bằng email/mật khẩu cho giáo viên hoặc quản trị viên.
+     * Mỗi tài khoản chỉ có đúng 1 role (role được chọn), trạng thái ACTIVE và coi như đã xác thực
+     * email (do admin tạo trực tiếp).
+     */
+    @Transactional
+    public AdminUserResponse createUser(AdminCreateUserRequest request) {
+        String email = request.getEmail().trim();
+        if (userRepository.existsByEmail(email)) {
+            throw new AppException(ErrorCode.USER_EXISTED);
+        }
+        String roleName = normalizeRole(request.getRole());
+        if (!PROVISIONABLE_ROLES.contains(roleName)) {
+            throw new AppException(ErrorCode.ROLE_INVALID);
+        }
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new AppException(ErrorCode.ROLE_INVALID));
+
+        User user = User.builder()
+                .email(email)
+                .fullName(request.getFullName().trim())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .status(UserStatus.ACTIVE)
+                .emailVerifiedAt(Instant.now())
+                .roles(new HashSet<>(Set.of(role)))
+                .build();
+        userRepository.save(user);
+        log.info("Admin {} provisioned account {} with role {}",
+                currentUserService.getCurrentUserId(), user.getId(), roleName);
+        return toResponse(user, Set.of(roleName));
+    }
 
     /**
      * Danh sách người dùng (chưa bị xóa), lọc theo từ khóa (email/họ tên), role, trạng thái.

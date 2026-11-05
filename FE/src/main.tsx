@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
+// Thông báo lỗi zod tiếng Việt cho toàn ứng dụng (phải nạp trước khi render form)
+import '@/lib/zod'
 import App from './App.tsx'
 import { queryClient } from '@/lib/queryClient'
 import { AntdProvider } from '@/lib/antd'

@@ -81,14 +81,6 @@ export const AdminStatsPage: React.FC = () => {
 
   const header = (
     <PageHeader
-      // badge="Quản trị"
-      title="Thống kê tổng quan"
-      subtitle={
-        data
-          ? `Từ ${fmtFullDay(data.from)} đến ${fmtFullDay(data.to)} · so sánh với ${data.days} ngày liền trước`
-          : 'Người dùng, mức độ hoạt động học tập và kết quả thi thử JLPT.'
-      }
-      variant="indigo"
       actions={
         <Segmented<DashboardRangeDays>
           options={RANGE_OPTIONS}

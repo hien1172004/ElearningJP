@@ -10,7 +10,6 @@ import { useCourses, useDeleteCourse } from '@/hooks'
 import { courseService } from '@/services'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { useAuthStore } from '@/stores'
 import type { CourseSummary } from '@/types'
 
 function statusBadge(published: boolean, archivedAt?: string | null) {
@@ -22,7 +21,6 @@ function statusBadge(published: boolean, archivedAt?: string | null) {
 export const TeacherCoursesPage: React.FC = () => {
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const user = useAuthStore((s) => s.user)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCourse, setEditingCourse] = useState<CourseSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null)
@@ -139,9 +137,6 @@ export const TeacherCoursesPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        // badge="Quản lý khóa học"
-        title="Khoá học của tôi"
-        subtitle={`Xin chào ${user?.fullName || user?.email || 'Giáo viên'}! Quản lý danh sách khóa học của bạn.`}
         actions={
           <AntdButton
             type="primary"

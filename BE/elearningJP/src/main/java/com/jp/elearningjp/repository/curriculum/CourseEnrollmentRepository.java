@@ -10,6 +10,7 @@ import com.jp.elearningjp.shared.enums.EnrollmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,44 @@ import java.util.Optional;
 public interface CourseEnrollmentRepository extends JpaRepository<CourseEnrollment, Long> {
 
     boolean existsByUserIdAndCourseIdAndDeletedFalse(Long userId, Long courseId);
+
+    /**
+     * Số học viên đang đăng ký khóa học — cùng điều kiện với trang "Theo dõi học viên"
+     * (bỏ đăng ký đã xóa và tài khoản đã xóa).
+     */
+    @Query("""
+            SELECT COUNT(e) FROM CourseEnrollment e
+             WHERE e.course.id = :courseId
+               AND e.deleted = false
+               AND e.user.deleted = false
+            """)
+    long countActiveByCourseId(@Param("courseId") Long courseId);
+
+    /** Như {@link #countActiveByCourseId} nhưng gộp cho nhiều khóa trong 1 query (danh sách khóa học). */
+    @Query("""
+            SELECT e.course.id AS courseId, COUNT(e.id) AS enrollmentCount
+              FROM CourseEnrollment e
+             WHERE e.course.id IN :courseIds
+               AND e.deleted = false
+               AND e.user.deleted = false
+             GROUP BY e.course.id
+            """)
+    List<CourseEnrollmentCount> countActiveByCourseIds(@Param("courseIds") Collection<Long> courseIds);
+
+    interface CourseEnrollmentCount {
+        Long getCourseId();
+
+        Long getEnrollmentCount();
+    }
+
+    /** Id học viên đang đăng ký khóa học (bỏ đăng ký đã xóa và tài khoản đã xóa). */
+    @Query("""
+            SELECT e.user.id FROM CourseEnrollment e
+             WHERE e.course.id = :courseId
+               AND e.deleted = false
+               AND e.user.deleted = false
+            """)
+    List<Long> findActiveUserIdsByCourseId(@Param("courseId") Long courseId);
 
     boolean existsByUserIdAndCourseIdAndStatusAndDeletedFalse(Long userId, Long courseId, EnrollmentStatus status);
 

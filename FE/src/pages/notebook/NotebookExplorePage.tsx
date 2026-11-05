@@ -21,7 +21,6 @@ import {
   DownloadOutlined,
   UserOutlined,
   BookOutlined,
-  ArrowLeftOutlined,
   CheckOutlined,
 } from '@ant-design/icons'
 import {
@@ -32,6 +31,7 @@ import {
 } from '@/hooks/useNotebooks'
 import { notebookService } from '@/services/notebook.service'
 import type { Notebook } from '@/types'
+import { BackButton } from '@/components/common'
 
 type SubTab = 'explore' | 'favorites' | 'recent'
 type SortOption = 'all' | 'downloads' | 'likes' | 'views'
@@ -182,18 +182,7 @@ export const NotebookExplorePage: React.FC = () => {
       {/* Top Header */}
       <div className="flex items-center justify-between pb-2 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <Button
-            type="text"
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate('/notebooks')}
-            className="text-gray-600 font-medium"
-          >
-            Quay lại Sổ tay của tôi
-          </Button>
-          <div className="h-5 w-px bg-gray-200" />
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Khám phá Sổ tay Cộng đồng
-          </h1>
+          <BackButton to="/notebooks" />
         </div>
       </div>
 
@@ -279,7 +268,7 @@ export const NotebookExplorePage: React.FC = () => {
           <Spin size="large" />
         </div>
       ) : currentItems.length === 0 ? (
-        <div className="py-20 text-center bg-gray-50/60 rounded-3xl border border-gray-100">
+        <div className="py-20 text-center bg-white rounded-3xl border border-suna shadow-xs">
           <Empty
             description={
               <span className="text-gray-500 text-sm">

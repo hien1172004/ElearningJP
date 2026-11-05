@@ -37,7 +37,6 @@ import {
   Save,
   Volume2,
   BookOpen,
-  ArrowLeft,
   X,
   Share2,
   Headphones,
@@ -60,6 +59,7 @@ import {
   SlidersHorizontal,
   ArrowRight,
 } from 'lucide-react'
+import { BackButton } from '@/components/common'
 
 export const AdminExamPreviewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>()
@@ -1027,13 +1027,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       <div className="sticky top-14 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-suna dark:border-slate-800 rounded-xl shadow-xs px-4 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/admin/exams')}
-              className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-              title="Quay lại danh sách quản lý đề thi"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
+            <BackButton to="/admin/exams" className="ml-0" />
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800 uppercase">

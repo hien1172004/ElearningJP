@@ -248,6 +248,18 @@ class CurriculumBugfixTest {
         assertThat(courseService.getCourseDetail(COURSE_ID)).isNotNull();
     }
 
+    @Test
+    void getCourseDetail_returnsTotalEnrollments() {
+        // Bug cũ: totalEnrollments không được gán → trang quản lý / chi tiết khóa học luôn hiện 0 học viên
+        unpublishedCourseWithOwner(USER_ID);
+        User owner = mock(User.class);
+        when(owner.getId()).thenReturn(USER_ID);
+        when(currentUserService.getCurrentUserOrNull()).thenReturn(owner);
+        when(enrollmentRepository.countActiveByCourseId(COURSE_ID)).thenReturn(3L);
+
+        assertThat(courseService.getCourseDetail(COURSE_ID).getTotalEnrollments()).isEqualTo(3L);
+    }
+
     // ---- xoá khóa / bài dọn dữ liệu liên quan
 
     @Test

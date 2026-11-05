@@ -1,18 +1,10 @@
 import React, { useState } from 'react'
-import { Lock, Unlock, ShieldCheck, Users } from 'lucide-react'
-import {
-  Avatar,
-  Button as AntdButton,
-  Checkbox,
-  Modal,
-  Select,
-  Table,
-  Tag,
-  Tooltip,
-} from 'antd'
+import { Lock, Unlock, UserPlus, Users } from 'lucide-react'
+import { Avatar, Button as AntdButton, Select, Table, Tag, Tooltip } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
-import { PageHeader, EmptyState, SearchInput, confirmDialog } from '@/components/common'
-import { useAdminUsers, useUpdateUserRoles, useUpdateUserStatus } from '@/hooks'
+import { EmptyState, SearchInput, confirmDialog } from '@/components/common'
+import { CreateAccountModal } from '@/components/admin'
+import { useAdminUsers, useUpdateUserStatus } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { formatDate } from '@/utils'
 import { normalizeRole } from '@/utils/roles'
@@ -33,9 +25,6 @@ const STATUS_META: Record<UserStatus, { label: string; color: string }> = {
   PENDING: { label: 'Chờ xác minh', color: 'default' },
 }
 
-/** Role cấp thêm cho tài khoản (USER luôn có, BE tự giữ). */
-const EXTRA_ROLES: AssignableRole[] = ['TEACHER', 'ADMIN']
-
 const isAssignableRole = (role: string): role is AssignableRole => role in ROLE_META
 
 export const AdminUsersPage: React.FC = () => {
@@ -47,8 +36,7 @@ export const AdminUsersPage: React.FC = () => {
   const [status, setStatus] = useState<UserStatus | undefined>()
   const [page, setPage] = useState(1)
 
-  const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null)
-  const [selectedRoles, setSelectedRoles] = useState<AssignableRole[]>([])
+  const [createOpen, setCreateOpen] = useState(false)
 
   const { data, isLoading, isFetching, isError, refetch } = useAdminUsers({
     keyword: keyword || undefined,
@@ -58,7 +46,6 @@ export const AdminUsersPage: React.FC = () => {
     size: PAGE_SIZE,
   })
   const updateStatus = useUpdateUserStatus()
-  const updateRoles = useUpdateUserRoles()
 
   const users = data?.items ?? data?.content ?? []
 
@@ -74,21 +61,6 @@ export const AdminUsersPage: React.FC = () => {
     })
     if (!ok) return
     updateStatus.mutate({ id: user.id, status: locking ? 'BANNED' : 'ACTIVE' })
-  }
-
-  const openRoleModal = (user: AdminUser) => {
-    setRoleTarget(user)
-    setSelectedRoles(
-      user.roles.map(normalizeRole).filter(isAssignableRole).filter((r) => r !== 'USER'),
-    )
-  }
-
-  const submitRoles = () => {
-    if (!roleTarget) return
-    updateRoles.mutate(
-      { id: roleTarget.id, roles: selectedRoles },
-      { onSuccess: () => setRoleTarget(null) },
-    )
   }
 
   const handleTableChange = (pagination: TablePaginationConfig) => {
@@ -172,15 +144,6 @@ export const AdminUsersPage: React.FC = () => {
         const locking = u.status === 'ACTIVE'
         return (
           <div className="flex justify-end gap-2">
-            <Tooltip title={isSelf ? selfHint : 'Phân quyền'}>
-              <AntdButton
-                size="small"
-                icon={<ShieldCheck className="w-4 h-4" />}
-                disabled={isSelf}
-                onClick={() => openRoleModal(u)}
-                aria-label="Phân quyền"
-              />
-            </Tooltip>
             <Tooltip title={isSelf ? selfHint : locking ? 'Khóa tài khoản' : 'Mở khóa'}>
               <AntdButton
                 size="small"
@@ -200,12 +163,6 @@ export const AdminUsersPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
-      <PageHeader
-        // badge="Quản trị"
-        title="Quản lý người dùng"
-        subtitle="Tra cứu tài khoản, khóa/mở khóa và phân quyền giáo viên, quản trị viên."
-        variant="rose"
-      />
 
       <div className="flex flex-col md:flex-row gap-3">
         <SearchInput
@@ -246,6 +203,14 @@ export const AdminUsersPage: React.FC = () => {
           }))}
           className="md:w-48"
         />
+        <AntdButton
+          type="primary"
+          icon={<UserPlus className="w-4 h-4" />}
+          onClick={() => setCreateOpen(true)}
+          className="md:ml-auto"
+        >
+          Tạo tài khoản
+        </AntdButton>
       </div>
 
       {isError ? (
@@ -283,47 +248,7 @@ export const AdminUsersPage: React.FC = () => {
         </div>
       )}
 
-      <Modal
-        open={!!roleTarget}
-        title="Phân quyền tài khoản"
-        okText="Lưu vai trò"
-        cancelText="Huỷ"
-        centered
-        confirmLoading={updateRoles.isPending}
-        onOk={submitRoles}
-        onCancel={() => setRoleTarget(null)}
-        destroyOnHidden
-      >
-        {roleTarget && (
-          <div className="space-y-4">
-            <div className="text-sm text-slate-600">
-              <span className="font-medium text-slate-800">{roleTarget.fullName}</span>{' '}
-              ({roleTarget.email})
-            </div>
-            <div className="flex flex-col gap-2">
-              <Checkbox checked disabled>
-                {ROLE_META.USER.label} <span className="text-xs text-slate-400">(mặc định)</span>
-              </Checkbox>
-              {EXTRA_ROLES.map((r) => (
-                <Checkbox
-                  key={r}
-                  checked={selectedRoles.includes(r)}
-                  onChange={(e) =>
-                    setSelectedRoles((prev) =>
-                      e.target.checked ? [...prev, r] : prev.filter((x) => x !== r),
-                    )
-                  }
-                >
-                  {ROLE_META[r].label}
-                </Checkbox>
-              ))}
-            </div>
-            <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-              Sau khi đổi vai trò, người dùng sẽ bị đăng xuất và cần đăng nhập lại để áp dụng quyền mới.
-            </p>
-          </div>
-        )}
-      </Modal>
+      <CreateAccountModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   )
 }

@@ -65,7 +65,8 @@ export const FileUploadButton: React.FC<FileUploadButtonProps> = ({
         accept={acceptMime}
         onChange={handleFileChange}
         disabled={disabled || uploading}
-        className="hidden"
+        // Dùng inline style: CSS của antd Form đặt `input[type="file"] { display: block }` đè class `hidden`
+        style={{ display: 'none' }}
       />
 
       <button

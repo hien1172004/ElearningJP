@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 /** Verify route/method của AdminUserController được map và validation body hoạt động (MockMvc standalone). */
@@ -56,6 +57,26 @@ class AdminUserRoutingTest {
     void updateRoles_missingRoles_returns400() {
         assertThat(status(put("/api/v1/admin/users/5/roles")
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))).isEqualTo(400);
+    }
+
+    @Test
+    void createUser_missingFields_returns400() {
+        assertThat(status(post("/api/v1/admin/users")
+                .contentType(MediaType.APPLICATION_JSON).content("{}"))).isEqualTo(400);
+    }
+
+    @Test
+    void createUser_plainUserRole_returns400() {
+        assertThat(status(post("/api/v1/admin/users").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"a@b.vn\",\"fullName\":\"A\",\"password\":\"12345678\",\"role\":\"USER\"}")))
+                .isEqualTo(400);
+    }
+
+    @Test
+    void createUser_validBody_routeExists() {
+        assertThat(status(post("/api/v1/admin/users").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"a@b.vn\",\"fullName\":\"A\",\"password\":\"12345678\",\"role\":\"TEACHER\"}")))
+                .isNotIn(400, 404);
     }
 
     @Test

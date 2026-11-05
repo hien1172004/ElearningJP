@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { GraduationCap, Megaphone } from 'lucide-react'
 import { Avatar, Button as AntdButton, Drawer, Progress, Select, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { PageHeader, EmptyState, LoadingState, SearchInput } from '@/components/common'
+import { EmptyState, LoadingState, SearchInput } from '@/components/common'
 import { StatTile } from '@/components/admin'
 import { useCourseStudents, useCourses, useStudentCourseDetail } from '@/hooks'
 import { formatDate, formatRelativeTime } from '@/utils/format'
@@ -116,23 +116,6 @@ export const TeacherStudentsPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
-      <PageHeader
-        // badge="Quản lý"
-        title="Theo dõi học viên"
-        subtitle="Tiến độ học, lần học gần nhất và điểm quiz của học viên trong từng khóa học."
-        variant="emerald"
-        actions={
-          courseId ? (
-            <AntdButton
-              icon={<Megaphone className="w-4 h-4" />}
-              onClick={() => navigate(`/admin/broadcasts?courseId=${courseId}`)}
-            >
-              Gửi thông báo cho học viên
-            </AntdButton>
-          ) : undefined
-        }
-      />
-
       {coursesLoading ? (
         <LoadingState message="Đang tải khóa học..." />
       ) : courses.length === 0 ? (
@@ -174,6 +157,15 @@ export const TeacherStudentsPage: React.FC = () => {
               className="md:w-48"
               aria-label="Sắp xếp"
             />
+            {courseId && (
+              <AntdButton
+                icon={<Megaphone className="w-4 h-4" />}
+                onClick={() => navigate(`/admin/broadcasts?courseId=${courseId}`)}
+                className="md:ml-auto"
+              >
+                Gửi thông báo cho học viên
+              </AntdButton>
+            )}
           </div>
 
           {summary && (

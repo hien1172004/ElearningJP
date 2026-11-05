@@ -3,6 +3,7 @@ package com.jp.elearningjp.service.curriculum;
 import com.jp.elearningjp.dto.response.curriculum.CourseResponse;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.mapper.CourseMapper;
+import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
 import com.jp.elearningjp.repository.curriculum.CourseRepository;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.shared.response.PageResponse;
@@ -39,6 +40,7 @@ class CourseAdminListTest {
 
     @Mock CourseRepository courseRepository;
     @Mock LessonRepository lessonRepository;
+    @Mock CourseEnrollmentRepository enrollmentRepository;
     @Mock CourseMapper courseMapper;
     @Mock CurrentUserService currentUserService;
 
@@ -76,5 +78,29 @@ class CourseAdminListTest {
         assertThat(res.getItems()).hasSize(1);
         assertThat(res.getTotalElements()).isEqualTo(1);
         verify(courseRepository, never()).findByDeletedFalse(any(Pageable.class));
+    }
+
+    private static CourseEnrollmentRepository.CourseEnrollmentCount enrollmentCount(long courseId, long count) {
+        return new CourseEnrollmentRepository.CourseEnrollmentCount() {
+            @Override public Long getCourseId() { return courseId; }
+            @Override public Long getEnrollmentCount() { return count; }
+        };
+    }
+
+    @Test
+    void list_includesTotalEnrollments_fromOneBatchQuery() {
+        // Bug cũ: danh sách khóa học không có số học viên → thẻ khóa học ẩn mục này
+        when(currentUserService.isAdmin()).thenReturn(true);
+        when(courseRepository.findByDeletedFalse(any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(course(1), course(2)), inv.getArgument(0), 2));
+        when(courseMapper.toCourseResponse(any(Course.class))).thenAnswer(inv -> new CourseResponse());
+        when(enrollmentRepository.countActiveByCourseIds(List.of(1L, 2L)))
+                .thenReturn(List.of(enrollmentCount(1L, 3L))); // khóa 2 chưa ai đăng ký
+
+        PageResponse<CourseResponse> res = courseService.getAllCoursesForAdmin(1, 10);
+
+        assertThat(res.getItems()).extracting(CourseResponse::getTotalEnrollments).containsExactly(3L, 0L);
+        verify(enrollmentRepository).countActiveByCourseIds(List.of(1L, 2L));
+        verify(enrollmentRepository, never()).countActiveByCourseId(anyLong());
     }
 }

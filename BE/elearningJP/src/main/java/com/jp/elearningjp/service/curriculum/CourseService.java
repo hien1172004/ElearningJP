@@ -24,6 +24,8 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import com.jp.elearningjp.shared.event.curriculum.CoursePublishStatusChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +54,7 @@ public class CourseService {
     LessonMapper lessonMapper;
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
+    ApplicationEventPublisher eventPublisher;
 
     private static final String DEFAULT_SLUG = "khoa-hoc";
 
@@ -150,6 +153,8 @@ public class CourseService {
         CourseDetailResponse response = courseMapper.toCourseDetailResponse(course);
         response.setEnrolled(isEnrolled);
         response.setTotalLessons(totalLessons);
+        // Trước đây field này không được gán → trang quản lý / chi tiết khóa học luôn hiện 0 học viên
+        response.setTotalEnrollments(enrollmentRepository.countActiveByCourseId(courseId));
         response.setCompletedLessonsCount(completedCount);
         response.setProgressPercent(progressPercent);
         response.setLessons(outlineList);
@@ -234,9 +239,16 @@ public class CourseService {
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
         ensureCourseOwnerOrAdmin(course);
 
+        boolean changed = !Boolean.valueOf(publish).equals(course.getPublished());
         course.setPublished(publish);
         Course saved = courseRepository.save(course);
         log.info("[COURSE] Course id={} published status set to {}", courseId, publish);
+
+        // Báo cho học viên đã đăng ký (listener chạy AFTER_COMMIT) — chỉ khi trạng thái thật sự đổi
+        if (changed) {
+            eventPublisher.publishEvent(new CoursePublishStatusChangedEvent(
+                    this, saved.getId(), saved.getTitle(), publish, currentUserService.getCurrentUserId()));
+        }
 
         CourseResponse response = courseMapper.toCourseResponse(saved);
         long totalLessons = lessonRepository.countByCourseIdAndDeletedFalse(courseId);
@@ -279,7 +291,7 @@ public class CourseService {
     // HELPER METHODS
     // =========================================================
 
-    /** Map trang khóa học, đếm số bài bằng 1 query gộp thay vì 1 query cho mỗi khóa. */
+    /** Map trang khóa học, đếm số bài và số học viên bằng query gộp thay vì 1 query cho mỗi khóa. */
     private PageResponse<CourseResponse> toCoursePageResponse(Page<Course> coursePage, int page, int size) {
         List<Long> courseIds = coursePage.getContent().stream().map(Course::getId).toList();
         Map<Long, Long> lessonCounts = courseIds.isEmpty()
@@ -288,11 +300,18 @@ public class CourseService {
                         .collect(Collectors.toMap(
                                 LessonRepository.CourseLessonCount::getCourseId,
                                 LessonRepository.CourseLessonCount::getLessonCount));
+        Map<Long, Long> enrollmentCounts = courseIds.isEmpty()
+                ? Map.of()
+                : enrollmentRepository.countActiveByCourseIds(courseIds).stream()
+                        .collect(Collectors.toMap(
+                                CourseEnrollmentRepository.CourseEnrollmentCount::getCourseId,
+                                CourseEnrollmentRepository.CourseEnrollmentCount::getEnrollmentCount));
 
         List<CourseResponse> items = coursePage.getContent().stream()
                 .map(course -> {
                     CourseResponse response = courseMapper.toCourseResponse(course);
                     response.setTotalLessons(lessonCounts.getOrDefault(course.getId(), 0L).intValue());
+                    response.setTotalEnrollments(enrollmentCounts.getOrDefault(course.getId(), 0L));
                     return response;
                 })
                 .toList();

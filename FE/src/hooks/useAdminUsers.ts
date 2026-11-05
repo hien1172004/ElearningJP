@@ -4,6 +4,7 @@ import type { AxiosError } from 'axios'
 import { adminUserService } from '@/services'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import type {
+  AdminCreateUserRequest,
   AdminUser,
   AdminUserListParams,
   ApiResponse,
@@ -21,6 +22,7 @@ const EMPTY_PAGE: PageResponse<AdminUser> = {
 
 /** Mã lỗi BE (ErrorCode) → thông báo tiếng Việt. */
 const ERROR_MESSAGES: Record<number, string> = {
+  1001: 'Email này đã được dùng cho một tài khoản khác.',
   1002: 'Không tìm thấy người dùng.',
   1010: 'Vai trò không hợp lệ.',
   1016: 'Bạn không thể thay đổi trạng thái hoặc vai trò của chính mình.',
@@ -62,21 +64,17 @@ export function useUpdateUserStatus() {
   })
 }
 
-export function useUpdateUserRoles() {
+/** Admin cấp phát tài khoản giáo viên / quản trị viên. */
+export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, roles }: { id: number; roles: string[] }) =>
-      adminUserService.updateRoles(id, roles),
+    mutationFn: (payload: AdminCreateUserRequest) => adminUserService.createUser(payload),
     onSuccess: (res) => {
-      toast.success('Đã cập nhật vai trò', {
-        description: res.data
-          ? `${res.data.email} cần đăng nhập lại để áp dụng quyền mới.`
-          : undefined,
-      })
+      toast.success('Đã tạo tài khoản', { description: res.data?.email })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.adminUser.all })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
-      toast.error('Cập nhật vai trò thất bại', {
+      toast.error('Tạo tài khoản thất bại', {
         description: toErrorMessage(error, 'Vui lòng thử lại.'),
       })
     },

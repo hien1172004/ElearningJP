@@ -23,7 +23,6 @@ import {
   ReadOutlined,
   InfoCircleOutlined,
   FolderOpenOutlined,
-  ArrowLeftOutlined,
 } from '@ant-design/icons'
 import {
   useMyNotebooks,
@@ -40,6 +39,7 @@ import { ShareNotebookModal } from '@/components/notebook/ShareNotebookModal'
 import { ReviewModeSelectModal } from '@/components/notebook/ReviewModeSelectModal'
 import { notebookService } from '@/services/notebook.service'
 import type { Notebook, NotebookGroup } from '@/types'
+import { BackButton } from '@/components/common'
 
 type SortOption = 'newest' | 'oldest' | 'nameAsc' | 'nameDesc'
 
@@ -360,7 +360,7 @@ export const NotebookListPage: React.FC = () => {
 
       {/* 2. Khối Tổng quan (SRS Spaced Repetition Overview) - Chỉ hiện khi ở ngoài Root */}
       {!currentGroup && (
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-2xs space-y-4">
+        <div className="bg-white border border-suna rounded-3xl p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <h2 className="text-base font-bold text-gray-800">Tổng quan</h2>
@@ -447,18 +447,12 @@ export const NotebookListPage: React.FC = () => {
       {/* 3. Nút QUAY LẠI khi đang ở bên trong nhóm (Đúng như Ảnh 3) */}
       {currentGroup && (
         <div>
-          <button
-            type="button"
-            onClick={() => setCurrentGroup(null)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <ArrowLeftOutlined /> Quay lại
-          </button>
+          <BackButton onClick={() => setCurrentGroup(null)} />
         </div>
       )}
 
       {/* 4. Khối Danh sách Sổ tay (Khung lớn bo tròn) */}
-      <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-2xs space-y-6">
+      <div className="bg-white border border-suna rounded-3xl p-6 shadow-xs space-y-6">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">

@@ -17,9 +17,12 @@ const SECTION_TYPES: { value: LessonSectionType; label: string }[] = [
 
 const schema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tiêu đề').max(200),
-  sectionType: z.enum(['KANJI', 'VOCABULARY', 'GRAMMAR']),
-  orderIndex: z.number().int().min(1),
+  sectionType: z.enum(['KANJI', 'VOCABULARY', 'GRAMMAR'], { error: 'Vui lòng chọn loại mục' }),
+  orderIndex: z.number({ error: 'Vui lòng nhập thứ tự' }).int().min(1, 'Thứ tự phải từ 1 trở lên'),
 })
+
+/** Sửa mục: không đổi được loại mục nên bỏ trường sectionType */
+const editSchema = schema.omit({ sectionType: true })
 
 type FormValues = z.infer<typeof schema>
 
@@ -72,19 +75,27 @@ export const SectionList: React.FC<SectionListProps> = ({
   const handleSubmit = async () => {
     try {
       const values = (await form.validateFields()) as FormValues
-      const parsed = schema.safeParse(values)
-      if (!parsed.success) {
-        message.error(parsed.error.issues[0].message)
-        return
-      }
-      const v = parsed.data
       if (editingSection) {
-        await updateSection.mutateAsync({ id: editingSection.id, payload: { title: v.title, orderIndex: v.orderIndex } })
+        // Sửa mục: ô "Loại mục" bị ẩn (không đổi được loại) → không kiểm tra sectionType
+        const parsed = editSchema.safeParse(values)
+        if (!parsed.success) {
+          message.error(parsed.error.issues[0].message)
+          return
+        }
+        await updateSection.mutateAsync({
+          id: editingSection.id,
+          payload: { title: parsed.data.title, orderIndex: parsed.data.orderIndex },
+        })
       } else {
+        const parsed = schema.safeParse(values)
+        if (!parsed.success) {
+          message.error(parsed.error.issues[0].message)
+          return
+        }
         await createSection.mutateAsync({
-          sectionType: v.sectionType,
-          title: v.title,
-          orderIndex: v.orderIndex,
+          sectionType: parsed.data.sectionType,
+          title: parsed.data.title,
+          orderIndex: parsed.data.orderIndex,
         } as LessonSectionCreateRequest)
       }
       setIsModalOpen(false)

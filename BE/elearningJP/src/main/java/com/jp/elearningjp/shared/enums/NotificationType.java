@@ -12,5 +12,7 @@ public enum NotificationType {
     /** Bình luận / trả lời của người dùng bị người kiểm duyệt ẩn hoặc xóa. */
     COMMENT_MODERATED,
     /** Thông báo hàng loạt do ADMIN / TEACHER gửi (notification_broadcasts). */
-    ANNOUNCEMENT
+    ANNOUNCEMENT,
+    /** Khóa học đã đăng ký được chuyển giữa bản nháp và xuất bản. */
+    COURSE_STATUS_CHANGED
 }
