@@ -72,7 +72,8 @@ class CourseStudentServiceTest {
     @Test
     void getStudents_mapsRows_computesPercent_andNormalizesParams() {
         Instant now = Instant.now();
-        Object[] row = {5L, "An", "an@t.local", null, "ACTIVE", now, 3L, 1L, now, new BigDecimal("87.50")};
+        Object[] row = {5L, "An", "an@t.local", null, "ACTIVE", now, 3L, 1L, now, new BigDecimal("87.50"),
+                new BigDecimal("121.333")};
         when(enrollmentRepository.findStudentProgress(eq(10L), anyString(), anyString(), any(Pageable.class)))
                 .thenAnswer(inv -> new PageImpl<>(List.<Object[]>of(row), inv.getArgument(3), 1));
         when(enrollmentRepository.summarizeCourseStudents(eq(10L), eq(4), any()))
@@ -91,6 +92,7 @@ class CourseStudentServiceTest {
         CourseStudentsResponse.StudentProgress s = res.getStudents().getItems().get(0);
         assertThat(s.getProgressPercent()).isEqualTo(75);
         assertThat(s.getAvgQuizScore()).isEqualTo(87.5);
+        assertThat(s.getAvgExamScore()).isEqualTo(121.3);
         assertThat(res.getTotalLessons()).isEqualTo(4);
         assertThat(res.getSummary().getAvgProgressPercent()).isEqualTo(50.0);
         assertThat(res.getSummary().getTotalStudents()).isEqualTo(2);

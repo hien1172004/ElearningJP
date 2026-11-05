@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { User } from '@/types'
 import { storage } from '@/utils/storage'
 import { queryClient } from '@/lib/queryClient'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 
 interface AuthState {
   user: User | null
@@ -44,6 +45,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       isRememberMe: remember,
       isInitialized: true,
     })
+    // Bình luận tải lúc còn là khách có owner/deletable/moderator/liked = false.
+    // Đăng nhập ngay trên trang (modal) → tải lại để hiện đúng nút Sửa/Xoá và ẩn nút báo cáo.
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comment.all })
   },
 
   setUser: (user) => {

@@ -39,6 +39,9 @@ public class CommentReplyResponse {
     /** Người xem được xoá: chủ bình luận hoặc admin (gỡ bình luận vi phạm). */
     Boolean deletable;
 
+    /** Người xem là người kiểm duyệt (admin, hoặc giáo viên chủ khóa của bài học) — FE ẩn nút báo cáo. */
+    Boolean moderator;
+
     Instant createdAt;
     Instant updatedAt;
 }

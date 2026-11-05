@@ -18,7 +18,7 @@ import {
   PieChart,
   ShieldAlert,
   Megaphone,
-  UserCheck,
+  // UserCheck, // dùng lại khi bật mục "Học viên" trong sidebar
 } from 'lucide-react'
 import { Tooltip, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
@@ -123,12 +123,14 @@ const navItems: NavItem[] = [
         icon: <BookOpen className="w-4 h-4" />,
         match: isActiveOrStartsWith('/teacher/courses'),
       },
-      {
-        to: '/teacher/students',
-        label: 'Học viên',
-        icon: <UserCheck className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/teacher/students'),
-      },
+      // Học viên đã chuyển vào trang soạn khóa học (/teacher/courses/:id?view=students).
+      // Trang /teacher/students vẫn giữ route, chỉ ẩn khỏi sidebar.
+      // {
+      //   to: '/teacher/students',
+      //   label: 'Học viên',
+      //   icon: <UserCheck className="w-4 h-4" />,
+      //   match: isActiveOrStartsWith('/teacher/students'),
+      // },
       {
         to: '/admin/exams',
         label: 'Đề thi',

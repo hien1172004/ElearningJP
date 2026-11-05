@@ -18,6 +18,8 @@ export interface StudentProgress {
   progressPercent: number
   lastActiveAt?: string | null
   avgQuizScore?: number | null
+  /** Điểm bài kiểm tra (exam) của khóa: TB điểm quy đổi cao nhất mỗi đề; chỉ có ở danh sách. */
+  avgExamScore?: number | null
 }
 
 /** Khớp `CourseStudentsResponse` ở BE (GET /teacher/courses/{courseId}/students). */

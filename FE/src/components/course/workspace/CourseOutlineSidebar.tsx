@@ -12,6 +12,7 @@ import {
   Plus,
   Settings,
   Trash2,
+  Users,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { LessonDetail, LessonOutline, LessonSectionType } from '@/types'
@@ -32,6 +33,7 @@ interface CourseOutlineSidebarProps {
   openLesson?: LessonDetail | null
   openLessonLoading?: boolean
   examCount: number
+  studentCount: number
   onAddLesson: () => void
   onEditLesson: (lesson: LessonOutline) => void
   onDeleteLesson: (lesson: LessonOutline) => void
@@ -45,7 +47,7 @@ const navItemClass = (active: boolean) =>
     active ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-700 hover:bg-slate-100',
   )
 
-/** Mục lục khóa học dạng cây: Tổng quan · Bài học (→ mục + quiz) · Bài kiểm tra · Cài đặt. */
+/** Mục lục khóa học dạng cây: Tổng quan · Bài học (→ mục + quiz) · Bài kiểm tra · Học viên · Cài đặt. */
 export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
   lessons,
   selection,
@@ -53,6 +55,7 @@ export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
   openLesson,
   openLessonLoading,
   examCount,
+  studentCount,
   onAddLesson,
   onEditLesson,
   onDeleteLesson,
@@ -190,6 +193,11 @@ export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
           <ClipboardList className="w-4 h-4 shrink-0" />
           <span className="flex-1">Bài kiểm tra</span>
           <span className="text-xs text-slate-400 tabular-nums">{examCount}</span>
+        </button>
+        <button type="button" className={navItemClass(selection.view === 'students')} onClick={() => onSelect({ view: 'students' })}>
+          <Users className="w-4 h-4 shrink-0" />
+          <span className="flex-1">Học viên</span>
+          <span className="text-xs text-slate-400 tabular-nums">{studentCount}</span>
         </button>
         <button type="button" className={navItemClass(selection.view === 'settings')} onClick={() => onSelect({ view: 'settings' })}>
           <Settings className="w-4 h-4 shrink-0" />

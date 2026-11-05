@@ -210,7 +210,7 @@ export const CommentReplyItem: React.FC<CommentReplyItemProps> = ({
             </Tooltip>
           )}
 
-          {!reply.owner && (
+          {!reply.owner && !reply.moderator && (
             <Tooltip title="Báo cáo vi phạm">
               <button
                 type="button"

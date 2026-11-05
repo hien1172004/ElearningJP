@@ -136,7 +136,8 @@ export const SrsReviewPage: React.FC = () => {
       {/* ===== Thanh điều khiển: dự báo ôn tập + Sổ tay/Thoát + số thẻ mỗi phiên ===== */}
       <section className="bg-white rounded-xl border border-suna shadow-xs p-4 mb-6 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SrsForecastBar />
+          {/* flex-1: lưới 7 ngày giãn hết phần còn lại của hàng; màn hẹp thì nút xuống dòng */}
+          <SrsForecastBar className="flex-1 min-w-[15rem]" />
           <div className="flex items-center gap-1">
             <Link
               to="/srs/deck"

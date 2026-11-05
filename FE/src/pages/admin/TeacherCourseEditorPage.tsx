@@ -1,7 +1,7 @@
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import React, { useState, useEffect } from 'react'
 import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { Pencil, Plus, BookOpen, Eye, EyeOff, Trash2, Clock, Edit3 } from 'lucide-react'
+import { Pencil, Plus, BookOpen, Eye, EyeOff, Trash2, Clock, Edit3, Megaphone } from 'lucide-react'
 import { Button as AntdButton, Modal } from 'antd'
 import { toast } from 'sonner'
 import { LoadingState, EmptyState, BackButton } from '@/components/common'
@@ -9,6 +9,7 @@ import {
   CourseFormModal,
   LessonFormModal,
   CourseOutlineSidebar,
+  CourseStudentsPanel,
   LessonWorkspacePanel,
   parseSelection,
   toSearchParams,
@@ -30,7 +31,7 @@ const CARD = 'bg-white rounded-xl border border-suna shadow-xs'
 
 /**
  * Không gian soạn khóa học (giáo viên) — bố cục 2 cột:
- * trái là mục lục (Tổng quan · Bài học → mục/quiz · Bài kiểm tra · Cài đặt),
+ * trái là mục lục (Tổng quan · Bài học → mục/quiz · Bài kiểm tra · Học viên · Cài đặt),
  * phải là nội dung của mục đang chọn. Mục đang chọn lưu trên URL (xem `workspaceSelection`).
  */
 export const TeacherCourseEditorPage: React.FC = () => {
@@ -334,6 +335,27 @@ export const TeacherCourseEditorPage: React.FC = () => {
     </div>
   )
 
+  const studentsPanel = (
+    <div className="space-y-4">
+      <div className={`${CARD} p-4 flex flex-wrap items-center justify-between gap-3`}>
+        <div>
+          <h3 className="font-bold text-sm text-gray-800">Học viên của khóa học</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Theo dõi tiến độ, điểm bài kiểm tra và lần học gần nhất của từng học viên.
+          </p>
+        </div>
+        <AntdButton
+          icon={<Megaphone className="w-4 h-4" />}
+          onClick={() => navigate(`/admin/broadcasts?courseId=${id}`)}
+          className="!rounded-md"
+        >
+          Gửi thông báo cho học viên
+        </AntdButton>
+      </div>
+      <CourseStudentsPanel key={id} courseId={id} />
+    </div>
+  )
+
   const settingsPanel = (
     <div className={`${CARD} p-6 space-y-6`}>
       <h3 className="font-bold text-base text-gray-900">Cài đặt khóa học</h3>
@@ -428,6 +450,8 @@ export const TeacherCourseEditorPage: React.FC = () => {
       )
     ) : selection.view === 'exams' ? (
       examsPanel
+    ) : selection.view === 'students' ? (
+      studentsPanel
     ) : selection.view === 'settings' ? (
       settingsPanel
     ) : (
@@ -476,6 +500,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
             openLesson={openLesson}
             openLessonLoading={openLessonLoading}
             examCount={courseExams.length}
+            studentCount={course.totalEnrollments ?? 0}
             onAddLesson={openCreateLesson}
             onEditLesson={openEditLesson}
             onDeleteLesson={setDeleteLessonTarget}

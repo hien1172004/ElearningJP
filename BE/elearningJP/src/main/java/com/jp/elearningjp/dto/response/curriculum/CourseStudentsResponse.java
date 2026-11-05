@@ -62,6 +62,11 @@ public class CourseStudentsResponse {
         Instant lastActiveAt;
         /** Điểm quiz trung bình (best_score các bài đã làm quiz); null nếu chưa làm. */
         Double avgQuizScore;
+        /**
+         * Điểm bài kiểm tra (exam) của khóa: trung bình điểm quy đổi cao nhất mỗi đề;
+         * null nếu chưa thi. Chỉ có ở danh sách học viên.
+         */
+        Double avgExamScore;
     }
 
     /** Chi tiết tiến độ từng bài của một học viên. */

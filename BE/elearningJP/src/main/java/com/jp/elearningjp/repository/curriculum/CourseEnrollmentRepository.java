@@ -105,7 +105,11 @@ public interface CourseEnrollmentRepository extends JpaRepository<CourseEnrollme
     /**
      * Học viên của khóa kèm tiến độ. Mỗi dòng:
      * [user_id, full_name, email, avatar_url, enrollment_status, enrolled_at,
-     *  số bài hoàn thành, số bài đang học, lần học gần nhất, điểm quiz trung bình].
+     *  số bài hoàn thành, số bài đang học, lần học gần nhất, điểm quiz trung bình,
+     *  điểm bài kiểm tra trung bình].
+     *
+     * <p>Điểm bài kiểm tra: với mỗi đề thi (exam) thuộc khóa, lấy điểm quy đổi cao nhất của
+     * các lượt thi FULL_EXAM đã nộp (SUBMITTED/TIMED_OUT), rồi lấy trung bình; null nếu chưa thi.</p>
      *
      * <p>{@code keyword}: "" để bỏ lọc, ngược lại dạng "%từ khóa%" chữ thường.
      * {@code sort}: PROGRESS | NAME | ENROLLED | (khác) = học gần nhất trước.</p>
@@ -115,7 +119,18 @@ public interface CourseEnrollmentRepository extends JpaRepository<CourseEnrollme
                    COUNT(p.id) FILTER (WHERE p.status = 'COMPLETED')   AS completed,
                    COUNT(p.id) FILTER (WHERE p.status = 'IN_PROGRESS') AS in_progress,
                    MAX(p.last_accessed_at)                              AS last_active,
-                   AVG(p.best_score)                                    AS avg_score
+                   AVG(p.best_score)                                    AS avg_score,
+                   (SELECT AVG(b.best)
+                    FROM (SELECT MAX(a.total_scaled_score) AS best
+                          FROM exam_attempts a
+                          JOIN exams x ON x.id = a.exam_id AND x.deleted = false
+                          WHERE x.course_id = :courseId
+                            AND a.user_id = e.user_id
+                            AND a.deleted = false
+                            AND a.attempt_type = 'FULL_EXAM'
+                            AND a.status IN ('SUBMITTED', 'TIMED_OUT')
+                            AND a.total_scaled_score IS NOT NULL
+                          GROUP BY a.exam_id) b)                         AS avg_exam_score
             """ + STUDENT_PROGRESS_FROM + """
             GROUP BY e.id, e.user_id, u.full_name, u.email, u.avatar_url, e.status, e.created_at
             ORDER BY

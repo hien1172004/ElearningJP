@@ -311,6 +311,50 @@ class CommentServiceTest {
         assertThat(service.getCommentsByTarget(CommentTargetType.LESSON, LESSON_ID, 1, 5)).isNotNull();
     }
 
+    // ---- cờ moderator (ẩn nút báo cáo với người kiểm duyệt)
+
+    private void stubSingleCommentPageWithReply() {
+        when(commentRepository.findByTarget(any(), anyLong(), any()))
+                .thenAnswer(i -> new PageImpl<>(List.of(comment), i.getArgument(2, Pageable.class), 1));
+        CommentReply reply = CommentReply.builder().comment(comment).user(author).content("r").build();
+        reply.setId(7L);
+        when(commentReplyRepository.findByCommentIdOrderByCreatedAtAsc(eq(COMMENT_ID), any()))
+                .thenAnswer(i -> new PageImpl<>(List.of(reply), i.getArgument(1, Pageable.class), 1));
+    }
+
+    @Test
+    void moderatorFlag_teacherOwningCourse_true() {
+        course.setCreatedBy(viewer);
+        stubSingleCommentPageWithReply();
+
+        assertThat(service.getCommentsByTarget(CommentTargetType.LESSON, LESSON_ID, 1, 5).getItems())
+                .extracting(c -> c.getModerator()).containsExactly(true);
+        assertThat(service.getRepliesByComment(COMMENT_ID, 1, 5).getItems())
+                .extracting(r -> r.getModerator()).containsExactly(true);
+    }
+
+    @Test
+    void moderatorFlag_admin_true() {
+        when(currentUserService.isAdmin()).thenReturn(true);
+        course.setCreatedBy(author);
+        stubSingleCommentPageWithReply();
+
+        assertThat(service.getCommentDetail(COMMENT_ID).getComment().getModerator()).isTrue();
+        assertThat(service.getCommentDetail(COMMENT_ID).getReplies())
+                .extracting(r -> r.getModerator()).containsExactly(true);
+    }
+
+    @Test
+    void moderatorFlag_otherUserNotOwningCourse_false() {
+        course.setCreatedBy(author);
+        stubSingleCommentPageWithReply();
+
+        assertThat(service.getCommentsByTarget(CommentTargetType.LESSON, LESSON_ID, 1, 5).getItems())
+                .extracting(c -> c.getModerator()).containsExactly(false);
+        assertThat(service.getRepliesByComment(COMMENT_ID, 1, 5).getItems())
+                .extracting(r -> r.getModerator()).containsExactly(false);
+    }
+
     // ---- phân trang & hiệu năng
 
     @Test
