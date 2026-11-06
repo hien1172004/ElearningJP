@@ -4,6 +4,7 @@ import { ChevronRight, FileCheck, Pencil } from 'lucide-react'
 import { EmptyState, LoadingState } from '@/components/common'
 import {
   SECTION_TYPE_LABEL,
+  SectionImportButton,
   SectionItemsEditor,
   SectionList,
 } from '@/components/course/section-editor'
@@ -73,11 +74,14 @@ export const LessonWorkspacePanel: React.FC<LessonWorkspacePanelProps> = ({
       ) : typeof section === 'number' ? (
         currentSection ? (
           <div className={`${CARD} p-4 space-y-3`}>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
-                {SECTION_TYPE_LABEL[currentSection.sectionType] ?? currentSection.sectionType}
-              </span>
-              <h2 className="text-base font-bold text-sumi">{currentSection.title}</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                  {SECTION_TYPE_LABEL[currentSection.sectionType] ?? currentSection.sectionType}
+                </span>
+                <h2 className="text-base font-bold text-sumi truncate">{currentSection.title}</h2>
+              </div>
+              <SectionImportButton lessonId={lessonId} section={currentSection} />
             </div>
             <SectionItemsEditor lessonId={lessonId} section={currentSection} />
           </div>

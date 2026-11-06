@@ -42,7 +42,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
  * Để refetch ngay cả các query đang inactive, ta gọi thêm `refetchQueries`
  * sau khi invalidate.
  */
-function invalidateLesson(qc: ReturnType<typeof useQueryClient>, lessonId: number) {
+export function invalidateLesson(qc: ReturnType<typeof useQueryClient>, lessonId: number) {
   // 1. Mark stale tất cả cache liên quan
   qc.invalidateQueries({ queryKey: QUERY_KEYS.lesson.detail(lessonId) })
   qc.invalidateQueries({ queryKey: ['lessons', 'kanji-item'] })
