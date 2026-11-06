@@ -14,7 +14,16 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import com.jp.elearningjp.dto.response.curriculum.importer.SectionImportCommitResponse;
+import com.jp.elearningjp.dto.response.curriculum.importer.SectionImportPreviewResponse;
+import com.jp.elearningjp.service.curriculum.importer.ImportTemplateFile;
+import com.jp.elearningjp.service.curriculum.importer.vocabulary.VocabularyImportService;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +37,7 @@ import java.util.List;
 public class LessonVocabularyItemController {
 
     VocabularySectionItemService vocabularySectionItemService;
+    VocabularyImportService vocabularyImportService;
 
     // ============================================================
     // VOCABULARY ITEM CRUD (4 endpoints chính)
@@ -101,6 +111,56 @@ public class LessonVocabularyItemController {
                 .success(true)
                 .message("Sắp xếp lại thứ tự vocabulary item thành công")
                 .data(vocabularySectionItemService.reorderVocabularyItems(sectionId, request))
+                .build();
+    }
+
+    // ============================================================
+    // IMPORT EXCEL (mẫu riêng cho section VOCABULARY)
+    // ============================================================
+
+    @Operation(summary = "[GV/Admin] Tải file Excel mẫu để import từ vựng vào section VOCABULARY")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @GetMapping(ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.VOCABULARY_IMPORT_TEMPLATE)
+    public ResponseEntity<byte[]> downloadVocabularyImportTemplate() {
+        ImportTemplateFile template = vocabularyImportService.buildTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(template.fileName()).build().toString())
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(template.content());
+    }
+
+    @Operation(summary = "[GV/Admin] Kiểm tra file Excel từ vựng trước khi import (không ghi dữ liệu)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(value = ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.VOCABULARY_IMPORT_PREVIEW,
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<SectionImportPreviewResponse> previewVocabularyImport(
+            @PathVariable Long sectionId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ApiResponse.<SectionImportPreviewResponse>builder()
+                .success(true)
+                .message("Kiểm tra file Excel thành công")
+                .data(vocabularyImportService.preview(sectionId, file))
+                .build();
+    }
+
+    @Operation(summary = "[GV/Admin] Import từ vựng từ file Excel vào section (file còn dòng lỗi thì không ghi gì)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PostMapping(value = ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.VOCABULARY_IMPORT_COMMIT,
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<SectionImportCommitResponse> commitVocabularyImport(
+            @PathVariable Long sectionId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ApiResponse.<SectionImportCommitResponse>builder()
+                .success(true)
+                .message("Import từ vựng từ Excel thành công")
+                .data(vocabularyImportService.commit(sectionId, file))
                 .build();
     }
 }

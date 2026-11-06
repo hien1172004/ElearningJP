@@ -63,6 +63,8 @@ class VocabularySectionItemServiceTest {
     @BeforeEach
     void setUp() {
         section = LessonSection.builder()
+                .lesson(com.jp.elearningjp.entity.curriculum.Lesson.builder()
+                        .course(new com.jp.elearningjp.entity.curriculum.Course()).build())
                 .sectionType(LessonSectionType.VOCABULARY)
                 .orderIndex(1)
                 .build();

@@ -77,6 +77,8 @@ class KanjiSectionItemServiceTest {
     @BeforeEach
     void setUp() {
         section = LessonSection.builder()
+                .lesson(com.jp.elearningjp.entity.curriculum.Lesson.builder()
+                        .course(new com.jp.elearningjp.entity.curriculum.Course()).build())
                 .sectionType(LessonSectionType.KANJI)
                 .orderIndex(1)
                 .build();
