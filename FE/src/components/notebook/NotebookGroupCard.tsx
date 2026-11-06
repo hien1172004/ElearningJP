@@ -62,7 +62,7 @@ export const NotebookGroupCard: React.FC<NotebookGroupCardProps> = ({
   return (
     <div
       onClick={() => onClick(group)}
-      className="group relative bg-[#f9fafb] hover:bg-surface border border-gray-100 hover:border-blue-400 hover:shadow-sm rounded-2xl p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[92px] select-none"
+      className="group relative bg-gray-50 hover:bg-surface border border-gray-100 hover:border-blue-400 hover:shadow-sm rounded-2xl p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[92px] select-none"
     >
       {/* Top: Icon thư mục xanh dương + Tên nhóm + Menu 3 chấm */}
       <div className="flex items-start justify-between gap-3">

@@ -300,21 +300,21 @@ export const ProgressChartBlock: React.FC<ProgressChartBlockProps> = ({
           >
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="#e5e7eb"
+              stroke="var(--color-gray-200)"
               vertical={false}
             />
 
             <XAxis
               dataKey="bucketStart"
               tickFormatter={(v: string) => formatXAxisLabel(v, granularity)}
-              tick={{ fontSize: 11, fill: '#6b7280' }}
-              axisLine={{ stroke: '#e5e7eb' }}
+              tick={{ fontSize: 11, fill: 'var(--color-gray-500)' }}
+              axisLine={{ stroke: 'var(--color-gray-200)' }}
               tickLine={false}
               minTickGap={24}
             />
 
             <YAxis
-              tick={{ fontSize: 11, fill: '#6b7280' }}
+              tick={{ fontSize: 11, fill: 'var(--color-gray-500)' }}
               axisLine={false}
               tickLine={false}
               width={48}

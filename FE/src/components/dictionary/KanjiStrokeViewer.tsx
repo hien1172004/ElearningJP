@@ -171,7 +171,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
                 key={`bg-${index}`}
                 d={stroke.svgPathData}
                 fill="none"
-                stroke="#f1f5f9"
+                stroke="var(--color-slate-100)"
                 strokeWidth="7"
                 strokeOpacity="0.8"
               />
@@ -183,7 +183,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
                 ? STROKE_COLORS[index % STROKE_COLORS.length]
                 : (isPlaying || currentStrokeIndex < strokes.length) && index === currentStrokeIndex - 1
                   ? '#dc2626'
-                  : '#1e293b'
+                  : 'var(--color-sumi)'
 
               const isLatestStroke = index === currentStrokeIndex - 1
 
@@ -204,7 +204,7 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
               strokes.slice(0, currentStrokeIndex).map((stroke, index) => {
                 const strokeColor = useMultiColors
                   ? STROKE_COLORS[index % STROKE_COLORS.length]
-                  : '#475569'
+                  : 'var(--color-slate-600)'
 
                 const startPoint = getStrokeStartPoint(stroke.svgPathData)
 
@@ -218,8 +218,8 @@ export const KanjiStrokeViewer: React.FC<KanjiStrokeViewerProps> = ({
                     <text
                       x={posX}
                       y={posY}
-                      fill="#ffffff"
-                      stroke="#ffffff"
+                      fill="var(--color-surface)"
+                      stroke="var(--color-surface)"
                       strokeWidth="2.5"
                       strokeLinejoin="round"
                       fontSize="9"

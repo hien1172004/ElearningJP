@@ -601,7 +601,7 @@ export const ScenarioDetailPage: React.FC = () => {
                 </div>
 
                 {/* Khung đoạn chat màu tím nhạt (#F7F5FC / #F5F3FF) */}
-                <div className="bg-[#F7F5FC] rounded-xl p-3 sm:p-4 space-y-3 min-h-[300px]">
+                <div className="bg-purple-50 rounded-xl p-3 sm:p-4 space-y-3 min-h-[300px]">
                   {scenario.sampleDialogue && scenario.sampleDialogue.length > 0 ? (
                     scenario.sampleDialogue.map((line: SampleDialogueLine, index: number) => {
                       const isUser = line.speaker === 'USER' || line.role === 'USER'
@@ -755,7 +755,7 @@ export const ScenarioDetailPage: React.FC = () => {
                       return (
                         <div
                           key={idx}
-                          className={`bg-[#F8FAFC] rounded-2xl p-4 border border-slate-100/90 hover:border-indigo-200 hover:bg-slate-50 transition flex items-start justify-between gap-3 ${
+                          className={`bg-slate-50 rounded-2xl p-4 border border-slate-100/90 hover:border-indigo-200 hover:bg-slate-50 transition flex items-start justify-between gap-3 ${
                             isCurrentPlaying ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : ''
                           }`}
                         >
@@ -879,7 +879,7 @@ export const ScenarioDetailPage: React.FC = () => {
                       return (
                         <div
                           key={idx}
-                          className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-slate-200/80 hover:border-indigo-200 transition space-y-2.5"
+                          className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/80 hover:border-indigo-200 transition space-y-2.5"
                         >
                           {/* Row 1: Cấu trúc ngữ pháp + Nút + */}
                           <div className="flex items-center justify-between">
@@ -1025,7 +1025,7 @@ export const ScenarioDetailPage: React.FC = () => {
             </h3>
 
             {/* Khung câu mẫu tiếng Nhật */}
-            <div className="p-4 rounded-xl bg-[#F7F5FC] text-center space-y-2">
+            <div className="p-4 rounded-xl bg-purple-50 text-center space-y-2">
               <FuriganaText text={shadowingLine.text} size="lg" />
               <button
                 type="button"
@@ -1136,7 +1136,7 @@ export const ScenarioDetailPage: React.FC = () => {
             {/* Flashcard Box */}
             <div
               onClick={() => setShowVocabAnswer((prev) => !prev)}
-              className="min-h-[180px] p-6 rounded-2xl bg-[#F8FAFC] border-2 border-dashed border-indigo-200 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition"
+              className="min-h-[180px] p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-indigo-200 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition"
             >
               <div className="text-2xl font-bold text-slate-800 mb-2">
                 {scenario.vocabulary[practiceVocabIndex].word}

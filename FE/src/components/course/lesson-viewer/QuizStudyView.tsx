@@ -611,7 +611,7 @@ const MatchingView: React.FC<MatchingViewProps> = ({
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-indigo-500)" />
             </marker>
           </defs>
           {anchors.map((a) => {
@@ -631,7 +631,7 @@ const MatchingView: React.FC<MatchingViewProps> = ({
                 {/* Đường nối hiển thị */}
                 <path
                   d={path}
-                  stroke="#6366f1"
+                  stroke="var(--color-indigo-500)"
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   fill="none"

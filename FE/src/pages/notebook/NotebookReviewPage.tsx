@@ -696,7 +696,7 @@ export const NotebookReviewPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-[#f3f4f6]/70 pb-4 flex flex-col justify-between rounded-2xl">
+    <div className="min-h-[calc(100vh-5rem)] bg-gray-100/70 pb-4 flex flex-col justify-between rounded-2xl">
       {/* 1. THANH TIẾN ĐỘ Ở RẤT ĐẦU TRANG */}
       <div className="w-full h-1 bg-gray-200">
         <div
@@ -789,7 +789,7 @@ export const NotebookReviewPage: React.FC = () => {
                 {!isFlipped ? (
                   <>
                     {/* Từ tiếng Nhật (chữ to màu xanh đậm) */}
-                    <div className="text-5xl md:text-6xl font-black text-[#2563eb] tracking-wide break-words">
+                    <div className="text-5xl md:text-6xl font-black text-blue-600 tracking-wide break-words">
                       {currentItem.word}
                     </div>
 

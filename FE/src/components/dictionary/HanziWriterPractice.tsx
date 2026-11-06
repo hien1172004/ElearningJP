@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import HanziWriter from 'hanzi-writer'
+import { useThemeStore } from '@/stores/useThemeStore'
 import { Play, RotateCcw, Eye, EyeOff, Award, AlertCircle, CheckCircle2, Sparkles, HelpCircle } from 'lucide-react'
 
 interface HanziWriterPracticeProps {
@@ -29,6 +30,9 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
   } | null>(null)
 
   // Khởi tạo HanziWriter với nạp dữ liệu chuẩn Kanji Nhật Bản (@k1low/hanzi-writer-data-jp)
+  // hanzi-writer tự đọc mã màu (không hiểu var(--…)) → chọn bảng màu theo chế độ sáng/tối
+  const isDark = useThemeStore((s) => s.resolved === 'dark')
+
   useEffect(() => {
     if (!containerRef.current || !character) return
 
@@ -52,9 +56,9 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
         showOutline: true,
         strokeAnimationSpeed: 1.2,
         strokeHighlightSpeed: 1.5,
-        strokeColor: '#1e1b4b', // Mực chàm đậm
-        outlineColor: '#cbd5e1', // Nét viền mờ chỉ dẫn
-        drawingColor: '#2563eb', // Nét người dùng vẽ: Xanh dương nổi bật
+        strokeColor: isDark ? '#ece7dd' : '#1e1b4b', // Mực chàm đậm (sáng ở nền tối)
+        outlineColor: isDark ? '#3f434d' : '#cbd5e1', // Nét viền mờ chỉ dẫn
+        drawingColor: isDark ? '#60a5fa' : '#2563eb', // Nét người dùng vẽ: Xanh dương nổi bật
         drawingWidth: Math.max(18, Math.round(size / 11)), // Tăng độ dày nét cọ vẽ (18-28px) mượt mà, đậm đà
         highlightColor: '#10b981', // Màu sáng khi vẽ đúng nét: Xanh ngọc
         highlightOnComplete: true,
@@ -101,7 +105,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
         } catch {}
       }
     }
-  }, [character, size])
+  }, [character, size, isDark])
 
   // Bắt đầu chế độ làm bài kiểm tra nét vẽ (Quiz Mode)
   const startPracticeQuiz = () => {

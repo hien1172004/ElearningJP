@@ -14,8 +14,8 @@ import { cn } from '@/utils/cn'
 
 // Một series / biểu đồ → một màu (slot 1 của bảng màu dataviz, đã kiểm tra ≥ 3:1 trên nền trắng).
 const SERIES_COLOR = '#2a78d6'
-const GRID_COLOR = '#eef0f3'
-const AXIS_TEXT = '#6b7280'
+const GRID_COLOR = 'var(--color-gray-200)'
+const AXIS_TEXT = 'var(--color-gray-500)'
 
 // ============================================================================
 // Thẻ KPI
@@ -169,7 +169,7 @@ export function DailyLineChart({
             width={44}
           />
           <Tooltip
-            cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '3 3' }}
+            cursor={{ stroke: 'var(--color-slate-400)', strokeWidth: 1, strokeDasharray: '3 3' }}
             content={
               <ChartTooltip
                 formatLabel={formatTooltipLabel ?? formatX}
@@ -184,7 +184,7 @@ export function DailyLineChart({
             stroke={SERIES_COLOR}
             strokeWidth={2}
             dot={false}
-            activeDot={{ r: 4, stroke: '#ffffff', strokeWidth: 2 }}
+            activeDot={{ r: 4, stroke: 'var(--color-surface)', strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>
@@ -244,7 +244,7 @@ export function SimpleBarChart({
             width={44}
           />
           <Tooltip
-            cursor={{ fill: '#f1f5f9' }}
+            cursor={{ fill: 'var(--color-slate-100)' }}
             content={
               <ChartTooltip formatLabel={formatX} formatValue={formatValue} valueLabel={valueLabel} />
             }
