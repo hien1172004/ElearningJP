@@ -75,6 +75,17 @@ public final class ApiPaths {
         public static final String GRAMMAR_ITEM_BY_ID = "/grammar-items/{itemId}";
         public static final String GRAMMAR_ITEMS_REORDER = "/{sectionId}/grammar-items/reorder";
 
+        // ===== Import item từ Excel — mỗi loại section một mẫu & một nhóm endpoint riêng =====
+        public static final String KANJI_IMPORT_TEMPLATE = "/kanji-items/import/template";
+        public static final String KANJI_IMPORT_PREVIEW = "/{sectionId}/kanji-items/import/preview";
+        public static final String KANJI_IMPORT_COMMIT = "/{sectionId}/kanji-items/import";
+        public static final String VOCABULARY_IMPORT_TEMPLATE = "/vocabulary-items/import/template";
+        public static final String VOCABULARY_IMPORT_PREVIEW = "/{sectionId}/vocabulary-items/import/preview";
+        public static final String VOCABULARY_IMPORT_COMMIT = "/{sectionId}/vocabulary-items/import";
+        public static final String GRAMMAR_IMPORT_TEMPLATE = "/grammar-items/import/template";
+        public static final String GRAMMAR_IMPORT_PREVIEW = "/{sectionId}/grammar-items/import/preview";
+        public static final String GRAMMAR_IMPORT_COMMIT = "/{sectionId}/grammar-items/import";
+
         // ===== Lesson examples endpoints (controller riêng) =====
         public static final String LESSON_VOCABULARY_ITEMS = "/lesson-vocabulary-items";
         public static final String LESSON_VOCABULARY_EXAMPLES = "/{vocabItemId}/examples";

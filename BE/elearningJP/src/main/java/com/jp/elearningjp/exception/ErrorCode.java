@@ -58,6 +58,15 @@ public enum ErrorCode {
     LESSON_REORDER_LIST_EMPTY(1218, "Danh sách lesson cần reorder không được rỗng", HttpStatus.BAD_REQUEST),
     LESSON_REORDER_LIST_INVALID(1219, "Danh sách lesson cần reorder chứa ID trùng lặp hoặc không hợp lệ", HttpStatus.BAD_REQUEST),
     LESSON_REORDER_LIST_MISMATCH(1220, "Danh sách lesson cần reorder phải khớp 100% với tất cả lesson hiện có trong khóa học", HttpStatus.CONFLICT),
+    // Import item section từ Excel (1230-1239)
+    IMPORT_FILE_EMPTY(1230, "Chưa chọn file Excel hoặc file rỗng", HttpStatus.BAD_REQUEST),
+    IMPORT_FILE_INVALID(1231, "File không đúng định dạng .xlsx hoặc bị hỏng", HttpStatus.BAD_REQUEST),
+    IMPORT_FILE_TOO_LARGE(1232, "File Excel vượt quá 2MB", HttpStatus.BAD_REQUEST),
+    IMPORT_TEMPLATE_INVALID(1233, "File không đúng mẫu Excel của hệ thống, hãy tải mẫu mới nhất", HttpStatus.BAD_REQUEST),
+    IMPORT_TEMPLATE_TYPE_MISMATCH(1234, "Mẫu Excel không khớp loại section đang import", HttpStatus.BAD_REQUEST),
+    IMPORT_TOO_MANY_ROWS(1235, "File Excel vượt quá số dòng cho phép", HttpStatus.BAD_REQUEST),
+    IMPORT_NO_ROWS(1236, "File Excel không có dòng dữ liệu nào", HttpStatus.BAD_REQUEST),
+    IMPORT_HAS_ERRORS(1237, "File Excel còn dòng lỗi, hãy sửa rồi import lại", HttpStatus.BAD_REQUEST),
     LESSON_KANJI_RELATED_VOCAB_TOO_MANY(1221, "Số từ vựng liên quan vượt quá giới hạn 200 từ cho 1 chữ Hán", HttpStatus.BAD_REQUEST),
 
     // CURRICULUM MODULE — Enrollment (1300-1399)

@@ -94,6 +94,8 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     @Transactional
     public LessonGrammarItemResponse addGrammarItem(Long sectionId, LessonGrammarItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.GRAMMAR);
+        // Chỉ chủ khóa học hoặc ADMIN được sửa nội dung section
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         GrammarPoint grammar = grammarPointRepository.findByIdAndDeletedFalse(request.getGrammarId())
                 .orElseThrow(() -> new AppException(ErrorCode.GRAMMAR_NOT_FOUND));
@@ -181,6 +183,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     public LessonGrammarItemResponse updateGrammarItem(Long itemId, LessonGrammarItemUpdateRequest request) {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);
         }
@@ -239,6 +242,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     public void deleteGrammarItem(Long itemId) {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) return;
         item.softDelete();
         // Cascade soft-delete examples
@@ -314,6 +318,38 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
      *
      * @return số lượng examples đã tạo
      */
+    /**
+     * Import Excel: thêm nhiều grammar item vào cuối section trong 1 transaction.
+     * Caller ({@code GrammarImportService}) đã kiểm tra quyền, từ điển và trùng lặp.
+     *
+     * @return số item đã tạo
+     */
+    @Transactional
+    public int importGrammarItems(LessonSection section, List<LessonGrammarItemCreateRequest> requests) {
+        List<LessonGrammarItem> existing =
+                grammarItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
+        int nextOrder = OrderIndexResolver.maxOrderIndex(existing, LessonGrammarItem::getOrderIndex) + 1;
+
+        for (LessonGrammarItemCreateRequest request : requests) {
+            GrammarPoint grammar = grammarPointRepository.findByIdAndDeletedFalse(request.getGrammarId())
+                    .orElseThrow(() -> new AppException(ErrorCode.GRAMMAR_NOT_FOUND));
+            LessonGrammarItem item = LessonGrammarItem.builder()
+                    .section(section)
+                    .grammar(grammar)
+                    .orderIndex(nextOrder++)
+                    .customMeaning(resolveImportOverride(request.getCustomMeaning(), grammar.getMeaningVi()))
+                    .customStructure(resolveImportOverride(request.getCustomStructure(), grammar.getStructure()))
+                    .note(request.getNote())
+                    .build();
+            applyExamplesOnCreate(item, grammar, request.getExamples());
+            section.addGrammarItem(item);
+            grammarItemRepository.save(item);
+        }
+        grammarItemRepository.flush();
+        log.info("[GRAMMAR-ITEM] Imported {} grammar items into section id={}", requests.size(), section.getId());
+        return requests.size();
+    }
+
     private int applyExamplesOnCreate(LessonGrammarItem item, GrammarPoint grammar,
                                       List<LessonGrammarExampleCreateRequest> teacherExamples) {
         if (teacherExamples == null || teacherExamples.isEmpty()) {
@@ -587,5 +623,13 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
             return null; // xoá override
         }
         return clientValue; // dùng override
+    }
+
+    /**
+     * Giá trị override khi import Excel: null (ô trống) → chép từ điển; "" (ô '-') → lưu chuỗi rỗng
+     * = ẩn trường này trong bài (display ưu tiên custom khác null); còn lại = giá trị giáo viên nhập.
+     */
+    private static String resolveImportOverride(String importValue, String fallback) {
+        return importValue == null ? fallback : importValue;
     }
 }

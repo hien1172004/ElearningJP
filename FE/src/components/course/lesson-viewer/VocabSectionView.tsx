@@ -55,7 +55,7 @@ export const VocabSectionView: React.FC<VocabSectionViewProps> = ({ section }) =
               </div>
               <button
                 type="button"
-                onClick={() => playSmartAudio({ text: item.word ?? item.hiragana ?? '' })}
+                onClick={() => playSmartAudio({ text: item.word ?? item.hiragana ?? '', audioUrl: item.displayAudioUrl })}
                 className="p-2.5 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:scale-105 active:scale-95 transition shrink-0"
                 title="Nghe phát âm"
               >

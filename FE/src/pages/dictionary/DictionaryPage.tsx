@@ -709,12 +709,12 @@ export const DictionaryPage: React.FC = () => {
           <div className="flex items-center gap-1 overflow-x-auto">
             {(
               [
-                { key: 'vocab', label: 'Từ vựng', icon: BookOpen },
-                { key: 'kanji', label: 'Chữ Hán', icon: Brush },
-                { key: 'grammar', label: 'Ngữ pháp', icon: BookText },
-                { key: 'kana', label: 'Bảng chữ cái', icon: Languages },
+                { key: 'vocab', label: 'Từ vựng' },
+                { key: 'kanji', label: 'Chữ Hán' },
+                { key: 'grammar', label: 'Ngữ pháp' },
+                { key: 'kana', label: 'Bảng chữ cái' },
               ] as const
-            ).map(({ key, label, icon: Icon }) => (
+            ).map(({ key, label }) => (
               <button
                 key={key}
                 type="button"

@@ -18,3 +18,4 @@ export * from './courseStudent.service'
 // Đặt tên cụ thể để tránh đụng `progressService` của course.service.ts
 // (service này gọi /progress/lessons/* — lesson progress).
 export { progressService as learningProgressService } from './progress.service'
+export * from './sectionImport.service'

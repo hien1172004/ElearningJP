@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { Volume2, ChevronLeft, ChevronRight, BookOpen, SpeakerIcon, PenTool, Loader2 } from 'lucide-react'
-import { speakJapanese } from '@/utils'
+import { playSmartAudio, speakJapanese } from '@/utils'
 import { useKanjiItemDetail, useKanjiDetail } from '@/hooks'
 import { KanjiPracticeModal } from '@/components/dictionary'
 import type { LessonKanjiItem } from '@/types'
@@ -215,7 +215,7 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
                 {v.word && (
                   <button
                     type="button"
-                    onClick={() => speakJapanese(v.word!)}
+                    onClick={() => playSmartAudio({ text: v.word!, audioUrl: v.audioUrl })}
                     className="p-2 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition shrink-0"
                     title="Nghe phát âm"
                   >

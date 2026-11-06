@@ -30,4 +30,6 @@ public class LessonRelatedVocabResponse {
     String word;
     String hiragana;
     String meaningVi;
+    /** File phát âm của từ trong từ điển (null nếu không có → FE dùng TTS). */
+    String audioUrl;
 }

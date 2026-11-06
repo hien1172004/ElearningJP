@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Pencil, Trash2, Plus, BookOpen, X as XIcon, Check, Eye, ChevronUp, ChevronDown } from 'lucide-react'
+import { Pencil, Trash2, Plus, BookOpen, X as XIcon, Check, Eye } from 'lucide-react'
 import { Modal, App, Button, Input, InputNumber } from 'antd'
 import { toast } from 'sonner'
-import { useLessonDetail, useLessonQuizManage, useQuizItemMutations, useReorderQuizQuestions } from '@/hooks'
+import { useLessonDetail, useLessonQuizManage, useQuizItemMutations } from '@/hooks'
 import { QUIZ_TYPE_LABEL } from './constants'
 import type { LessonQuizItem } from '@/hooks/useQuizItemMutations'
 import type { QuizQuestionWithAnswer } from '@/types'
@@ -31,7 +31,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
   // createQuizItem/updateQuizItem được dùng trong QuestionFormModal (qua cùng hook)
   const { deleteQuizItem } = useQuizItemMutations(lessonId)
   // Hook reorder (gọi POST /lessons/{id}/quiz/questions/reorder)
-  const reorderQuiz = useReorderQuizQuestions(lessonId)
 
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -108,33 +107,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
     })
   }
 
-  /**
-   * Reorder 1 câu hỏi lên/xuống 1 vị trí bằng nút ↑/↓.
-   * Dùng cùng pattern với SectionList.handleReorder:
-   *   - Tính danh sách active sort theo orderIndex
-   *   - Swap 2 phần tử liền kề
-   *   - Gọi BE POST /lessons/{id}/quiz/questions/reorder với itemIds theo thứ tự mới
-   *
-   * <p>BE dùng thuật toán adjacent swap chain (xem QuizService.swapQuestionToTarget)
-   * nên không bị UNIQUE conflict kể cả khi swap nhiều bước.</p>
-   */
-  const handleReorderQuestion = async (direction: 'up' | 'down', qId: number) => {
-    if (!quiz) return
-    const arr = [...questionsFull]
-      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-    const idx = arr.findIndex((q) => q.id === qId)
-    if (idx < 0) return
-    const targetIndex = direction === 'up' ? idx - 1 : idx + 1
-    if (targetIndex < 0 || targetIndex >= arr.length) return
-    const newOrder = [...arr]
-      ;[newOrder[idx], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[idx]]
-    try {
-      await reorderQuiz.mutateAsync(newOrder.map((q) => q.id))
-    } catch {
-      /* lỗi đã toast trong hook */
-    }
-  }
-
   // Danh sách câu hỏi (dùng chung cho hộp thoại và chế độ inline)
   const questionList = (
     <div className="py-2 space-y-3">
@@ -163,14 +135,9 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
       )}
 
       <div className={inline ? 'space-y-2' : 'space-y-2 max-h-105 overflow-y-auto pr-1'}>
-        {questionsFull.map((q, idx) => {
+        {questionsFull.map((q) => {
           const qType = (q.questionType ?? 'MULTIPLE_CHOICE') as string
           const correctOpt = q.options?.find((o) => o.correct)
-          // idx trong mảng đã sort theo orderIndex từ BE (findByQuizIdAndDeletedFalseOrderByOrderIndexAsc)
-          // → dùng idx trực tiếp để enable/disable nút ↑/↓
-          const isFirst = idx === 0
-          const isLast = idx === questionsFull.length - 1
-          const isReordering = reorderQuiz.isPending
           return (
             <div
               key={q.id}
@@ -198,43 +165,10 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                   )}
                 </p>
               </div>
-              {/* Nút ↑/↓ reorder — luôn hiển thị để dễ thao tác.
-                  Enable/disable theo vị trí đầu/cuối. */}
-              {/* <div
-                className="flex flex-col gap-0.5 shrink-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleReorderQuestion('up', q.id)}
-                  disabled={isFirst || isReordering}
-                  className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                  title="Di chuyển lên"
-                >
-                  <ChevronUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleReorderQuestion('down', q.id)}
-                  disabled={isLast || isReordering}
-                  className="p-0.5 text-gray-400 hover:text-cyan-600 rounded disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                  title="Di chuyển xuống"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
-              </div> */}
               <div
                 className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition shrink-0"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* <button
-                  type="button"
-                  onClick={() => setViewingQuestion(q)}
-                  className="p-1 text-gray-400 hover:text-cyan-600 rounded"
-                  title="Xem chi tiết"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                </button> */}
                 <button
                   type="button"
                   onClick={() => {
@@ -317,9 +251,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
             placeholder="VD: Bài kiểm tra cuối khóa"
             size="large"
           />
-          {/* <p className="text-[11px] text-amber-600">
-          ⚠ Tính năng này cần BE hỗ trợ PUT /lessons/{'{id}'}/quiz
-        </p> */}
         </div>
       </Modal>
     </>
@@ -415,14 +346,6 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
             </button>
           ) : (
             <>
-              {/* <button
-                type="button"
-                onClick={openEditor}
-                disabled={isLoading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-600 text-white text-xs font-bold hover:bg-cyan-700 transition disabled:opacity-50"
-              >
-                <Pencil className="w-3.5 h-3.5" /> Quản lý câu hỏi
-              </button> */}
               {quiz && total > 0 && (
                 <button
                   type="button"
@@ -619,9 +542,6 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
                         >
                           {/* Left cell */}
                           <div className="px-3 py-2 border-r border-indigo-100 flex items-center gap-2 min-h-10">
-                            {/* <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold bg-indigo-100 text-indigo-600">
-                              {l?.key ?? '—'}
-                            </span> */}
                             <span className="text-sm text-gray-900 font-semibold">
                               {l?.label || (
                                 <span className="italic text-gray-400 font-normal">(trống)</span>
@@ -630,9 +550,6 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
                           </div>
                           {/* Right cell */}
                           <div className="px-3 py-2 flex items-center gap-2 min-h-10">
-                            {/* <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold bg-indigo-100 text-indigo-600">
-                              {r?.key ?? '—'}
-                            </span> */}
                             <span className="text-sm text-gray-900 font-semibold">
                               {r?.label || (
                                 <span className="italic text-gray-400 font-normal">(trống)</span>

@@ -122,7 +122,7 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
             {displayWord && (
               <button
                 type="button"
-                onClick={() => playSmartAudio({ text: displayWord })}
+                onClick={() => playSmartAudio({ text: displayWord, audioUrl: item.displayAudioUrl })}
                 className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-200 text-emerald-800 hover:bg-emerald-300 transition text-sm font-semibold"
                 title="Nghe phát âm"
               >
@@ -191,7 +191,7 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
                 {ex.exampleJp && (
                   <button
                     type="button"
-                    onClick={() => playSmartAudio({ text: ex.exampleJp! })}
+                    onClick={() => playSmartAudio({ text: ex.exampleJp!, audioUrl: ex.audioUrl })}
                     className="p-2 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition shrink-0"
                     title="Nghe phát âm"
                   >

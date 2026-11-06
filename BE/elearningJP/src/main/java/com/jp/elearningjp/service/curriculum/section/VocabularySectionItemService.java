@@ -94,6 +94,8 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     @Transactional
     public LessonVocabularyItemResponse addVocabularyItem(Long sectionId, LessonVocabularyItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.VOCABULARY);
+        // Chỉ chủ khóa học hoặc ADMIN được sửa nội dung section
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         // Eager-load vocab kèm examples chỉ khi cần auto-copy (teacher không gửi examples HOẶC gửi []).
         // Khi teacher cung cấp examples, dùng findByIdAndDeletedFalse cho nhẹ.
@@ -194,6 +196,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     public LessonVocabularyItemResponse updateVocabularyItem(Long itemId, LessonVocabularyItemUpdateRequest request) {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);
         }
@@ -264,6 +267,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     public void deleteVocabularyItem(Long itemId) {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) return;
         item.softDelete();
         // Cascade soft-delete examples
@@ -340,6 +344,48 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
      *
      * @return số lượng examples đã tạo
      */
+    /**
+     * Import Excel: thêm nhiều vocab item vào cuối section trong 1 transaction.
+     *
+     * <p>Caller ({@code VocabularyImportService}) đã kiểm tra quyền, loại section, tồn tại
+     * trong từ điển và trùng lặp. Khác {@link #addVocabularyItem}: không renumber sau mỗi item
+     * mà nối tiếp MAX+1, MAX+2… (tránh N lượt renumber khi import vài trăm dòng).</p>
+     *
+     * @return số item đã tạo
+     */
+    @Transactional
+    public int importVocabularyItems(LessonSection section, List<LessonVocabularyItemCreateRequest> requests) {
+        List<LessonVocabularyItem> existing =
+                vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
+        int nextOrder = OrderIndexResolver.maxOrderIndex(existing, LessonVocabularyItem::getOrderIndex) + 1;
+
+        for (LessonVocabularyItemCreateRequest request : requests) {
+            boolean autoCopy = request.getExamples() == null || request.getExamples().isEmpty();
+            Vocabulary vocab = (autoCopy
+                    ? vocabularyRepository.findByIdWithActiveExamples(request.getVocabId())
+                    : vocabularyRepository.findByIdAndDeletedFalse(request.getVocabId()))
+                    .orElseThrow(() -> new AppException(ErrorCode.VOCAB_NOT_FOUND));
+
+            LessonVocabularyItem item = LessonVocabularyItem.builder()
+                    .section(section)
+                    .vocab(vocab)
+                    .orderIndex(nextOrder++)
+                    .customHiragana(resolveImportOverride(request.getCustomHiragana(), vocab.getHiragana()))
+                    .customRomaji(resolveImportOverride(request.getCustomRomaji(), vocab.getRomaji()))
+                    .customAudioUrl(resolveImportOverride(request.getCustomAudioUrl(), vocab.getAudioUrl()))
+                    .customMeaning(resolveImportOverride(request.getCustomMeaning(), vocab.getMeaningVi()))
+                    .imageUrl(request.getImageUrl())
+                    .note(request.getNote())
+                    .build();
+            applyExamplesOnCreate(item, vocab, request.getExamples());
+            section.addVocabularyItem(item);
+            vocabItemRepository.save(item);
+        }
+        vocabItemRepository.flush();
+        log.info("[VOCAB-ITEM] Imported {} vocab items into section id={}", requests.size(), section.getId());
+        return requests.size();
+    }
+
     private int applyExamplesOnCreate(LessonVocabularyItem item, Vocabulary vocab,
                                       List<LessonVocabularyExampleCreateRequest> teacherExamples) {
         if (teacherExamples == null || teacherExamples.isEmpty()) {
@@ -688,5 +734,13 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
             return null; // xoá override
         }
         return clientValue; // dùng override
+    }
+
+    /**
+     * Giá trị override khi import Excel: null (ô trống) → chép từ điển; "" (ô '-') → lưu chuỗi rỗng
+     * = ẩn trường này trong bài (display ưu tiên custom khác null); còn lại = giá trị giáo viên nhập.
+     */
+    private static String resolveImportOverride(String importValue, String fallback) {
+        return importValue == null ? fallback : importValue;
     }
 }

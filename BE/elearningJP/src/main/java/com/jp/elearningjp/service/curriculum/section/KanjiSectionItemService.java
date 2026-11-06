@@ -135,6 +135,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     @Transactional
     public LessonKanjiItemResponse addKanjiItem(Long sectionId, LessonKanjiItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.KANJI);
+        // Chỉ chủ khóa học hoặc ADMIN được sửa nội dung section
+        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         // Validate chữ Hán tồn tại trong từ điển qua DictionaryService
         String character = request.getCharacter();
@@ -207,6 +209,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     public LessonKanjiItemResponse updateKanjiItem(Long itemId, LessonKanjiItemUpdateRequest request) {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND);
         }
@@ -260,6 +263,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     public void deleteKanjiItem(Long itemId) {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
+        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) return;
 
         // V25+: cascade soft-delete tất cả related vocab thuộc kanji item này.
@@ -402,6 +406,36 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
      *
      * @return số lượng related vocab đã tạo thành công.
      */
+    /**
+     * Import Excel: thêm nhiều kanji item (kèm từ liên quan) vào cuối section trong 1 transaction.
+     * Caller ({@code KanjiImportService}) đã kiểm tra quyền, từ điển và trùng lặp.
+     *
+     * @return số item đã tạo
+     */
+    @Transactional
+    public int importKanjiItems(LessonSection section, List<LessonKanjiItemCreateRequest> requests) {
+        List<LessonKanjiItem> existing =
+                kanjiItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId());
+        int nextOrder = OrderIndexResolver.maxOrderIndex(existing, LessonKanjiItem::getOrderIndex) + 1;
+
+        for (LessonKanjiItemCreateRequest request : requests) {
+            WritingCharacter writingChar = writingCharacterRepository
+                    .findByCharacterAndDeletedFalse(request.getCharacter())
+                    .orElseThrow(() -> new AppException(ErrorCode.CHARACTER_NOT_FOUND));
+            LessonKanjiItem item = LessonKanjiItem.builder()
+                    .section(section)
+                    .character(writingChar)
+                    .orderIndex(nextOrder++)
+                    .note(request.getNote())
+                    .build();
+            section.addKanjiItem(item);
+            LessonKanjiItem saved = kanjiItemRepository.saveAndFlush(item);
+            applyRelatedVocabCreate(saved, request.getRelatedVocabulary());
+        }
+        log.info("[KANJI-ITEM] Imported {} kanji items into section id={}", requests.size(), section.getId());
+        return requests.size();
+    }
+
     private int applyRelatedVocabCreate(LessonKanjiItem item, List<LessonKanjiRelatedVocabRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return 0;

@@ -40,6 +40,15 @@ public interface VocabularyRepository extends JpaRepository<Vocabulary, Long> {
      */
     Optional<Vocabulary> findByWordAndHiraganaAndDeletedFalse(String word, String hiragana);
 
+    /** Import Excel: 1 cặp word+hiragana có thể có nhiều nghĩa (senseNo) → lấy nghĩa đầu. */
+    Optional<Vocabulary> findFirstByWordAndHiraganaAndDeletedFalseOrderBySenseNoAsc(String word, String hiragana);
+
+    /** Import Excel: mọi nghĩa/cách đọc của 1 từ, để gợi ý khi giáo viên điền sai hiragana. */
+    List<Vocabulary> findByWordAndDeletedFalseOrderBySenseNoAsc(String word);
+
+    /** Import Excel: đếm số nghĩa để cảnh báo khi 1 từ có nhiều nghĩa. */
+    long countByWordAndDeletedFalse(String word);
+
     /**
      * Tra cứu nhanh từ vựng theo từ viết, cách đọc, romaji, hán việt hoặc nghĩa.
      */
