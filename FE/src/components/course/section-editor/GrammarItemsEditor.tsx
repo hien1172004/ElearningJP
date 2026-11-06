@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react'
+import { ItemPreviewModal } from './ItemPreviewModal'
 import { Plus, Pencil, Trash2, BookOpen, Eye, Search, Link2, X as XIcon, Volume2 } from 'lucide-react'
 import { Modal, Form, Input, InputNumber, App, Select, Spin, Empty, Tag } from 'antd'
 import { z } from 'zod'
@@ -352,6 +353,8 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
   const [editing, setEditing] = useState<LessonGrammarItem | null>(null)
   const [examples, setExamples] = useState<ExampleRow[]>([])
   /** Item đang xem chi tiết (mở modal view, không edit) */
+  // Item đang xem trước (popup giống giao diện bài học)
+  const [previewId, setPreviewId] = useState<number | null>(null)
   const [viewingItem, setViewingItem] = useState<LessonGrammarItem | null>(null)
   /** Đang fetch chi tiết từ điển sau khi user chọn grammar (lấy examplesJson) */
   const [loadingGrammarDetail, setLoadingGrammarDetail] = useState(false)
@@ -660,7 +663,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
         {sorted.map((item) => (
           <div
             key={item.id}
-            onClick={() => setViewingItem(item)}
+            onClick={() => setPreviewId(item.id)}
             className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-purple-300 hover:bg-purple-50/30 transition group cursor-pointer"
           >
             <div className="flex-1 min-w-0">
@@ -686,7 +689,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
                 type="button"
                 onClick={() => setViewingItem(item)}
                 className="p-1 text-gray-400 hover:text-purple-600 rounded transition"
-                title="Xem chi tiết"
+                title="Xem dữ liệu chi tiết"
               >
                 <Eye className="w-3.5 h-3.5" />
               </button> */}
@@ -939,6 +942,8 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
           </div>
         </Form>
       </Modal>
+
+      <ItemPreviewModal type="GRAMMAR" items={items} itemId={previewId} onClose={() => setPreviewId(null)} />
 
       {/* Modal xem chi tiết grammar item */}
       <GrammarItemDetailModal

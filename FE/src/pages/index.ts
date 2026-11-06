@@ -35,6 +35,7 @@ export * from './admin/AdminBroadcastsPage'
 export * from './admin/TeacherStudentsPage'
 export * from './admin/TeacherCoursesPage'
 export * from './admin/TeacherCourseEditorPage'
+export * from './admin/TeacherLessonEditorPage'
 
 // Speaking AI practice pages
 export * from './speaking/SpeakingLobbyPage'
