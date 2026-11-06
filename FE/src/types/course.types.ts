@@ -454,6 +454,7 @@ export interface LessonKanjiRelatedVocab {
   word: string
   hiragana?: string
   meaningVi?: string
+  audioUrl?: string // file phát âm từ điển (không có → TTS)
 }
 
 // ============================================================================

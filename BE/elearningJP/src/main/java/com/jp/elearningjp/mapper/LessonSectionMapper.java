@@ -205,6 +205,7 @@ public class LessonSectionMapper {
                 .word(v.getWord())
                 .hiragana(v.getHiragana())
                 .meaningVi(v.getMeaningVi())
+                .audioUrl(v.getAudioUrl())
                 .build();
     }
 
@@ -227,6 +228,7 @@ public class LessonSectionMapper {
                 .word(v.getWord())
                 .hiragana(v.getHiragana())
                 .meaningVi(v.getMeaningVi())
+                .audioUrl(v.getAudioUrl())
                 .build();
     }
 
