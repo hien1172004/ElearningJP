@@ -10,6 +10,8 @@ interface GrammarStudyViewProps {
   items: LessonGrammarItem[]
   /** Được gọi 1 lần khi user đã mở tới trang cuối cùng. */
   onSectionDone?: () => void
+  /** Mở sẵn tại item này (dùng cho popup xem trước của giáo viên). */
+  initialItemId?: number
 }
 
 /**
@@ -20,7 +22,7 @@ interface GrammarStudyViewProps {
  * - Dưới: ví dụ minh họa.
  * - Có nút Next/Prev và phân trang "1/N" ở dưới.
  */
-export const GrammarStudyView: React.FC<GrammarStudyViewProps> = ({ items, onSectionDone }) => {
+export const GrammarStudyView: React.FC<GrammarStudyViewProps> = ({ items, onSectionDone, initialItemId }) => {
   // Sắp xếp theo orderIndex
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
@@ -29,10 +31,11 @@ export const GrammarStudyView: React.FC<GrammarStudyViewProps> = ({ items, onSec
   const [page, setPage] = useState(0)
   const total = sortedItems.length
 
-  // Reset page khi items đổi
+  // Reset page khi items đổi (hoặc nhảy tới item được chỉ định)
   useEffect(() => {
-    setPage(0)
-  }, [items])
+    const idx = initialItemId != null ? sortedItems.findIndex((it) => it.id === initialItemId) : -1
+    setPage(Math.max(idx, 0))
+  }, [sortedItems, initialItemId])
 
   // Báo "đã xem xong" khi user mở tới trang cuối (chỉ phát 1 lần)
   const reportedDoneRef = useRef(false)

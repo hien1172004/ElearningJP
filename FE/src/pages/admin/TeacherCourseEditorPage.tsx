@@ -1,6 +1,6 @@
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import React, { useState, useEffect } from 'react'
-import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Pencil, Plus, BookOpen, Eye, EyeOff, Trash2, Clock, Edit3, Megaphone } from 'lucide-react'
 import { Button as AntdButton, Modal } from 'antd'
 import { toast } from 'sonner'
@@ -10,7 +10,6 @@ import {
   LessonFormModal,
   CourseOutlineSidebar,
   CourseStudentsPanel,
-  LessonWorkspacePanel,
   parseSelection,
   toSearchParams,
   type WorkspaceSelection,
@@ -24,6 +23,7 @@ import {
   useReorderLessons,
 } from '@/hooks'
 import type { LessonDetail, LessonOutline } from '@/types'
+import { SECTION_TYPE_TO_TAB, lessonEditorPath, type LessonEditorTab } from './TeacherLessonEditorPage'
 import type { ExamSummary } from '@/types/exam.types'
 import { examService } from '@/services/exam.service'
 
@@ -76,7 +76,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
   const openLessonId = selection.view === 'lesson' ? selection.lessonId : undefined
   // Chỉ tải bài thuộc khóa này (tránh mở bài của khóa khác qua URL)
   const openLessonInCourse = openLessonId != null && lessons.some((l) => l.id === openLessonId)
-  const { data: openLesson, isLoading: openLessonLoading } = useLessonDetail(
+  const { data: openLesson } = useLessonDetail(
     openLessonInCourse ? openLessonId : undefined,
   )
 
@@ -424,6 +424,19 @@ export const TeacherCourseEditorPage: React.FC = () => {
     </div>
   )
 
+  /** Điều hướng sang trang soạn bài; section cũ (id) → tab tương ứng loại của nó. */
+  const lessonRedirect = (section?: number | 'quiz') => {
+    if (selection.view !== 'lesson') return null
+    let tab: LessonEditorTab | undefined
+    if (section === 'quiz') tab = 'quiz'
+    else if (typeof section === 'number') {
+      if (!openLesson) return null // chờ tải bài để biết loại của section
+      const found = openLesson.sections?.find((s) => s.id === section)
+      tab = found ? SECTION_TYPE_TO_TAB[found.sectionType] : undefined
+    }
+    return <Navigate to={lessonEditorPath(id, selection.lessonId, tab)} replace />
+  }
+
   const lessonIndex = openLessonId != null ? lessons.findIndex((l) => l.id === openLessonId) : -1
   const mainPanel =
     selection.view === 'lesson' ? (
@@ -438,15 +451,9 @@ export const TeacherCourseEditorPage: React.FC = () => {
           action={<AntdButton onClick={() => select({ view: 'overview' })}>Về tổng quan</AntdButton>}
         />
       ) : (
-        <LessonWorkspacePanel
-          lessonId={selection.lessonId}
-          lessonNumber={lessonIndex + 1}
-          section={selection.section}
-          lesson={openLesson}
-          isLoading={openLessonLoading}
-          onSelect={select}
-          onEditLesson={() => openEditLesson(openLesson ?? lessons[lessonIndex])}
-        />
+        // Bài học mở ở trang riêng (4 tab Từ vựng · Ngữ pháp · Chữ Hán · Quiz).
+        // replace: link cũ ?lesson=..&section=.. không để lại bước lịch sử lặp vòng.
+        lessonRedirect(selection.section) ?? <LoadingState message="Đang tải bài học..." />
       )
     ) : selection.view === 'exams' ? (
       examsPanel
@@ -497,8 +504,6 @@ export const TeacherCourseEditorPage: React.FC = () => {
             lessons={lessons}
             selection={selection}
             onSelect={select}
-            openLesson={openLesson}
-            openLessonLoading={openLessonLoading}
             examCount={courseExams.length}
             studentCount={course.totalEnrollments ?? 0}
             onAddLesson={openCreateLesson}

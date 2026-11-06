@@ -10,6 +10,7 @@ import {
   CourseDetailPage,
   TeacherCoursesPage,
   TeacherCourseEditorPage,
+  TeacherLessonEditorPage,
   LessonViewerPage,
   ProgressPage,
   ProgressGoalPage,
@@ -198,6 +199,8 @@ export const router = createBrowserRouter([
     children: [
       { path: 'courses', element: <TeacherCoursesPage /> },
       { path: 'courses/:courseId', element: <TeacherCourseEditorPage /> },
+      // Soạn 1 bài học: 4 tab Từ vựng · Ngữ pháp · Chữ Hán · Quiz (?tab=)
+      { path: 'courses/:courseId/lessons/:lessonId', element: <TeacherLessonEditorPage /> },
       // Theo dõi học viên: ADMIN mọi khóa, TEACHER khóa của mình
       { path: 'students', element: <TeacherStudentsPage /> },
     ],

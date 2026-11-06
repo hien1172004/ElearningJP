@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { ItemPreviewModal } from './ItemPreviewModal'
 import { Plus, Pencil, Trash2, BookOpen, Eye, Search, Link2, X as XIcon, Volume2, Star } from 'lucide-react'
 import { Modal, Form, Input, InputNumber, App, Select, Spin, Empty, Tag } from 'antd'
 import { z } from 'zod'
@@ -402,6 +403,8 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState<LessonVocabularyItem | null>(null)
   /** Item đang xem chi tiết (mở modal view, không edit) */
+  // Item đang xem trước (popup giống giao diện bài học)
+  const [previewId, setPreviewId] = useState<number | null>(null)
   const [viewingItem, setViewingItem] = useState<LessonVocabularyItem | null>(null)
   const [examples, setExamples] = useState<ExampleRow[]>([])
 
@@ -762,7 +765,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
         {sorted.map((item) => (
           <div
             key={item.id}
-            onClick={() => setViewingItem(item)}
+            onClick={() => setPreviewId(item.id)}
             className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 transition group cursor-pointer"
           >
             <div className="flex-1 min-w-0">
@@ -788,7 +791,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
                 type="button"
                 onClick={() => setViewingItem(item)}
                 className="p-1 text-gray-400 hover:text-emerald-600 rounded transition"
-                title="Xem chi tiết"
+                title="Xem dữ liệu chi tiết"
               >
                 <Eye className="w-3.5 h-3.5" />
               </button> */}
@@ -1098,6 +1101,8 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
           </div>
         </Form>
       </Modal>
+
+      <ItemPreviewModal type="VOCABULARY" items={items} itemId={previewId} onClose={() => setPreviewId(null)} />
 
       {/* Modal xem chi tiết vocab item */}
       <VocabItemDetailModal

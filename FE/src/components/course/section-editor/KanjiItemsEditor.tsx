@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
+import { ItemPreviewModal } from './ItemPreviewModal'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Plus,
@@ -203,6 +204,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
   const [form] = Form.useForm<FormValues>()
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState<LessonKanjiItem | null>(null)
+  // Item đang xem trước (popup giống giao diện bài học)
+  const [previewId, setPreviewId] = useState<number | null>(null)
   const [viewingId, setViewingId] = useState<number | null>(null)
 
   // Kanji đã chọn
@@ -570,7 +573,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         {sorted.map((item) => (
           <div
             key={item.id}
-            onClick={() => setViewingId(item.id)}
+            onClick={() => setPreviewId(item.id)}
             className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-amber-300 hover:bg-amber-50/30 transition group cursor-pointer"
           >
             <div className="w-10 h-10 rounded bg-amber-50 text-amber-900 font-serif font-bold text-lg flex items-center justify-center border border-amber-200 shrink-0">
@@ -607,7 +610,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
                 type="button"
                 onClick={() => setViewingId(item.id)}
                 className="p-1 text-gray-400 hover:text-amber-600 rounded transition"
-                title="Xem chi tiết"
+                title="Xem dữ liệu chi tiết"
               >
                 <Eye className="w-3.5 h-3.5" />
               </button> */}
@@ -979,6 +982,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
           </div>
         </Form>
       </Modal>
+
+      <ItemPreviewModal type="KANJI" items={items} itemId={previewId} onClose={() => setPreviewId(null)} />
 
       {/* Modal xem chi tiết */}
       <KanjiItemDetailModal

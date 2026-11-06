@@ -1,13 +1,9 @@
 import React from 'react'
 import {
-  AlertTriangle,
   ChevronDown,
-  ChevronRight,
   ChevronUp,
   ClipboardList,
-  FileCheck,
   LayoutDashboard,
-  Loader2,
   Pencil,
   Plus,
   Settings,
@@ -15,23 +11,13 @@ import {
   Users,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
-import type { LessonDetail, LessonOutline, LessonSectionType } from '@/types'
-import { countSectionItems } from '@/components/course/section-editor'
+import type { LessonOutline } from '@/types'
 import type { WorkspaceSelection } from './workspaceSelection'
-
-const TYPE_BADGE: Record<LessonSectionType, { label: string; className: string }> = {
-  KANJI: { label: 'Kanji', className: 'bg-amber-50 text-amber-700 border-amber-200' },
-  VOCABULARY: { label: 'Từ vựng', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  GRAMMAR: { label: 'Ngữ pháp', className: 'bg-purple-50 text-purple-700 border-purple-200' },
-}
 
 interface CourseOutlineSidebarProps {
   lessons: LessonOutline[]
   selection: WorkspaceSelection
   onSelect: (selection: WorkspaceSelection) => void
-  /** Chi tiết bài đang mở (để hiện các mục bên trong); null/undefined khi chưa tải xong */
-  openLesson?: LessonDetail | null
-  openLessonLoading?: boolean
   examCount: number
   studentCount: number
   onAddLesson: () => void
@@ -47,13 +33,11 @@ const navItemClass = (active: boolean) =>
     active ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-slate-700 hover:bg-slate-100',
   )
 
-/** Mục lục khóa học dạng cây: Tổng quan · Bài học (→ mục + quiz) · Bài kiểm tra · Học viên · Cài đặt. */
+/** Mục lục khóa học dạng cây: Tổng quan · Bài học (mở trang soạn bài) · Bài kiểm tra · Học viên · Cài đặt. */
 export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
   lessons,
   selection,
   onSelect,
-  openLesson,
-  openLessonLoading,
   examCount,
   studentCount,
   onAddLesson,
@@ -63,8 +47,6 @@ export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
   reorderPending,
 }) => {
   const openLessonId = selection.view === 'lesson' ? selection.lessonId : null
-  const openSection = selection.view === 'lesson' ? selection.section : undefined
-  const sections = [...(openLesson?.sections ?? [])].sort((a, b) => a.orderIndex - b.orderIndex)
 
   return (
     <nav className="bg-white rounded-xl border border-suna shadow-xs p-2 space-y-1" aria-label="Mục lục khóa học">
@@ -100,15 +82,10 @@ export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
                 <div className="group relative">
                   <button
                     type="button"
-                    className={cn(navItemClass(isOpen && openSection == null), 'pr-24')}
+                    className={cn(navItemClass(isOpen), 'pr-24')}
                     onClick={() => onSelect({ view: 'lesson', lessonId: lesson.id })}
                     title={lesson.title}
                   >
-                    {isOpen ? (
-                      <ChevronDown className="w-4 h-4 shrink-0 text-slate-400" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 shrink-0 text-slate-400" />
-                    )}
                     <span className="shrink-0 text-xs font-bold text-slate-400 tabular-nums">
                       {String(idx + 1).padStart(2, '0')}
                     </span>
@@ -135,53 +112,6 @@ export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
                   </div>
                 </div>
 
-                {/* Các mục của bài đang mở */}
-                {isOpen && (
-                  <div className="ml-6 mt-0.5 mb-1 border-l border-suna pl-2 space-y-0.5">
-                    {openLessonLoading && !openLesson ? (
-                      <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-slate-400">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Đang tải…
-                      </div>
-                    ) : (
-                      <>
-                        {sections.map((s) => {
-                          const count = countSectionItems(s)
-                          const badge = TYPE_BADGE[s.sectionType]
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              className={cn(navItemClass(openSection === s.id), 'py-1.5')}
-                              onClick={() => onSelect({ view: 'lesson', lessonId: lesson.id, section: s.id })}
-                              title={s.title}
-                            >
-                              <span className={cn('shrink-0 rounded border px-1.5 text-[10px] font-bold', badge?.className)}>
-                                {badge?.label ?? s.sectionType}
-                              </span>
-                              <span className="truncate flex-1">{s.title}</span>
-                              {count === 0 ? (
-                                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" aria-label="Chưa có nội dung" />
-                              ) : (
-                                <span className="shrink-0 text-xs text-slate-400 tabular-nums">{count}</span>
-                              )}
-                            </button>
-                          )
-                        })}
-                        <button
-                          type="button"
-                          className={cn(navItemClass(openSection === 'quiz'), 'py-1.5')}
-                          onClick={() => onSelect({ view: 'lesson', lessonId: lesson.id, section: 'quiz' })}
-                        >
-                          <FileCheck className="w-3.5 h-3.5 shrink-0" />
-                          <span className="flex-1">Quiz</span>
-                          {openLesson && !openLesson.hasQuiz && (
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-500" aria-label="Chưa có quiz" />
-                          )}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
               </li>
             )
           })}
