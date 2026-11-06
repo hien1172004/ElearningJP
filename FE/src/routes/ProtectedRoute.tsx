@@ -18,6 +18,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles, children 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const isInitialized = useAuthStore((s) => s.isInitialized)
   const user = useAuthStore((s) => s.user)
+  const loggedOut = useAuthStore((s) => s.loggedOut)
   const location = useLocation()
 
   // Khi reload, AuthInitializer chưa chạy xong: KHÔNG đá về login ngay
@@ -31,6 +32,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles, children 
   }
 
   if (!isAuthenticated) {
+    // Vừa chủ động đăng xuất → về trang chủ, không mở modal đăng nhập
+    if (loggedOut) return <Navigate to="/" replace />
     const redirect = encodeURIComponent(location.pathname + location.search)
     return <Navigate to={`/login?redirect=${redirect}`} replace />
   }

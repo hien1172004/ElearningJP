@@ -11,6 +11,8 @@ interface AuthState {
   isAuthenticated: boolean
   isRememberMe: boolean
   isInitialized: boolean
+  /** true khi phiên vừa bị xoá do người dùng chủ động đăng xuất (ProtectedRoute về trang chủ thay vì /login). */
+  loggedOut: boolean
   setAuth: (params: {
     user: User | null
     accessToken: string
@@ -19,7 +21,7 @@ interface AuthState {
   }) => void
   setUser: (user: User | null) => void
   updateAccessToken: (token: string) => void
-  clearAuth: () => void
+  clearAuth: (opts?: { loggedOut?: boolean }) => void
   setInitialized: (value: boolean) => void
 }
 
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: !!storage.getAccessToken(),
   isRememberMe: storage.getRemember(),
   isInitialized: false,
+  loggedOut: false,
 
   setAuth: ({ user, accessToken, refreshToken, remember }) => {
     storage.setTokens({
@@ -44,6 +47,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: true,
       isRememberMe: remember,
       isInitialized: true,
+      loggedOut: false,
     })
     // Bình luận tải lúc còn là khách có owner/deletable/moderator/liked = false.
     // Đăng nhập ngay trên trang (modal) → tải lại để hiện đúng nút Sửa/Xoá và ẩn nút báo cáo.
@@ -60,7 +64,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ accessToken: token })
   },
 
-  clearAuth: () => {
+  clearAuth: (opts) => {
     storage.clearAll()
     // Xoá toàn bộ cache server-state của phiên cũ (danh sách khóa học quản lý, profile, SRS…)
     // để tài khoản đăng nhập tiếp theo trên cùng tab không thấy dữ liệu của người trước.
@@ -73,6 +77,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: null,
       isAuthenticated: false,
       isRememberMe: false,
+      loggedOut: opts?.loggedOut ?? false,
     })
   },
 

@@ -26,7 +26,7 @@ export function useLogout() {
       try {
         await navigate('/', { replace: true })
       } finally {
-        clearAuth()
+        clearAuth({ loggedOut: true })
       }
       if (!token) return null
       return authService.logout(token)

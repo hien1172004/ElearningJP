@@ -54,7 +54,10 @@ export const AuthGatePage: React.FC<AuthGatePageProps> = ({ mode }) => {
     } else {
       openLogin(redirectTo)
     }
-    navigate(redirectTo, { replace: true })
+    // Nền phía sau modal luôn là trang chủ: nếu quay về redirectTo (route cần đăng nhập) khi chưa
+    // đăng nhập, ProtectedRoute lại đá sang /login → component này bị tái sử dụng (ran=true) → trang trắng.
+    // redirectTo đã được lưu trong modal, đăng nhập xong sẽ tự điều hướng tới đó.
+    navigate('/', { replace: true })
   }, [mode, isAuthenticated, openLogin, openRegister, navigate, searchParams])
 
   // Không render gì — modal sẽ được mount ở MainLayout
