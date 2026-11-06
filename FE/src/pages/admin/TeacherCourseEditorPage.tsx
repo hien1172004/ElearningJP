@@ -27,7 +27,7 @@ import { SECTION_TYPE_TO_TAB, lessonEditorPath, type LessonEditorTab } from './T
 import type { ExamSummary } from '@/types/exam.types'
 import { examService } from '@/services/exam.service'
 
-const CARD = 'bg-white rounded-xl border border-suna shadow-xs'
+const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
 
 /**
  * Không gian soạn khóa học (giáo viên) — bố cục 2 cột:
@@ -270,7 +270,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
               <div
                 key={exam.id}
                 onClick={() => navigate(`/admin/exams/${exam.id}/preview`)}
-                className="bg-white rounded-xl border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm p-4 shadow-xs transition flex flex-col justify-between gap-3 cursor-pointer"
+                className="bg-surface rounded-xl border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm p-4 shadow-xs transition flex flex-col justify-between gap-3 cursor-pointer"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">

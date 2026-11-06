@@ -22,7 +22,7 @@ export const NotebookStatsOverview: React.FC<NotebookStatsOverviewProps> = ({
   onStartReview,
 }) => {
   return (
-    <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-xs mb-6">
+    <div className="bg-surface border border-gray-100 rounded-3xl p-5 shadow-xs mb-6">
       {/* Top: Header + Toggle SR + Start Review Button */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ export const NotebookStatsOverview: React.FC<NotebookStatsOverviewProps> = ({
       {/* 4 Cards: Chưa thuộc / Thuộc lơ mơ / Thuộc kha khá / Thuộc làu làu */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Chưa thuộc */}
-        <div className="bg-white border border-red-200 rounded-2xl p-4 flex items-center gap-4">
+        <div className="bg-surface border border-red-200 rounded-2xl p-4 flex items-center gap-4">
           <div className="w-1.5 h-10 rounded-full bg-red-500" />
           <div>
             <div className="text-xs text-gray-500 font-medium">Chưa thuộc</div>
@@ -65,7 +65,7 @@ export const NotebookStatsOverview: React.FC<NotebookStatsOverviewProps> = ({
         </div>
 
         {/* Thuộc lơ mơ */}
-        <div className="bg-white border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
+        <div className="bg-surface border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
           <div className="w-1.5 h-10 rounded-full bg-amber-500" />
           <div>
             <div className="text-xs text-gray-500 font-medium">Thuộc lơ mơ</div>
@@ -76,7 +76,7 @@ export const NotebookStatsOverview: React.FC<NotebookStatsOverviewProps> = ({
         </div>
 
         {/* Thuộc kha khá */}
-        <div className="bg-white border border-blue-200 rounded-2xl p-4 flex items-center gap-4">
+        <div className="bg-surface border border-blue-200 rounded-2xl p-4 flex items-center gap-4">
           <div className="w-1.5 h-10 rounded-full bg-blue-500" />
           <div>
             <div className="text-xs text-gray-500 font-medium">Thuộc kha khá</div>
@@ -87,7 +87,7 @@ export const NotebookStatsOverview: React.FC<NotebookStatsOverviewProps> = ({
         </div>
 
         {/* Thuộc làu làu */}
-        <div className="bg-white border border-green-200 rounded-2xl p-4 flex items-center gap-4">
+        <div className="bg-surface border border-green-200 rounded-2xl p-4 flex items-center gap-4">
           <div className="w-1.5 h-10 rounded-full bg-green-500" />
           <div>
             <div className="text-xs text-gray-500 font-medium">Thuộc làu làu</div>

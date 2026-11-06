@@ -268,7 +268,7 @@ export const NotebookExplorePage: React.FC = () => {
           <Spin size="large" />
         </div>
       ) : currentItems.length === 0 ? (
-        <div className="py-20 text-center bg-white rounded-3xl border border-suna shadow-xs">
+        <div className="py-20 text-center bg-surface rounded-3xl border border-suna shadow-xs">
           <Empty
             description={
               <span className="text-gray-500 text-sm">
@@ -283,7 +283,7 @@ export const NotebookExplorePage: React.FC = () => {
             <div
               key={item.id}
               onClick={() => handleCardClick(item)}
-              className="group bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex flex-col justify-between select-none"
+              className="group bg-surface rounded-2xl border border-gray-200/90 p-4 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex flex-col justify-between select-none"
             >
               {/* Dòng trên: Tên sổ tay & Nút Thích / Tải */}
               <div className="flex items-start justify-between gap-2 mb-3">
@@ -470,7 +470,7 @@ export const NotebookExplorePage: React.FC = () => {
                   {previewWords.map((w, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between text-xs bg-white p-2 rounded-lg border border-gray-100"
+                      className="flex items-center justify-between text-xs bg-surface p-2 rounded-lg border border-gray-100"
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-gray-900">{w.word}</span>

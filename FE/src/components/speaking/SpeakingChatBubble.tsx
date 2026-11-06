@@ -128,7 +128,7 @@ export const SpeakingChatBubble: React.FC<SpeakingChatBubbleProps> = ({
         <MaziikoMascot size={32} />
       </div>
 
-      <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl rounded-tl-xs bg-white border border-slate-200/80 px-4 py-3 shadow-xs hover:border-indigo-200 transition-all text-left">
+      <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl rounded-tl-xs bg-surface border border-slate-200/80 px-4 py-3 shadow-xs hover:border-indigo-200 transition-all text-left">
         {/* Tên AI / Nhân vật đóng vai */}
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-semibold text-indigo-600 tracking-wide flex items-center gap-1">

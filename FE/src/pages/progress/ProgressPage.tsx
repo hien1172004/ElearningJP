@@ -48,7 +48,7 @@ const ProgressDashboard: React.FC = () => {
   return (
     <div className="space-y-4 pb-12">
       {/* ======================= HÀNG 1 — TỔNG HỢP + LỊCH STREAK (chung 1 thẻ, không banner) ======================= */}
-      <div className="bg-white rounded-xl border border-suna shadow-xs p-4 sm:p-5 grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+      <div className="bg-surface rounded-xl border border-suna shadow-xs p-4 sm:p-5 grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         <div className="xl:col-span-6 2xl:col-span-7 min-w-0">
           <ProgressSummaryBlock
             summary={data}
@@ -74,10 +74,10 @@ const ProgressDashboard: React.FC = () => {
         <div className="xl:col-span-12 2xl:col-span-5 min-w-0">
           <ProgressChartBlock from={range.from} to={range.to} preset={range.preset} />
         </div>
-        <div className="xl:col-span-6 2xl:col-span-3 min-w-0 bg-white rounded-xl border border-suna shadow-xs p-4">
+        <div className="xl:col-span-6 2xl:col-span-3 min-w-0 bg-surface rounded-xl border border-suna shadow-xs p-4">
           <TopLookupsBlock />
         </div>
-        <div className="xl:col-span-6 2xl:col-span-4 min-w-0 bg-white rounded-xl border border-suna shadow-xs p-4">
+        <div className="xl:col-span-6 2xl:col-span-4 min-w-0 bg-surface rounded-xl border border-suna shadow-xs p-4">
           <LeaderboardBlock />
         </div>
       </div>

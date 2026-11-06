@@ -238,7 +238,7 @@ const VocabItemDetailModal: React.FC<{
                 {senses.map((s, idx) => (
                   <div
                     key={s.id ?? idx}
-                    className="rounded border border-gray-200 bg-white p-2.5 text-sm"
+                    className="rounded border border-gray-200 bg-surface p-2.5 text-sm"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-emerald-600">
@@ -324,7 +324,7 @@ const VocabItemDetailModal: React.FC<{
                     className={`rounded border p-2.5 ${
                       ex.isPrimary
                         ? 'border-amber-300 bg-amber-50/60'
-                        : 'border-gray-200 bg-white'
+                        : 'border-gray-200 bg-surface'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -766,7 +766,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
           <div
             key={item.id}
             onClick={() => setPreviewId(item.id)}
-            className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 transition group cursor-pointer"
+            className="flex items-center gap-3 p-2.5 bg-surface rounded-md border border-gray-200/80 hover:border-emerald-300 hover:bg-emerald-50/30 transition group cursor-pointer"
           >
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-gray-900">{item.word}</p>
@@ -1020,7 +1020,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
                     className={`rounded border p-2 space-y-1.5 ${
                       ex.isPrimary
                         ? 'border-amber-300 bg-amber-50/80'
-                        : 'border-gray-200 bg-white'
+                        : 'border-gray-200 bg-surface'
                     }`}
                   >
                     <div className="flex items-center justify-between">

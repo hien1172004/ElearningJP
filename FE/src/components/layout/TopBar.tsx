@@ -16,6 +16,7 @@ import {
 } from '@/stores'
 import { useLogout } from '@/hooks'
 import { NotificationBell } from '@/components/notification'
+import { ThemeToggle } from '@/components/theme'
 import { cn } from '@/utils/cn'
 
 /**
@@ -42,7 +43,7 @@ export const TopBar: React.FC = () => {
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200/80 h-14">
+    <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-md border-b border-gray-200/80 h-14">
       <div className="h-14 flex items-center justify-between gap-2 pl-0 pr-3 sm:pr-4 lg:pr-5">
         {/* Trái: hamburger/toggle + logo */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -73,6 +74,7 @@ export const TopBar: React.FC = () => {
 
         {/* Phải: tài khoản + đăng xuất (hoặc đăng nhập / đăng ký) */}
         <div className="flex items-center gap-2 shrink-0">
+          <ThemeToggle />
           {isAuthenticated ? (
             <>
               {/* Chuông thông báo — chỉ hiện khi đã đăng nhập */}

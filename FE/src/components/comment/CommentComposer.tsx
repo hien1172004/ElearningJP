@@ -78,7 +78,7 @@ export const CommentComposer: React.FC<CommentComposerProps> = ({
           className,
         )}
       >
-        <span className="w-10 h-10 rounded-md bg-white text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+        <span className="w-10 h-10 rounded-md bg-surface text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
           <MessageSquare className="w-5 h-5" />
         </span>
         <div className="flex-1 min-w-0">

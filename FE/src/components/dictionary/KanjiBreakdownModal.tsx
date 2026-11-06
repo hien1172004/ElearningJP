@@ -242,7 +242,7 @@ export const KanjiBreakdownModal: React.FC<KanjiBreakdownModalProps> = ({
                     y1={link.y1}
                     x2={link.x2}
                     y2={link.y2}
-                    stroke="#cbd5e1"
+                    stroke="var(--color-slate-300)"
                     strokeWidth="2"
                     strokeLinecap="round"
                   />
@@ -251,7 +251,7 @@ export const KanjiBreakdownModal: React.FC<KanjiBreakdownModalProps> = ({
                     cx={link.midX}
                     cy={link.midY}
                     r="3"
-                    fill="#94a3b8"
+                    fill="var(--color-slate-400)"
                   />
                 </g>
               ))}
@@ -282,7 +282,7 @@ export const KanjiBreakdownModal: React.FC<KanjiBreakdownModalProps> = ({
                     key={node.id}
                     title={tooltipTitle}
                     placement="top"
-                    color="#1e293b"
+                    color="var(--color-sumi)"
                     mouseEnterDelay={0.08}
                     mouseLeaveDelay={0.15}
                     overlayInnerStyle={{
@@ -304,8 +304,8 @@ export const KanjiBreakdownModal: React.FC<KanjiBreakdownModalProps> = ({
                         cx={node.x}
                         cy={node.y}
                         r={nodeRadius}
-                        fill={node.isRoot ? '#dbeafe' : '#ffffff'}
-                        stroke={node.isRoot ? '#3b82f6' : '#334155'}
+                        fill={node.isRoot ? 'var(--color-indigo-100)' : 'var(--color-surface)'}
+                        stroke={node.isRoot ? 'var(--color-blue-500)' : 'var(--color-slate-700)'}
                         strokeWidth={node.isRoot ? 2.5 : 1.75}
                         className="transition-colors duration-150 group-hover:stroke-indigo-600 group-hover:fill-indigo-50/50"
                       />
@@ -315,7 +315,7 @@ export const KanjiBreakdownModal: React.FC<KanjiBreakdownModalProps> = ({
                         x={node.x}
                         y={node.y + 7}
                         textAnchor="middle"
-                        fill="#0f172a"
+                        fill="var(--color-sumi)"
                         fontSize={node.isRoot ? '22' : '20'}
                         fontWeight="bold"
                         fontFamily="serif"
@@ -358,7 +358,7 @@ export const KanjiBreakdownModal: React.FC<KanjiBreakdownModalProps> = ({
                   key={i}
                   title={compTooltip}
                   placement="top"
-                  color="#1e293b"
+                  color="var(--color-sumi)"
                   overlayInnerStyle={{ padding: '8px 12px', borderRadius: '8px' }}
                 >
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-gray-100 hover:bg-indigo-50 hover:border-indigo-300 text-gray-800 border border-gray-200 cursor-pointer transition">

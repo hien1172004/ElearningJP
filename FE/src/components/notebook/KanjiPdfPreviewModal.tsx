@@ -181,7 +181,7 @@ export const KanjiPdfPreviewModal: React.FC<KanjiPdfPreviewModalProps> = ({
                 icon={<LeftOutlined />}
                 disabled={currentPage <= 1 || imageLoading}
                 onClick={() => loadPage(currentPage - 1)}
-                className="rounded-lg h-7 px-2 border-none shadow-none text-xs font-medium hover:bg-white"
+                className="rounded-lg h-7 px-2 border-none shadow-none text-xs font-medium hover:bg-surface"
               >
                 Trước
               </Button>
@@ -203,7 +203,7 @@ export const KanjiPdfPreviewModal: React.FC<KanjiPdfPreviewModalProps> = ({
                 icon={<RightOutlined />}
                 disabled={currentPage >= totalPages || imageLoading}
                 onClick={() => loadPage(currentPage + 1)}
-                className="rounded-lg h-7 px-2 border-none shadow-none text-xs font-medium hover:bg-white"
+                className="rounded-lg h-7 px-2 border-none shadow-none text-xs font-medium hover:bg-surface"
               >
                 Sau
               </Button>
@@ -283,12 +283,12 @@ export const KanjiPdfPreviewModal: React.FC<KanjiPdfPreviewModalProps> = ({
                 <img
                   src={currentImageUrl}
                   alt={`Kanji Practice Preview Page ${currentPage}`}
-                  className="w-full max-w-[920px] h-auto rounded-lg shadow-sm bg-white border border-gray-200 block"
+                  className="w-full max-w-[920px] h-auto rounded-lg shadow-sm bg-surface border border-gray-200 block"
                 />
 
                 {/* Thanh chuyển trang dính ở đáy khung xem */}
                 {totalPages > 1 && (
-                  <div className="sticky bottom-2 mt-4 bg-white/95 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-gray-200 flex items-center gap-3 z-10">
+                  <div className="sticky bottom-2 mt-4 bg-surface/95 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-gray-200 flex items-center gap-3 z-10">
                     <Button
                       size="middle"
                       icon={<LeftOutlined />}

@@ -55,7 +55,7 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
   const next = currentIdx < lessons.length - 1 ? lessons[currentIdx + 1] : null
 
   return (
-    <aside className="sticky top-16 w-full bg-white rounded-md border border-gray-200/80 shadow-xs overflow-hidden">
+    <aside className="sticky top-16 w-full bg-surface rounded-md border border-gray-200/80 shadow-xs overflow-hidden">
       <div className="p-4 border-b border-gray-100">
         <h3 className="font-bold text-sm text-gray-800">Nội dung bài học</h3>
         <p className="text-xs text-gray-500 mt-0.5">{lessons.length} bài học</p>
@@ -96,7 +96,7 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
               <Link
                 key={exam.id}
                 to={`/exam/lobby/${exam.id}`}
-                className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200/80 hover:border-indigo-400 hover:shadow-xs transition text-xs group"
+                className="flex items-center justify-between p-2 rounded-lg bg-surface border border-gray-200/80 hover:border-indigo-400 hover:shadow-xs transition text-xs group"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <FileCheck className="w-4 h-4 text-indigo-600 shrink-0 group-hover:scale-110 transition" />

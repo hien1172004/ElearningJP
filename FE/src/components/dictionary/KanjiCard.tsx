@@ -12,7 +12,7 @@ export const KanjiCard: React.FC<KanjiCardProps> = ({ kanji, onOpenDetail }) => 
   return (
     <div
       onClick={() => onOpenDetail(kanji.character)}
-      className="bg-white rounded-md border border-gray-200/80 hover:border-indigo-400 hover:shadow-md p-5 transition-all duration-200 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group"
+      className="bg-surface rounded-md border border-gray-200/80 hover:border-indigo-400 hover:shadow-md p-5 transition-all duration-200 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 group"
     >
       <div className="flex items-start gap-4">
         {/* Khung chữ Hán nổi bật */}

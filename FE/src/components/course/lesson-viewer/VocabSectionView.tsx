@@ -22,7 +22,7 @@ export const VocabSectionView: React.FC<VocabSectionViewProps> = ({ section }) =
       )}
       <div className="space-y-2">
         {items.map((item) => (
-          <div key={item.id} className="bg-white rounded-md border border-gray-200/80 p-4 hover:border-emerald-300 hover:shadow-sm transition">
+          <div key={item.id} className="bg-surface rounded-md border border-gray-200/80 p-4 hover:border-emerald-300 hover:shadow-sm transition">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-baseline gap-3">

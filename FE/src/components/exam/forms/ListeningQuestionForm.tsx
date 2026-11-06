@@ -224,10 +224,10 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
             value={data.imageUrl || ''}
             onChange={(e) => onChange({ ...data, imageUrl: e.target.value })}
             placeholder="Hoặc dán link URL: https://.../tranh_tinh_huong.png"
-            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-mono"
+            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-mono"
           />
           {data.imageUrl && (
-            <div className="mt-2 p-2 border border-slate-200 rounded-xl bg-white max-w-xs relative group">
+            <div className="mt-2 p-2 border border-slate-200 rounded-xl bg-surface max-w-xs relative group">
               <img src={data.imageUrl} alt="Tình huống" className="rounded-lg max-h-36 object-contain mx-auto" />
               <button
                 type="button"
@@ -261,7 +261,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                 onChange={(e) => onChange({ ...data, hasVisualOptions: e.target.checked })}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
           </div>
         )}
@@ -289,7 +289,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
             value={data.questionText || ''}
             onChange={(e) => onChange({ ...data, questionText: e.target.value })}
             placeholder="Ví dụ: 1番 hoặc 男の人はこのあと何をしますか (Để trống sẽ tự động lấy số câu)"
-            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
           />
         </div>
 
@@ -310,7 +310,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                     className={`p-3.5 rounded-2xl border-2 transition-all flex flex-col justify-between gap-3 ${
                       isCorrect
                         ? 'bg-emerald-50/70 border-emerald-500 shadow-sm ring-1 ring-emerald-300'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
+                        : 'bg-surface border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -383,7 +383,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                         value={opt.optionImageUrl || ''}
                         onChange={(e) => handleOptionChange(idx, '', e.target.value)}
                         placeholder={`Hoặc dán URL ảnh Tranh ${opt.optionKey}...`}
-                        className="w-full px-2.5 py-1 text-[11px] border border-slate-200 rounded-lg bg-white font-mono"
+                        className="w-full px-2.5 py-1 text-[11px] border border-slate-200 rounded-lg bg-surface font-mono"
                       />
                       {!opt.optionImageUrl && (
                         <FileUploadButton
@@ -409,7 +409,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                     className={`p-3 rounded-2xl border transition flex flex-col gap-2 ${
                       isCorrect
                         ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200'
-                        : 'bg-white border-slate-200 hover:border-slate-300'
+                        : 'bg-surface border-slate-200 hover:border-slate-300'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -432,7 +432,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                         value={opt.optionText}
                         onChange={(e) => handleOptionChange(idx, e.target.value)}
                         placeholder={`Nội dung lựa chọn ${idx + 1}...`}
-                        className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+                        className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
                       />
 
                       <label
@@ -473,7 +473,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
               value={data.transcriptJp || ''}
               onChange={(e) => onChange({ ...data, transcriptJp: e.target.value })}
               placeholder="男：明日の会議は何時からですか。&#10;女：10時からですよ。"
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-serif focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-serif focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
             />
           </div>
           <div>
@@ -486,7 +486,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
               value={data.transcriptVi || ''}
               onChange={(e) => onChange({ ...data, transcriptVi: e.target.value })}
               placeholder="Nam: Cuộc họp ngày mai mấy giờ bắt đầu?&#10;Nữ: 10 giờ đấy."
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
             />
           </div>
         </div>
@@ -502,7 +502,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
             value={data.explanationVi || ''}
             onChange={(e) => onChange({ ...data, explanationVi: e.target.value })}
             placeholder="Người nam hỏi giờ họp, người nữ trả lời là từ 10 giờ nên chọn đáp án..."
-            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
           />
         </div>
       </div>

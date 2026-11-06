@@ -46,7 +46,7 @@ export const ExamResultPage: React.FC = () => {
       <div className="flex items-center justify-center py-24 px-4">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">Đang tổng hợp phiếu điểm...</p>
+          <p className="text-sm text-slate-600 font-medium">Đang tổng hợp phiếu điểm...</p>
         </div>
       </div>
     )
@@ -55,10 +55,10 @@ export const ExamResultPage: React.FC = () => {
   if (error || !result) {
     return (
       <div className="flex items-center justify-center py-16 px-4">
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xs border border-suna dark:border-slate-700 p-6 max-w-md w-full text-center">
+        <div className="bg-surface rounded-xl shadow-xs border border-suna p-6 max-w-md w-full text-center">
           <XCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Lỗi tải kết quả</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">{error || 'Không tìm thấy dữ liệu kết quả bài thi.'}</p>
+          <h2 className="text-lg font-bold text-slate-800 mb-2">Lỗi tải kết quả</h2>
+          <p className="text-slate-600 text-sm mb-6">{error || 'Không tìm thấy dữ liệu kết quả bài thi.'}</p>
           <button
             onClick={() => navigate('/exams')}
             className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition"
@@ -99,17 +99,17 @@ export const ExamResultPage: React.FC = () => {
         {/* Trang trước có thể là phòng thi → luôn về lịch sử thi */}
         <BackButton to="/exam-history" label="Quay lại lịch sử thi" useHistory={false} />
         {/* Certificate Card Header */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xs border border-suna dark:border-slate-700/60 overflow-hidden relative">
+        <div className="bg-surface rounded-xl shadow-xs border border-suna overflow-hidden relative">
           {/* Top banner accent */}
           <div
             className={`h-1.5 w-full ${result.passed ? 'bg-emerald-500' : 'bg-rose-500'}`}
           />
 
           <div className="p-5 md:p-6">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-md text-[11px] font-bold uppercase tracking-wider">
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-[11px] font-bold uppercase tracking-wider">
                     {result.jlptLevel} • {isFullExam ? 'THI THỬ CHUẨN JLPT' : 'LUYỆN TẬP PHÂN HỆ'}
                   </span>
                   <span className="text-xs text-slate-400 flex items-center gap-1">
@@ -117,12 +117,12 @@ export const ExamResultPage: React.FC = () => {
                     {new Date(result.submittedAt).toLocaleDateString('vi-VN')}
                   </span>
                 </div>
-                <h1 className="text-lg md:text-xl font-bold text-sumi dark:text-white">
+                <h1 className="text-lg md:text-xl font-bold text-sumi">
                   {result.examTitle}
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  Thời gian làm bài: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatTime(result.timeSpentSeconds)}</span>
+                  Thời gian làm bài: <span className="font-semibold text-slate-700">{formatTime(result.timeSpentSeconds)}</span>
                 </p>
               </div>
 
@@ -130,8 +130,8 @@ export const ExamResultPage: React.FC = () => {
               <div
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border shrink-0 whitespace-nowrap ${
                   result.passed
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300'
-                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : 'bg-rose-50 border-rose-200 text-rose-700'
                 }`}
               >
                 {result.passed ? (
@@ -152,9 +152,9 @@ export const ExamResultPage: React.FC = () => {
 
             {/* Threshold failed alert */}
             {result.hasThresholdFailed && (
-              <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 rounded-lg flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-900 dark:text-amber-200">
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-900">
                   <span className="font-bold">Cảnh báo điểm liệt:</span> Tổng điểm của bạn có thể đạt hoặc gần ngưỡng đỗ, nhưng bạn có phân môn không đạt mức điểm sàn tối thiểu quy định theo chuẩn JLPT.
                 </div>
               </div>
@@ -186,7 +186,7 @@ export const ExamResultPage: React.FC = () => {
 
               {/* Group scores breakdown */}
               <div className="md:col-span-2 space-y-3">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                   <Layers className="w-4 h-4 text-indigo-500" />
                   Điểm theo từng phần thi
                 </h3>
@@ -197,19 +197,19 @@ export const ExamResultPage: React.FC = () => {
                     return (
                       <div
                         key={group.scoreGroupId}
-                        className="p-3 bg-kinari dark:bg-slate-900/60 rounded-lg"
+                        className="p-3 bg-kinari rounded-lg"
                       >
                         <div className="flex items-center justify-between text-sm mb-1.5">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          <span className="font-semibold text-slate-800">
                             {getGroupName(group.groupCode)}
                           </span>
-                          <span className="font-bold text-slate-900 dark:text-white">
+                          <span className="font-bold text-slate-900">
                             {group.scaledScore} / {group.maxScaledScore} điểm
                           </span>
                         </div>
 
                         {/* Progress Bar */}
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 ${
                               group.groupPassed ? 'bg-indigo-600' : 'bg-rose-500'
@@ -218,15 +218,15 @@ export const ExamResultPage: React.FC = () => {
                           />
                         </div>
 
-                        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-2">
+                        <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
                           <span>
-                            Đúng: <strong className="text-slate-700 dark:text-slate-300">{group.rawCorrectCount} / {group.rawTotalCount} câu</strong>
+                            Đúng: <strong className="text-slate-700">{group.rawCorrectCount} / {group.rawTotalCount} câu</strong>
                           </span>
                           <span>
                             {group.minRequiredScore > 0 ? (
                               <>
                                 Điểm liệt: <strong className="text-rose-500 font-semibold">&lt; {group.minRequiredScore}đ</strong> • {group.groupPassed ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Qua ngưỡng</span>
+                                  <span className="text-emerald-600 font-medium">Qua ngưỡng</span>
                                 ) : (
                                   <span className="text-rose-600 font-bold">Dưới ngưỡng liệt</span>
                                 )}
@@ -234,9 +234,9 @@ export const ExamResultPage: React.FC = () => {
                             ) : (
                               <>
                                 Mục tiêu luyện tập: <strong className="text-indigo-600 font-semibold">&ge; 30đ (50%)</strong> • {group.groupPassed ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">Đạt mục tiêu</span>
+                                  <span className="text-emerald-600 font-medium">Đạt mục tiêu</span>
                                 ) : (
-                                  <span className="text-amber-600 dark:text-amber-400 font-medium">Cần ôn luyện thêm</span>
+                                  <span className="text-amber-600 font-medium">Cần ôn luyện thêm</span>
                                 )}
                               </>
                             )}
@@ -248,8 +248,8 @@ export const ExamResultPage: React.FC = () => {
                 </div>
 
                 {!isFullExam && result.groupScores.some(g => g.groupCode === 'LANGUAGE_KNOWLEDGE_READING') && (
-                  <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
-                    <Lightbulb className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-px" />
+                  <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-[11px] text-amber-800 flex items-start gap-2.5">
+                    <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-px" />
                     <span>
                       <strong>Lưu ý quy chế JLPT:</strong> Đối với N4/N5, điểm liệt (tối thiểu 38/120 điểm) chỉ áp dụng trên tổng điểm gộp của cả 2 phần (Từ vựng + Ngữ pháp & Đọc hiểu) khi thi <strong>Toàn bài (Full Exam)</strong>. Khi luyện thi ca lẻ, hệ thống đánh giá theo tỷ lệ hoàn thành mục tiêu.
                     </span>
@@ -259,18 +259,18 @@ export const ExamResultPage: React.FC = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button
                   onClick={() => navigate('/exam-history')}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border border-suna dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-kamenozoki dark:hover:bg-slate-700 transition"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border border-suna text-slate-700 text-sm font-medium hover:bg-kamenozoki transition"
                 >
                   <History className="w-4 h-4 text-slate-500" />
                   Lịch sử thi
                 </button>
                 <button
                   onClick={() => navigate('/exams')}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border border-suna dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-kamenozoki dark:hover:bg-slate-700 transition"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg border border-suna text-slate-700 text-sm font-medium hover:bg-kamenozoki transition"
                 >
                   <RotateCcw className="w-4 h-4 text-slate-500" />
                   Sảnh đề thi

@@ -171,7 +171,7 @@ export const WordImportModal: React.FC<WordImportModalProps> = ({
               className={`border rounded-xl overflow-hidden shadow-2xs transition-colors ${
                 isDragging
                   ? 'border-blue-500 bg-blue-50/30'
-                  : 'border-gray-200 bg-white'
+                  : 'border-gray-200 bg-surface'
               }`}
             >
               <table className="w-full text-xs text-left border-collapse">
@@ -262,19 +262,19 @@ export const WordImportModal: React.FC<WordImportModalProps> = ({
             </div>
 
             <div className="grid grid-cols-3 gap-3 text-center text-xs">
-              <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-2xs">
+              <div className="bg-surface p-3 rounded-xl border border-gray-100 shadow-2xs">
                 <div className="text-gray-400 mb-1">Tổng số dòng</div>
                 <div className="text-lg font-bold text-gray-800">
                   {importResult.totalProcessed ?? importResult.totalRows ?? 0}
                 </div>
               </div>
-              <div className="bg-white p-3 rounded-xl border border-emerald-100 shadow-2xs">
+              <div className="bg-surface p-3 rounded-xl border border-emerald-100 shadow-2xs">
                 <div className="text-emerald-500 mb-1">Đã thêm thành công</div>
                 <div className="text-lg font-bold text-emerald-600">
                   {importResult.successCount ?? importResult.importedCount ?? 0}
                 </div>
               </div>
-              <div className="bg-white p-3 rounded-xl border border-amber-100 shadow-2xs">
+              <div className="bg-surface p-3 rounded-xl border border-amber-100 shadow-2xs">
                 <div className="text-amber-500 mb-1">Bỏ qua / Lỗi</div>
                 <div className="text-lg font-bold text-amber-600">
                   {importResult.errorCount ?? importResult.skippedCount ?? 0}

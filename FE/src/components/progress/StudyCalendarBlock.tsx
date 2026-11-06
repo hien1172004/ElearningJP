@@ -35,7 +35,7 @@ const STATE_STYLE: Record<DayState, string> = {
   // Có học nhưng chưa đạt — xanh lá.
   active: 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600',
   // Không học — không tô màu (nền trắng, viền xám nhạt).
-  empty: 'bg-white text-gray-500 border-gray-200',
+  empty: 'bg-surface text-gray-500 border-gray-200',
   // Ngày chưa tới — làm mờ, không tô màu.
   future: 'bg-gray-50 text-gray-300 border-gray-100',
 }
@@ -147,7 +147,7 @@ export const StudyCalendarBlock: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* Chuyển tháng */}
-          <div className="flex items-center gap-1 bg-white rounded-md border border-gray-200/80 shadow-xs p-0.5">
+          <div className="flex items-center gap-1 bg-surface rounded-md border border-gray-200/80 shadow-xs p-0.5">
             <Tooltip title="Tháng trước">
               <Button
                 type="text"
@@ -232,7 +232,7 @@ export const StudyCalendarBlock: React.FC = () => {
                     {/* Chấm nhỏ báo đã học, giúp màu không chỉ dựa vào sắc độ. */}
                     {hasActivity && (
                       <span
-                        className="w-0.5 h-0.5 rounded-full bg-white/80 mt-0.5"
+                        className="w-0.5 h-0.5 rounded-full bg-surface/80 mt-0.5"
                         aria-hidden="true"
                       />
                     )}
@@ -246,7 +246,7 @@ export const StudyCalendarBlock: React.FC = () => {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 pt-2.5 border-t border-gray-100">
             <LegendItem color="bg-blue-600" label="Đạt mục tiêu" />
             <LegendItem color="bg-emerald-500" label="Có học, chưa đạt" />
-            <LegendItem color="bg-white border border-gray-300" label="Không học" />
+            <LegendItem color="bg-surface border border-gray-300" label="Không học" />
             {data && (
               <span className="text-[10px] text-gray-400 ml-auto">
                 Mục tiêu {data.goalWords} từ MỚI/ngày
@@ -257,7 +257,7 @@ export const StudyCalendarBlock: React.FC = () => {
 
         {/* ---------- Card streak ---------- */}
         {/* <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-3.5 text-center">
+          <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-3.5 text-center">
             <span className="inline-flex w-10 h-10 rounded-full bg-amber-50 text-amber-500 items-center justify-center">
               <Flame className="w-5 h-5" />
             </span>
@@ -274,7 +274,7 @@ export const StudyCalendarBlock: React.FC = () => {
             )}
           </div>
 
-          <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-3.5 text-center">
+          <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-3.5 text-center">
             <span className="inline-flex w-10 h-10 rounded-full bg-blue-50 text-blue-500 items-center justify-center">
               <Trophy className="w-5 h-5" />
             </span>

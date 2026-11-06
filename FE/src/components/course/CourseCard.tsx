@@ -41,7 +41,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     : 'bg-gray-100 text-gray-600 border-gray-200'
 
   return (
-    <div className="group relative bg-white rounded-md border border-gray-200/80 hover:border-indigo-400 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
+    <div className="group relative bg-surface rounded-md border border-gray-200/80 hover:border-indigo-400 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
       {/* Thumbnail */}
       <Link to={target} className="block">
         <div className="relative aspect-[16/9] bg-gradient-to-br from-indigo-100 via-indigo-200 to-purple-200 overflow-hidden">

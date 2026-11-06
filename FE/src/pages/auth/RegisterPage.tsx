@@ -80,7 +80,7 @@ export const RegisterPage: React.FC = () => {
         <div>
           {/* Logo */}
           <Link to="/" className="inline-flex items-center gap-3">
-            <span className="w-12 h-12 rounded-md bg-white/10 backdrop-blur flex items-center justify-center font-serif text-2xl font-black">
+            <span className="w-12 h-12 rounded-md bg-surface/10 backdrop-blur flex items-center justify-center font-serif text-2xl font-black">
               日
             </span>
             <span className="text-2xl font-bold">ElearningJP</span>
@@ -101,7 +101,7 @@ export const RegisterPage: React.FC = () => {
           {/* Features */}
           <div className="mt-10 grid gap-4">
             {features.map((feature, index) => (
-              <div key={index} className="flex items-center gap-4 p-4 rounded-md bg-white/5">
+              <div key={index} className="flex items-center gap-4 p-4 rounded-md bg-surface/5">
                 <div className="w-10 h-10 rounded bg-purple-500/30 flex items-center justify-center">
                   <feature.icon className="w-5 h-5 text-purple-300" />
                 </div>
@@ -134,7 +134,7 @@ export const RegisterPage: React.FC = () => {
             </Link>
           </div>
 
-          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-8">
+          <div className="bg-surface rounded-md shadow-sm border border-gray-200 p-8">
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900">Tạo tài khoản</h2>
               <p className="text-sm text-gray-500 mt-1">Bắt đầu hành trình N5 → N1</p>

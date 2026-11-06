@@ -298,7 +298,7 @@ export const ExamRoomPage: React.FC = () => {
       <div
         key={q.id}
         id={`question-${q.id}`}
-        className={`transition-all duration-200 rounded-2xl bg-white border ${
+        className={`transition-all duration-200 rounded-2xl bg-surface border ${
           isActive
             ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
             : isFlagged
@@ -384,7 +384,7 @@ export const ExamRoomPage: React.FC = () => {
                     className={`px-2.5 py-0.5 rounded-md text-xs font-bold transition ${
                       isTarget
                         ? 'bg-amber-400 text-slate-900 shadow-2xs ring-1 ring-amber-500'
-                        : 'bg-white text-slate-500 border border-amber-200'
+                        : 'bg-surface text-slate-500 border border-amber-200'
                     }`}
                   >
                     {isTarget ? '★ (Cần chọn)' : `___`}
@@ -426,7 +426,7 @@ export const ExamRoomPage: React.FC = () => {
                       className={`p-3 rounded-2xl border transition-all text-left cursor-pointer flex flex-col justify-between gap-2.5 ${
                         isSelected
                           ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500/20 shadow-xs'
-                          : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/60'
+                          : 'border-slate-200 hover:border-slate-300 bg-surface hover:bg-slate-50/60'
                       }`}
                     >
                       <div className="flex items-center justify-between font-bold text-xs">
@@ -472,7 +472,7 @@ export const ExamRoomPage: React.FC = () => {
                     className={`w-full ${useTwoCols || isThreeOptionsMondai ? 'p-3' : 'p-3.5'} rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
                         ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-xs'
-                        : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/60 bg-white text-slate-800 font-medium'
+                        : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/60 bg-surface text-slate-800 font-medium'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -560,7 +560,7 @@ export const ExamRoomPage: React.FC = () => {
   return (
     <div className={`min-h-screen bg-slate-50/70 pb-20 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 ${showFurigana ? '' : 'hide-furigana'}`}>
       {/* 1. ZEN TOPBAR (Thanh công cụ làm bài tinh tế, cố định trên cùng) */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-2.5 shadow-2xs">
+      <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-2.5 shadow-2xs">
         <div className="max-w-[1560px] mx-auto flex items-center justify-between gap-4">
           
           {/* Cụm trái: Huy hiệu JLPT & Bộ chuyển phần thi (Section Switcher) */}
@@ -581,7 +581,7 @@ export const ExamRoomPage: React.FC = () => {
                     key={sec.id || idx}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
                       isActive
-                        ? 'bg-white text-indigo-700 shadow-2xs'
+                        ? 'bg-surface text-indigo-700 shadow-2xs'
                         : isPast
                         ? 'text-emerald-700 hover:text-emerald-800'
                         : 'text-slate-500'
@@ -702,7 +702,7 @@ export const ExamRoomPage: React.FC = () => {
                   {/* MONDAI HEADER (Đề mục phân loại thanh thoát kiểu tạp chí hiện đại) */}
                   {isNewMondai && (
                     <div className="pt-2">
-                      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-100 via-white to-slate-50 border border-slate-200/90 shadow-2xs">
+                      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-100 via-surface to-slate-50 border border-slate-200/90 shadow-2xs">
                         <div className="flex items-center gap-2 mb-1.5">
                           {(() => {
                             const mInfo = formatMondaiDisplay(curMondaiCode, curMondaiNameVi)
@@ -755,7 +755,7 @@ export const ExamRoomPage: React.FC = () => {
                     /* KHỐI BÀI ĐỌC DOKKAI (Biên tập thanh thoát, dễ đọc) */
                     <div className="space-y-4">
                       {/* Thẻ bài đọc hiểu ở trên */}
-                      <article className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+                      <article className="bg-surface rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
                         {/* Header bài đọc */}
                         <div className="bg-slate-50/80 border-b border-slate-200 px-5 py-3 flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2.5">
@@ -764,17 +764,17 @@ export const ExamRoomPage: React.FC = () => {
                               {cleanPassageTitle(item.passage.title, 'Bài đọc hiểu')}
                             </h4>
                           </div>
-                          <span className="text-xs font-bold px-2.5 py-0.5 bg-white text-slate-700 border border-slate-200 rounded-lg shadow-2xs">
+                          <span className="text-xs font-bold px-2.5 py-0.5 bg-surface text-slate-700 border border-slate-200 rounded-lg shadow-2xs">
                             Câu {item.questions[0].questionNumber} ~ {item.questions[item.questions.length - 1].questionNumber} ({item.questions.length} câu)
                           </span>
                         </div>
 
                         {/* Thân bài đọc hiểu: Font serif chuẩn Nhật, line-height 2.2 thoáng mắt */}
-                        <div className="p-6 sm:p-8 bg-white">
+                        <div className="p-6 sm:p-8 bg-surface">
                           {item.passage.contentJp && (
                             <div
                               onClick={handlePassageBlankClick}
-                              className="text-slate-800 bg-white select-text font-serif text-[16px] sm:text-[17px] leading-[2.2] tracking-wide"
+                              className="text-slate-800 bg-surface select-text font-serif text-[16px] sm:text-[17px] leading-[2.2] tracking-wide"
                               title="Bấm vào số chỗ trống 【 21 】 để cuộn nhanh đến câu hỏi tương ứng bên dưới"
                               dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(ensurePassageContentWithIntro(item.passage.contentJp, item.passage.title)) }}
                             />
@@ -819,7 +819,7 @@ export const ExamRoomPage: React.FC = () => {
 
         {/* CỘT PHẢI (3/12): QUESTION PALETTE (Bảng điều hướng số câu cố định - không trôi khi cuộn) */}
         <aside className="lg:col-span-3 lg:sticky lg:top-[68px] lg:self-start z-30">
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-4 sm:p-5 flex flex-col max-h-[calc(100vh-84px)] space-y-3">
+          <div className="bg-surface rounded-2xl border border-slate-200/90 shadow-xs p-4 sm:p-5 flex flex-col max-h-[calc(100vh-84px)] space-y-3">
             
             {/* Header Palette & Thanh tiến độ */}
             <div className="shrink-0">
@@ -999,7 +999,7 @@ export const ExamRoomPage: React.FC = () => {
       {/* Modal Chuyển Ca Thi (Next Section Modal) */}
       {nextSectionModalOpen && takingData && currentSectionIndex < takingData.sections.length - 1 && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
               <CheckCircle2 className="w-6 h-6" />
             </div>
@@ -1056,7 +1056,7 @@ export const ExamRoomPage: React.FC = () => {
       {/* Modal Xác Nhận Nộp Toàn Bộ Bài */}
       {confirmSubmitOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
               <AlertCircle className="w-6 h-6" />
             </div>
@@ -1153,7 +1153,7 @@ export const ExamRoomPage: React.FC = () => {
             />
             <button
               onClick={() => setLightboxImage(null)}
-              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white text-slate-800 flex items-center justify-center shadow-md font-bold text-xs cursor-pointer hover:bg-slate-100"
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-surface text-slate-800 flex items-center justify-center shadow-md font-bold text-xs cursor-pointer hover:bg-slate-100"
             >
               <X className="w-4 h-4" />
             </button>

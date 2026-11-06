@@ -150,7 +150,7 @@ const KanjiItemDetailModal: React.FC<{
                 {data.relatedVocabulary.map((rv) => (
                   <div
                     key={`${rv.vocabId}-${rv.id ?? 'auto'}`}
-                    className="flex items-center justify-between p-2 rounded border border-gray-200 bg-white"
+                    className="flex items-center justify-between p-2 rounded border border-gray-200 bg-surface"
                   >
                     <div className="flex-1 min-w-0">
                       <span className="font-bold text-sm">{rv.word}</span>
@@ -574,7 +574,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
           <div
             key={item.id}
             onClick={() => setPreviewId(item.id)}
-            className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-amber-300 hover:bg-amber-50/30 transition group cursor-pointer"
+            className="flex items-center gap-3 p-2.5 bg-surface rounded-md border border-gray-200/80 hover:border-amber-300 hover:bg-amber-50/30 transition group cursor-pointer"
           >
             <div className="w-10 h-10 rounded bg-amber-50 text-amber-900 font-serif font-bold text-lg flex items-center justify-center border border-amber-200 shrink-0">
               {item.character ?? '?'}
@@ -747,7 +747,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
                 )}
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-16 h-16 rounded bg-white text-amber-900 font-serif font-bold text-4xl flex items-center justify-center border-2 border-amber-300 shrink-0">
+                <div className="w-16 h-16 rounded bg-surface text-amber-900 font-serif font-bold text-4xl flex items-center justify-center border-2 border-amber-300 shrink-0">
                   {selectedKanji.character}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -843,7 +843,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
                         className={`flex items-start gap-2 p-2 rounded border cursor-pointer transition select-none ${
                           checked
                             ? 'border-indigo-500 bg-indigo-100/80 ring-1 ring-indigo-300'
-                            : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40'
+                            : 'border-gray-200 bg-surface hover:border-indigo-300 hover:bg-indigo-50/40'
                         }`}
                       >
                         <input
@@ -897,7 +897,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
                 {newVocabs.map((row, idx) => (
                   <div
                     key={idx}
-                    className="rounded border border-indigo-300 bg-white p-2 space-y-1.5"
+                    className="rounded border border-indigo-300 bg-surface p-2 space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-indigo-600 uppercase">

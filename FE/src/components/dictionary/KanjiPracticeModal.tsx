@@ -393,7 +393,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-md shadow-2xl border border-gray-100 w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="bg-surface rounded-md shadow-2xl border border-gray-100 w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
@@ -417,7 +417,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {/* Quick Kanji pills */}
-            <div className="flex items-center gap-1 bg-white p-1 rounded-md border border-gray-200 text-xs shadow-2xs">
+            <div className="flex items-center gap-1 bg-surface p-1 rounded-md border border-gray-200 text-xs shadow-2xs">
               <span className="text-[11px] font-semibold text-gray-400 px-1">Chữ mẫu:</span>
               {Object.keys(PRESET_KANJI).map((char) => (
                 <button
@@ -458,7 +458,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                   if (e.key === 'Enter') loadAnyCharacter(customInputChar)
                 }}
                 placeholder="Gõ hoặc dán bất kỳ chữ Kanji / Kana nào (ví dụ: 学, 桜, 愛, 山, 川, あ, ア)..."
-                className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-md text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                className="w-full pl-8 pr-3 py-1.5 bg-surface border border-gray-200 rounded-md text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-2xs"
               />
               <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             </div>
@@ -488,7 +488,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                   className={`px-2 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
                     selectedLevel === lvl
                       ? 'bg-amber-500 text-white shadow-2xs'
-                      : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'
+                      : 'bg-surface border border-gray-200 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   {lvl}
@@ -507,7 +507,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                   className={`w-7 h-7 rounded font-serif font-black flex items-center justify-center transition cursor-pointer shrink-0 text-sm ${
                     currentChar === char
                       ? 'bg-indigo-600 text-white shadow-xs scale-105'
-                      : 'bg-white border border-gray-200/90 text-gray-800 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300'
+                      : 'bg-surface border border-gray-200/90 text-gray-800 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300'
                   }`}
                 >
                   {char}
@@ -519,7 +519,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
 
         {/* Thanh chuyển đổi Chế độ Luyện viết */}
         <div className="px-6 py-2 bg-indigo-50/50 border-b border-indigo-100/60 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-gray-200/80 shadow-2xs">
+          <div className="flex items-center gap-1.5 p-1 bg-surface rounded-2xl border border-gray-200/80 shadow-2xs">
             <button
               type="button"
               onClick={() => setPracticeMode('guided')}
@@ -616,7 +616,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
 
                 {/* Container Canvas + Lớp nét gợi ý SVG */}
                 <div
-                  className="relative bg-white rounded-md border-2 border-indigo-200/80 shadow-md overflow-hidden select-none touch-none flex items-center justify-center"
+                  className="relative bg-surface rounded-md border-2 border-indigo-200/80 shadow-md overflow-hidden select-none touch-none flex items-center justify-center"
                   style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}
                 >
                   {/* Nét mờ KanjiVG làm mẫu nền (Ghost guide) */}
@@ -661,7 +661,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                     type="button"
                     onClick={handleUndo}
                     disabled={userStrokes.length === 0}
-                    className="px-3.5 py-2.5 rounded-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
+                    className="px-3.5 py-2.5 rounded-md border border-gray-200 bg-surface hover:bg-gray-50 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
                   >
                     <RotateCcw className="w-4 h-4 text-gray-500" />
                     <span>Hoàn tác nét</span>
@@ -671,7 +671,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                     type="button"
                     onClick={handleClear}
                     disabled={userStrokes.length === 0}
-                    className="px-3.5 py-2.5 rounded-md border border-gray-200 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
+                    className="px-3.5 py-2.5 rounded-md border border-gray-200 bg-surface hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-gray-700 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 cursor-pointer shadow-2xs"
                   >
                     <Trash2 className="w-4 h-4 text-gray-400" />
                     <span>Viết lại</span>
@@ -748,7 +748,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                       key={detail.stroke_number}
                       className={`p-3 rounded-md border text-xs space-y-1 transition ${
                         detail.order_correct && detail.is_direction_correct
-                          ? 'bg-white border-emerald-200'
+                          ? 'bg-surface border-emerald-200'
                           : detail.is_reversed
                           ? 'bg-rose-50/70 border-rose-200'
                           : 'bg-amber-50/70 border-amber-200'
@@ -800,7 +800,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                     Vẽ từng nét theo đúng thứ tự (từ trên xuống dưới, từ trái sang phải, ngang trước sổ sau).
                   </p>
                 </div>
-                <div className="text-left w-full max-w-xs space-y-1.5 text-xs text-gray-600 bg-white p-3 rounded-md border border-gray-200/80">
+                <div className="text-left w-full max-w-xs space-y-1.5 text-xs text-gray-600 bg-surface p-3 rounded-md border border-gray-200/80">
                   <div className="flex items-center gap-2">
                     <ChevronRight className="w-3.5 h-3.5 text-indigo-500" />
                     <span>Nét ngang: viết từ trái sang phải</span>

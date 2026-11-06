@@ -100,7 +100,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
   return (
     <section
-      className={`bg-white rounded-md border border-gray-200/80 shadow-xs p-4 md:p-5 ${className ?? ''}`}
+      className={`bg-surface rounded-md border border-gray-200/80 shadow-xs p-4 md:p-5 ${className ?? ''}`}
       aria-label={title}
     >
       {/* ---------------- Header ---------------- */}

@@ -51,7 +51,7 @@ export const NotebookGroupSidebar: React.FC<NotebookGroupSidebarProps> = ({
   }
 
   return (
-    <aside className="w-64 bg-white border border-gray-100 rounded-2xl p-4 flex flex-col h-full shadow-xs">
+    <aside className="w-64 bg-surface border border-gray-100 rounded-2xl p-4 flex flex-col h-full shadow-xs">
       <div className="flex items-center justify-between pb-3 mb-2 border-b border-gray-100">
         <h2 className="font-semibold text-gray-700 text-sm">Nhóm sổ tay</h2>
         <button
@@ -79,7 +79,7 @@ export const NotebookGroupSidebar: React.FC<NotebookGroupSidebarProps> = ({
             <Folder className={`w-4 h-4 ${selectedGroupId === null ? 'fill-blue-400/20' : ''}`} />
             <span className="truncate">Tất cả sổ tay</span>
           </div>
-          <span className="text-xs text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100">
+          <span className="text-xs text-gray-400 bg-surface px-2 py-0.5 rounded-full border border-gray-100">
             {totalCount}
           </span>
         </button>
@@ -98,7 +98,7 @@ export const NotebookGroupSidebar: React.FC<NotebookGroupSidebarProps> = ({
             <Folder className="w-4 h-4 text-gray-400" />
             <span className="truncate">Chưa phân nhóm</span>
           </div>
-          <span className="text-xs text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100">
+          <span className="text-xs text-gray-400 bg-surface px-2 py-0.5 rounded-full border border-gray-100">
             {ungroupedCount}
           </span>
         </button>
@@ -122,7 +122,7 @@ export const NotebookGroupSidebar: React.FC<NotebookGroupSidebarProps> = ({
               </div>
 
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                <span className="text-xs text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100">
+                <span className="text-xs text-gray-400 bg-surface px-2 py-0.5 rounded-full border border-gray-100">
                   {group.notebookCount || 0}
                 </span>
 

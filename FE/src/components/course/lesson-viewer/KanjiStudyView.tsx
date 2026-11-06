@@ -103,7 +103,7 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
       {/* Phần trên: ô chữ Hán + Hán Việt */}
       <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-md border-2 border-amber-200/80 p-8 md:p-10 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-8">
-          <div className="w-40 h-40 md:w-48 md:h-48 shrink-0 rounded-md bg-white border-2 border-amber-300 flex items-center justify-center shadow-inner">
+          <div className="w-40 h-40 md:w-48 md:h-48 shrink-0 rounded-md bg-surface border-2 border-amber-300 flex items-center justify-center shadow-inner">
             <span className="text-7xl md:text-8xl font-bold text-gray-900 font-serif leading-none">
               {item.character ?? '?'}
             </span>
@@ -159,7 +159,7 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
           Cột trái: cấp độ JLPT + số nét + ghi chú
           Cột phải: onyomi + kunyomi + bộ thủ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <InfoRow
             label="Cấp độ JLPT"
             value={item.jlptLevel ? `${item.jlptLevel}` : '—'}
@@ -174,7 +174,7 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
           />
           <InfoRow label="Ghi chú" value={item.note || '—'} />
         </div>
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <h4 className="font-bold text-base text-gray-900 flex items-center gap-2">
             <SpeakerIcon className="w-5 h-5 text-indigo-600" />
             Cách đọc
@@ -193,7 +193,7 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
 
       {/* Từ vựng liên quan */}
       {relatedVocabs.length > 0 && (
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
           <h4 className="font-bold text-base text-gray-900 flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-600" />
             Từ vựng liên quan ({relatedVocabs.length})
@@ -274,7 +274,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
         type="button"
         onClick={onPrev}
         disabled={page <= 0}
-        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-gray-700"
+        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-surface text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:text-gray-700"
       >
         <ChevronLeft className="w-4 h-4" />
         Quay lại

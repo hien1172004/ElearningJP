@@ -114,7 +114,7 @@ export const ExamLobbyPage: React.FC = () => {
         {/* CỘT TRÁI (8 CỘT TRÊN DESKTOP): BỘ LỌC + DANH SÁCH BÀI THI */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-4">
           {/* Tabs Lọc Cấp Độ N1 - N5 và Nút chức năng */}
-          <div className="flex items-center justify-between flex-wrap gap-3 bg-white p-2.5 rounded-xl border border-suna shadow-xs">
+          <div className="flex items-center justify-between flex-wrap gap-3 bg-surface p-2.5 rounded-xl border border-suna shadow-xs">
             <div className="flex items-center gap-1.5 flex-wrap">
               <div className="px-2 text-xs font-bold text-gray-400 flex items-center gap-1.5 uppercase">
                 <Filter className="w-3.5 h-3.5" />
@@ -138,7 +138,7 @@ export const ExamLobbyPage: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => navigate('/exam-history')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 font-bold text-xs shadow-xs transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface border border-gray-200 text-gray-700 hover:text-indigo-600 hover:border-indigo-300 font-bold text-xs shadow-xs transition cursor-pointer"
               >
                 <Clock className="w-3.5 h-3.5 text-indigo-500" />
                 <span>Lịch sử thi</span>
@@ -148,7 +148,7 @@ export const ExamLobbyPage: React.FC = () => {
 
           {/* Danh sách đề thi */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-14 text-gray-400 bg-white rounded-xl border border-suna">
+            <div className="flex flex-col items-center justify-center py-14 text-gray-400 bg-surface rounded-xl border border-suna">
               <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-3" />
               <p className="font-semibold text-sm">Đang tải danh sách đề thi...</p>
             </div>
@@ -157,7 +157,7 @@ export const ExamLobbyPage: React.FC = () => {
               {error}
             </div>
           ) : exams.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-xl border border-suna shadow-xs p-6">
+            <div className="text-center py-12 bg-surface rounded-xl border border-suna shadow-xs p-6">
               <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <h3 className="text-base font-bold text-gray-800 mb-1">Chưa có đề thi nào ở cấp độ này</h3>
               <p className="text-sm text-gray-500 max-w-md mx-auto">
@@ -169,7 +169,7 @@ export const ExamLobbyPage: React.FC = () => {
               {exams.map((exam) => (
                 <div
                   key={exam.id}
-                  className="bg-white rounded-xl border border-suna hover:border-indigo-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group"
+                  className="bg-surface rounded-xl border border-suna hover:border-indigo-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group"
                 >
                   <div className="p-4">
                     <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -242,7 +242,7 @@ export const ExamLobbyPage: React.FC = () => {
       {/* Modal Chọn Chế Độ Thi (Full Exam hoặc Practice Section) */}
       {selectedExam && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-surface rounded-xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
@@ -275,7 +275,7 @@ export const ExamLobbyPage: React.FC = () => {
                     className={`p-3 rounded-xl border text-left transition-all ${
                       attemptType === 'FULL_EXAM'
                         ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-600'
-                        : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+                        : 'border-gray-200 hover:border-gray-300 bg-surface text-gray-700'
                     }`}
                   >
                     <div className="flex items-center gap-2 font-black text-sm mb-1 text-indigo-600">
@@ -298,7 +298,7 @@ export const ExamLobbyPage: React.FC = () => {
                     className={`p-3 rounded-xl border text-left transition-all ${
                       attemptType === 'PRACTICE_SECTION'
                         ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-600'
-                        : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+                        : 'border-gray-200 hover:border-gray-300 bg-surface text-gray-700'
                     }`}
                   >
                     <div className="flex items-center gap-2 font-black text-sm mb-1 text-emerald-600">
@@ -344,7 +344,7 @@ export const ExamLobbyPage: React.FC = () => {
                           className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all ${
                             selectedSectionId === sec.id
                               ? 'border-indigo-600 bg-indigo-50/70 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-xs'
-                              : 'border-gray-200 bg-white text-gray-700 font-medium hover:bg-gray-50'
+                              : 'border-gray-200 bg-surface text-gray-700 font-medium hover:bg-gray-50'
                           }`}
                         >
                           <div className="flex items-center gap-3.5">
@@ -413,7 +413,7 @@ export const ExamLobbyPage: React.FC = () => {
       {/* Modal Yêu Cầu Đăng Nhập Trước Khi Vào Thi */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-surface rounded-xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 p-6 text-center animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
               <Award className="w-6 h-6" />
             </div>

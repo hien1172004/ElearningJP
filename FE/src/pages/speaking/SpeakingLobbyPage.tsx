@@ -312,7 +312,7 @@ export const SpeakingLobbyPage: React.FC = () => {
           {/* ================================================================ */}
           <div className="lg:col-span-8 space-y-4">
             {/* 1. Greeting Card chào buổi tối */}
-            <div className="relative bg-white rounded-xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center">
+            <div className="relative bg-surface rounded-xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col items-center justify-center text-center">
               <div className="mb-2">
                 <MaziikoMascot size={60} showAura={true} showBadge={true} />
               </div>
@@ -338,7 +338,7 @@ export const SpeakingLobbyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/speaking/free')}
-                className="flex-1 py-2 px-5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 active:scale-[0.99] cursor-pointer"
+                className="flex-1 py-2 px-5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all bg-surface text-slate-600 border border-slate-200 hover:bg-slate-50 active:scale-[0.99] cursor-pointer"
               >
                 <span className="w-4 h-4 rounded-full bg-purple-600 text-white text-[10px] flex items-center justify-center font-bold">
                   AI
@@ -352,7 +352,7 @@ export const SpeakingLobbyPage: React.FC = () => {
             {/* ============================================================== */}
             <div
               onClick={() => handleOpenDrawer('COMMUNITY')}
-              className="bg-white rounded-xl p-3 border border-slate-200/80 shadow-xs cursor-pointer hover:border-indigo-300 hover:shadow-sm transition group"
+              className="bg-surface rounded-xl p-3 border border-slate-200/80 shadow-xs cursor-pointer hover:border-indigo-300 hover:shadow-sm transition group"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-bold text-sm text-slate-800 group-hover:text-indigo-600 transition">
@@ -385,7 +385,7 @@ export const SpeakingLobbyPage: React.FC = () => {
             {/* ============================================================== */}
             {/* 4. Hội thoại theo chủ đề */}
             {/* ============================================================== */}
-            <div className="bg-white rounded-xl p-4 border border-slate-200/80 shadow-xs">
+            <div className="bg-surface rounded-xl p-4 border border-slate-200/80 shadow-xs">
               <h3 className="font-bold text-sm text-slate-800 mb-3 text-left">
                 Hội thoại theo chủ đề
               </h3>
@@ -422,7 +422,7 @@ export const SpeakingLobbyPage: React.FC = () => {
           {/* CỘT PHẢI (4/12 cột): Lịch sử luyện tập */}
           {/* ================================================================ */}
           <div className="lg:col-span-4">
-            <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-xs sticky top-20 text-left">
+            <div className="bg-surface rounded-xl border border-slate-200/80 p-4 shadow-xs sticky top-20 text-left">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                 <span className="font-bold text-sm text-slate-800">Lịch sử luyện tập</span>
                 {historySessions.length > 0 && (
@@ -491,7 +491,7 @@ export const SpeakingLobbyPage: React.FC = () => {
       {/* ==================================================================== */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up border border-slate-100">
+          <div className="bg-surface rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up border border-slate-100">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="text-lg font-bold text-slate-800">Tạo tình huống</h3>
@@ -635,9 +635,9 @@ export const SpeakingLobbyPage: React.FC = () => {
           {/* Backdrop click to close */}
           <div className="flex-1" onClick={() => setIsDrawerOpen(false)} />
 
-          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-slide-left">
+          <div className="w-full max-w-md bg-surface h-full shadow-2xl flex flex-col overflow-hidden animate-slide-left">
             {/* Header Tabs: Khám phá | Kết bạn & Trò chuyện | Sống ở Nhật... | X */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-white">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 bg-surface">
               <div className="flex items-center gap-4 overflow-x-auto text-xs font-semibold scrollbar-none pr-2">
                 {TOPIC_CATEGORIES.map((topic) => (
                   <button
@@ -676,7 +676,7 @@ export const SpeakingLobbyPage: React.FC = () => {
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
                     placeholder="Tìm kiếm"
-                    className="w-full pl-9 pr-3 py-2 bg-white rounded-xl border border-slate-200 outline-none text-xs sm:text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 transition"
+                    className="w-full pl-9 pr-3 py-2 bg-surface rounded-xl border border-slate-200 outline-none text-xs sm:text-sm text-slate-700 placeholder:text-slate-400 focus:border-indigo-500 transition"
                   />
                   {searchKeyword && (
                     <button
@@ -695,7 +695,7 @@ export const SpeakingLobbyPage: React.FC = () => {
                   className={`p-2 rounded-xl border transition ${
                     filterLevel !== 'ALL' || showFilterOptions
                       ? 'bg-indigo-50 border-indigo-300 text-indigo-600'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      : 'bg-surface border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                   title="Bộ lọc cấp độ"
                 >
@@ -747,7 +747,7 @@ export const SpeakingLobbyPage: React.FC = () => {
                     <div
                       key={item.id}
                       onClick={() => handleOpenScenario(item)}
-                      className="p-4 rounded-2xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-xs transition bg-white cursor-pointer group space-y-2"
+                      className="p-4 rounded-2xl border border-slate-200/80 hover:border-indigo-400 hover:shadow-xs transition bg-surface cursor-pointer group space-y-2"
                     >
                       {/* Hàng 1: Tiêu đề + Badge JLPT + Icon Flag ⚠️ */}
                       <div className="flex items-start justify-between gap-2">

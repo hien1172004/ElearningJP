@@ -102,7 +102,7 @@ const GrammarStudyCard: React.FC<GrammarStudyCardProps> = ({ item }) => {
             </h3>
           )}
           {displayStructure && (
-            <div className="inline-block bg-white border-2 border-rose-200 rounded-md px-5 py-3 shadow-inner">
+            <div className="inline-block bg-surface border-2 border-rose-200 rounded-md px-5 py-3 shadow-inner">
               <p className="text-lg md:text-xl font-bold text-gray-900 font-mono">
                 {displayStructure}
               </p>
@@ -120,7 +120,7 @@ const GrammarStudyCard: React.FC<GrammarStudyCardProps> = ({ item }) => {
           Cột trái: cấp độ JLPT + nghĩa
           Cột phải: cách dùng + ghi chú */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <InfoRow
             label="Cấp độ"
             value={item.jlptLevel ? `${item.jlptLevel}` : '—'}
@@ -129,14 +129,14 @@ const GrammarStudyCard: React.FC<GrammarStudyCardProps> = ({ item }) => {
           <InfoRow label="Nghĩa" value={displayMeaning || '—'} />
           <InfoRow label="Ghi chú" value={item.note || '—'} />
         </div>
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <InfoRow label="Cách dùng" value={item.usageNotes || '—'} />
         </div>
       </div>
 
       {/* Ví dụ */}
       {examples.length > 0 && (
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
           <h4 className="font-bold text-base text-gray-900 flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-600" />
             Ví dụ ({examples.length})

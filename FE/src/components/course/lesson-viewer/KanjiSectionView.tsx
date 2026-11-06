@@ -22,7 +22,7 @@ export const KanjiSectionView: React.FC<KanjiSectionViewProps> = ({ section }) =
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {items.map((item) => (
-          <div key={item.id} className="bg-white rounded-md border border-amber-200/80 p-4 text-center hover:shadow-md transition group">
+          <div key={item.id} className="bg-surface rounded-md border border-amber-200/80 p-4 text-center hover:shadow-md transition group">
             <div className="w-14 h-14 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center text-3xl font-bold text-gray-900 font-serif mx-auto group-hover:scale-105 transition">
               {item.character ?? '?'}
             </div>

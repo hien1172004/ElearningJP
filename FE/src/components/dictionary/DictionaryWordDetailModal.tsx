@@ -254,7 +254,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
     >
       <div className="flex flex-col max-h-[88vh]">
         {/* 1. Header: Tiêu đề "Chi tiết từ [từ]" */}
-        <div className="px-6 pt-4 pb-2.5 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
+        <div className="px-6 pt-4 pb-2.5 border-b border-gray-100 flex items-center justify-between shrink-0 bg-surface">
           <h2 className="text-lg font-bold text-gray-900 m-0">
             Chi tiết từ <span className="text-blue-600">{currentWord}</span>
           </h2>
@@ -271,7 +271,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer select-none ${
                   isActive
-                    ? 'bg-white text-blue-600 shadow-2xs font-bold border border-gray-200/60'
+                    ? 'bg-surface text-blue-600 shadow-2xs font-bold border border-gray-200/60'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/80'
                 }`}
               >
@@ -294,7 +294,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
               {activeTab === 'vocab' && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                   {/* Cột trái (7/12): Chi tiết từ vựng chính */}
-                  <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-gray-200/80 shadow-2xs space-y-5">
+                  <div className="lg:col-span-7 bg-surface rounded-2xl p-6 border border-gray-200/80 shadow-2xs space-y-5">
                     {/* Hàng 1: Mặt chữ to, các nút thao tác */}
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -448,7 +448,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                                     audioUrl: ex.audioUrl,
                                   })
                                 }
-                                className="w-7 h-7 rounded-full bg-white hover:bg-blue-50 text-gray-500 hover:text-blue-600 flex items-center justify-center border border-gray-200 transition-colors shrink-0 cursor-pointer text-xs"
+                                className="w-7 h-7 rounded-full bg-surface hover:bg-blue-50 text-gray-500 hover:text-blue-600 flex items-center justify-center border border-gray-200 transition-colors shrink-0 cursor-pointer text-xs"
                               >
                                 <SoundOutlined />
                               </button>
@@ -467,7 +467,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                                 <button
                                   type="button"
                                   onClick={() => playSmartAudio({ text: vocabDetail.exampleJp || '' })}
-                                  className="w-7 h-7 rounded-full bg-white hover:bg-blue-50 text-gray-500 hover:text-blue-600 flex items-center justify-center border border-gray-200 transition-colors shrink-0 cursor-pointer text-xs"
+                                  className="w-7 h-7 rounded-full bg-surface hover:bg-blue-50 text-gray-500 hover:text-blue-600 flex items-center justify-center border border-gray-200 transition-colors shrink-0 cursor-pointer text-xs"
                                 >
                                   <SoundOutlined />
                                 </button>
@@ -507,7 +507,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                   {/* Cột phải (5/12): Kết quả tra cứu, Các chữ Kanji, Các từ liên quan */}
                   <div className="lg:col-span-5 space-y-4">
                     {/* Card 1: KẾT QUẢ TRA CỨU */}
-                    <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-2xs space-y-2">
+                    <div className="bg-surface rounded-2xl p-4 border border-gray-200/80 shadow-2xs space-y-2">
                       <div className="text-xs font-bold text-gray-700 uppercase tracking-wider">
                         Kết quả tra cứu {currentWord}
                       </div>
@@ -546,7 +546,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                     </div>
 
                     {/* Card 2: CÁC CHỮ KANJI CỦA TỪ */}
-                    <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-2xs space-y-3">
+                    <div className="bg-surface rounded-2xl p-4 border border-gray-200/80 shadow-2xs space-y-3">
                       <div className="text-xs font-bold text-gray-700 uppercase tracking-wider">
                         Các chữ Kanji của {currentWord}
                       </div>
@@ -619,7 +619,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                     </div>
 
                     {/* Card 3: CHỮ HÁN CẤU THÀNH */}
-                    <div className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-2xs space-y-2">
+                    <div className="bg-surface rounded-2xl p-4 border border-gray-200/80 shadow-2xs space-y-2">
                       <div className="text-xs font-bold text-gray-700 uppercase tracking-wider">
                         Chữ Hán cấu thành của {currentWord}
                       </div>
@@ -673,7 +673,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                                 className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between gap-2.5 ${
                                   isSelected
                                     ? 'bg-blue-50/90 border-blue-500 shadow-2xs ring-1.5 ring-blue-300'
-                                    : 'bg-white border-gray-200/90 hover:border-blue-300 hover:bg-slate-50/70'
+                                    : 'bg-surface border-gray-200/90 hover:border-blue-300 hover:bg-slate-50/70'
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5 min-w-0">
@@ -729,7 +729,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                       </div>
                     )
                   ) : (
-                    <div className="bg-white rounded-2xl p-10 text-center text-gray-500 border border-gray-200 space-y-2">
+                    <div className="bg-surface rounded-2xl p-10 text-center text-gray-500 border border-gray-200 space-y-2">
                       <p className="font-medium">Từ này không chứa ký tự chữ Hán (Kanji).</p>
                       <p className="text-xs text-gray-400">
                         Bạn có thể xem chi tiết nghĩa ở tab &quot;Từ vựng&quot;.
@@ -760,7 +760,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                                 className={`p-2.5 rounded-xl border transition cursor-pointer ${
                                   isSelected
                                     ? 'bg-purple-50/90 border-purple-500 shadow-xs ring-1.5 ring-purple-200'
-                                    : 'bg-white border-gray-200 hover:border-purple-300 hover:bg-slate-50/60'
+                                    : 'bg-surface border-gray-200 hover:border-purple-300 hover:bg-slate-50/60'
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-1.5 mb-1">
@@ -791,7 +791,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                       </div>
                     )
                   ) : (
-                    <div className="bg-white rounded-2xl p-10 text-center text-gray-500 border border-gray-200 space-y-2">
+                    <div className="bg-surface rounded-2xl p-10 text-center text-gray-500 border border-gray-200 space-y-2">
                       <p className="font-medium">
                         Không tìm thấy cấu trúc ngữ pháp tương ứng với từ khóa này.
                       </p>

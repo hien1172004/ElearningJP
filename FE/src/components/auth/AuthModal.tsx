@@ -195,7 +195,7 @@ export const AuthModal: React.FC = () => {
         body: { padding: 0 },
       }}
     >
-      <div className="flex flex-col bg-white max-h-[90vh]">
+      <div className="flex flex-col bg-surface max-h-[90vh]">
         {/* ============================================================
             HEADER — Logo + Title
            ============================================================ */}

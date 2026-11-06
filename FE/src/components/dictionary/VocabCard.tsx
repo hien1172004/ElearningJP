@@ -69,7 +69,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
   }
 
   return (
-    <div className="bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div className="bg-surface rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden">
       {/* Phần tóm tắt đầu thẻ */}
       <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex-1">
@@ -182,7 +182,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                     {detail.senses.map((sense, idx) => (
                       <div
                         key={idx}
-                        className="bg-white p-3 rounded-md border border-gray-200/80 text-sm shadow-2xs"
+                        className="bg-surface p-3 rounded-md border border-gray-200/80 text-sm shadow-2xs"
                       >
                         <div className="font-semibold text-gray-800">
                           {idx + 1}. {sense.meaningVi}
@@ -215,7 +215,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                         key={k.id}
                         type="button"
                         onClick={() => onSelectKanji?.(k.character)}
-                        className="px-3 py-1.5 bg-white border border-gray-200/90 rounded-md text-xs font-bold text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                        className="px-3 py-1.5 bg-surface border border-gray-200/90 rounded-md text-xs font-bold text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300 transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
                       >
                         <span className="text-base font-serif font-black">{k.character}</span>
                         {k.hanViet && (
@@ -241,7 +241,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                       detail.examples.map((ex, idx) => (
                         <div
                           key={idx}
-                          className="bg-white p-3.5 rounded-md border border-gray-200/80 shadow-2xs flex items-start justify-between gap-3 group"
+                          className="bg-surface p-3.5 rounded-md border border-gray-200/80 shadow-2xs flex items-start justify-between gap-3 group"
                         >
                           <div>
                             <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition">
@@ -270,7 +270,7 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
                         </div>
                       ))
                     ) : (
-                      <div className="bg-white p-3.5 rounded-md border border-gray-200/80 shadow-2xs flex items-start justify-between gap-3">
+                      <div className="bg-surface p-3.5 rounded-md border border-gray-200/80 shadow-2xs flex items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-gray-900">
                             {'exampleJp' in vocab ? (vocab.exampleJp as string) : ''}

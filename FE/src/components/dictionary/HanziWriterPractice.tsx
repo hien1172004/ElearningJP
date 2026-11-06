@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import HanziWriter from 'hanzi-writer'
+import { useThemeStore } from '@/stores/useThemeStore'
 import { Play, RotateCcw, Eye, EyeOff, Award, AlertCircle, CheckCircle2, Sparkles, HelpCircle } from 'lucide-react'
 
 interface HanziWriterPracticeProps {
@@ -29,6 +30,9 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
   } | null>(null)
 
   // Khởi tạo HanziWriter với nạp dữ liệu chuẩn Kanji Nhật Bản (@k1low/hanzi-writer-data-jp)
+  // hanzi-writer tự đọc mã màu (không hiểu var(--…)) → chọn bảng màu theo chế độ sáng/tối
+  const isDark = useThemeStore((s) => s.resolved === 'dark')
+
   useEffect(() => {
     if (!containerRef.current || !character) return
 
@@ -52,9 +56,9 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
         showOutline: true,
         strokeAnimationSpeed: 1.2,
         strokeHighlightSpeed: 1.5,
-        strokeColor: '#1e1b4b', // Mực chàm đậm
-        outlineColor: '#cbd5e1', // Nét viền mờ chỉ dẫn
-        drawingColor: '#2563eb', // Nét người dùng vẽ: Xanh dương nổi bật
+        strokeColor: isDark ? '#ece7dd' : '#1e1b4b', // Mực chàm đậm (sáng ở nền tối)
+        outlineColor: isDark ? '#3f434d' : '#cbd5e1', // Nét viền mờ chỉ dẫn
+        drawingColor: isDark ? '#60a5fa' : '#2563eb', // Nét người dùng vẽ: Xanh dương nổi bật
         drawingWidth: Math.max(18, Math.round(size / 11)), // Tăng độ dày nét cọ vẽ (18-28px) mượt mà, đậm đà
         highlightColor: '#10b981', // Màu sáng khi vẽ đúng nét: Xanh ngọc
         highlightOnComplete: true,
@@ -101,7 +105,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
         } catch {}
       }
     }
-  }, [character, size])
+  }, [character, size, isDark])
 
   // Bắt đầu chế độ làm bài kiểm tra nét vẽ (Quiz Mode)
   const startPracticeQuiz = () => {
@@ -208,7 +212,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
 
       {/* Vùng Canvas chứa HanziWriter có nền lưới chữ Mễ */}
       <div
-        className="relative bg-white rounded-3xl border-2 border-indigo-200/80 shadow-md overflow-hidden flex items-center justify-center transition-all duration-200"
+        className="relative bg-surface rounded-3xl border-2 border-indigo-200/80 shadow-md overflow-hidden flex items-center justify-center transition-all duration-200"
         style={{ width: size, height: size }}
       >
         {/* Lưới chữ Mễ (Dashed grid) */}
@@ -229,7 +233,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
 
         {/* Loading Spinner */}
         {isLoading && (
-          <div className="absolute inset-0 z-20 bg-white/80 backdrop-blur-2xs flex flex-col items-center justify-center gap-2 text-indigo-600">
+          <div className="absolute inset-0 z-20 bg-surface/80 backdrop-blur-2xs flex flex-col items-center justify-center gap-2 text-indigo-600">
             <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-xs font-semibold text-gray-600">Đang nạp nét chữ...</span>
           </div>
@@ -237,7 +241,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
 
         {/* Thông báo lỗi nếu ký tự không có trong dữ liệu */}
         {loadError && (
-          <div className="absolute inset-0 z-20 bg-white/95 p-4 flex flex-col items-center justify-center text-center gap-2">
+          <div className="absolute inset-0 z-20 bg-surface/95 p-4 flex flex-col items-center justify-center text-center gap-2">
             <AlertCircle className="w-8 h-8 text-amber-500" />
             <p className="text-xs font-bold text-gray-800">{loadError}</p>
             <p className="text-[11px] text-gray-500">Bạn có thể chuyển sang tab Canvas AI tự do để thực hành.</p>
@@ -269,7 +273,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
           type="button"
           onClick={handleAnimate}
           disabled={isLoading || !!loadError}
-          className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs disabled:opacity-40"
+          className="px-3.5 py-2 rounded-xl border border-gray-200 bg-surface hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs disabled:opacity-40"
         >
           <Play className="w-3.5 h-3.5" />
           <span>Xem viết mẫu</span>
@@ -279,7 +283,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
           type="button"
           onClick={handleReset}
           disabled={isLoading || !!loadError}
-          className="px-3.5 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs disabled:opacity-40"
+          className="px-3.5 py-2 rounded-xl border border-gray-200 bg-surface hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-2xs disabled:opacity-40"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>Viết lại</span>

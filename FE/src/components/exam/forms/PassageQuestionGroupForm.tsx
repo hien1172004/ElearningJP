@@ -97,7 +97,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
           </span>
 
           {existingPassages.length > 0 && (
-            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-sky-200 text-xs">
+            <div className="flex items-center gap-1 bg-surface p-1 rounded-xl border border-sky-200 text-xs">
               <button
                 type="button"
                 disabled={disabled}
@@ -129,14 +129,14 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
 
         {/* Chế độ chọn bài đọc đã có trong Section để liên kết nhiều câu hỏi */}
         {passageMode === 'EXISTING' && existingPassages.length > 0 ? (
-          <div className="space-y-2 bg-white p-3 rounded-2xl border border-sky-200">
+          <div className="space-y-2 bg-surface p-3 rounded-2xl border border-sky-200">
             <label className="block text-[11px] font-bold text-slate-700">
               Chọn đoạn văn đã có để liên kết câu hỏi này vào:
             </label>
             <select
               value={data.existingPassageId || ''}
               onChange={(e) => handleSelectExistingPassage(Number(e.target.value))}
-              className="w-full p-2 border border-slate-300 rounded-xl bg-white font-medium text-xs text-slate-800"
+              className="w-full p-2 border border-slate-300 rounded-xl bg-surface font-medium text-xs text-slate-800"
             >
               <option value="">-- Chọn bài đọc đang có trong đề --</option>
               {existingPassages.map((p) => (
@@ -164,7 +164,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
                 value={data.passageTitle || ''}
                 onChange={(e) => onChange({ ...data, passageTitle: e.target.value })}
                 placeholder={isClozeText ? 'Ví dụ: Bài đục lỗ ngữ pháp (19) - (23)' : 'Ví dụ: Đoạn văn ngắn 1 hoặc Bài đọc trung'}
-                className="w-full p-2.5 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+                className="w-full p-2.5 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
               />
             </div>
 
@@ -181,7 +181,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
                         key={tag}
                         type="button"
                         onClick={() => handleInsertBlank(tag)}
-                        className="px-1.5 py-0.5 bg-white border border-sky-300 rounded-md text-[10px] font-mono text-sky-800 hover:bg-sky-100 cursor-pointer"
+                        className="px-1.5 py-0.5 bg-surface border border-sky-300 rounded-md text-[10px] font-mono text-sky-800 hover:bg-sky-100 cursor-pointer"
                       >
                         {tag}
                       </button>
@@ -195,7 +195,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
                 value={data.passageContentJp || ''}
                 onChange={(e) => onChange({ ...data, passageContentJp: e.target.value })}
                 placeholder="Dán nội dung đoạn văn bài đọc hoặc bài văn đục lỗ vào đây..."
-                className="w-full p-2.5 text-xs border border-slate-300 rounded-xl font-serif bg-white leading-relaxed focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+                className="w-full p-2.5 text-xs border border-slate-300 rounded-xl font-serif bg-surface leading-relaxed focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
               />
             </div>
 
@@ -209,7 +209,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
                 value={data.passageTranslationVi || ''}
                 onChange={(e) => onChange({ ...data, passageTranslationVi: e.target.value })}
                 placeholder="Dịch nghĩa đoạn văn để hỗ trợ học viên xem giải thích sau khi thi..."
-                className="w-full p-2 text-xs border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+                className="w-full p-2 text-xs border border-slate-300 rounded-xl bg-surface focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
               />
             </div>
           </div>
@@ -228,7 +228,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
             value={data.questionText || ''}
             onChange={(e) => onChange({ ...data, questionText: e.target.value })}
             placeholder="Nội dung câu hỏi con..."
-            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
           />
         </div>
 
@@ -246,7 +246,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
                   className={`p-3 rounded-2xl border transition flex items-center gap-3 ${
                     isCorrect
                       ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200'
-                      : 'bg-white border-slate-200 hover:border-slate-300'
+                      : 'bg-surface border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <button
@@ -268,7 +268,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
                     value={opt.optionText}
                     onChange={(e) => handleOptionChange(idx, e.target.value)}
                     placeholder={`Nội dung lựa chọn ${idx + 1}...`}
-                    className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+                    className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
                   />
 
                   <label
@@ -306,7 +306,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
             value={data.explanationVi || ''}
             onChange={(e) => onChange({ ...data, explanationVi: e.target.value })}
             placeholder="Dẫn chứng trong đoạn văn vì sao lựa chọn này đúng..."
-            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
+            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface focus:ring-2 focus:ring-sky-500/20 focus:outline-none"
           />
         </div>
       </div>

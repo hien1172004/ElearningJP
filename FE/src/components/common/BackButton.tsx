@@ -19,7 +19,7 @@ interface BackButtonProps {
 }
 
 const BASE_CLASS =
-  'inline-flex items-center gap-1.5 rounded-lg px-2 py-1 -ml-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800'
+  'inline-flex items-center gap-1.5 rounded-lg px-2 py-1 -ml-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-indigo-600'
 
 /** React Router lưu vị trí trong lịch sử ở history.state.idx — idx > 0 nghĩa là còn trang trước trong app */
 const hasAppHistory = (): boolean => {

@@ -144,7 +144,7 @@ export const SrsDeckPage: React.FC = () => {
           <Zap className="w-4 h-4" />
           Ôn ngay
           {stats && stats.dueTodayCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-xs tabular-nums">
+            <span className="px-1.5 py-0.5 rounded-md bg-surface/20 text-xs tabular-nums">
               {stats.dueTodayCount}
             </span>
           )}
@@ -171,7 +171,7 @@ export const SrsDeckPage: React.FC = () => {
               'px-3.5 py-1.5 rounded-full text-xs font-semibold transition border',
               status === f.value
                 ? 'bg-indigo-600 text-white border-indigo-600'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300',
+                : 'bg-surface text-slate-600 border-slate-200 hover:border-indigo-300',
             )}
           >
             {f.label}
@@ -228,7 +228,7 @@ export const SrsDeckPage: React.FC = () => {
             return (
             <li
               key={item.srsItemId}
-              className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-indigo-300 transition"
+              className="flex items-center gap-4 p-4 rounded-2xl bg-surface border border-slate-200 hover:border-indigo-300 transition"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">

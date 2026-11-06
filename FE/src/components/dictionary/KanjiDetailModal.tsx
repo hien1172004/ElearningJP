@@ -83,7 +83,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-      <div className="bg-white rounded-md shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface rounded-md shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-3">
@@ -181,13 +181,13 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white p-2.5 rounded-md border border-gray-200/80">
+                    <div className="bg-surface p-2.5 rounded-md border border-gray-200/80">
                       <span className="text-xs text-gray-400 block">Số nét</span>
                       <span className="text-base font-bold text-indigo-600">
                         {detail.strokeCount || detail.strokes?.length || 0} nét
                       </span>
                     </div>
-                    <div className="bg-white p-2.5 rounded-md border border-gray-200/80">
+                    <div className="bg-surface p-2.5 rounded-md border border-gray-200/80">
                       <span className="text-xs text-gray-400 block">Bộ thủ</span>
                       <span className="text-base font-bold text-gray-700">
                         {detail.radicals && detail.radicals.length > 0
@@ -209,7 +209,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                             key={i}
                             type="button"
                             onClick={() => speakJapanese(on)}
-                            className="px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-900 font-bold rounded border border-indigo-200 text-xs flex items-center gap-1 transition"
+                            className="px-2.5 py-1 bg-surface hover:bg-indigo-50 text-indigo-900 font-bold rounded border border-indigo-200 text-xs flex items-center gap-1 transition"
                           >
                             {on} <Volume2 className="w-3 h-3 text-indigo-400" />
                           </button>
@@ -232,7 +232,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                             key={i}
                             type="button"
                             onClick={() => speakJapanese(kun)}
-                            className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-900 font-bold rounded border border-emerald-200 text-xs flex items-center gap-1 transition"
+                            className="px-2.5 py-1 bg-surface hover:bg-emerald-50 text-emerald-900 font-bold rounded border border-emerald-200 text-xs flex items-center gap-1 transition"
                           >
                             {kun} <Volume2 className="w-3 h-3 text-emerald-400" />
                           </button>
@@ -287,7 +287,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                               color="#1e293b"
                               overlayInnerStyle={{ padding: '8px 12px', borderRadius: '8px' }}
                             >
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-indigo-50 hover:border-indigo-300 text-gray-800 rounded border border-gray-200/90 text-xs shadow-2xs cursor-pointer transition">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface hover:bg-indigo-50 hover:border-indigo-300 text-gray-800 rounded border border-gray-200/90 text-xs shadow-2xs cursor-pointer transition">
                                 <span className="font-serif font-bold text-base text-gray-900 leading-none">{comp.w}</span>
                                 {comp.h && (
                                   <span className="text-[11px] font-extrabold text-amber-700 uppercase tracking-wide">
@@ -329,7 +329,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                             <div
                               key={idx}
                               onClick={() => onSelectVocab?.(w.vocabId)}
-                              className="bg-white p-3 rounded-md border border-gray-200/70 hover:border-indigo-400 hover:shadow-xs transition cursor-pointer flex items-center justify-between"
+                              className="bg-surface p-3 rounded-md border border-gray-200/70 hover:border-indigo-400 hover:shadow-xs transition cursor-pointer flex items-center justify-between"
                             >
                               <div>
                                 <div className="flex items-baseline gap-2">
