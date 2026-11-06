@@ -170,7 +170,7 @@ export const AdminBroadcastsPage: React.FC = () => {
       {presetCourseId && <BackButton to={`/teacher/students?courseId=${presetCourseId}`} />}
 
       {/* ======================== Soạn thông báo ======================== */}
-      <section className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
+      <section className="bg-surface rounded-xl border border-slate-200 p-4 space-y-4">
         <div className="grid md:grid-cols-2 gap-3">
           <label className="space-y-1">
             <span className="text-sm font-medium text-slate-700">Gửi tới</span>
@@ -270,7 +270,7 @@ export const AdminBroadcastsPage: React.FC = () => {
             action={<AntdButton onClick={() => void history.refetch()}>Thử lại</AntdButton>}
           />
         ) : (
-          <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+          <div className="bg-surface rounded-xl border border-slate-200 overflow-x-auto">
             <Table<Broadcast>
               rowKey="id"
               columns={columns}

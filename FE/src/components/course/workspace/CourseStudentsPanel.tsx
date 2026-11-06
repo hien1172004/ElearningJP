@@ -166,7 +166,7 @@ export const CourseStudentsPanel: React.FC<CourseStudentsPanelProps> = ({ course
           description={keyword ? 'Thử đổi từ khóa tìm kiếm.' : 'Học viên đăng ký khóa sẽ xuất hiện ở đây.'}
         />
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+        <div className="bg-surface rounded-xl border border-slate-200 overflow-x-auto">
           <Table<StudentProgress>
             rowKey="userId"
             columns={columns}

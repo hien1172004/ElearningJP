@@ -315,7 +315,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
             onPointerDown={(e) => handlePointerDown(e, 'START')}
           >
             <div className="w-2.5 h-7 bg-indigo-500 hover:bg-indigo-400 active:scale-110 rounded-md border border-white shadow-md flex items-center justify-center transition-transform">
-              <div className="w-0.5 h-3 bg-white/80 rounded" />
+              <div className="w-0.5 h-3 bg-surface/80 rounded" />
             </div>
             {/* Tooltip hiển thị mốc khi kéo */}
             <span className="absolute -top-6 text-[9px] font-mono bg-indigo-600 text-white px-1.5 py-0.5 rounded shadow whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">
@@ -330,7 +330,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
             onPointerDown={(e) => handlePointerDown(e, 'END')}
           >
             <div className="w-2.5 h-7 bg-purple-500 hover:bg-purple-400 active:scale-110 rounded-md border border-white shadow-md flex items-center justify-center transition-transform">
-              <div className="w-0.5 h-3 bg-white/80 rounded" />
+              <div className="w-0.5 h-3 bg-surface/80 rounded" />
             </div>
             {/* Tooltip hiển thị mốc khi kéo */}
             <span className="absolute -top-6 text-[9px] font-mono bg-purple-600 text-white px-1.5 py-0.5 rounded shadow whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none">

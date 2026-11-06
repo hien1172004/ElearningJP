@@ -57,7 +57,7 @@ export const MainLayout: React.FC = () => {
         </main>
 
         {!hideFooter && (
-          <footer className="bg-white border-t border-gray-200">
+          <footer className="bg-surface border-t border-gray-200">
             <div className="max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-5 py-6 text-center text-sm text-gray-500">
               © 2026 ElearningJP - Hệ thống học tiếng Nhật trực tuyến thông minh (SRS &amp; Mazii Dictionary)
             </div>

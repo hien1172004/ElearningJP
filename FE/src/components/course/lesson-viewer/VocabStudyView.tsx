@@ -99,7 +99,7 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
       {/* Phần trên: từ vựng + nghĩa */}
       <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-md border-2 border-emerald-200/80 p-8 md:p-10 shadow-sm">
         <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-8">
-          <div className="w-40 h-40 md:w-48 md:h-48 shrink-0 rounded-md bg-white border-2 border-emerald-300 flex flex-col items-center justify-center shadow-inner px-3 text-center">
+          <div className="w-40 h-40 md:w-48 md:h-48 shrink-0 rounded-md bg-surface border-2 border-emerald-300 flex flex-col items-center justify-center shadow-inner px-3 text-center">
             <span className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
               {displayWord || '?'}
             </span>
@@ -141,7 +141,7 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
           Cột trái: JLPT + Hán Việt + loại từ
           Cột phải: hiragana + romaji + ghi chú */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <InfoRow
             label="Cấp độ"
             value={item.jlptLevel ? `${item.jlptLevel}` : '—'}
@@ -152,7 +152,7 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
           <InfoRow label="Ghi chú" value={item.note || '—'} />
 
         </div>
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 space-y-3">
           <h4 className="font-bold text-base text-gray-900 flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-600" />
             Cách viết
@@ -164,7 +164,7 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
 
       {/* Ví dụ */}
       {examples.length > 0 && (
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
           <h4 className="font-bold text-base text-gray-900 flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-600" />
             Ví dụ ({examples.length})

@@ -257,7 +257,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white rounded-md shadow-2xl w-full max-w-6xl border border-gray-100 overflow-hidden transform animate-in zoom-in-95 duration-200"
+        className="bg-surface rounded-md shadow-2xl w-full max-w-6xl border border-gray-100 overflow-hidden transform animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
@@ -286,7 +286,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
         <div className="p-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* VÙNG VẼ CANVAS (Bên trái - 7 cột) */}
           <div className="md:col-span-7 flex flex-col items-center space-y-5">
-            <div className="relative border-2 border-gray-200 rounded-md overflow-hidden shadow-inner bg-white cursor-crosshair touch-none">
+            <div className="relative border-2 border-gray-200 rounded-md overflow-hidden shadow-inner bg-surface cursor-crosshair touch-none">
               <canvas
                 ref={canvasRef}
                 width={CANVAS_SIZE}
@@ -371,7 +371,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
                         // Bấm đúp hoặc bấm trực tiếp để tra cứu ngay
                         handleConfirmSearch(p.char)
                       }}
-                      className="group relative flex flex-col items-center justify-center p-3.5 rounded-md border border-gray-200 bg-white hover:border-indigo-500 hover:bg-indigo-50/50 hover:shadow-md transition active:scale-95"
+                      className="group relative flex flex-col items-center justify-center p-3.5 rounded-md border border-gray-200 bg-surface hover:border-indigo-500 hover:bg-indigo-50/50 hover:shadow-md transition active:scale-95"
                       title={`Độ tin cậy: ${p.percentage}%`}
                     >
                       <span className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition">

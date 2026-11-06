@@ -152,7 +152,7 @@ const GrammarItemDetailModal: React.FC<{
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0 space-y-2">
                 {displayStructure && (
-                  <div className="inline-block bg-white border-2 border-purple-200 rounded px-4 py-2 shadow-inner">
+                  <div className="inline-block bg-surface border-2 border-purple-200 rounded px-4 py-2 shadow-inner">
                     <p className="text-base font-bold text-gray-900 font-mono">
                       {displayStructure}
                     </p>
@@ -244,7 +244,7 @@ const GrammarItemDetailModal: React.FC<{
                 {examples.map((ex, idx) => (
                   <div
                     key={ex.id ?? idx}
-                    className="rounded border border-gray-200 bg-white p-2.5"
+                    className="rounded border border-gray-200 bg-surface p-2.5"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[10px] font-bold text-purple-600">
@@ -664,7 +664,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
           <div
             key={item.id}
             onClick={() => setPreviewId(item.id)}
-            className="flex items-center gap-3 p-2.5 bg-white rounded-md border border-gray-200/80 hover:border-purple-300 hover:bg-purple-50/30 transition group cursor-pointer"
+            className="flex items-center gap-3 p-2.5 bg-surface rounded-md border border-gray-200/80 hover:border-purple-300 hover:bg-purple-50/30 transition group cursor-pointer"
           >
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-gray-900">{item.title}</p>
@@ -899,7 +899,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
                 {examples.map((ex, idx) => (
                   <div
                     key={idx}
-                    className="rounded border border-gray-200 bg-white p-2 space-y-1.5"
+                    className="rounded border border-gray-200 bg-surface p-2 space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-indigo-600 uppercase">

@@ -266,7 +266,7 @@ export const QuizStudyView: React.FC<QuizStudyViewProps> = ({ lessonId, onComple
           type="button"
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={safePage <= 0}
-          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-surface text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-4 h-4" />
           Câu trước
@@ -331,7 +331,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
 }) => {
   const t = getQuestionType(question)
   return (
-    <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-4">
+    <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-4">
       <div className="flex items-start gap-3">
         <span className="w-8 h-8 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-sm shrink-0">
           {index + 1}
@@ -665,12 +665,12 @@ const MatchingView: React.FC<MatchingViewProps> = ({
                     ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
                     : active
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-800 ring-2 ring-indigo-200'
-                      : 'border-gray-200 bg-white text-gray-900 hover:border-indigo-300'
+                      : 'border-gray-200 bg-surface text-gray-900 hover:border-indigo-300'
                   } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
               >
                 <span>{l.label}</span>
                 {matched && rightLabel && (
-                  <span className="absolute -bottom-2 right-2 text-[10px] font-semibold text-emerald-700 bg-white px-1.5 rounded">
+                  <span className="absolute -bottom-2 right-2 text-[10px] font-semibold text-emerald-700 bg-surface px-1.5 rounded">
                     = {rightLabel}
                   </span>
                 )}
@@ -700,12 +700,12 @@ const MatchingView: React.FC<MatchingViewProps> = ({
                 onClick={() => handleRightClick(r.key)}
                 className={`relative h-[56px] flex items-center justify-center px-3 rounded-md border-2 text-sm font-medium transition select-none ${matched
                     ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-300'
+                    : 'border-gray-200 bg-surface text-gray-700 hover:border-indigo-300'
                   } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
               >
                 <span>{r.label}</span>
                 {matched && leftLabel && (
-                  <span className="absolute -bottom-2 left-2 text-[10px] font-semibold text-emerald-700 bg-white px-1.5 rounded">
+                  <span className="absolute -bottom-2 left-2 text-[10px] font-semibold text-emerald-700 bg-surface px-1.5 rounded">
                     {leftLabel} =
                   </span>
                 )}
@@ -934,7 +934,7 @@ const QuizResultView: React.FC<QuizResultViewProps> = ({
         </p>
       </div>
 
-      <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
+      <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-5 md:p-6 space-y-3">
         <h4 className="font-bold text-base text-gray-900">Chi tiết từng câu</h4>
         <div className="space-y-2">
           {normalizedResults.map((r) => {

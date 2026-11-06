@@ -53,7 +53,7 @@ function DeltaBadge({ current, previous }: { current: number; previous: number }
 }
 
 export const StatTile: React.FC<StatTileProps> = ({ label, value, current, previous, hint }) => (
-  <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-1 min-w-0">
+  <div className="bg-surface rounded-xl border border-slate-200 p-4 flex flex-col gap-1 min-w-0">
     <span className="text-sm text-slate-500 truncate">{label}</span>
     <span className="text-2xl font-semibold text-slate-900 tabular-nums">{value}</span>
     {current !== undefined && previous !== undefined && (
@@ -73,7 +73,7 @@ export const ChartCard: React.FC<{
   children: React.ReactNode
   className?: string
 }> = ({ title, subtitle, children, className }) => (
-  <section className={cn('bg-white rounded-xl border border-slate-200 p-4', className)}>
+  <section className={cn('bg-surface rounded-xl border border-slate-200 p-4', className)}>
     <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
     {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
     <div className="mt-3">{children}</div>
@@ -111,7 +111,7 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({
   const text = typeof raw === 'number' ? formatValue(raw) : '—'
   const labelText = label === undefined ? '' : formatLabel ? formatLabel(String(label)) : String(label)
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-sm px-3 py-2 text-xs">
+    <div className="bg-surface border border-slate-200 rounded-lg shadow-sm px-3 py-2 text-xs">
       <div className="font-medium text-slate-800">{labelText}</div>
       <div className="mt-1 flex items-center gap-2 text-slate-600">
         <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: SERIES_COLOR }} />

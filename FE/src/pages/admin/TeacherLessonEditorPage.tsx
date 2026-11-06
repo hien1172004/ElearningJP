@@ -15,7 +15,7 @@ import { QuizPanel } from '@/components/course/quiz-editor'
 import { useCourseDetail, useLessonDetail, useSectionMutations } from '@/hooks'
 import type { LessonSection, LessonSectionType } from '@/types'
 
-const CARD = 'bg-white rounded-xl border border-suna shadow-xs'
+const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
 
 /** Tab trên URL (?tab=) ↔ loại section. */
 export type LessonEditorTab = 'vocab' | 'grammar' | 'kanji' | 'quiz'

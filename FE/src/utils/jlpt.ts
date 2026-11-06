@@ -23,9 +23,9 @@ export const JLPT_LEVEL_BORDER: Record<JlptLevel, string> = {
 
 /** Badge nhỏ: chữ + viền màu cấp độ, nền trắng. */
 export const JLPT_LEVEL_BADGE: Record<JlptLevel, string> = {
-  N5: 'bg-white text-jlpt-n5 border border-jlpt-n5/40',
-  N4: 'bg-white text-jlpt-n4 border border-jlpt-n4/40',
-  N3: 'bg-white text-jlpt-n3 border border-jlpt-n3/40',
-  N2: 'bg-white text-jlpt-n2 border border-jlpt-n2/40',
-  N1: 'bg-white text-jlpt-n1 border border-jlpt-n1/40',
+  N5: 'bg-surface text-jlpt-n5 border border-jlpt-n5/40',
+  N4: 'bg-surface text-jlpt-n4 border border-jlpt-n4/40',
+  N3: 'bg-surface text-jlpt-n3 border border-jlpt-n3/40',
+  N2: 'bg-surface text-jlpt-n2 border border-jlpt-n2/40',
+  N1: 'bg-surface text-jlpt-n1 border border-jlpt-n1/40',
 }

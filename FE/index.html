@@ -7,6 +7,14 @@
     <title>fe</title>
     <script>
       window.global = window;
+      // Chống nháy trắng: gắn class .dark trước khi React render (khoá trùng stores/useThemeStore.ts)
+      (function () {
+        try {
+          var m = localStorage.getItem('elearning-theme') || 'system';
+          var dark = m === 'dark' || (m === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
     </script>
   </head>
   <body>

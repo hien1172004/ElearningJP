@@ -42,7 +42,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-md p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
+      <div className="bg-surface rounded-md p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
         <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm font-medium">Đang tải chi tiết từ vựng kiểu Mazii...</p>
       </div>
@@ -51,7 +51,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
 
   if (!detail) {
     return (
-      <div className="bg-white rounded-md p-10 border border-gray-200 text-center text-gray-500">
+      <div className="bg-surface rounded-md p-10 border border-gray-200 text-center text-gray-500">
         Không tìm thấy thông tin chi tiết từ vựng.
       </div>
     )
@@ -83,7 +83,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
   }
 
   return (
-    <div className="bg-white rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
+    <div className="bg-surface rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
       {/* 1. Header từ vựng kiểu Mazii: Từ to bản, Furigana, Hán-Việt, Nút nghe, Nút lưu */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-gray-100 pb-6">
         <div className="space-y-2">
@@ -177,7 +177,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
                 key={k.id}
                 type="button"
                 onClick={() => onSelectKanji?.(k.character)}
-                className="flex items-center gap-3 p-3 bg-white rounded-md border border-gray-200/80 hover:border-indigo-400 hover:bg-indigo-50/40 hover:shadow-xs transition text-left group"
+                className="flex items-center gap-3 p-3 bg-surface rounded-md border border-gray-200/80 hover:border-indigo-400 hover:bg-indigo-50/40 hover:shadow-xs transition text-left group"
               >
                 <div className="w-12 h-12 rounded bg-indigo-50/80 border border-indigo-200/60 flex items-center justify-center text-2xl font-bold text-gray-900 font-serif group-hover:scale-105 group-hover:text-indigo-600 transition shrink-0">
                   {k.character}
@@ -211,7 +211,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
 
           <div className="space-y-2.5">
             {detail.senses.map((sense, idx) => (
-              <div key={idx} className="bg-white p-4 rounded-md border border-gray-200/80 space-y-1">
+              <div key={idx} className="bg-surface p-4 rounded-md border border-gray-200/80 space-y-1">
                 <div className="flex items-baseline gap-2.5">
                   <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
                     {sense.senseNo || idx + 1}
@@ -262,7 +262,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
                         audioUrl: ex.audioUrl,
                       })
                     }
-                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-md transition shrink-0"
+                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-surface rounded-md transition shrink-0"
                     title="Nghe phát âm câu ví dụ"
                   >
                     <Volume2 className="w-5 h-5" />
@@ -282,7 +282,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
                       text: detail.exampleJp || '',
                     })
                   }
-                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-white rounded-md transition shrink-0"
+                  className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-surface rounded-md transition shrink-0"
                   title="Nghe câu ví dụ"
                 >
                   <Volume2 className="w-5 h-5" />

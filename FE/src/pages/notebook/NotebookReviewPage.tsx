@@ -713,7 +713,7 @@ export const NotebookReviewPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(notebookId ? `/notebooks/${notebookId}` : '/notebooks')}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-white border border-gray-200 px-3.5 py-1.5 rounded-xl shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-surface border border-gray-200 px-3.5 py-1.5 rounded-xl shadow-2xs transition-colors cursor-pointer"
             >
               <CloseOutlined className="text-xs" />
               <span>Thoát</span>
@@ -740,7 +740,7 @@ export const NotebookReviewPage: React.FC = () => {
               onClick={() => {
                 setQuickSearchOpen(true)
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white border border-gray-200 text-xs font-semibold text-gray-700 hover:text-blue-600 hover:border-blue-400 shadow-2xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface border border-gray-200 text-xs font-semibold text-gray-700 hover:text-blue-600 hover:border-blue-400 shadow-2xs transition-all cursor-pointer"
             >
               <SearchOutlined className="text-gray-400" />
               <span>Tra cứu từ</span>
@@ -751,7 +751,7 @@ export const NotebookReviewPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleShuffle}
-                  className="w-9 h-9 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-400 flex items-center justify-center shadow-2xs transition-all cursor-pointer text-sm"
+                  className="w-9 h-9 rounded-xl bg-surface border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-400 flex items-center justify-center shadow-2xs transition-all cursor-pointer text-sm"
                 >
                   <SwapOutlined />
                 </button>
@@ -764,7 +764,7 @@ export const NotebookReviewPage: React.FC = () => {
                   className={`w-9 h-9 rounded-xl border flex items-center justify-center shadow-2xs transition-all cursor-pointer text-sm ${
                     autoPlay
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white border-gray-200 text-gray-600 hover:text-blue-600'
+                      : 'bg-surface border-gray-200 text-gray-600 hover:text-blue-600'
                   }`}
                 >
                   {autoPlay ? <PauseOutlined /> : <CaretRightOutlined />}
@@ -777,7 +777,7 @@ export const NotebookReviewPage: React.FC = () => {
           <div className="flex-1 flex items-center justify-center my-1">
             <div
               onClick={() => setIsFlipped(!isFlipped)}
-              className="w-full max-w-[520px] min-h-[480px] md:min-h-[520px] bg-white border-4 border-blue-500 rounded-[36px] p-8 md:p-10 shadow-sm flex flex-col justify-between items-center text-center cursor-pointer select-none transition-all hover:shadow-md relative"
+              className="w-full max-w-[520px] min-h-[480px] md:min-h-[520px] bg-surface border-4 border-blue-500 rounded-[36px] p-8 md:p-10 shadow-sm flex flex-col justify-between items-center text-center cursor-pointer select-none transition-all hover:shadow-md relative"
             >
               {/* Vị trí câu nhỏ góc trên trái */}
               <div className="absolute top-5 left-7 text-xs text-gray-400 font-semibold">
@@ -876,7 +876,7 @@ export const NotebookReviewPage: React.FC = () => {
                   type="button"
                   onClick={handlePreviousWord}
                   disabled={currentIndex === 0}
-                  className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 flex items-center justify-center shadow-xs text-xl md:text-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                  className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-surface hover:bg-gray-50 border border-gray-200 text-gray-600 flex items-center justify-center shadow-xs text-xl md:text-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-40 disabled:hover:scale-100 disabled:cursor-not-allowed"
                 >
                   <UndoOutlined />
                 </button>
@@ -927,7 +927,7 @@ export const NotebookReviewPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(notebookId ? `/notebooks/${notebookId}` : '/notebooks')}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-white border border-gray-200 px-3 py-1.5 rounded-xl shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-surface border border-gray-200 px-3 py-1.5 rounded-xl shadow-2xs transition-colors cursor-pointer"
             >
               <CloseOutlined className="text-xs" />
               <span>Thoát</span>
@@ -1007,7 +1007,7 @@ export const NotebookReviewPage: React.FC = () => {
                   className={`w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-semibold text-sm transition-all cursor-pointer shadow-2xs ${
                     isListening
                       ? 'bg-red-500 text-white animate-pulse'
-                      : 'bg-white hover:bg-blue-50/70 border border-gray-200 text-gray-800 hover:text-blue-600'
+                      : 'bg-surface hover:bg-blue-50/70 border border-gray-200 text-gray-800 hover:text-blue-600'
                   }`}
                 >
                   <AudioOutlined className={isListening ? 'text-white' : 'text-blue-600'} />
@@ -1016,7 +1016,7 @@ export const NotebookReviewPage: React.FC = () => {
 
                 {/* Kết quả nhận diện giọng nói */}
                 {transcript && (
-                  <div className="bg-white p-3 rounded-2xl border border-gray-200 text-xs space-y-1">
+                  <div className="bg-surface p-3 rounded-2xl border border-gray-200 text-xs space-y-1">
                     <div className="text-gray-400">Bạn vừa nói: <strong className="text-gray-800">{transcript}</strong></div>
                     {speechAccuracy !== null && (
                       <div>
@@ -1052,7 +1052,7 @@ export const NotebookReviewPage: React.FC = () => {
 
           {/* NỘI DUNG B: LUYỆN VIẾT KANJI */}
           {subPracticeTab === 'writing' && (
-            <div className="bg-white rounded-3xl border border-gray-200 p-6 text-center space-y-4 my-auto">
+            <div className="bg-surface rounded-3xl border border-gray-200 p-6 text-center space-y-4 my-auto">
               <div className="space-y-1">
                 <div className="text-lg font-bold text-gray-900">{currentItem.word}</div>
                 <div className="text-xs text-gray-500">Nghĩa: {currentItem.meaning}</div>
@@ -1112,7 +1112,7 @@ export const NotebookReviewPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(notebookId ? `/notebooks/${notebookId}` : '/notebooks')}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-white border border-gray-200 px-3.5 py-1.5 rounded-xl shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900 bg-surface border border-gray-200 px-3.5 py-1.5 rounded-xl shadow-2xs transition-colors cursor-pointer"
             >
               <CloseOutlined className="text-xs" />
               <span>Thoát</span>
@@ -1150,7 +1150,7 @@ export const NotebookReviewPage: React.FC = () => {
                   {/* Mascot shiba kèm Bong bóng thoại */}
                   <div className="flex items-center justify-center gap-4 py-2">
                     <SystemMascot size={140} />
-                    <div className="relative bg-white border border-gray-200/90 rounded-2xl px-6 py-3 shadow-xs flex items-center gap-2 select-none before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90">
+                    <div className="relative bg-surface border border-gray-200/90 rounded-2xl px-6 py-3 shadow-xs flex items-center gap-2 select-none before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90">
                       <span
                         className={
                           isMeaningPrompt
@@ -1173,7 +1173,7 @@ export const NotebookReviewPage: React.FC = () => {
                           const isSelected = selectedOption === wordOpt
                           const isCorrect = wordOpt === targetAnswer
 
-                          let btnClass = 'bg-white border-gray-200 hover:border-blue-300 text-gray-800 shadow-2xs'
+                          let btnClass = 'bg-surface border-gray-200 hover:border-blue-300 text-gray-800 shadow-2xs'
                           let furiganaClass = 'text-gray-400'
 
                           if (isSelected && !isAnswerChecked) {
@@ -1187,7 +1187,7 @@ export const NotebookReviewPage: React.FC = () => {
                               btnClass = 'bg-red-50/40 border-2 border-red-500 text-red-600 font-bold shadow-xs'
                               furiganaClass = 'text-red-500 font-medium'
                             } else {
-                              btnClass = 'opacity-40 border-gray-200 bg-white text-gray-400'
+                              btnClass = 'opacity-40 border-gray-200 bg-surface text-gray-400'
                             }
                           }
 
@@ -1218,7 +1218,7 @@ export const NotebookReviewPage: React.FC = () => {
                           const isSelected = selectedOption === opt
                           const isCorrect = opt === targetAnswer
 
-                          let btnClass = 'bg-white border-gray-200 hover:border-blue-300 text-gray-800 shadow-2xs'
+                          let btnClass = 'bg-surface border-gray-200 hover:border-blue-300 text-gray-800 shadow-2xs'
 
                           if (isSelected && !isAnswerChecked) {
                             btnClass = 'bg-blue-50/20 border-2 border-blue-500 shadow-xs text-blue-900 font-semibold'
@@ -1228,7 +1228,7 @@ export const NotebookReviewPage: React.FC = () => {
                             } else if (isSelected) {
                               btnClass = 'bg-red-50/40 border-2 border-red-500 text-red-600 font-bold shadow-xs'
                             } else {
-                              btnClass = 'opacity-40 border-gray-200 bg-white text-gray-400'
+                              btnClass = 'opacity-40 border-gray-200 bg-surface text-gray-400'
                             }
                           }
 
@@ -1262,7 +1262,7 @@ export const NotebookReviewPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => playAudio(currentItem)}
-                    className="relative bg-white border border-gray-200/90 hover:border-blue-300 rounded-2xl px-6 py-4 shadow-xs flex items-center gap-3 cursor-pointer select-none active:scale-95 transition before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90"
+                    className="relative bg-surface border border-gray-200/90 hover:border-blue-300 rounded-2xl px-6 py-4 shadow-xs flex items-center gap-3 cursor-pointer select-none active:scale-95 transition before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90"
                     title="Bấm để nghe lại"
                   >
                     <SoundOutlined className="text-2xl text-blue-600" />
@@ -1287,7 +1287,7 @@ export const NotebookReviewPage: React.FC = () => {
                     const isSelected = selectedOption === wordOpt
                     const isCorrect = wordOpt === currentItem.word
 
-                    let btnClass = 'bg-white border-gray-200 hover:border-blue-300 text-gray-800 shadow-2xs'
+                    let btnClass = 'bg-surface border-gray-200 hover:border-blue-300 text-gray-800 shadow-2xs'
                     let furiganaClass = 'text-gray-400'
 
                     if (isSelected && !isAnswerChecked) {
@@ -1301,7 +1301,7 @@ export const NotebookReviewPage: React.FC = () => {
                         btnClass = 'bg-red-50/40 border-2 border-red-500 text-red-600 font-bold shadow-xs'
                         furiganaClass = 'text-red-500 font-medium'
                       } else {
-                        btnClass = 'opacity-40 border-gray-200 bg-white text-gray-400'
+                        btnClass = 'opacity-40 border-gray-200 bg-surface text-gray-400'
                       }
                     }
 
@@ -1339,7 +1339,7 @@ export const NotebookReviewPage: React.FC = () => {
                 {/* Mascot shiba kèm Bong bóng thoại chứa ý nghĩa từ vựng (Chuẩn Ảnh 3) */}
                 <div className="flex items-center justify-center gap-4 py-2">
                   <SystemMascot size={140} />
-                  <div className="relative bg-white border border-gray-200/90 rounded-2xl px-6 py-3 shadow-xs flex items-center gap-2 select-none before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90">
+                  <div className="relative bg-surface border border-gray-200/90 rounded-2xl px-6 py-3 shadow-xs flex items-center gap-2 select-none before:content-[''] before:absolute before:-left-2.5 before:top-1/2 before:-translate-y-1/2 before:border-y-[8px] before:border-y-transparent before:border-r-[10px] before:border-r-white before:z-10 after:content-[''] after:absolute after:-left-[11px] after:top-1/2 after:-translate-y-1/2 after:border-y-[9px] after:border-y-transparent after:border-r-[11px] after:border-r-gray-200/90">
                     <span className="text-base font-bold text-gray-800">{currentItem.meaning}</span>
                   </div>
                 </div>
@@ -1423,7 +1423,7 @@ export const NotebookReviewPage: React.FC = () => {
                         const isSelected = selectedMatchWord === w
                         const isMismatched = mismatchedWord === w
 
-                        let btnClass = 'bg-white border-gray-200 hover:border-blue-400 text-gray-800 cursor-pointer shadow-2xs hover:shadow-xs'
+                        let btnClass = 'bg-surface border-gray-200 hover:border-blue-400 text-gray-800 cursor-pointer shadow-2xs hover:shadow-xs'
                         if (isMatched) {
                           btnClass = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-700 opacity-60 cursor-not-allowed shadow-none'
                         } else if (isMismatched) {
@@ -1453,7 +1453,7 @@ export const NotebookReviewPage: React.FC = () => {
                         const isSelected = selectedMatchMeaning === m
                         const isMismatched = mismatchedMeaning === m
 
-                        let btnClass = 'bg-white border-gray-200 hover:border-blue-400 text-gray-800 cursor-pointer shadow-2xs hover:shadow-xs'
+                        let btnClass = 'bg-surface border-gray-200 hover:border-blue-400 text-gray-800 cursor-pointer shadow-2xs hover:shadow-xs'
                         if (isMatched) {
                           btnClass = 'bg-emerald-50 border-2 border-emerald-500 text-emerald-700 opacity-60 cursor-not-allowed shadow-none'
                         } else if (isMismatched) {
@@ -1497,7 +1497,7 @@ export const NotebookReviewPage: React.FC = () => {
               {/* 1. Khi chưa kiểm tra: Nút "Kiểm tra" ở góc dưới bên phải */}
               {!isAnswerChecked && (
                 <div
-                  className={`fixed bottom-0 right-0 py-4 px-6 md:px-12 bg-white/95 backdrop-blur-xs border-t border-gray-200/80 z-20 transition-[left] duration-300 ease-in-out ${
+                  className={`fixed bottom-0 right-0 py-4 px-6 md:px-12 bg-surface/95 backdrop-blur-xs border-t border-gray-200/80 z-20 transition-[left] duration-300 ease-in-out ${
                     sidebarCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-60'
                   }`}
                 >
@@ -1521,7 +1521,7 @@ export const NotebookReviewPage: React.FC = () => {
               {/* 2. Khi đã kiểm tra: Thanh banner kết quả tràn viền đáy màn hình */}
               {isAnswerChecked && isQuizCorrect !== null && (
                 <div
-                  className={`fixed bottom-0 right-0 py-4 px-6 md:px-12 bg-white border-t-2 z-30 shadow-lg animate-in slide-in-from-bottom duration-200 transition-[left] duration-300 ease-in-out ${
+                  className={`fixed bottom-0 right-0 py-4 px-6 md:px-12 bg-surface border-t-2 z-30 shadow-lg animate-in slide-in-from-bottom duration-200 transition-[left] duration-300 ease-in-out ${
                     sidebarCollapsed ? 'left-0 md:left-16' : 'left-0 md:left-60'
                   } ${
                     isQuizCorrect ? 'border-emerald-400' : 'border-red-400'

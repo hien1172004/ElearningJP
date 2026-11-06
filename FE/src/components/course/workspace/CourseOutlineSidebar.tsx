@@ -49,7 +49,7 @@ export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
   const openLessonId = selection.view === 'lesson' ? selection.lessonId : null
 
   return (
-    <nav className="bg-white rounded-xl border border-suna shadow-xs p-2 space-y-1" aria-label="Mục lục khóa học">
+    <nav className="bg-surface rounded-xl border border-suna shadow-xs p-2 space-y-1" aria-label="Mục lục khóa học">
       <button type="button" className={navItemClass(selection.view === 'overview')} onClick={() => onSelect({ view: 'overview' })}>
         <LayoutDashboard className="w-4 h-4 shrink-0" />
         Tổng quan
@@ -153,7 +153,7 @@ const IconAction: React.FC<{
     onClick={onClick}
     className={cn(
       'rounded p-1 text-slate-400 transition disabled:opacity-30 disabled:cursor-not-allowed',
-      danger ? 'hover:bg-rose-50 hover:text-rose-600' : 'hover:bg-white hover:text-indigo-600',
+      danger ? 'hover:bg-rose-50 hover:text-rose-600' : 'hover:bg-surface hover:text-indigo-600',
     )}
   >
     {children}

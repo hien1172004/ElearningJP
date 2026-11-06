@@ -80,7 +80,7 @@ export const NotebookShareRedirectPage: React.FC = () => {
     <div className="max-w-xl mx-auto py-12 px-4 space-y-6">
       <BackButton to="/notebooks" />
 
-      <div className="bg-white rounded-3xl border border-gray-200 p-8 shadow-sm text-center space-y-4">
+      <div className="bg-surface rounded-3xl border border-gray-200 p-8 shadow-sm text-center space-y-4">
         <div className="w-16 h-16 mx-auto bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 border border-blue-100">
           <BookOutlined className="text-3xl" />
         </div>

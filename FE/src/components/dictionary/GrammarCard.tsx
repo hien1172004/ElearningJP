@@ -65,7 +65,7 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
   })()
 
   return (
-    <div className="bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div className="bg-surface rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-md transition-all duration-200 overflow-hidden">
       {/* Header tóm tắt */}
       <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex-1 space-y-2">
@@ -145,7 +145,7 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                     Giải thích cách dùng & Lưu ý
                   </h4>
-                  <div className="bg-white p-3.5 rounded-md border border-gray-200/80 text-sm text-gray-800 leading-relaxed whitespace-pre-line">
+                  <div className="bg-surface p-3.5 rounded-md border border-gray-200/80 text-sm text-gray-800 leading-relaxed whitespace-pre-line">
                     {detail.usageNotes}
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
                     {parsedExamples.map((ex, idx) => (
                       <div
                         key={idx}
-                        className="bg-white p-3.5 rounded-md border border-gray-200/80 flex items-start justify-between gap-3 group"
+                        className="bg-surface p-3.5 rounded-md border border-gray-200/80 flex items-start justify-between gap-3 group"
                       >
                         <div>
                           <p className="text-sm font-semibold text-gray-900 group-hover:text-purple-700 transition">

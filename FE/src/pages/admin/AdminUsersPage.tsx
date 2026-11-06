@@ -221,7 +221,7 @@ export const AdminUsersPage: React.FC = () => {
           action={<AntdButton onClick={() => refetch()}>Thử lại</AntdButton>}
         />
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+        <div className="bg-surface rounded-xl border border-slate-200 overflow-x-auto">
           <Table<AdminUser>
             rowKey="id"
             columns={columns}

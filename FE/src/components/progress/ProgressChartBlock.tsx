@@ -140,7 +140,7 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({
   )
 
   return (
-    <div className="rounded-md border border-gray-200 bg-white px-3 py-2 shadow-md">
+    <div className="rounded-md border border-gray-200 bg-surface px-3 py-2 shadow-md">
       <p className="text-[11px] font-bold text-gray-700 mb-1">
         {label ? formatTooltipLabel(label, granularity) : ''}
       </p>
@@ -169,7 +169,7 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({
 // --------------------------------------------------------------------------
 
 const SkeletonBlock: React.FC = () => (
-  <div className="bg-white rounded-xl border border-suna shadow-xs p-4">
+  <div className="bg-surface rounded-xl border border-suna shadow-xs p-4">
     <div className="animate-pulse space-y-3">
       <div className="h-5 w-44 bg-gray-200 rounded" />
       <div className="h-[280px] w-full bg-gray-100 rounded-md" />
@@ -181,7 +181,7 @@ const ErrorBlock: React.FC<{ onRetry?: () => void; message?: string }> = ({
   onRetry,
   message,
 }) => (
-  <div className="bg-white rounded-xl border border-rose-200 shadow-xs p-6">
+  <div className="bg-surface rounded-xl border border-rose-200 shadow-xs p-6">
     <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
       <span className="flex items-center justify-center w-14 h-14 rounded-full bg-rose-50 text-rose-500 shrink-0">
         <CircleAlert className="w-7 h-7" aria-hidden="true" />
@@ -202,7 +202,7 @@ const ErrorBlock: React.FC<{ onRetry?: () => void; message?: string }> = ({
 )
 
 const EmptyBlock: React.FC = () => (
-  <div className="bg-white rounded-xl border border-suna shadow-xs p-6">
+  <div className="bg-surface rounded-xl border border-suna shadow-xs p-6">
     <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
       <span className="flex items-center justify-center w-[72px] h-[72px] rounded-full bg-gradient-to-br from-indigo-100 to-sky-100 text-indigo-500 shrink-0">
         <Sparkles className="w-9 h-9" aria-hidden="true" />
@@ -260,7 +260,7 @@ export const ProgressChartBlock: React.FC<ProgressChartBlockProps> = ({
 
   return (
     <section
-      className="bg-white rounded-xl border border-suna shadow-xs p-4 space-y-3 h-full"
+      className="bg-surface rounded-xl border border-suna shadow-xs p-4 space-y-3 h-full"
       aria-label="Biểu đồ tiến độ"
     >
       {/* ---------- Header ---------- */}

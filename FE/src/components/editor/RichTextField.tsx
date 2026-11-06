@@ -260,7 +260,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
       <div className={`relative ${className}`}>
         <div className="relative flex items-center">
           <div
-            className={`w-full border rounded-xl transition bg-white pr-24 ${
+            className={`w-full border rounded-xl transition bg-surface pr-24 ${
               disabled
                 ? 'bg-slate-100/90 border-slate-200 text-slate-500 cursor-not-allowed select-none'
                 : 'border-slate-300 hover:border-indigo-400 focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-500/20 shadow-2xs'
@@ -324,7 +324,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
   // --- MULTILINE VARIANT CHO CÂU HỎI & SCRIPTS ---
   return (
     <div
-      className={`border rounded-xl transition bg-white ${
+      className={`border rounded-xl transition bg-surface ${
         disabled
           ? 'bg-slate-100/90 border-slate-200 text-slate-500 cursor-not-allowed select-none'
           : 'border-slate-300 hover:border-indigo-400 focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-500/20 shadow-2xs'
@@ -348,7 +348,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
               className={`p-1 px-1.5 rounded transition font-bold flex items-center cursor-pointer ${
                 editor.isActive('bold')
                   ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
+                  : 'bg-surface hover:bg-slate-200 text-slate-700 border border-slate-200'
               }`}
             >
               <BoldIcon className="w-3.5 h-3.5" />
@@ -362,7 +362,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
               className={`p-1 px-1.5 rounded transition font-bold flex items-center cursor-pointer ${
                 editor.isActive('underline')
                   ? 'bg-indigo-600 text-white shadow-2xs'
-                  : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
+                  : 'bg-surface hover:bg-slate-200 text-slate-700 border border-slate-200'
               }`}
             >
               <UnderlineIcon className="w-3.5 h-3.5" />
@@ -395,7 +395,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
                 </button>
 
                 {showSpeakerMenu && (
-                  <div className="absolute top-full left-0 mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex gap-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute top-full left-0 mt-1 z-30 bg-surface border border-slate-200 rounded-xl shadow-lg p-1.5 flex gap-1 animate-in fade-in zoom-in-95 duration-100">
                     {['男', '女', '先生', '学生', '店員'].map((spk) => (
                       <button
                         key={spk}
@@ -417,7 +417,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
                 type="button"
                 onClick={handleInsertQuestionNumber}
                 title="Chèn số thứ tự câu (1番, 2番...)"
-                className="p-1 px-1.5 rounded bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-bold flex items-center gap-0.5 cursor-pointer"
+                className="p-1 px-1.5 rounded bg-surface hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-bold flex items-center gap-0.5 cursor-pointer"
               >
                 <Hash className="w-3 h-3 text-slate-500" />
                 <span>Số câu</span>
@@ -456,7 +456,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
               onClick={() => editor.chain().focus().undo().run()}
               disabled={!editor.can().undo()}
               title="Hoàn tác (Ctrl+Z)"
-              className="p-1 px-1.5 rounded bg-white hover:bg-slate-200 text-slate-600 border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+              className="p-1 px-1.5 rounded bg-surface hover:bg-slate-200 text-slate-600 border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -467,7 +467,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
               onClick={() => editor.chain().focus().redo().run()}
               disabled={!editor.can().redo()}
               title="Làm lại (Ctrl+Shift+Z)"
-              className="p-1 px-1.5 rounded bg-white hover:bg-slate-200 text-slate-600 border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+              className="p-1 px-1.5 rounded bg-surface hover:bg-slate-200 text-slate-600 border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
             >
               <RotateCw className="w-3.5 h-3.5" />
             </button>
@@ -477,7 +477,7 @@ export const RichTextField: React.FC<RichTextFieldProps> = ({
               type="button"
               onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
               title="Xóa định dạng"
-              className="p-1 px-1.5 rounded bg-white hover:bg-slate-200 text-slate-600 border border-slate-200 cursor-pointer transition"
+              className="p-1 px-1.5 rounded bg-surface hover:bg-slate-200 text-slate-600 border border-slate-200 cursor-pointer transition"
             >
               <RemoveFormatting className="w-3.5 h-3.5" />
             </button>

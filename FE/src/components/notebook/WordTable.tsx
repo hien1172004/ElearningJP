@@ -238,7 +238,7 @@ export const WordTable: React.FC<WordTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-xs border border-suna overflow-hidden">
+    <div className="bg-surface rounded-xl shadow-xs border border-suna overflow-hidden">
       <Table<NotebookWord>
         rowKey="id"
         rowSelection={rowSelection}

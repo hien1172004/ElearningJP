@@ -46,7 +46,7 @@ export const MaziikoMascot: React.FC<MaziikoMascotProps> = ({
         style={{ width: size, height: size }}
         className="relative rounded-full p-[3px] bg-linear-to-tr from-amber-400 via-rose-400 to-indigo-500 shadow-lg shadow-indigo-500/20 transition-transform duration-300 hover:scale-105"
       >
-        <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center relative">
+        <div className="w-full h-full rounded-full overflow-hidden bg-surface flex items-center justify-center relative">
           {!imageError ? (
             <img
               src={imgSrc}
@@ -65,7 +65,7 @@ export const MaziikoMascot: React.FC<MaziikoMascotProps> = ({
 
         {/* 3. Huy hiệu nhỏ hoa anh đào (Sakura Badge) hoặc Chuông Nhật Bản */}
         {showBadge && size >= 48 && (
-          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white shadow-md border border-rose-100 flex items-center justify-center text-xs animate-bounce">
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-surface shadow-md border border-rose-100 flex items-center justify-center text-xs animate-bounce">
             🌸
           </div>
         )}

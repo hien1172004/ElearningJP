@@ -441,7 +441,7 @@ export const SpeakingPracticePage: React.FC = () => {
       {/* 1. Header Mazii: < Quay lại | Tiêu đề | ⚙️ Cài đặt */}
       {/* ==================================================================== */}
       <div className="sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between bg-white rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between bg-surface rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-3">
             <BackButton to="/speaking" />
             <h1 className="text-sm sm:text-base font-bold text-slate-800 truncate max-w-xs sm:max-w-md">
@@ -466,7 +466,7 @@ export const SpeakingPracticePage: React.FC = () => {
             {/* Popover Cài đặt (1:1 Screenshot 1) */}
             {/* ============================================================== */}
             {showSettings && (
-              <div className="absolute right-0 top-12 w-80 sm:w-88 bg-white rounded-2xl p-5 shadow-2xl border border-slate-100 z-50 space-y-4 animate-in fade-in zoom-in-95">
+              <div className="absolute right-0 top-12 w-80 sm:w-88 bg-surface rounded-2xl p-5 shadow-2xl border border-slate-100 z-50 space-y-4 animate-in fade-in zoom-in-95">
                 {/* Hiện Romaji */}
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-slate-700">Hiện Romaji</span>
@@ -478,7 +478,7 @@ export const SpeakingPracticePage: React.FC = () => {
                     }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      className={`bg-surface w-4 h-4 rounded-full shadow-md transform transition-transform ${
                         showRomaji ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -496,7 +496,7 @@ export const SpeakingPracticePage: React.FC = () => {
                     }`}
                   >
                     <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                      className={`bg-surface w-4 h-4 rounded-full shadow-md transform transition-transform ${
                         showFurigana ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
@@ -620,7 +620,7 @@ export const SpeakingPracticePage: React.FC = () => {
             // Tin nhắn của người học (Căn phải)
             return (
               <div key={index} className="flex justify-end items-start gap-2.5 animate-in fade-in">
-                <div className="max-w-[85%] sm:max-w-[75%] rounded-xl rounded-tr-xs bg-white border border-slate-200/90 p-3 shadow-xs text-left">
+                <div className="max-w-[85%] sm:max-w-[75%] rounded-xl rounded-tr-xs bg-surface border border-slate-200/90 p-3 shadow-xs text-left">
                   <div className="flex items-center justify-between mb-1.5 text-xs text-slate-400">
                     <span className="font-semibold text-slate-700">Bạn</span>
                     <span>{time}</span>
@@ -685,7 +685,7 @@ export const SpeakingPracticePage: React.FC = () => {
                 <MaziikoMascot size={36} />
               </div>
 
-              <div className="max-w-[85%] sm:max-w-[80%] rounded-xl rounded-tl-xs bg-white border border-slate-200/90 p-3 shadow-xs text-left space-y-2">
+              <div className="max-w-[85%] sm:max-w-[80%] rounded-xl rounded-tl-xs bg-surface border border-slate-200/90 p-3 shadow-xs text-left space-y-2">
                 {/* Tên & thời gian */}
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-bold text-slate-800">Maziiko</span>
@@ -772,7 +772,7 @@ export const SpeakingPracticePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowTasksModal(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition"
               >
                 <Target className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Nhiệm vụ</span>
@@ -785,7 +785,7 @@ export const SpeakingPracticePage: React.FC = () => {
             <button
               type="button"
               onClick={handleQuickTranslateLastMessage}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition"
             >
               <Zap className="w-3.5 h-3.5 text-amber-500" />
               <span>Dịch nhanh</span>
@@ -795,7 +795,7 @@ export const SpeakingPracticePage: React.FC = () => {
               type="button"
               disabled={isLoadingSuggestions}
               onClick={handleOpenSuggestions}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoadingSuggestions ? (
                 <div className="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
@@ -808,7 +808,7 @@ export const SpeakingPracticePage: React.FC = () => {
 
           {/* Thẻ Gợi ý trực quan inline phía trên thanh nhập liệu (1:1 Screenshot 2) */}
           {showInlineSuggestion && (
-            <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+            <div className="w-full bg-surface rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
               {isLoadingSuggestions ? (
                 <div className="flex items-center gap-3 py-2 text-indigo-600 text-sm font-medium">
                   <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin shrink-0" />
@@ -905,7 +905,7 @@ export const SpeakingPracticePage: React.FC = () => {
 
           {/* Khung nhập liệu: Khi đang thu âm hoặc có chữ vừa nói thì hiển thị Thẻ Thu Âm (1:1 Screenshot 2) */}
           {isListening || !!spokenText ? (
-            <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+            <div className="w-full bg-surface rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
               {/* Dòng chữ nhận diện trực tiếp khi nói */}
               <div className="text-slate-800 text-sm sm:text-base font-medium min-h-[32px] select-text">
                 {spokenText || (
@@ -981,7 +981,7 @@ export const SpeakingPracticePage: React.FC = () => {
             </div>
           ) : (
             /* Thanh Capsule bình thường khi ở chế độ chờ hoặc gõ phím */
-            <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
+            <div className="w-full bg-surface rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
               {/* Nút bàn phím */}
               <button
                 type="button"
@@ -1083,7 +1083,7 @@ export const SpeakingPracticePage: React.FC = () => {
       {/* ==================================================================== */}
       {showTasksModal && session.scenario?.tasks && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+          <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
             <button
               onClick={() => setShowTasksModal(false)}
               className="absolute top-4 right-4 p-1 rounded-full hover:bg-slate-100 text-slate-400"

@@ -75,11 +75,11 @@ const getStandardSections = (level: JlptLevel): InitialSectionConfig[] => {
 
 // Màu cấp độ lấy từ utils/jlpt (chỉ tô chữ + viền, không tô nền cả khối)
 const LEVEL_COLORS: Record<JlptLevel, { bg: string; text: string; border: string; desc: string }> = {
-  N5: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N5, border: JLPT_LEVEL_BORDER.N5, desc: 'Sơ cấp 1 (Cơ bản)' },
-  N4: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N4, border: JLPT_LEVEL_BORDER.N4, desc: 'Sơ cấp 2 (Giao tiếp cơ bản)' },
-  N3: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N3, border: JLPT_LEVEL_BORDER.N3, desc: 'Trung cấp (Đời sống)' },
-  N2: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N2, border: JLPT_LEVEL_BORDER.N2, desc: 'Trung - Cao cấp (Công việc)' },
-  N1: { bg: 'bg-white', text: JLPT_LEVEL_TEXT.N1, border: JLPT_LEVEL_BORDER.N1, desc: 'Cao cấp (Chuyên sâu)' },
+  N5: { bg: 'bg-surface', text: JLPT_LEVEL_TEXT.N5, border: JLPT_LEVEL_BORDER.N5, desc: 'Sơ cấp 1 (Cơ bản)' },
+  N4: { bg: 'bg-surface', text: JLPT_LEVEL_TEXT.N4, border: JLPT_LEVEL_BORDER.N4, desc: 'Sơ cấp 2 (Giao tiếp cơ bản)' },
+  N3: { bg: 'bg-surface', text: JLPT_LEVEL_TEXT.N3, border: JLPT_LEVEL_BORDER.N3, desc: 'Trung cấp (Đời sống)' },
+  N2: { bg: 'bg-surface', text: JLPT_LEVEL_TEXT.N2, border: JLPT_LEVEL_BORDER.N2, desc: 'Trung - Cao cấp (Công việc)' },
+  N1: { bg: 'bg-surface', text: JLPT_LEVEL_TEXT.N1, border: JLPT_LEVEL_BORDER.N1, desc: 'Cao cấp (Chuyên sâu)' },
 }
 
 export const AdminExamCreatePage: React.FC = () => {
@@ -222,8 +222,8 @@ export const AdminExamCreatePage: React.FC = () => {
 
         {/* Thông báo lỗi nếu có */}
         {error && (
-          <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-sm flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
             <div className="space-y-1">
               <p className="font-semibold">Đã xảy ra lỗi:</p>
               <p>{error}</p>
@@ -233,15 +233,15 @@ export const AdminExamCreatePage: React.FC = () => {
 
         {/* Form nhập thông tin cơ bản */}
         <form onSubmit={handleCreateExam} className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-suna dark:border-slate-800 shadow-xs space-y-5">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="bg-surface rounded-xl p-5 border border-suna shadow-xs space-y-5">
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 pb-3 border-b border-slate-100">
               <Award className="w-4 h-4 text-indigo-600" />
               Thông tin đề thi
             </h2>
 
             {/* Cấp độ JLPT */}
             <div className="space-y-2.5">
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">
+              <label className="block text-sm font-bold text-slate-800">
                 Cấp độ <span className="text-rose-500">*</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -256,16 +256,16 @@ export const AdminExamCreatePage: React.FC = () => {
                       className={`relative p-3 rounded-lg border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
                         isSelected
                           ? `${meta.border} ${meta.bg} shadow-xs`
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
+                          : 'border-slate-200 hover:border-slate-300 bg-surface'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`text-lg font-black ${isSelected ? meta.text : 'text-slate-800 dark:text-slate-200'}`}>
+                        <span className={`text-lg font-black ${isSelected ? meta.text : 'text-slate-800'}`}>
                           {level}
                         </span>
                         {isSelected && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
                       </div>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                      <span className="text-[11px] text-slate-500 line-clamp-1">
                         {meta.desc}
                       </span>
                     </button>
@@ -277,13 +277,13 @@ export const AdminExamCreatePage: React.FC = () => {
             {/* Tiêu đề đề thi */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">
+                <label className="block text-sm font-bold text-slate-800">
                   Tiêu đề đề thi <span className="text-rose-500">*</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleSuggestTitle}
-                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   Gợi ý tên mẫu
@@ -295,13 +295,13 @@ export const AdminExamCreatePage: React.FC = () => {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={`Ví dụ: Đề thi thử JLPT ${jlptLevel} - Đề số 1`}
                 required
-                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm font-medium transition"
+                className="w-full px-3.5 py-2 rounded-lg border border-slate-300 bg-surface text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm font-medium transition"
               />
             </div>
 
             {/* Loại đề thi */}
             <div className="space-y-2.5">
-              <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">
+              <label className="block text-sm font-bold text-slate-800">
                 Loại đề thi <span className="text-rose-500">*</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -310,16 +310,16 @@ export const AdminExamCreatePage: React.FC = () => {
                   onClick={() => setExamType('JLPT_OFFICIAL_MOCK')}
                   className={`p-4 rounded-xl border-2 text-left transition cursor-pointer flex items-start gap-3 ${
                     examType === 'JLPT_OFFICIAL_MOCK'
-                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      ? 'border-indigo-600 bg-indigo-50/50 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <BookOpen className={`w-5 h-5 shrink-0 mt-0.5 ${examType === 'JLPT_OFFICIAL_MOCK' ? 'text-indigo-600' : 'text-slate-400'}`} />
                   <div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    <p className="text-sm font-bold text-slate-900">
                       Đề thi thử JLPT chính thức
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Đầy đủ các phần thi theo chuẩn JLPT Nhật Bản, dùng cho kỳ thi thử công khai hoặc toàn hệ thống.
                     </p>
                   </div>
@@ -330,16 +330,16 @@ export const AdminExamCreatePage: React.FC = () => {
                   onClick={() => setExamType('MINI_TEST')}
                   className={`p-4 rounded-xl border-2 text-left transition cursor-pointer flex items-start gap-3 ${
                     examType === 'MINI_TEST'
-                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-xs'
-                      : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      ? 'border-indigo-600 bg-indigo-50/50 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <Layers className={`w-5 h-5 shrink-0 mt-0.5 ${examType === 'MINI_TEST' ? 'text-indigo-600' : 'text-slate-400'}`} />
                   <div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    <p className="text-sm font-bold text-slate-900">
                       Bài kiểm tra theo khóa học
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       Gắn trực tiếp vào một khóa học cụ thể, chỉ học viên đã tham gia khóa học mới được làm bài.
                     </p>
                   </div>
@@ -349,8 +349,8 @@ export const AdminExamCreatePage: React.FC = () => {
 
             {/* Chọn khóa học nếu là MINI_TEST */}
             {examType === 'MINI_TEST' && (
-              <div className="space-y-2 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-                <label className="block text-sm font-bold text-slate-800 dark:text-slate-200">
+              <div className="space-y-2 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <label className="block text-sm font-bold text-slate-800">
                   Khóa học áp dụng bài thi này <span className="text-rose-500">*</span>
                 </label>
                 {loadingCourses ? (
@@ -362,7 +362,7 @@ export const AdminExamCreatePage: React.FC = () => {
                     value={courseId}
                     onChange={(e) => setCourseId(e.target.value)}
                     required
-                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20"
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-surface text-sm font-medium focus:ring-2 focus:ring-indigo-500/20"
                   >
                     <option value="">-- Chọn khóa học --</option>
                     {courses.map((c) => (
@@ -377,10 +377,10 @@ export const AdminExamCreatePage: React.FC = () => {
           </div>
 
           {/* Cấu trúc phần thi sẽ khởi tạo */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-suna dark:border-slate-800 shadow-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="bg-surface rounded-xl p-5 border border-suna shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="space-y-0.5">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <Layers className="w-4 h-4 text-indigo-600" />
                   Cấu trúc các phần thi tự động khởi tạo
                 </h2>
@@ -389,7 +389,7 @@ export const AdminExamCreatePage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold shrink-0">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold shrink-0">
                 <Clock className="w-4 h-4 text-slate-500" />
                 <span>Tổng: {totalDurationMinutes} phút</span>
               </div>
@@ -399,18 +399,18 @@ export const AdminExamCreatePage: React.FC = () => {
               {sections.map((sec, idx) => (
                 <div
                   key={sec.sessionType}
-                  className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0">
+                    <span className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
                     <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      <p className="text-sm font-bold text-slate-900">
                         {sec.sectionTitle}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Mã phần thi: <code className="font-mono text-indigo-600 dark:text-indigo-400">{sec.sessionType}</code>
+                      <p className="text-xs text-slate-500">
+                        Mã phần thi: <code className="font-mono text-indigo-600">{sec.sessionType}</code>
                       </p>
                     </div>
                   </div>
@@ -424,7 +424,7 @@ export const AdminExamCreatePage: React.FC = () => {
                         max="180"
                         value={sec.durationMinutes}
                         onChange={(e) => handleSectionDurationChange(idx, Number(e.target.value))}
-                        className="w-16 px-2.5 py-1 text-center font-bold text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                        className="w-16 px-2.5 py-1 text-center font-bold text-sm rounded-lg border border-slate-300 bg-surface text-slate-900"
                       />
                       <span className="text-xs text-slate-500">phút</span>
                     </div>
@@ -433,7 +433,7 @@ export const AdminExamCreatePage: React.FC = () => {
               ))}
             </div>
 
-            <div className="p-3.5 rounded-xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 text-xs text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
+            <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-100 text-xs text-indigo-800 flex items-center gap-2">
               <HelpCircle className="w-4 h-4 text-indigo-600 shrink-0" />
               <span>
                 Sau khi bấm <strong>"Khởi tạo đề thi"</strong>, bạn sẽ được chuyển ngay sang giao diện biên soạn chi tiết. Tại đó, mỗi phần thi đều có sẵn nút <strong>"Thêm câu hỏi bằng tay"</strong>, <strong>"Quét câu hỏi bằng AI"</strong>, và <strong>"Nạp đáp án 正答表"</strong>.
@@ -447,7 +447,7 @@ export const AdminExamCreatePage: React.FC = () => {
               type="button"
               onClick={() => navigate('/admin/exams')}
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg border border-suna dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm hover:bg-kamenozoki dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
+              className="px-4 py-2 rounded-lg border border-suna text-slate-700 font-bold text-sm hover:bg-kamenozoki transition cursor-pointer disabled:opacity-50"
             >
               Hủy
             </button>

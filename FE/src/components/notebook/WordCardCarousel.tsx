@@ -86,11 +86,11 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
       <div className="max-w-xl mx-auto">
         <div
           onClick={() => setIsFlipped(!isFlipped)}
-          className="relative min-h-[170px] bg-gradient-to-br from-white to-blue-50/60 rounded-2xl border border-blue-200/70 p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between select-none"
+          className="relative min-h-[170px] bg-gradient-to-br from-surface to-blue-50/60 rounded-2xl border border-blue-200/70 p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between select-none"
         >
           {/* Header thẻ: vị trí hiện tại & nút xáo trộn / autoplay */}
           <div className="flex items-center justify-between text-xs text-gray-400">
-            <span className="font-medium bg-white/80 px-2.5 py-0.5 rounded-full border border-gray-100 shadow-2xs">
+            <span className="font-medium bg-surface/80 px-2.5 py-0.5 rounded-full border border-gray-100 shadow-2xs">
               {currentIndex + 1} / {words.length}
             </span>
 

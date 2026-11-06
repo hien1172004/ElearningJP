@@ -78,7 +78,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
 
   return (
     <div
-      className={`bg-white rounded-xl border border-suna shadow-xs p-4 space-y-3 ${className}`}
+      className={`bg-surface rounded-xl border border-suna shadow-xs p-4 space-y-3 ${className}`}
     >
       {/* 1. HEADER: TIÊU ĐỀ + NHÃN JLPT */}
       <div className="flex items-center justify-between pb-1">
@@ -196,7 +196,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
             {/* VỊ TRÍ HẠNG 2 (BÊN TRÁI - BẠC / TÍM NHẠT) */}
             <div className="bg-gradient-to-b from-[#c3ccdf] via-[#e2e8f0] to-[#f8fafc] border border-slate-300/80 rounded-2xl p-2 flex flex-col justify-between items-center text-center shadow-2xs h-48 sm:h-52">
               {/* Huy hiệu 02 */}
-              <div className="w-6 h-6 rounded-full bg-white text-slate-800 font-black text-[11px] border border-slate-300 shadow-2xs flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-full bg-surface text-slate-800 font-black text-[11px] border border-slate-300 shadow-2xs flex items-center justify-center shrink-0">
                 02
               </div>
 
@@ -212,7 +212,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
               </div>
 
               {/* Thẻ trắng chứa tên & điểm */}
-              <div className="w-full bg-white/95 rounded-xl py-1.5 px-1 text-center shadow-2xs">
+              <div className="w-full bg-surface/95 rounded-xl py-1.5 px-1 text-center shadow-2xs">
                 {top2 ? (
                   <>
                     <p className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate" title={top2.fullName}>
@@ -234,7 +234,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
             {/* VỊ TRÍ HẠNG 1 (Ở GIỮA - VÀNG HOÀNG GIA - CAO NHẤT & HUY CHƯƠNG) */}
             <div className="bg-gradient-to-b from-[#f59e0b] via-[#fbbf24] to-[#fef3c7] border-2 border-amber-400 rounded-2xl p-2 flex flex-col justify-between items-center text-center shadow-md h-56 sm:h-60 -translate-y-2 relative">
               {/* Huy hiệu 01 */}
-              <div className="w-7 h-7 rounded-full bg-white text-amber-950 font-black text-xs border-2 border-amber-400 shadow-2xs flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-full bg-surface text-amber-950 font-black text-xs border-2 border-amber-400 shadow-2xs flex items-center justify-center shrink-0">
                 01
               </div>
 
@@ -256,7 +256,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
               </div>
 
               {/* Thẻ trắng chứa tên & điểm */}
-              <div className="w-full bg-white/95 rounded-xl py-2 px-1 text-center shadow-xs">
+              <div className="w-full bg-surface/95 rounded-xl py-2 px-1 text-center shadow-xs">
                 {top1 ? (
                   <>
                     <p className="text-[11px] sm:text-xs font-black text-slate-900 truncate" title={top1.fullName}>
@@ -278,7 +278,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
             {/* VỊ TRÍ HẠNG 3 (BÊN PHẢI - ĐỒNG / CAM) */}
             <div className="bg-gradient-to-b from-[#e39a62] via-[#fed7aa] to-[#fff7ed] border border-orange-300/80 rounded-2xl p-2 flex flex-col justify-between items-center text-center shadow-2xs h-44 sm:h-48">
               {/* Huy hiệu 03 */}
-              <div className="w-6 h-6 rounded-full bg-white text-slate-800 font-black text-[11px] border border-slate-300 shadow-2xs flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-full bg-surface text-slate-800 font-black text-[11px] border border-slate-300 shadow-2xs flex items-center justify-center shrink-0">
                 03
               </div>
 
@@ -294,7 +294,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
               </div>
 
               {/* Thẻ trắng chứa tên & điểm */}
-              <div className="w-full bg-white/90 rounded-xl py-1.5 px-1 text-center shadow-2xs">
+              <div className="w-full bg-surface/90 rounded-xl py-1.5 px-1 text-center shadow-2xs">
                 {top3 ? (
                   <>
                     <p className="text-[10px] sm:text-[11px] font-bold text-slate-800 truncate" title={top3.fullName}>

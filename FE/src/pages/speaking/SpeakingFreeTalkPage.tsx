@@ -155,7 +155,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       {/* 1. Header Mazii: < Quay lại | Trò chuyện tự do | ⚙️ 📋 */}
       {/* ==================================================================== */}
       <div className="sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between bg-white rounded-xl border border-slate-200/90 shadow-xs">
+        <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between bg-surface rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-4">
             <BackButton to="/speaking" />
             <h1 className="text-sm sm:text-base font-bold text-slate-800">
@@ -179,7 +179,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
 
               {/* Popover Cài đặt 1:1 Mazii Screenshot */}
               {showSettingsPopover && (
-                <div className="absolute right-0 top-12 w-80 sm:w-88 bg-white rounded-2xl p-5 shadow-2xl border border-slate-100 z-50 space-y-4 animate-in fade-in zoom-in-95 text-left">
+                <div className="absolute right-0 top-12 w-80 sm:w-88 bg-surface rounded-2xl p-5 shadow-2xl border border-slate-100 z-50 space-y-4 animate-in fade-in zoom-in-95 text-left">
                   {/* Hiện Romaji */}
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-slate-700">Hiện Romaji</span>
@@ -191,7 +191,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                       }`}
                     >
                       <div
-                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        className={`bg-surface w-4 h-4 rounded-full shadow-md transform transition-transform ${
                           showRomaji ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
@@ -209,7 +209,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                       }`}
                     >
                       <div
-                        className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
+                        className={`bg-surface w-4 h-4 rounded-full shadow-md transform transition-transform ${
                           showFurigana ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
@@ -344,7 +344,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                 type="button"
                 onClick={() => handleStartSession(topic.text)}
                 disabled={isStartingSession}
-                className="flex flex-col items-start p-4 rounded-2xl bg-white border border-slate-200/90 hover:border-purple-300 hover:shadow-md transition-all text-left min-w-[140px] sm:min-w-[160px] group shrink-0"
+                className="flex flex-col items-start p-4 rounded-2xl bg-surface border border-slate-200/90 hover:border-purple-300 hover:shadow-md transition-all text-left min-w-[140px] sm:min-w-[160px] group shrink-0"
               >
                 <div className="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                   <Sparkles className="w-4 h-4 fill-purple-600" />
@@ -364,7 +364,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       <div className="sticky bottom-0 z-20 pb-4 px-4 bg-gradient-to-t from-kinari via-kinari/90 to-transparent pt-4">
         <div className="max-w-2xl mx-auto flex flex-col items-center">
           {/* Capsule Container */}
-          <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
+          <div className="w-full bg-surface rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
             {/* Nút bàn phím */}
             <button
               type="button"
@@ -381,7 +381,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
 
           {/* Card thu âm trực tiếp hoặc Capsule thông thường */}
           {isListening || !!spokenText ? (
-            <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+            <div className="w-full bg-surface rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
               {/* Dòng chữ nhận diện trực tiếp khi nói */}
               <div className="text-slate-800 text-sm sm:text-base font-medium min-h-[32px] select-text">
                 {spokenText || (
@@ -456,7 +456,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
+            <div className="w-full bg-surface rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3">
               {/* Nút bàn phím */}
               <button
                 type="button"

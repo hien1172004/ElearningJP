@@ -64,7 +64,7 @@ export const SrsForecastBar: React.FC<SrsForecastBarProps> = ({ className }) => 
                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
                   : d.past
                     ? 'bg-slate-50 text-slate-400 border-slate-100'
-                    : 'bg-white text-slate-600 border-slate-200',
+                    : 'bg-surface text-slate-600 border-slate-200',
               )}
             >
               <span className={cn('font-semibold', d.today ? 'text-white/80' : '')}>

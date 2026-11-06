@@ -35,7 +35,7 @@ export const ModerationItemCard: React.FC<ModerationItemCardProps> = ({
   const where = [TARGET_TYPE_LABELS[item.targetType], item.targetLabel].filter(Boolean).join(': ')
 
   return (
-    <article className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+    <article className="bg-surface rounded-xl border border-slate-200 p-4 space-y-3">
       {/* Người viết + trạng thái */}
       <div className="flex items-start gap-3">
         <Avatar src={item.author?.avatarUrl || undefined} className="shrink-0 bg-indigo-100 text-indigo-700">

@@ -126,7 +126,7 @@ export const FuriganaPopover: React.FC<FuriganaPopoverProps> = ({
       }
       className={`${
         position ? 'fixed' : 'relative'
-      } z-50 p-2.5 bg-white border border-indigo-200/90 rounded-2xl shadow-xl w-72 sm:w-80 space-y-2 animate-in fade-in zoom-in-95 duration-100 select-none`}
+      } z-50 p-2.5 bg-surface border border-indigo-200/90 rounded-2xl shadow-xl w-72 sm:w-80 space-y-2 animate-in fade-in zoom-in-95 duration-100 select-none`}
     >
       {/* Header nhỏ */}
       <div className="flex items-center justify-between border-b border-indigo-100 pb-1.5">
@@ -153,7 +153,7 @@ export const FuriganaPopover: React.FC<FuriganaPopoverProps> = ({
           onChange={(e) => setReading(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Nhập Hiragana (ví dụ: たいいくかん)..."
-          className="w-full pr-8 pl-2.5 py-1.5 border border-indigo-200 rounded-xl text-xs font-serif bg-slate-50 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+          className="w-full pr-8 pl-2.5 py-1.5 border border-indigo-200 rounded-xl text-xs font-serif bg-slate-50 focus:bg-surface focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
         />
         {loadingSuggestion && (
           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-indigo-500">

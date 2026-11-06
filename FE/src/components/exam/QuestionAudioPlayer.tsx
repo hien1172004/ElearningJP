@@ -124,15 +124,15 @@ export const QuestionAudioPlayer: React.FC<QuestionAudioPlayerProps> = ({
   }
 
   return (
-    <div className="bg-linear-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/40 dark:to-purple-950/40 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3 shadow-xs space-y-2">
+    <div className="bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-2xl p-3 shadow-xs space-y-2">
       <audio ref={audioRef} src={effectiveUrl} preload="metadata" />
 
       <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1.5 font-bold text-indigo-900 dark:text-indigo-200">
+        <div className="flex items-center gap-1.5 font-bold text-indigo-900">
           <Volume2 className="w-4 h-4 text-indigo-600 animate-pulse" />
           <span>{title || (audioUrl ? 'Audio riêng câu hỏi' : `Đoạn cắt ca nghe (${segStart}s - ${endTime || 0}s)`)}</span>
         </div>
-        <div className="font-mono text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+        <div className="font-mono text-[11px] font-semibold text-indigo-700">
           {formatTime(currentTime)} / {formatTime(effectiveDuration)}
         </div>
       </div>
@@ -146,7 +146,7 @@ export const QuestionAudioPlayer: React.FC<QuestionAudioPlayerProps> = ({
           step={0.1}
           value={currentTime}
           onChange={handleSeek}
-          className="w-full h-1.5 bg-indigo-200 dark:bg-indigo-900 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          className="w-full h-1.5 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
         />
       </div>
 
@@ -156,7 +156,7 @@ export const QuestionAudioPlayer: React.FC<QuestionAudioPlayerProps> = ({
           <button
             type="button"
             onClick={() => handleSkip(-5)}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/80 transition cursor-pointer text-[10px] font-bold flex items-center gap-0.5"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-surface/80 transition cursor-pointer text-[10px] font-bold flex items-center gap-0.5"
             title="Lùi lại 5 giây"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -184,7 +184,7 @@ export const QuestionAudioPlayer: React.FC<QuestionAudioPlayerProps> = ({
           <button
             type="button"
             onClick={() => handleSkip(5)}
-            className="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/80 transition cursor-pointer text-[10px] font-bold flex items-center gap-0.5"
+            className="p-1.5 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-surface/80 transition cursor-pointer text-[10px] font-bold flex items-center gap-0.5"
             title="Tua tới 5 giây"
           >
             <span>+5s</span>

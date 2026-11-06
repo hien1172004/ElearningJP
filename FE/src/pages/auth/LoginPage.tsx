@@ -138,7 +138,7 @@ export const LoginPage: React.FC = () => {
         <div>
           {/* Logo */}
           <Link to="/" className="inline-flex items-center gap-3">
-            <span className="w-12 h-12 rounded-md text-white bg-white/10 backdrop-blur flex items-center justify-center font-serif text-2xl font-black">
+            <span className="w-12 h-12 rounded-md text-white bg-surface/10 backdrop-blur flex items-center justify-center font-serif text-2xl font-black">
               日
             </span>
             <span className="text-2xl font-bold text-white">ElearningJP</span>
@@ -158,7 +158,7 @@ export const LoginPage: React.FC = () => {
           {/* Features */}
           <div className="mt-10 grid gap-4">
             {features.map((feature, index) => (
-              <div key={index} className="flex items-center gap-4 p-4 rounded-md bg-white/5">
+              <div key={index} className="flex items-center gap-4 p-4 rounded-md bg-surface/5">
                 <div className="w-10 h-10 rounded bg-indigo-500/30 flex items-center justify-center">
                   <feature.icon className="w-5 h-5 text-indigo-300" />
                 </div>
@@ -185,7 +185,7 @@ export const LoginPage: React.FC = () => {
             </Link>
           </div>
 
-          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-8">
+          <div className="bg-surface rounded-md shadow-sm border border-gray-200 p-8">
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900">Đăng nhập tài khoản</h2>
               <p className="text-sm text-gray-500 mt-1">Chào mừng bạn quay lại</p>
@@ -266,7 +266,7 @@ export const LoginPage: React.FC = () => {
                 <div className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-3 text-gray-500 font-medium">Hoặc</span>
+                <span className="bg-surface px-3 text-gray-500 font-medium">Hoặc</span>
               </div>
             </div>
 

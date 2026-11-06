@@ -244,7 +244,7 @@ export const MatchingPairsEditor: React.FC<MatchingPairsEditorProps> = ({
                       className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                         active
                           ? 'border-indigo-500 bg-indigo-500 text-white'
-                          : 'border-indigo-200 bg-white text-indigo-600 hover:border-indigo-400'
+                          : 'border-indigo-200 bg-surface text-indigo-600 hover:border-indigo-400'
                       }`}
                     >
                       {k === 'ALL' ? 'Tất cả' : getKindLabel(k as CandidateKind)} ({count})
@@ -357,7 +357,7 @@ export const MatchingPairsEditor: React.FC<MatchingPairsEditorProps> = ({
                   ? 'border-emerald-300 bg-emerald-50/50'
                   : isWrong
                     ? 'border-rose-300 bg-rose-50/50'
-                    : 'border-gray-200 bg-white'
+                    : 'border-gray-200 bg-surface'
               }`}
             >
               {/* Vế trái */}

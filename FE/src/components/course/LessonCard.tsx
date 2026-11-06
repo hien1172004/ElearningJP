@@ -39,7 +39,7 @@ export const LessonCard: React.FC<LessonCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`group flex items-center gap-3 p-3.5 bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm transition ${onOpenSectionEditor ? 'cursor-pointer' : ''
+      className={`group flex items-center gap-3 p-3.5 bg-surface rounded-md border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm transition ${onOpenSectionEditor ? 'cursor-pointer' : ''
         }`}
     >
       <div className="shrink-0 w-10 h-10 rounded-md bg-indigo-50 text-indigo-700 font-bold text-sm flex items-center justify-center border border-indigo-200/60">

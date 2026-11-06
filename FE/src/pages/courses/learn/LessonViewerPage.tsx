@@ -505,7 +505,7 @@ export const LessonViewerPage: React.FC = () => {
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6 md:p-8">
+            <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-6 md:p-8">
               {currentPage?.kind === 'KANJI' && (
                 <KanjiStudyView
                   items={currentPage.kanjiItems ?? []}
@@ -541,12 +541,12 @@ export const LessonViewerPage: React.FC = () => {
             </div>
 
             {/* Footer: Back / Next (luôn hiển thị để user điều hướng) */}
-            <div className="mt-6 flex items-center justify-between gap-3 bg-white rounded-md border border-gray-200/80 shadow-xs p-4">
+            <div className="mt-6 flex items-center justify-between gap-3 bg-surface rounded-md border border-gray-200/80 shadow-xs p-4">
               <button
                 type="button"
                 onClick={goPrevPage}
                 disabled={safePageIdx <= 0}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-surface text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Quay lại
@@ -624,7 +624,7 @@ const PageNavigator: React.FC<PageNavigatorProps> = ({
 }) => {
   if (items.length === 0) return null
   return (
-    <div className="mt-3 bg-white rounded-md border border-gray-200/80 shadow-xs p-3 space-y-1.5">
+    <div className="mt-3 bg-surface rounded-md border border-gray-200/80 shadow-xs p-3 space-y-1.5">
       <p className="text-xs font-bold text-gray-500 uppercase tracking-wider px-2 py-1">
         Các dạng bài
       </p>

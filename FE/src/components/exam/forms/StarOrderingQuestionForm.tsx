@@ -87,7 +87,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
           value={data.questionText || ''}
           onChange={(e) => handleTextChange(e.target.value)}
           placeholder="Ví dụ: 田中さんは ____ ____ ★ ____ 行きました。"
-          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
         />
       </div>
 
@@ -110,7 +110,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
                 className={`py-2 px-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
                   isStar
                     ? 'bg-amber-500 text-white border-amber-600 shadow-sm font-extrabold ring-2 ring-amber-300'
-                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100 font-bold'
+                    : 'bg-surface text-slate-700 border-slate-300 hover:bg-slate-100 font-bold'
                 }`}
               >
                 <div className="flex items-center gap-1 text-xs">
@@ -126,7 +126,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
         </div>
 
         {/* Live Preview dòng câu hoàn chỉnh */}
-        <div className="mt-3 p-3 bg-white border border-amber-200/80 rounded-xl text-center font-serif text-sm text-slate-900 tracking-wide shadow-2xs">
+        <div className="mt-3 p-3 bg-surface border border-amber-200/80 rounded-xl text-center font-serif text-sm text-slate-900 tracking-wide shadow-2xs">
           <span className="text-slate-400 font-sans text-[11px] block mb-1">Mô phỏng hiển thị trên đề thi:</span>
           <span>
             {data.questionText ? (
@@ -159,7 +159,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
                 className={`p-3 rounded-2xl border transition flex items-center gap-3 ${
                   isStarSlot
                     ? 'bg-amber-50/70 border-amber-300 ring-1 ring-amber-200'
-                    : 'bg-white border-slate-200'
+                    : 'bg-surface border-slate-200'
                 }`}
               >
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -185,7 +185,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
                   value={opt.optionText}
                   onChange={(e) => handleOptionChange(idx, e.target.value)}
                   placeholder={`Cụm từ lựa chọn ${idx + 1}...`}
-                  className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+                  className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
                 />
 
                 <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer shrink-0">
@@ -219,7 +219,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
           value={data.explanationVi || ''}
           onChange={(e) => handleExplanationChange(e.target.value)}
           placeholder="Ví dụ: Thứ tự đúng là 4 - 1 - 3 - 2. Vị trí dấu sao là số 3..."
-          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
         />
       </div>
     </div>

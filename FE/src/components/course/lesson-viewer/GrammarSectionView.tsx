@@ -21,7 +21,7 @@ export const GrammarSectionView: React.FC<GrammarSectionViewProps> = ({ section 
       )}
       <div className="space-y-3">
         {items.map((item) => (
-          <div key={item.id} className="bg-white rounded-md border border-gray-200/80 p-5 hover:border-purple-300 hover:shadow-sm transition">
+          <div key={item.id} className="bg-surface rounded-md border border-gray-200/80 p-5 hover:border-purple-300 hover:shadow-sm transition">
             <div className="flex items-baseline gap-3 flex-wrap">
               {item.title && (
                 <span className="text-2xl font-bold text-gray-900 font-sans">{item.title}</span>

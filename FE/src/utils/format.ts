@@ -73,7 +73,7 @@ export const formatJapaneseBlanksHtml = (text?: string | null): string => {
   const cleaned = text.replace(/\\n/g, '\n')
   return cleaned.replace(
     /([【\[]\s*(\d+)\s*[】\]])/g,
-    '<span data-blank-num="$2" class="jlpt-blank-pill inline-flex items-center justify-center font-bold px-2 py-0.5 mx-1 text-sm rounded border border-black bg-white text-black hover:bg-gray-100 transition cursor-pointer select-none font-mono">【 $2 】</span>'
+    '<span data-blank-num="$2" class="jlpt-blank-pill inline-flex items-center justify-center font-bold px-2 py-0.5 mx-1 text-sm rounded border border-black bg-surface text-black hover:bg-gray-100 transition cursor-pointer select-none font-mono">【 $2 】</span>'
   )
 }
 
@@ -122,7 +122,7 @@ export const formatJapanesePassageHtml = (rawText?: string | null): string => {
         bodyRows = rows.slice(1).map(parseCells)
       }
 
-      let tableHtml = '<div class="my-3.5 overflow-x-auto rounded-lg border border-gray-400 bg-white">'
+      let tableHtml = '<div class="my-3.5 overflow-x-auto rounded-lg border border-gray-400 bg-surface">'
       tableHtml += '<table class="w-full text-left border-collapse text-xs md:text-sm font-serif text-black">'
       if (headerCells.length > 0) {
         tableHtml += '<thead class="bg-gray-100 text-black font-bold border-b border-gray-400"><tr>'
@@ -195,7 +195,7 @@ export const formatJapanesePassageHtml = (rawText?: string | null): string => {
     // Chú thích / Lưu ý đặc biệt: ※ hoặc 【注意】 hoặc （注） hoặc (注)
     if (line.startsWith('※') || line.startsWith('【注意】') || line.startsWith('（注）') || line.startsWith('(注)')) {
       resultBlocks.push(
-        `<div class="my-3 p-3 rounded-lg border border-gray-400 bg-white text-black text-sm md:text-base leading-relaxed font-serif">
+        `<div class="my-3 p-3 rounded-lg border border-gray-400 bg-surface text-black text-sm md:text-base leading-relaxed font-serif">
           <div class="leading-relaxed flex-1">${formatJapaneseBlanksHtml(cleanJapaneseText(line))}</div>
         </div>`
       )

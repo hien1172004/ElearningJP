@@ -106,7 +106,7 @@ export const VocabGrammarStandardForm: React.FC<VocabGrammarStandardFormProps> =
           value={data.questionText || ''}
           onChange={(e) => handleTextChange(e.target.value)}
           placeholder="Ví dụ: きのう ____ へ いきました。"
-          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
         />
       </div>
 
@@ -124,7 +124,7 @@ export const VocabGrammarStandardForm: React.FC<VocabGrammarStandardFormProps> =
                 className={`p-3 rounded-2xl border transition flex items-center gap-3 ${
                   isCorrect
                     ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-200'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
+                    : 'bg-surface border-slate-200 hover:border-slate-300'
                 }`}
               >
                 <button
@@ -147,7 +147,7 @@ export const VocabGrammarStandardForm: React.FC<VocabGrammarStandardFormProps> =
                   value={opt.optionText}
                   onChange={(e) => handleOptionChange(idx, e.target.value)}
                   placeholder={`Nội dung đáp án ${idx + 1}...`}
-                  className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+                  className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface font-medium focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
                 />
 
                 <label
@@ -185,7 +185,7 @@ export const VocabGrammarStandardForm: React.FC<VocabGrammarStandardFormProps> =
           value={data.explanationVi || ''}
           onChange={(e) => handleExplanationChange(e.target.value)}
           placeholder="Ví dụ: 学校 (がっこう) là cách đọc đúng của trường học. Lựa chọn B sai vì thừa âm..."
-          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+          className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl bg-surface focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
         />
       </div>
     </div>

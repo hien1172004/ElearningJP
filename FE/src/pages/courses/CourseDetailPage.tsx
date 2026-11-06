@@ -106,7 +106,7 @@ export const CourseDetailPage: React.FC = () => {
 
       <div className="space-y-6">
         {/* Stats + Progress */}
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-black text-indigo-600">{course.jlptLevel}</p>
             <p className="text-xs text-gray-500 mt-1">Cấp độ</p>
@@ -163,7 +163,7 @@ export const CourseDetailPage: React.FC = () => {
 
         {/* Danh sách bài kiểm tra / Thi thử của khóa học */}
         {courseExams.length > 0 && (
-          <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6">
+          <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-6">
             <h2 className="font-bold text-base text-gray-900 mb-4 flex items-center gap-2">
               <Award className="w-5 h-5 text-indigo-600" />
               Bài kiểm tra & Thi thử của khóa học ({courseExams.length})
@@ -172,7 +172,7 @@ export const CourseDetailPage: React.FC = () => {
               {courseExams.map((exam) => (
                 <div
                   key={exam.id}
-                  className="p-4 rounded-xl border border-gray-200/80 hover:border-indigo-400 hover:shadow-xs transition bg-gradient-to-br from-white to-slate-50/50 flex flex-col justify-between gap-3"
+                  className="p-4 rounded-xl border border-gray-200/80 hover:border-indigo-400 hover:shadow-xs transition bg-gradient-to-br from-surface to-slate-50/50 flex flex-col justify-between gap-3"
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -203,7 +203,7 @@ export const CourseDetailPage: React.FC = () => {
         )}
 
         {/* Mục lục bài học */}
-        <div className="bg-white rounded-md border border-gray-200/80 shadow-xs p-6">
+        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-6">
           <h2 className="font-bold text-base text-gray-900 mb-4 flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-600" />
             Mục lục bài học ({lessons.length})

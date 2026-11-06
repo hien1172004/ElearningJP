@@ -84,7 +84,7 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
   return (
     <div
       onClick={() => onClick(notebook)}
-      className="group relative bg-[#f9fafb] hover:bg-white border border-gray-100 hover:border-amber-300 hover:shadow-sm rounded-2xl p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[92px] select-none"
+      className="group relative bg-[#f9fafb] hover:bg-surface border border-gray-100 hover:border-amber-300 hover:shadow-sm rounded-2xl p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[92px] select-none"
     >
       {/* Top: Icon sổ tay vàng + Tên sổ tay + Menu 3 chấm */}
       <div className="flex items-start justify-between gap-3">

@@ -351,7 +351,7 @@ export const NotebookListPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/notebooks/explore')}
-            className="px-5 py-2 rounded-xl bg-white hover:bg-gray-50 text-gray-600 font-medium text-sm border border-gray-100 transition-colors cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-surface hover:bg-gray-50 text-gray-600 font-medium text-sm border border-gray-100 transition-colors cursor-pointer"
           >
             Khám phá
           </button>
@@ -360,7 +360,7 @@ export const NotebookListPage: React.FC = () => {
 
       {/* 2. Khối Tổng quan (SRS Spaced Repetition Overview) - Chỉ hiện khi ở ngoài Root */}
       {!currentGroup && (
-        <div className="bg-white border border-suna rounded-3xl p-6 shadow-xs space-y-4">
+        <div className="bg-surface border border-suna rounded-3xl p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <h2 className="text-base font-bold text-gray-800">Tổng quan</h2>
@@ -397,7 +397,7 @@ export const NotebookListPage: React.FC = () => {
 
           {/* 4 Thẻ mức độ ghi nhớ */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-1">
-            <div className="bg-white border border-red-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
+            <div className="bg-surface border border-red-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
               <div className="absolute left-0 top-3 bottom-3 w-1 bg-red-500 rounded-r" />
               <div className="pl-2">
                 <div className="text-xs text-gray-500 font-medium">Chưa thuộc</div>
@@ -408,7 +408,7 @@ export const NotebookListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white border border-amber-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
+            <div className="bg-surface border border-amber-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
               <div className="absolute left-0 top-3 bottom-3 w-1 bg-amber-500 rounded-r" />
               <div className="pl-2">
                 <div className="text-xs text-gray-500 font-medium">Thuộc lơ mơ</div>
@@ -419,7 +419,7 @@ export const NotebookListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white border border-blue-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
+            <div className="bg-surface border border-blue-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
               <div className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r" />
               <div className="pl-2">
                 <div className="text-xs text-gray-500 font-medium">Thuộc kha khá</div>
@@ -430,7 +430,7 @@ export const NotebookListPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white border border-emerald-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
+            <div className="bg-surface border border-emerald-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
               <div className="absolute left-0 top-3 bottom-3 w-1 bg-emerald-500 rounded-r" />
               <div className="pl-2">
                 <div className="text-xs text-gray-500 font-medium">Thuộc làu làu</div>
@@ -452,7 +452,7 @@ export const NotebookListPage: React.FC = () => {
       )}
 
       {/* 4. Khối Danh sách Sổ tay (Khung lớn bo tròn) */}
-      <div className="bg-white border border-suna rounded-3xl p-6 shadow-xs space-y-6">
+      <div className="bg-surface border border-suna rounded-3xl p-6 shadow-xs space-y-6">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -500,7 +500,7 @@ export const NotebookListPage: React.FC = () => {
               <Dropdown menu={{ items: rootAddMenuItems }} trigger={['click']} placement="bottomRight">
                 <button
                   type="button"
-                  className="h-9 pl-3.5 pr-1 bg-white hover:bg-gray-50 border border-gray-200 rounded-full flex items-center gap-2 text-xs font-medium text-gray-700 shadow-2xs transition-all cursor-pointer"
+                  className="h-9 pl-3.5 pr-1 bg-surface hover:bg-gray-50 border border-gray-200 rounded-full flex items-center gap-2 text-xs font-medium text-gray-700 shadow-2xs transition-all cursor-pointer"
                 >
                   <span>Thêm mới</span>
                   <span className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs shadow-2xs">
@@ -514,7 +514,7 @@ export const NotebookListPage: React.FC = () => {
             <Dropdown menu={{ items: sortMenuItems }} trigger={['click']} placement="bottomRight">
               <button
                 type="button"
-                className="w-9 h-9 rounded-full bg-white hover:bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer shadow-2xs"
+                className="w-9 h-9 rounded-full bg-surface hover:bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer shadow-2xs"
                 title="Sắp xếp danh sách"
               >
                 <FilterOutlined className="text-sm" />

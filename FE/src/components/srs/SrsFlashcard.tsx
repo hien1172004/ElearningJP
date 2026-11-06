@@ -49,7 +49,7 @@ export const SrsFlashcard: React.FC<SrsFlashcardProps> = ({ item, flipped, onFli
           )}
         >
           {/* ===== MẶT TRƯỚC ===== */}
-          <div className="absolute inset-0 rounded-3xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col [backface-visibility:hidden]">
+          <div className="absolute inset-0 rounded-3xl bg-surface border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col [backface-visibility:hidden]">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold">
                 {ITEM_TYPE_LABEL[item.itemType]}
@@ -84,7 +84,7 @@ export const SrsFlashcard: React.FC<SrsFlashcardProps> = ({ item, flipped, onFli
           </div>
 
           {/* ===== MẶT SAU ===== */}
-          <div className="absolute inset-0 rounded-3xl bg-white border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col [backface-visibility:hidden] [transform:rotateY(180deg)] overflow-y-auto">
+          <div className="absolute inset-0 rounded-3xl bg-surface border border-slate-200 shadow-sm p-6 sm:p-8 flex flex-col [backface-visibility:hidden] [transform:rotateY(180deg)] overflow-y-auto">
             <div className="flex items-center justify-between">
               <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold">
                 Nghĩa

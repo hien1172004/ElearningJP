@@ -173,10 +173,10 @@ export const ExamReviewPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-slate-600 dark:text-slate-400 font-medium">Đang tải chi tiết bài làm...</p>
+          <p className="text-slate-600 font-medium">Đang tải chi tiết bài làm...</p>
         </div>
       </div>
     )
@@ -184,11 +184,11 @@ export const ExamReviewPage: React.FC = () => {
 
   if (error || !reviewData || !activeSection) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-surface rounded-2xl shadow-xl border border-slate-200 p-8 max-w-md w-full text-center">
           <XCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Lỗi tải dữ liệu</h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mb-6">{error || 'Không tìm thấy dữ liệu xem lại'}</p>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Lỗi tải dữ liệu</h2>
+          <p className="text-slate-600 text-sm mb-6">{error || 'Không tìm thấy dữ liệu xem lại'}</p>
           <button
             onClick={() => navigate('/exam-history')}
             className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition"
@@ -201,28 +201,28 @@ export const ExamReviewPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
       {/* Top sticky review bar */}
       {/* Top sticky review bar */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs">
+      <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         {/* Hàng 1: Tiêu đề đề thi & Điểm số - Thiết kế gọn gàng trên 1 hàng */}
         <div className="max-w-7xl mx-auto px-4 lg:px-6 py-2.5 flex items-center justify-between gap-3">
           <div className="flex-1 min-w-0 flex items-center gap-2.5">
             <BackButton to={`/exams/result/${reviewData.attemptId}`} className="shrink-0" />
-            <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded text-xs font-black shrink-0">
+            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-black shrink-0">
               {reviewData.jlptLevel}
             </span>
             <span
               className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 ${
                 reviewData.passed
-                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-rose-50 text-rose-700'
               }`}
             >
               {reviewData.passed ? 'ĐẠT (合格)' : 'KHÔNG ĐẠT (不合格)'}
             </span>
             <h1
-              className="text-sm md:text-base font-bold text-slate-800 dark:text-white truncate"
+              className="text-sm md:text-base font-bold text-slate-800 truncate"
               title={reviewData.examTitle}
             >
               {reviewData.examTitle}
@@ -230,25 +230,25 @@ export const ExamReviewPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
-            <div className="hidden sm:flex items-center gap-2.5 text-xs font-semibold bg-slate-100/80 dark:bg-slate-800/80 px-3 py-1 rounded-lg">
-              <span className="text-slate-600 dark:text-slate-300">
+            <div className="hidden sm:flex items-center gap-2.5 text-xs font-semibold bg-slate-100/80 px-3 py-1 rounded-lg">
+              <span className="text-slate-600">
                 Điểm:{' '}
-                <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold text-sm">
+                <strong className="text-indigo-600 font-extrabold text-sm">
                   {reviewData.totalScaledScore ?? 0}
                 </strong>
                 <span className="text-slate-400 font-normal">/{reviewData.totalScaledMaxScore || 180}</span>
               </span>
-              <span className="text-slate-300 dark:text-slate-600">•</span>
-              <span className="text-slate-600 dark:text-slate-300">
+              <span className="text-slate-300">•</span>
+              <span className="text-slate-600">
                 Đúng:{' '}
-                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
+                <strong className="text-emerald-600 font-bold">
                   {reviewData.totalRawScore ?? 0} câu
                 </strong>
               </span>
             </div>
             <button
               onClick={() => navigate('/exam-history')}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition shrink-0"
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition shrink-0"
             >
               Lịch sử thi
             </button>
@@ -257,9 +257,9 @@ export const ExamReviewPage: React.FC = () => {
 
         {/* Hàng 2: Thanh chuyển Phần thi (Section Tabs) siêu gọn gàng */}
         {reviewData.sections.length > 1 && (
-          <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 px-4 lg:px-6 py-1.5">
+          <div className="border-t border-slate-100 bg-slate-50/70 px-4 lg:px-6 py-1.5">
             <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 shrink-0">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0">
                 Phần thi:
               </span>
               {reviewData.sections.map((sec, idx) => {
@@ -277,7 +277,7 @@ export const ExamReviewPage: React.FC = () => {
                     className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 transition flex items-center gap-1.5 ${
                       activeSectionIndex === idx
                         ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700'
+                        : 'bg-surface text-slate-600 hover:bg-slate-100 border border-slate-200/80'
                     }`}
                   >
                     <span>{compactLabel}</span>
@@ -285,7 +285,7 @@ export const ExamReviewPage: React.FC = () => {
                       className={`text-[10px] px-1.5 py-0.2 rounded-full ${
                         activeSectionIndex === idx
                           ? 'bg-indigo-700 text-white'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                          : 'bg-slate-100 text-slate-500'
                       }`}
                     >
                       {sec.questions.length} câu
@@ -302,17 +302,17 @@ export const ExamReviewPage: React.FC = () => {
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Continuous Paper-Style Questions (3 columns) */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-4 md:p-6 mb-4 flex items-center justify-between">
+          <div className="bg-surface rounded-2xl shadow-sm border border-slate-200/80 p-4 md:p-6 mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-slate-800 dark:text-white">
+              <h2 className="text-lg font-bold text-slate-800">
                 {formatSectionName(activeSection?.sessionType, activeSectionIndex + 1, activeSection?.sectionTitle)}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Xem lại câu hỏi, đối chiếu đáp án của bạn và nghiên cứu lời giải chi tiết.
               </p>
             </div>
             {activeSection?.audioUrl && (
-              <div className="flex items-center gap-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800">
+              <div className="flex items-center gap-2 text-xs font-medium text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-200">
                 <Volume2 className="w-4 h-4" />
                 <span>Có file âm thanh phân đoạn</span>
               </div>
@@ -333,22 +333,22 @@ export const ExamReviewPage: React.FC = () => {
               <div key={q.id} className="space-y-4">
                 {/* MONDAI HEADER: Chỉ hiển thị 1 lần duy nhất ở đầu mỗi dạng bài Mondai */}
                 {isNewMondai && (
-                  <div className="bg-white dark:bg-slate-900 border-l-4 border-indigo-600 rounded-2xl p-4 md:p-5 border border-slate-200 dark:border-slate-800 shadow-xs">
+                  <div className="bg-surface border-l-4 border-indigo-600 rounded-2xl p-4 md:p-5 border border-slate-200 shadow-xs">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-black tracking-wide">
                         {mondaiInfo.jp}
                       </span>
-                      <h3 className="text-sm md:text-base font-extrabold text-slate-900 dark:text-white">
+                      <h3 className="text-sm md:text-base font-extrabold text-slate-900">
                         {mondaiInfo.vi}
                       </h3>
                     </div>
                     {q.instructionJp && (
-                      <p className="text-xs md:text-sm text-slate-700 dark:text-slate-300 font-serif mt-1.5 leading-relaxed font-medium">
+                      <p className="text-xs md:text-sm text-slate-700 font-serif mt-1.5 leading-relaxed font-medium">
                         {cleanJapaneseText(q.instructionJp)}
                       </p>
                     )}
                     {q.instructionVi && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         ({q.instructionVi})
                       </p>
                     )}
@@ -358,12 +358,12 @@ export const ExamReviewPage: React.FC = () => {
                 {/* KHUNG CÂU HỎI */}
                 <div
                   id={`review-q-${q.id}`}
-                  className={`bg-white dark:bg-slate-900 rounded-2xl shadow-sm border transition-all ${
+                  className={`bg-surface rounded-2xl shadow-sm border transition-all ${
                     !isAnswered
-                      ? 'border-slate-300 dark:border-slate-700'
+                      ? 'border-slate-300'
                       : isCorrect
-                      ? 'border-emerald-300/80 dark:border-emerald-900/60'
-                      : 'border-rose-300/80 dark:border-rose-900/60'
+                      ? 'border-emerald-300/80'
+                      : 'border-rose-300/80'
                   } p-5 md:p-7 relative`}
                 >
                   {/* Status Ribbon/Badge */}
@@ -373,7 +373,7 @@ export const ExamReviewPage: React.FC = () => {
                         {q.questionNumber}
                       </span>
                       {q.starPosition && (
-                        <span className="text-xs font-black text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                        <span className="text-xs font-black text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg flex items-center gap-1">
                           <Star className="w-3.5 h-3.5 fill-current" />
                           <span>Vị trí dấu sao ★</span>
                         </span>
@@ -382,16 +382,16 @@ export const ExamReviewPage: React.FC = () => {
 
                     <div className="flex items-center gap-2">
                       {!isAnswered ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
                           Chưa trả lời
                         </span>
                       ) : isCorrect ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
                           <CheckCircle2 className="w-4 h-4" />
                           Chính xác
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700">
                           <XCircle className="w-4 h-4" />
                           Chưa chính xác
                         </span>
@@ -409,17 +409,17 @@ export const ExamReviewPage: React.FC = () => {
                     );
                     if (isSamePassageAsPrev) {
                       return (
-                        <div className="mb-5 rounded-xl border border-indigo-200 dark:border-indigo-800/60 overflow-hidden text-xs">
-                          <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 flex items-center justify-between text-indigo-900 dark:text-indigo-300">
+                        <div className="mb-5 rounded-xl border border-indigo-200 overflow-hidden text-xs">
+                          <div className="p-3 bg-indigo-50/70 flex items-center justify-between text-indigo-900">
                             <div className="flex items-center gap-2">
                               <span className="font-bold">📍 Câu hỏi liên kết:</span>
                               <span>Dùng chung bài đọc với câu {prevQ.questionNumber}.</span>
                             </div>
                             <details className="cursor-pointer">
-                              <summary className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold list-none flex items-center gap-1 select-none">
+                              <summary className="text-indigo-600 hover:underline font-bold list-none flex items-center gap-1 select-none">
                                 <span>📖 Xem nhanh nội dung bài đọc</span>
                               </summary>
-                              <div className="mt-3 p-4 bg-white dark:bg-slate-900 rounded-lg border border-indigo-100 dark:border-slate-700 text-sm font-serif leading-relaxed text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
+                              <div className="mt-3 p-4 bg-surface rounded-lg border border-indigo-100 text-sm font-serif leading-relaxed text-slate-800 whitespace-pre-wrap">
                                 {cleanJapaneseText(q.passage.contentJp || '')}
                               </div>
                             </details>
@@ -429,8 +429,8 @@ export const ExamReviewPage: React.FC = () => {
                     }
 
                     return (
-                      <div className="mb-6 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
-                        <div className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-3 flex items-center justify-between">
+                      <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-5">
+                        <div className="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-3 flex items-center justify-between">
                           <span>Bài đọc / Dữ liệu tham chiếu: {cleanPassageTitle(q.passage.title, 'Bài đọc')}</span>
                         </div>
 
@@ -439,7 +439,7 @@ export const ExamReviewPage: React.FC = () => {
                             <img
                               src={q.passage.imageUrl}
                               alt={cleanPassageTitle(q.passage.title, 'Bài đọc')}
-                              className="max-h-96 rounded-lg border border-slate-300 dark:border-slate-600 shadow-sm cursor-pointer"
+                              className="max-h-96 rounded-lg border border-slate-300 shadow-sm cursor-pointer"
                               onClick={() => setZoomImageUrl(q.passage?.imageUrl || null)}
                             />
                             <button
@@ -454,7 +454,7 @@ export const ExamReviewPage: React.FC = () => {
 
                         {q.passage.contentJp && (
                           <div 
-                            className="text-slate-800 dark:text-slate-200 leading-relaxed font-sans p-4 bg-white dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs select-text"
+                            className="text-slate-800 leading-relaxed font-sans p-4 bg-surface rounded-xl border border-slate-200 shadow-2xs select-text"
                             dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(ensurePassageContentWithIntro(q.passage.contentJp, q.passage.title)) }}
                           />
                         )}
@@ -465,7 +465,7 @@ export const ExamReviewPage: React.FC = () => {
 
                 {/* Listening Audio Player for this question */}
                 {q.audioStartTime !== undefined && activeSection.audioUrl && (
-                  <div className="mb-5 p-3.5 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-xl flex flex-wrap items-center justify-between gap-3">
+                  <div className="mb-5 p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handlePlayQuestionAudio(q, activeSection.audioUrl)}
@@ -482,11 +482,11 @@ export const ExamReviewPage: React.FC = () => {
                         )}
                       </button>
                       <div>
-                        <div className="text-xs font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                        <div className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                           <Volume2 className="w-4 h-4 text-indigo-600" />
                           <span>Đoạn ghi âm câu {q.questionNumber}</span>
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                        <div className="text-xs text-slate-500">
                           {q.audioStartTime}s - {q.audioEndTime ?? '?'}s
                         </div>
                       </div>
@@ -500,7 +500,7 @@ export const ExamReviewPage: React.FC = () => {
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition ${
                             showJp
                               ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50'
+                              : 'bg-surface text-slate-700 border-slate-300 hover:bg-slate-50'
                           }`}
                         >
                           {showJp ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -513,7 +513,7 @@ export const ExamReviewPage: React.FC = () => {
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition ${
                             showVi
                               ? 'bg-teal-600 text-white border-teal-600'
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50'
+                              : 'bg-surface text-slate-700 border-slate-300 hover:bg-slate-50'
                           }`}
                         >
                           {showVi ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -526,11 +526,11 @@ export const ExamReviewPage: React.FC = () => {
 
                 {/* Transcript JP Dropdown */}
                 {showJp && q.transcriptJp && (
-                  <div className="mb-4 p-4 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl">
-                    <div className="text-xs font-bold text-amber-900 dark:text-amber-300 mb-1">
+                  <div className="mb-4 p-4 bg-amber-50/60 border border-amber-200 rounded-xl">
+                    <div className="text-xs font-bold text-amber-900 mb-1">
                       Kịch bản hội thoại tiếng Nhật (Transcript JP):
                     </div>
-                    <div className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                    <div className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                       {cleanJapaneseText(q.transcriptJp)}
                     </div>
                   </div>
@@ -538,11 +538,11 @@ export const ExamReviewPage: React.FC = () => {
 
                 {/* Transcript VI Dropdown */}
                 {showVi && q.transcriptVi && (
-                  <div className="mb-4 p-4 bg-teal-50/60 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-900/50 rounded-xl">
-                    <div className="text-xs font-bold text-teal-900 dark:text-teal-300 mb-1">
+                  <div className="mb-4 p-4 bg-teal-50/60 border border-teal-200 rounded-xl">
+                    <div className="text-xs font-bold text-teal-900 mb-1">
                       Bản dịch hội thoại tiếng Việt (Transcript VI):
                     </div>
-                    <div className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                    <div className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                       {q.transcriptVi}
                     </div>
                   </div>
@@ -554,7 +554,7 @@ export const ExamReviewPage: React.FC = () => {
                     <img
                       src={q.imageUrl}
                       alt={`Minh họa câu ${q.questionNumber}`}
-                      className="max-h-64 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm cursor-zoom-in"
+                      className="max-h-64 rounded-xl border border-slate-200 shadow-sm cursor-zoom-in"
                       onClick={() => setZoomImageUrl(q.imageUrl || null)}
                     />
                   </div>
@@ -562,7 +562,7 @@ export const ExamReviewPage: React.FC = () => {
 
                 {/* Question Text */}
                 <div 
-                  className="text-base md:text-lg font-medium text-slate-900 dark:text-slate-100 mb-5 leading-relaxed [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold"
+                  className="text-base md:text-lg font-medium text-slate-900 mb-5 leading-relaxed [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold"
                   dangerouslySetInnerHTML={{ __html: cleanQuestionPrompt(q.questionText, q.instructionJp) }}
                 />
 
@@ -591,24 +591,24 @@ export const ExamReviewPage: React.FC = () => {
                     const isUserChoice = q.studentAnswer?.selectedOptionId === opt.id
                     const isCorrectAnswer = opt.correct
 
-                    let borderClass = 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                    let textClass = 'text-slate-700 dark:text-slate-300'
+                    let borderClass = 'border-slate-200 bg-surface'
+                    let textClass = 'text-slate-700'
                     let badgeNode = null
 
                     if (isCorrectAnswer) {
-                      borderClass = 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 ring-2 ring-emerald-500/30'
-                      textClass = 'text-emerald-900 dark:text-emerald-200 font-semibold'
+                      borderClass = 'border-emerald-500 bg-emerald-50/60 ring-2 ring-emerald-500/30'
+                      textClass = 'text-emerald-900 font-semibold'
                       badgeNode = (
-                        <span className="ml-auto flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/50 px-2.5 py-1 rounded-md">
+                        <span className="ml-auto flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-100 px-2.5 py-1 rounded-md">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Đáp án đúng
                         </span>
                       )
                     } else if (isUserChoice && !isCorrectAnswer) {
-                      borderClass = 'border-rose-400 bg-rose-50/60 dark:bg-rose-950/30 ring-2 ring-rose-400/30'
-                      textClass = 'text-rose-900 dark:text-rose-200 font-medium'
+                      borderClass = 'border-rose-400 bg-rose-50/60 ring-2 ring-rose-400/30'
+                      textClass = 'text-rose-900 font-medium'
                       badgeNode = (
-                        <span className="ml-auto flex items-center gap-1 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/50 px-2.5 py-1 rounded-md">
+                        <span className="ml-auto flex items-center gap-1 text-xs font-bold text-rose-600 bg-rose-100 px-2.5 py-1 rounded-md">
                           <XCircle className="w-3.5 h-3.5" />
                           Lựa chọn của bạn
                         </span>
@@ -626,7 +626,7 @@ export const ExamReviewPage: React.FC = () => {
                               ? 'bg-emerald-600 text-white'
                               : isUserChoice
                               ? 'bg-rose-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                              : 'bg-slate-100 text-slate-700'
                           }`}
                         >
                           {opt.optionKey}
@@ -637,7 +637,7 @@ export const ExamReviewPage: React.FC = () => {
                             <img
                               src={opt.optionImageUrl}
                               alt={`Đáp án ${opt.optionKey}`}
-                              className="max-h-36 rounded border border-slate-200 dark:border-slate-700"
+                              className="max-h-36 rounded border border-slate-200"
                             />
                           </div>
                         ) : (
@@ -657,8 +657,8 @@ export const ExamReviewPage: React.FC = () => {
 
                 {/* Star Position question re-ordering analysis */}
                 {q.starPosition && q.studentAnswer?.orderedOptionIds && (
-                  <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                  <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                    <span className="font-bold text-slate-700">
                       Thứ tự bạn đã sắp xếp:
                     </span>{' '}
                     {q.studentAnswer.orderedOptionIds.map((optId, idx) => {
@@ -669,8 +669,8 @@ export const ExamReviewPage: React.FC = () => {
                           key={optId}
                           className={`inline-block mx-1 px-2 py-0.5 rounded font-medium ${
                             isStarIdx
-                              ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-300'
-                              : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-surface text-slate-700'
                           }`}
                         >
                           {idx + 1}. {opt?.optionText} {isStarIdx ? ' (★ Vị trí sao)' : ''}
@@ -682,12 +682,12 @@ export const ExamReviewPage: React.FC = () => {
 
                 {/* Explanation Section */}
                 {q.explanationVi && (
-                  <div className="mt-5 p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl">
-                    <div className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                  <div className="mt-5 p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl">
+                    <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                       <HelpCircle className="w-4 h-4" />
                       Giải thích đáp án
                     </div>
-                    <div className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                    <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                       {q.explanationVi}
                     </div>
                   </div>
@@ -700,23 +700,23 @@ export const ExamReviewPage: React.FC = () => {
 
         {/* Sticky Question Palette Navigator (1 column) */}
         <div className="lg:col-span-1">
-          <div className="sticky top-[88px] bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200 dark:border-slate-800 p-5 space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+          <div className="sticky top-[88px] bg-surface rounded-2xl shadow-md border border-slate-200 p-5 space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
               Danh sách câu hỏi
             </h3>
 
             {/* Legend */}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+              <div className="flex items-center gap-1.5 text-slate-600">
                 <span className="w-3.5 h-3.5 rounded-md bg-emerald-500"></span>
                 <span>Câu đúng</span>
               </div>
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
+              <div className="flex items-center gap-1.5 text-slate-600">
                 <span className="w-3.5 h-3.5 rounded-md bg-rose-500"></span>
                 <span>Câu sai</span>
               </div>
-              <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-                <span className="w-3.5 h-3.5 rounded-md bg-slate-300 dark:bg-slate-700"></span>
+              <div className="flex items-center gap-1.5 text-slate-600">
+                <span className="w-3.5 h-3.5 rounded-md bg-slate-300"></span>
                 <span>Chưa làm</span>
               </div>
             </div>
@@ -726,8 +726,8 @@ export const ExamReviewPage: React.FC = () => {
               <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                 {listeningReviewMondaiGroups.map((group, gIdx) => (
                   <div key={group.mondaiCode || gIdx} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400 px-0.5">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-extrabold">
                         {group.mondaiTitle}
                       </span>
                     </div>
@@ -738,7 +738,7 @@ export const ExamReviewPage: React.FC = () => {
                           q.studentAnswer?.selectedOptionId != null ||
                           (q.studentAnswer?.orderedOptionIds && q.studentAnswer.orderedOptionIds.length > 0)
 
-                        let colorClass = 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                        let colorClass = 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                         if (isAnswered) {
                           colorClass = isCorrect
                             ? 'bg-emerald-500 text-white font-bold hover:bg-emerald-600'
@@ -771,7 +771,7 @@ export const ExamReviewPage: React.FC = () => {
                     q.studentAnswer?.selectedOptionId != null ||
                     (q.studentAnswer?.orderedOptionIds && q.studentAnswer.orderedOptionIds.length > 0)
 
-                  let colorClass = 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200'
+                  let colorClass = 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                   if (isAnswered) {
                     colorClass = isCorrect
                       ? 'bg-emerald-500 text-white font-bold hover:bg-emerald-600'
@@ -795,10 +795,10 @@ export const ExamReviewPage: React.FC = () => {
               </div>
             )}
 
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+            <div className="pt-3 border-t border-slate-100">
               <button
                 onClick={() => navigate(`/exams/result/${reviewData.attemptId}`)}
-                className="w-full py-2.5 px-4 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-semibold text-xs rounded-xl transition"
+                className="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl transition"
               >
                 Xem lại phiếu điểm
               </button>
@@ -813,7 +813,7 @@ export const ExamReviewPage: React.FC = () => {
           className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setZoomImageUrl(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] overflow-auto bg-white dark:bg-slate-900 rounded-2xl p-2 shadow-2xl">
+          <div className="relative max-w-4xl max-h-[90vh] overflow-auto bg-surface rounded-2xl p-2 shadow-2xl">
             <button
               onClick={() => setZoomImageUrl(null)}
               className="absolute top-4 right-4 bg-slate-900/70 hover:bg-slate-900 text-white p-2 rounded-full transition z-10"

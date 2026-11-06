@@ -81,7 +81,7 @@ export const SpeakingMicControlBar: React.FC<SpeakingMicControlBarProps> = ({
   }
 
   return (
-    <div className="bg-white/95 backdrop-blur-md border-t border-slate-200/90 p-4 sticky bottom-0 z-20 shadow-lg">
+    <div className="bg-surface/95 backdrop-blur-md border-t border-slate-200/90 p-4 sticky bottom-0 z-20 shadow-lg">
       <div className="max-w-3xl mx-auto">
         {/* Banner thông báo trạng thái hoặc lỗi microphone */}
         {speechError && (

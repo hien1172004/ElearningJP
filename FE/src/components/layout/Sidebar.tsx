@@ -431,7 +431,7 @@ export const Sidebar: React.FC = () => {
   // Trên mobile: full-height drawer bắt đầu từ top=0
   // Trên desktop: bắt đầu từ dưới header (top-14 = 56px)
   const sidebarClasses = cn(
-    'flex flex-col bg-white border-r border-gray-200 z-40',
+    'flex flex-col bg-surface border-r border-gray-200 z-40',
     'transition-[width,transform] duration-300 ease-in-out',
     'fixed left-0',
     isMobile

@@ -162,7 +162,7 @@ export const SectionList: React.FC<SectionListProps> = ({
           <div
             key={section.id}
             onClick={() => onManageItems?.(section)}
-            className="flex items-center gap-3 p-3 bg-white rounded-md border border-gray-200/80 hover:border-indigo-300 hover:bg-indigo-50/30 transition group cursor-pointer"
+            className="flex items-center gap-3 p-3 bg-surface rounded-md border border-gray-200/80 hover:border-indigo-300 hover:bg-indigo-50/30 transition group cursor-pointer"
           >
             <div className="shrink-0 w-8 h-8 rounded bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center">
               {section.orderIndex}

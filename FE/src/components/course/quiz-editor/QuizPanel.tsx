@@ -142,7 +142,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
             <div
               key={q.id}
               onClick={() => setViewingQuestion(q)}
-              className="flex items-start gap-2 p-2.5 bg-white rounded-md border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 transition group cursor-pointer"
+              className="flex items-start gap-2 p-2.5 bg-surface rounded-md border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50/30 transition group cursor-pointer"
             >
               <div className="shrink-0 w-7 h-7 rounded bg-cyan-50 text-cyan-700 font-bold text-xs flex items-center justify-center">
                 #{q.orderIndex ?? '?'}
@@ -259,7 +259,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
   if (inline) {
     return (
       <>
-        <div className="bg-white rounded-xl border border-suna shadow-xs p-4 space-y-3">
+        <div className="bg-surface rounded-xl border border-suna shadow-xs p-4 space-y-3">
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <BookOpen className="w-5 h-5 text-cyan-600 shrink-0" />
             <h2 className="flex-1 min-w-0 truncate text-base font-bold text-sumi">
@@ -449,7 +449,7 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
                     key={o.id ?? idx}
                     className={`flex items-start gap-2 p-2 rounded border-2 transition ${isCorrect
                       ? 'border-emerald-400 bg-emerald-50'
-                      : 'border-gray-200 bg-white'
+                      : 'border-gray-200 bg-surface'
                       }`}
                   >
                     <div
@@ -486,7 +486,7 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
               value={question.correctTextAnswer ?? ''}
               readOnly
               placeholder="(Chưa đặt)"
-              className="w-full px-3 py-2 text-sm font-bold text-amber-900 bg-white border-2 border-amber-300 rounded-md focus:outline-none cursor-default"
+              className="w-full px-3 py-2 text-sm font-bold text-amber-900 bg-surface border-2 border-amber-300 rounded-md focus:outline-none cursor-default"
             />
             <p className="text-[11px] text-amber-700/70">
               Hệ thống so sánh không phân biệt hoa/thường, bỏ qua khoảng trắng đầu/cuối.
@@ -520,7 +520,7 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
               const right = data?.right ?? []
 
               return (
-                <div className="rounded-md border border-indigo-200 overflow-hidden bg-white mt-1">
+                <div className="rounded-md border border-indigo-200 overflow-hidden bg-surface mt-1">
                   {/* Header */}
                   <div className="grid grid-cols-2 bg-indigo-100/60 border-b border-indigo-200">
                     <div className="px-3 py-1.5 text-[10px] font-bold text-indigo-700 uppercase tracking-wider border-r border-indigo-200">
@@ -577,7 +577,7 @@ const QuestionViewModal: React.FC<QuestionViewModalProps> = ({ question, onClose
                   )
                 }
                 return (
-                  <div className="rounded-md border-2 border-indigo-200 bg-white divide-y divide-indigo-100 overflow-hidden">
+                  <div className="rounded-md border-2 border-indigo-200 bg-surface divide-y divide-indigo-100 overflow-hidden">
                     {Object.entries(map).map(([matchKey, label]) => (
                       <div
                         key={matchKey}
@@ -907,7 +907,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
                 disabled={!!editing}
                 className={`px-3 py-2 rounded text-xs font-bold border-2 transition ${questionType === t
                   ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-cyan-300'
+                  : 'border-gray-200 bg-surface text-gray-600 hover:border-cyan-300'
                   } ${editing ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 {QUIZ_TYPE_LABEL[t]}

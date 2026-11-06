@@ -34,7 +34,7 @@ export const ItemPreviewModal: React.FC<
         </span>
       }
     >
-      <div className="rounded-md border border-gray-200/80 bg-white p-4 md:p-6 max-h-[75vh] overflow-y-auto">
+      <div className="rounded-md border border-gray-200/80 bg-surface p-4 md:p-6 max-h-[75vh] overflow-y-auto">
         {props.type === 'KANJI' && <KanjiStudyView items={props.items} initialItemId={initialItemId} />}
         {props.type === 'VOCABULARY' && <VocabStudyView items={props.items} initialItemId={initialItemId} />}
         {props.type === 'GRAMMAR' && <GrammarStudyView items={props.items} initialItemId={initialItemId} />}

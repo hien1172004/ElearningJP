@@ -314,7 +314,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(true)}
-                className="w-10 h-10 rounded-full border border-gray-200 bg-white hover:bg-gray-50 active:scale-95 text-gray-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                className="w-10 h-10 rounded-full border border-gray-200 bg-surface hover:bg-gray-50 active:scale-95 text-gray-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
               >
                 <PlusOutlined className="text-base" />
               </button>
@@ -325,7 +325,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
               <button
                 type="button"
                 onClick={toggleSort}
-                className="w-10 h-10 rounded-full border border-gray-200 bg-white hover:bg-gray-50 active:scale-95 text-gray-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                className="w-10 h-10 rounded-full border border-gray-200 bg-surface hover:bg-gray-50 active:scale-95 text-gray-600 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
               >
                 <ArrowUpDown className="w-4 h-4" />
               </button>
@@ -381,7 +381,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                       <div
                         key={`group-${group.id}`}
                         onClick={() => setActiveGroup(group)}
-                        className="bg-white border border-gray-200/90 hover:border-blue-500 hover:shadow-xs rounded-xl p-3.5 transition-all duration-150 cursor-pointer flex flex-col justify-between group"
+                        className="bg-surface border border-gray-200/90 hover:border-blue-500 hover:shadow-xs rounded-xl p-3.5 transition-all duration-150 cursor-pointer flex flex-col justify-between group"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -410,7 +410,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                     <div
                       key={`notebook-${notebook.id}`}
                       onClick={() => !isAdding && handleSelectNotebook(notebook)}
-                      className={`bg-white border rounded-xl p-3.5 transition-all duration-150 flex flex-col justify-between group ${
+                      className={`bg-surface border rounded-xl p-3.5 transition-all duration-150 flex flex-col justify-between group ${
                         isAdding
                           ? 'border-amber-400 bg-amber-50/20 cursor-wait'
                           : 'border-gray-200/90 hover:border-amber-500 hover:shadow-xs cursor-pointer'
@@ -457,7 +457,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                   type="button"
                   disabled={safeCurrentPage <= 1}
                   onClick={() => setCurrentPage(1)}
-                  className="w-7 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer font-bold text-xs"
+                  className="w-7 h-7 rounded border border-gray-200 bg-surface hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer font-bold text-xs"
                   title="Trang đầu"
                 >
                   «
@@ -468,7 +468,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                   type="button"
                   disabled={safeCurrentPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="w-7 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer"
+                  className="w-7 h-7 rounded border border-gray-200 bg-surface hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer"
                   title="Trang trước"
                 >
                   <LeftOutlined style={{ fontSize: 10 }} />
@@ -491,7 +491,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                           className={`w-7 h-7 rounded text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer ${
                             p === safeCurrentPage
                               ? 'border border-blue-500 bg-blue-50 text-blue-600'
-                              : 'border border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
+                              : 'border border-gray-200 bg-surface hover:bg-gray-50 text-gray-700'
                           }`}
                         >
                           {p}
@@ -505,7 +505,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                   type="button"
                   disabled={safeCurrentPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="w-7 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer"
+                  className="w-7 h-7 rounded border border-gray-200 bg-surface hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer"
                   title="Trang kế"
                 >
                   <RightOutlined style={{ fontSize: 10 }} />
@@ -516,7 +516,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                   type="button"
                   disabled={safeCurrentPage >= totalPages}
                   onClick={() => setCurrentPage(totalPages)}
-                  className="w-7 h-7 rounded border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer font-bold text-xs"
+                  className="w-7 h-7 rounded border border-gray-200 bg-surface hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-gray-600 cursor-pointer font-bold text-xs"
                   title="Trang cuối"
                 >
                   »

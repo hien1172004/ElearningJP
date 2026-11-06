@@ -25,7 +25,7 @@ export const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
   const hasFilter = !!keyword || !!selectedLevel
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-md border border-gray-200 shadow-xs">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-3 rounded-md border border-gray-200 shadow-xs">
       {!hideSearch && (
         <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-md border border-gray-200/80 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition">
           <input

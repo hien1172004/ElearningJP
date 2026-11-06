@@ -336,7 +336,7 @@ export const LeaderboardBlock: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {/* Chọn tuần */}
-          <div className="flex items-center gap-1 bg-white rounded-md border border-gray-200/80 shadow-xs p-0.5">
+          <div className="flex items-center gap-1 bg-surface rounded-md border border-gray-200/80 shadow-xs p-0.5">
             <Tooltip title="Tuần trước">
               <Button
                 type="text"

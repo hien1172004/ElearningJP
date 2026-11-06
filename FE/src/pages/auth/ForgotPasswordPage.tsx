@@ -34,7 +34,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-indigo-50 to-slate-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-md shadow-xl border border-gray-200/70 overflow-hidden">
+      <div className="w-full max-w-md bg-surface rounded-md shadow-xl border border-gray-200/70 overflow-hidden">
         <AuthHeader
           badge="Khôi phục mật khẩu"
           title="Quên mật khẩu?"

@@ -264,7 +264,7 @@ export const ReviewModeSelectModal: React.FC<ReviewModeSelectModalProps> = ({
                       className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
                         isChecked
                           ? 'bg-blue-600 border-blue-600 text-white'
-                          : 'border-gray-300 bg-white'
+                          : 'border-gray-300 bg-surface'
                       }`}
                     >
                       {isChecked && <CheckOutlined className="text-[10px]" />}
@@ -292,7 +292,7 @@ export const ReviewModeSelectModal: React.FC<ReviewModeSelectModalProps> = ({
                   className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
                     quizAudioEnabled
                       ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'border-gray-300 bg-white'
+                      : 'border-gray-300 bg-surface'
                   }`}
                 >
                   {quizAudioEnabled && <CheckOutlined className="text-[10px]" />}

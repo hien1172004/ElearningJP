@@ -153,7 +153,7 @@ const Section: React.FC<{ title: string; hint?: string; children: React.ReactNod
   hint,
   children,
 }) => (
-  <section className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+  <section className="bg-surface rounded-xl border border-slate-200 p-4 space-y-3">
     <div>
       <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
       {hint && <p className="text-xs text-slate-500 mt-0.5">{hint}</p>}

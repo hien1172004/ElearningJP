@@ -68,7 +68,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-md p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
+      <div className="bg-surface rounded-md p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
         <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm font-medium">Đang tải nét vẽ & từ ghép chữ Hán...</p>
       </div>
@@ -77,7 +77,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
 
   if (!detail) {
     return (
-      <div className="bg-white rounded-md p-10 border border-gray-200 text-center text-gray-500">
+      <div className="bg-surface rounded-md p-10 border border-gray-200 text-center text-gray-500">
         Không tìm thấy thông tin chữ Hán.
       </div>
     )
@@ -101,7 +101,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
+    <div className="bg-surface rounded-md border border-gray-200/80 shadow-sm p-6 md:p-8 space-y-6">
       {/* 1. Header Chữ Hán */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-gray-100 pb-5">
         <div className="space-y-2 flex-1 min-w-0">
@@ -194,13 +194,13 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
 
         <div className="space-y-4 text-sm justify-center flex flex-col">
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-white p-3 rounded-md border border-gray-200/80 shadow-2xs">
+            <div className="bg-surface p-3 rounded-md border border-gray-200/80 shadow-2xs">
               <span className="text-xs text-gray-400 block font-medium">Số nét</span>
               <span className="text-lg font-black text-indigo-600">
                 {detail.strokeCount || detail.strokes?.length || 0} nét
               </span>
             </div>
-            <div className="bg-white p-3 rounded-md border border-gray-200/80 shadow-2xs">
+            <div className="bg-surface p-3 rounded-md border border-gray-200/80 shadow-2xs">
               <span className="text-xs text-gray-400 block font-medium">Bộ thủ</span>
               <span className="text-lg font-bold text-gray-800">
                 {detail.radicals && detail.radicals.length > 0
@@ -222,7 +222,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
                     key={i}
                     type="button"
                     onClick={() => playSmartAudio({ text: on })}
-                    className="px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-900 font-bold rounded border border-indigo-200 text-xs flex items-center gap-1 transition"
+                    className="px-2.5 py-1 bg-surface hover:bg-indigo-50 text-indigo-900 font-bold rounded border border-indigo-200 text-xs flex items-center gap-1 transition"
                   >
                     {on} <Volume2 className="w-3 h-3 text-indigo-400" />
                   </button>
@@ -245,7 +245,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
                     key={i}
                     type="button"
                     onClick={() => playSmartAudio({ text: kun })}
-                    className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-900 font-bold rounded border border-emerald-200 text-xs flex items-center gap-1 transition"
+                    className="px-2.5 py-1 bg-surface hover:bg-emerald-50 text-emerald-900 font-bold rounded border border-emerald-200 text-xs flex items-center gap-1 transition"
                   >
                     {kun} <Volume2 className="w-3 h-3 text-emerald-400" />
                   </button>
@@ -300,7 +300,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
                       color="#1e293b"
                       overlayInnerStyle={{ padding: '8px 12px', borderRadius: '8px' }}
                     >
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-indigo-50 hover:border-indigo-300 text-gray-800 rounded border border-gray-200/90 text-xs shadow-2xs cursor-pointer transition">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface hover:bg-indigo-50 hover:border-indigo-300 text-gray-800 rounded border border-gray-200/90 text-xs shadow-2xs cursor-pointer transition">
                         <span className="font-serif font-bold text-base text-gray-900 leading-none">{comp.w}</span>
                         {comp.h && (
                           <span className="text-[11px] font-extrabold text-amber-700 uppercase tracking-wide">
@@ -361,7 +361,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
                       <div
                         key={idx}
                         onClick={() => onSelectVocab?.(w.vocabId, w.word)}
-                        className="bg-white p-3 rounded-md border border-gray-200/80 hover:border-indigo-400 hover:shadow-xs transition cursor-pointer flex items-center justify-between group"
+                        className="bg-surface p-3 rounded-md border border-gray-200/80 hover:border-indigo-400 hover:shadow-xs transition cursor-pointer flex items-center justify-between group"
                       >
                         <div>
                           <div className="flex items-baseline gap-2">

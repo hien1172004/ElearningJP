@@ -134,7 +134,7 @@ export const SrsReviewPage: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto pb-16">
       {/* ===== Thanh điều khiển: dự báo ôn tập + Sổ tay/Thoát + số thẻ mỗi phiên ===== */}
-      <section className="bg-white rounded-xl border border-suna shadow-xs p-4 mb-6 space-y-3">
+      <section className="bg-surface rounded-xl border border-suna shadow-xs p-4 mb-6 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* flex-1: lưới 7 ngày giãn hết phần còn lại của hàng; màn hẹp thì nút xuống dòng */}
           <SrsForecastBar className="flex-1 min-w-[15rem]" />
@@ -167,7 +167,7 @@ export const SrsReviewPage: React.FC = () => {
                 className={cn(
                   'px-3 py-1 rounded-md text-xs font-semibold transition',
                   limit === n
-                    ? 'bg-white text-indigo-600 shadow-sm'
+                    ? 'bg-surface text-indigo-600 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700',
                 )}
               >

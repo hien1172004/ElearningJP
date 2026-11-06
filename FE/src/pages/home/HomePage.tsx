@@ -45,7 +45,7 @@ export const HomePage: React.FC = () => {
         </AntdButton>
         <Link
           to="/login"
-          className="px-6 py-3.5 rounded-md bg-white text-gray-800 font-bold border border-gray-200 hover:bg-gray-50 active:scale-98 transition shadow-2xs"
+          className="px-6 py-3.5 rounded-md bg-surface text-gray-800 font-bold border border-gray-200 hover:bg-gray-50 active:scale-98 transition shadow-2xs"
         >
           Bắt đầu học ngay
         </Link>
