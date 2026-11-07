@@ -149,6 +149,13 @@ public final class ApiPaths {
         public static final String LOOKUP = "/lookup";
     }
 
+    /** Luyện viết Kanji: lưu điểm & xem tổng hợp (chuột / bằng tay, trong bài học hoặc từ điển). */
+    public static final class Handwriting {
+        public static final String BASE = "/handwriting";
+        public static final String PRACTICE_LOGS = "/practice-logs";
+        public static final String SUMMARY = "/practice-logs/summary";
+    }
+
     public static final class Study {
         public static final String BASE = "/study";
         /** Heartbeat thời gian học từ FE. */
