@@ -1,19 +1,31 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import HanziWriter from 'hanzi-writer'
 import { useThemeStore } from '@/stores/useThemeStore'
+import { HandInputLayer, HandInputHint } from './HandInputLayer'
+import type { Point } from '@/lib/handTracking'
 import { Play, RotateCcw, Eye, EyeOff, Award, AlertCircle, CheckCircle2, Sparkles, HelpCircle } from 'lucide-react'
 
 interface HanziWriterPracticeProps {
   character: string
   size?: number
   onCompleteQuiz?: (summary: { character: string; totalMistakes: number; accuracyScore: number }) => void
+  /** Nguồn nhập nét: chuột/cảm ứng (mặc định) hoặc bằng tay qua camera */
+  inputMode?: 'mouse' | 'hand'
+  /** Gọi khi camera lỗi và người học chọn quay về dùng chuột */
+  onFallbackToMouse?: () => void
 }
+
+// Viết trên không kém chính xác hơn chuột → nới độ khớp nét của hanzi-writer (mặc định 1)
+const HAND_LENIENCY = 1.6
 
 export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
   character,
   size = 320,
   onCompleteQuiz,
+  inputMode = 'mouse',
+  onFallbackToMouse,
 }) => {
+  const isHand = inputMode === 'hand'
   const containerRef = useRef<HTMLDivElement | null>(null)
   const writerRef = useRef<HanziWriter | null>(null)
 
@@ -118,6 +130,7 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
     writerRef.current.quiz({
       showOutline: showOutline,
       showHintAfterMisses: 2,
+      leniency: isHand ? HAND_LENIENCY : 1,
       onMistake: (strokeData) => {
         setMistakesCount(strokeData.totalMistakes)
       },
@@ -144,6 +157,42 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
       },
     })
   }
+
+  // Đổi nguồn nhập giữa chừng → huỷ bài đang làm để bắt đầu lại với độ khớp tương ứng
+  useEffect(() => {
+    if (!writerRef.current) return
+    try {
+      writerRef.current.cancelQuiz()
+    } catch {
+      // writer chưa sẵn sàng
+    }
+    setQuizStatus('idle')
+    setQuizSummary(null)
+  }, [isHand])
+
+  /**
+   * Chuyển nét tay thành sự kiện chuột giả lập trên SVG của hanzi-writer.
+   * hanzi-writer nghe mousedown/mousemove trên SVG và mouseup trên document,
+   * nên quiz() vẫn tự chấm từng nét như khi dùng chuột.
+   */
+  const dispatchToWriter = useCallback((type: 'mousedown' | 'mousemove' | 'mouseup', p?: Point) => {
+    const svg = containerRef.current?.querySelector('svg')
+    if (!svg) return
+    if (type === 'mouseup') {
+      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+      return
+    }
+    if (!p) return
+    const rect = svg.getBoundingClientRect()
+    svg.dispatchEvent(
+      new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + (p.x / size) * rect.width,
+        clientY: rect.top + (p.y / size) * rect.height,
+      }),
+    )
+  }, [size])
 
   // Chạy hiệu ứng viết mẫu toàn bộ chữ
   const handleAnimate = () => {
@@ -231,6 +280,17 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
           className="relative z-10 w-full h-full cursor-crosshair [&_svg_path]:stroke-linecap-round [&_svg_path]:stroke-linejoin-round"
         />
 
+        {/* Nhập nét bằng tay qua camera (chỉ bật camera khi chọn chế độ này) */}
+        {isHand && (
+          <HandInputLayer
+            size={size}
+            onStrokeStart={(p) => dispatchToWriter('mousedown', p)}
+            onStrokeMove={(p) => dispatchToWriter('mousemove', p)}
+            onStrokeEnd={() => dispatchToWriter('mouseup')}
+            onFallbackToMouse={onFallbackToMouse}
+          />
+        )}
+
         {/* Loading Spinner */}
         {isLoading && (
           <div className="absolute inset-0 z-20 bg-surface/80 backdrop-blur-2xs flex flex-col items-center justify-center gap-2 text-indigo-600">
@@ -300,10 +360,14 @@ export const HanziWriterPractice: React.FC<HanziWriterPracticeProps> = ({
         </button>
       </div>
 
-      <div className="mt-3 flex items-center gap-1 text-[11px] text-gray-400">
-        <HelpCircle className="w-3.5 h-3.5" />
-        <span>Gợi ý: Cầm chuột hoặc bút viết từng nét theo đúng chiều từ trái qua phải, trên xuống dưới.</span>
-      </div>
+      {isHand ? (
+        <HandInputHint />
+      ) : (
+        <div className="mt-3 flex items-center gap-1 text-[11px] text-gray-400">
+          <HelpCircle className="w-3.5 h-3.5" />
+          <span>Gợi ý: Cầm chuột hoặc bút viết từng nét theo đúng chiều từ trái qua phải, trên xuống dưới.</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,8 @@
 ﻿import React, { useState, useEffect, useMemo, useRef } from 'react'
-import { Volume2, ChevronLeft, ChevronRight, BookOpen, SpeakerIcon, PenTool, Loader2 } from 'lucide-react'
+import { Volume2, ChevronLeft, ChevronRight, BookOpen, SpeakerIcon, PenTool, Loader2, Hand } from 'lucide-react'
 import { playSmartAudio, speakJapanese } from '@/utils'
 import { useKanjiItemDetail, useKanjiDetail } from '@/hooks'
+import { useHandwritingSummary } from '@/hooks/useHandwritingPractice'
 import { KanjiPracticeModal } from '@/components/dictionary'
 import type { LessonKanjiItem } from '@/types'
 
@@ -12,6 +13,8 @@ interface KanjiStudyViewProps {
   onSectionDone?: () => void
   /** Mở sẵn tại item này (dùng cho popup xem trước của giáo viên). */
   initialItemId?: number
+  /** Bài học đang học — dùng để lưu điểm luyện viết theo bài (bỏ trống ở popup xem trước) */
+  lessonId?: number
 }
 
 /**
@@ -22,7 +25,7 @@ interface KanjiStudyViewProps {
  * - Dưới: related vocabulary (từ liên quan).
  * - Có nút Next/Prev và phân trang "1/N" ở dưới.
  */
-export const KanjiStudyView: React.FC<KanjiStudyViewProps> = ({ items, onSectionDone, initialItemId }) => {
+export const KanjiStudyView: React.FC<KanjiStudyViewProps> = ({ items, onSectionDone, initialItemId, lessonId }) => {
   // Sắp xếp theo orderIndex
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
@@ -65,7 +68,7 @@ export const KanjiStudyView: React.FC<KanjiStudyViewProps> = ({ items, onSection
     <div className="space-y-6">
       {/* `key` theo item.id → mỗi chữ Hán là 1 instance mới, tránh giữ trạng thái
           (modal đang mở, nét vẽ cũ) của chữ trước khi chuyển trang. */}
-      <KanjiStudyCard key={currentItem.id} item={currentItem} />
+      <KanjiStudyCard key={currentItem.id} item={currentItem} lessonId={lessonId} />
 
       {/* Phân trang */}
       <PaginationFooter
@@ -80,9 +83,10 @@ export const KanjiStudyView: React.FC<KanjiStudyViewProps> = ({ items, onSection
 
 interface KanjiStudyCardProps {
   item: LessonKanjiItem
+  lessonId?: number
 }
 
-const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
+const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item, lessonId }) => {
   // Nếu item chưa có relatedVocabulary (BE chưa truyền bundle vào mapper / DB rỗng) →
   // tự gọi endpoint riêng /lesson-kanji-items/kanji-items/{id} để lấy.
   const needFetch = !item.relatedVocabulary || item.relatedVocabulary.length === 0
@@ -93,10 +97,24 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
 
   // ===== Luyện viết AI (modal KanjiPracticeModal) =====
   const [isPracticeOpen, setIsPracticeOpen] = useState<boolean>(false)
+  // Nguồn nhập khi mở modal: nút "Luyện bằng tay" mở thẳng chế độ viết trên không qua camera
+  const [practiceInput, setPracticeInput] = useState<'mouse' | 'hand'>('mouse')
+  const openPractice = (input: 'mouse' | 'hand') => {
+    setPracticeInput(input)
+    setIsPracticeOpen(true)
+  }
   // `LessonKanjiItem` không chứa field `strokes` → gọi endpoint từ điển để lấy nét chuẩn.
   // Fetch ngay khi thẻ hiển thị (mỗi trang chỉ có 1 chữ Hán) để khi user bấm nút thì modal
   // mở lên đã có sẵn nét chuẩn, không nhấp nháy "0 nét". React Query cache 5 phút.
   const { data: kanjiDetail, isLoading: isKanjiLoading } = useKanjiDetail(item.character)
+  // Điểm luyện viết cao nhất của tôi cho chữ này trong bài (mọi chế độ)
+  const { data: practiceSummary } = useHandwritingSummary(item.character, lessonId, { enabled: lessonId != null })
+  const bestOf = (input: 'MOUSE' | 'AIR') => {
+    const scores = (practiceSummary?.stats ?? []).filter((st) => st.inputMode === input).map((st) => st.bestScore)
+    return scores.length ? Math.round(Math.max(...scores)) : null
+  }
+  const bestMouse = bestOf('MOUSE')
+  const bestAir = bestOf('AIR')
 
   return (
     <>
@@ -137,7 +155,7 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
                 {/* Nút luyện viết AI — mở modal luyện viết & chấm điểm nét (giống trang từ điển) */}
                 <button
                   type="button"
-                  onClick={() => setIsPracticeOpen(true)}
+                  onClick={() => openPractice('mouse')}
                   disabled={isKanjiLoading}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-amber-500 hover:bg-amber-600 active:scale-95 transition text-sm font-semibold text-white shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   title="Luyện viết & Chấm điểm nét AI"
@@ -149,6 +167,27 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
                   )}
                   Luyện viết AI
                 </button>
+
+                {/* Luyện viết bằng tay (Air Writing) — cùng modal, bật sẵn nhập bằng camera */}
+                <button
+                  type="button"
+                  onClick={() => openPractice('hand')}
+                  disabled={isKanjiLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-700 active:scale-95 transition text-sm font-semibold text-white shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  title="Viết chữ trên không bằng ngón trỏ trước webcam và được chấm điểm"
+                >
+                  <Hand className="w-4 h-4" />
+                  Luyện bằng tay
+                </button>
+
+                {(bestMouse != null || bestAir != null) && (
+                  <span className="text-xs text-gray-600 font-medium">
+                    Điểm cao nhất:{' '}
+                    {bestMouse != null && <b className="text-amber-700">🖱 {bestMouse}</b>}
+                    {bestMouse != null && bestAir != null && ' • '}
+                    {bestAir != null && <b className="text-sky-700">✋ {bestAir}</b>}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -241,6 +280,8 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item }) => {
           meaningVi={item.meaningVi}
           hanViet={item.hanViet}
           strokes={kanjiDetail?.strokes ?? []}
+          initialInputMode={practiceInput}
+          lessonId={lessonId}
         />
       )}
     </>

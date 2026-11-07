@@ -5,7 +5,7 @@ Thuật toán so khớp hình học vector (Geometric Vector Matching & Arc-leng
 
 import math
 import re
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 import numpy as np
 
 try:
@@ -244,9 +244,22 @@ def normalize_user_strokes(
     return norm_strokes
 
 
+# Bộ ngưỡng chấm theo nguồn nhập. 'mouse' giữ nguyên giá trị cũ (không đổi hành vi hiện tại);
+# 'air' nới lỏng vì nét viết trên không (camera) rung và kém chính xác hơn chuột.
+SCORING_PROFILES: Dict[str, Dict[str, float]] = {
+    "mouse": {"reversed_deg": 115.0, "correct_deg": 50.0, "shape_max_dist": 35.0, "count_penalty": 15.0},
+    "air": {"reversed_deg": 135.0, "correct_deg": 65.0, "shape_max_dist": 50.0, "count_penalty": 8.0},
+}
+
+
+def get_scoring_profile(input_mode: Optional[str]) -> Dict[str, float]:
+    return SCORING_PROFILES.get(input_mode or "mouse", SCORING_PROFILES["mouse"])
+
+
 def evaluate_stroke_direction(
     user_pts: List[Tuple[float, float]],
     ref_pts: List[Tuple[float, float]],
+    profile: Optional[Dict[str, float]] = None,
 ) -> Tuple[float, bool, bool, float, str, str]:
     """
     Đánh giá chiều của một nét vẽ so với nét chuẩn.
@@ -283,13 +296,16 @@ def evaluate_stroke_direction(
     cos_theta = max(-1.0, min(1.0, cos_theta))
     angle_deg = math.degrees(math.acos(cos_theta))
 
-    # Phát hiện vẽ ngược chiều (góc lệch > 115 độ)
-    is_reversed = angle_deg > 115.0
-    is_direction_correct = angle_deg <= 50.0
+    prof = profile or SCORING_PROFILES["mouse"]
+    reversed_deg = prof["reversed_deg"]
+
+    # Phát hiện vẽ ngược chiều (mặc định góc lệch > 115 độ)
+    is_reversed = angle_deg > reversed_deg
+    is_direction_correct = angle_deg <= prof["correct_deg"]
 
     if is_reversed:
         # Ngược chiều thì điểm chiều rất thấp
-        direction_score = max(0.0, 0.2 * (180.0 - angle_deg) / 65.0)
+        direction_score = max(0.0, 0.2 * (180.0 - angle_deg) / (180.0 - reversed_deg))
     else:
         # Càng gần 0 độ thì điểm càng cao (từ 0.5 đến 1.0)
         direction_score = max(0.0, 1.0 - (angle_deg / 90.0) * 0.6)
@@ -301,6 +317,7 @@ def evaluate_stroke_direction(
 def evaluate_stroke_shape_and_position(
     user_pts: List[Tuple[float, float]],
     ref_pts: List[Tuple[float, float]],
+    max_dist: float = 35.0,
 ) -> float:
     """
     Tính điểm hình dáng và vị trí nét dựa trên khoảng cách Euclidean trung bình giữa các điểm lấy mẫu.
@@ -313,7 +330,7 @@ def evaluate_stroke_shape_and_position(
     mean_dist = float(np.mean(distances))
 
     # Trong viewBox 109x109, lệch dưới 8px coi như rất đẹp (>0.9), lệch trên 35px thì điểm thấp
-    score = max(0.0, min(1.0, 1.0 - (mean_dist / 35.0)))
+    score = max(0.0, min(1.0, 1.0 - (mean_dist / max_dist)))
     return round(score, 2)
 
 
@@ -327,6 +344,7 @@ class StrokeEvaluator:
         char = request.character
         raw_user_strokes = request.user_strokes
         ref_strokes_input = request.reference_strokes or []
+        profile = get_scoring_profile(getattr(request, "input_mode", "mouse"))
 
         # Tự động tra cứu KanjiVGService nếu người dùng không gửi kèm reference_strokes
         if not ref_strokes_input and char:
@@ -391,10 +409,10 @@ class StrokeEvaluator:
             stroke_num = i + 1  # 1-based index
 
             # Đánh giá chiều nét
-            dir_score, is_dir_ok, is_rev, angle, user_lbl, ref_lbl = evaluate_stroke_direction(user_pts, ref_pts)
+            dir_score, is_dir_ok, is_rev, angle, user_lbl, ref_lbl = evaluate_stroke_direction(user_pts, ref_pts, profile)
 
             # Đánh giá hình dáng & vị trí
-            shape_sc = evaluate_stroke_shape_and_position(user_pts, ref_pts)
+            shape_sc = evaluate_stroke_shape_and_position(user_pts, ref_pts, profile["shape_max_dist"])
 
             # Kiểm tra thứ tự nét: So khớp xem nét người dùng vừa vẽ gần với nét chuẩn nào nhất
             best_match_idx = i
@@ -453,7 +471,7 @@ class StrokeEvaluator:
 
         # Nếu vẽ thiếu hoặc thừa nét thì trừ điểm tỷ lệ
         if not count_correct:
-            penalty = abs(total_received - total_expected) * 15.0
+            penalty = abs(total_received - total_expected) * profile["count_penalty"]
             final_overall = max(0.0, base_overall - penalty)
         else:
             final_overall = base_overall

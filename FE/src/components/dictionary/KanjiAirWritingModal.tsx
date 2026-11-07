@@ -22,24 +22,17 @@ import {
 } from 'lucide-react'
 import { aiService, type PredictionItem } from '@/services'
 
-export interface Point {
-  x: number
-  y: number
-}
+import {
+  getDistance,
+  isStrictPointing,
+  loadScript,
+  type NormalizedLandmark,
+  type Point,
+  type Results,
+} from '@/lib/handTracking'
 
-export interface NormalizedLandmark {
-  x: number
-  y: number
-  z: number
-  visibility?: number
-}
-
-export interface Results {
-  image: HTMLVideoElement | HTMLCanvasElement | HTMLImageElement
-  multiHandLandmarks?: NormalizedLandmark[][]
-  multiHandWorldLandmarks?: NormalizedLandmark[][]
-  multiHandedness?: Array<{ index: number; score: number; label: string; displayName?: string }>
-}
+// Giữ export kiểu cũ để các nơi đang import từ file này không bị ảnh hưởng
+export type { NormalizedLandmark, Point, Results }
 
 // Cặp chỉ số các khớp nối xương bàn tay chuẩn của MediaPipe
 const DEFAULT_HAND_CONNECTIONS: Array<[number, number]> = [
@@ -51,10 +44,6 @@ const DEFAULT_HAND_CONNECTIONS: Array<[number, number]> = [
 ]
 
 export type AirGestureType = 'NONE' | 'FIST_CLEAR' | 'SELECT' | 'PEACE_UNDO' | 'THUMBS_SEARCH'
-
-// Helper tính khoảng cách Euclidean giữa 2 landmarks
-const getDistance = (p1: NormalizedLandmark, p2: NormalizedLandmark) =>
-  Math.hypot(p1.x - p2.x, p1.y - p2.y)
 
 // Kiểm tra 1 ngón tay có đang duỗi thẳng hay không
 const isFingerExtended = (
@@ -78,31 +67,6 @@ const isFingerFolded = (
   const distTipWrist = getDistance(tip, wrist)
   const distPipWrist = getDistance(pip, wrist)
   return distTipWrist <= distPipWrist || tip.y >= pip.y - 0.02
-}
-
-// Kiểm tra tư thế VẼ (1 ngón trỏ) - bản NỚI: chấp nhận ngón trỏ cong nhẹ, các ngón khác hơi nhích.
-// Chỉ dùng tỷ lệ khoảng cách (bỏ so tọa độ Y) để không bị rớt nét khi ngón cong.
-const isStrictPointing = (lm: NormalizedLandmark[]) => {
-  const wrist = lm[0]
-  const indexTip = lm[8]
-  const indexPip = lm[6]
-  const middleTip = lm[12]
-  const middlePip = lm[10]
-  const ringTip = lm[16]
-  const ringPip = lm[14]
-  const pinkyTip = lm[20]
-  const pinkyPip = lm[18]
-
-  // Ngón trỏ "vươn ra": đầu ngón xa cổ tay hơn hẳn khớp PIP (tỷ lệ > 1.15 -> nới lỏng)
-  const indexExtended =
-    getDistance(indexTip, wrist) > getDistance(indexPip, wrist) * 1.15
-
-  // Các ngón khác "chưa vươn rõ": đầu ngón không xa cổ tay hơn PIP quá 1.3 lần
-  const middleNotExtended = getDistance(middleTip, wrist) < getDistance(middlePip, wrist) * 1.3
-  const ringNotExtended = getDistance(ringTip, wrist) < getDistance(ringPip, wrist) * 1.3
-  const pinkyNotExtended = getDistance(pinkyTip, wrist) < getDistance(pinkyPip, wrist) * 1.3
-
-  return indexExtended && middleNotExtended && ringNotExtended && pinkyNotExtended
 }
 
 // Nhận diện các cử chỉ tay tĩnh điều khiển (không bao gồm tư thế vẽ 1 ngón trỏ)
@@ -219,22 +183,6 @@ interface KanjiAirWritingModalProps {
   isOpen: boolean
   onClose: () => void
   onSelectCharacter?: (char: string) => void
-}
-
-// Hàm tải script động từ CDN của Google
-const loadScript = (src: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) {
-      resolve()
-      return
-    }
-    const script = document.createElement('script')
-    script.src = src
-    script.crossOrigin = 'anonymous'
-    script.onload = () => resolve()
-    script.onerror = (err) => reject(err)
-    document.head.appendChild(script)
-  })
 }
 
 export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({

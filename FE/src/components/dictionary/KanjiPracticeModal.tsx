@@ -15,6 +15,8 @@ import {
   HelpCircle,
   Search,
   PenLine,
+  MousePointer,
+  Hand,
 } from 'lucide-react'
 import type { CharacterStroke } from '@/types'
 import {
@@ -23,6 +25,10 @@ import {
   type StrokeAssessmentResponse,
 } from '@/services'
 import { HanziWriterPractice } from './HanziWriterPractice'
+import { HandInputLayer, HandInputHint } from './HandInputLayer'
+import type { Point } from '@/lib/handTracking'
+import { useHandwritingSummary, useSaveHandwritingPractice } from '@/hooks/useHandwritingPractice'
+import type { HandwritingPracticeLogPayload } from '@/services'
 
 const PRESET_KANJI: Record<string, { hanViet: string; meaningVi: string; strokes: CharacterStroke[] }> = {
   '二': {
@@ -86,6 +92,10 @@ interface KanjiPracticeModalProps {
   meaningVi?: string
   hanViet?: string
   strokes?: CharacterStroke[]
+  /** Nguồn nhập khi mở modal: chuột (mặc định) hoặc bằng tay qua camera */
+  initialInputMode?: 'mouse' | 'hand'
+  /** Bài học đang mở modal (để lưu điểm luyện viết theo bài); bỏ trống khi luyện ở từ điển */
+  lessonId?: number
 }
 
 export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
@@ -95,6 +105,8 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
   meaningVi: propMeaning,
   hanViet: propHanViet,
   strokes: propStrokes,
+  initialInputMode = 'mouse',
+  lessonId,
 }) => {
   const [selectedChar, setSelectedChar] = useState<string>(propChar || '木')
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -106,6 +118,24 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
   const [assessment, setAssessment] = useState<StrokeAssessmentResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [practiceMode, setPracticeMode] = useState<'guided' | 'freehand'>('guided')
+  // Nguồn nhập nét độc lập với chế độ luyện: cả 2 chế độ đều dùng được chuột hoặc tay
+  const [inputMode, setInputMode] = useState<'mouse' | 'hand'>(initialInputMode)
+  const isHand = inputMode === 'hand'
+  const handStrokeRef = useRef<StrokePoint[]>([])
+
+  // Mỗi lần mở modal lấy lại nguồn nhập ban đầu (vd: nút "Luyện bằng tay" trong bài học)
+  useEffect(() => {
+    if (isOpen) setInputMode(initialInputMode)
+  }, [isOpen, initialInputMode])
+
+  // Đổi nguồn nhập → xoá nét & kết quả cũ (điểm 2 nguồn chấm theo ngưỡng khác nhau)
+  useEffect(() => {
+    handStrokeRef.current = []
+    setUserStrokes([])
+    setCurrentStroke([])
+    setAssessment(null)
+    setErrorMessage(null)
+  }, [inputMode])
 
   // Hỗ trợ gõ chữ bất kỳ & chọn theo cấp độ JLPT
   const [customInputChar, setCustomInputChar] = useState<string>('')
@@ -209,6 +239,32 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
         ? propStrokes
         : activePreset?.strokes || [])
 
+  // ===== Lưu điểm luyện viết (chỉ khi đã đăng nhập) =====
+  // Chỉ gắn bài học cho chữ của bài; chữ khác chọn thêm trong modal tính là luyện ngoài bài học.
+  const logLessonId = lessonId != null && currentChar === propChar ? lessonId : undefined
+  const { data: practiceSummary } = useHandwritingSummary(currentChar, logLessonId, { enabled: isOpen })
+  const savePractice = useSaveHandwritingPractice()
+  const [saveInfo, setSaveInfo] = useState<{ status: 'saving' | 'saved' | 'error'; newBest?: boolean } | null>(null)
+
+  const persistResult = (payload: Omit<HandwritingPracticeLogPayload, 'character' | 'lessonId' | 'inputMode'>) => {
+    if (!savePractice.canSave) return
+    setSaveInfo({ status: 'saving' })
+    savePractice.mutate(
+      { ...payload, character: currentChar, lessonId: logLessonId, inputMode: isHand ? 'AIR' : 'MOUSE' },
+      {
+        onSuccess: (res) => setSaveInfo({ status: 'saved', newBest: res?.newBest }),
+        onError: () => setSaveInfo({ status: 'error' }),
+      },
+    )
+  }
+
+  // Thống kê của đúng chế độ + nguồn nhập đang chọn (2 thang điểm khác nhau, không gộp)
+  const currentModeStat = practiceSummary?.stats.find(
+    (st) =>
+      st.practiceMode === (practiceMode === 'guided' ? 'GUIDED' : 'FREEHAND') &&
+      st.inputMode === (isHand ? 'AIR' : 'MOUSE'),
+  )
+
   const handleSelectChar = (char: string) => {
     loadAnyCharacter(char)
   }
@@ -277,8 +333,9 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
       setCurrentStroke([])
       setAssessment(null)
       setErrorMessage(null)
+      setSaveInfo(null)
     }
-  }, [isOpen, currentChar])
+  }, [isOpen, currentChar, practiceMode])
 
   // 2. Bắt tọa độ chuột / cảm ứng
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent): StrokePoint | null => {
@@ -331,6 +388,27 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
     setCurrentStroke([])
   }
 
+  // 2b. Nét vẽ bằng tay (toạ độ đã quy về pixel ô vẽ bởi HandInputLayer)
+  const handleHandStart = useCallback((p: Point) => {
+    handStrokeRef.current = [{ ...p, t: Date.now() }]
+    setCurrentStroke(handStrokeRef.current)
+  }, [])
+
+  const handleHandMove = useCallback((p: Point) => {
+    handStrokeRef.current = [...handStrokeRef.current, { ...p, t: Date.now() }]
+    setCurrentStroke(handStrokeRef.current)
+  }, [])
+
+  const handleHandEnd = useCallback(() => {
+    const stroke = handStrokeRef.current
+    handStrokeRef.current = []
+    if (stroke.length > 1) {
+      setUserStrokes((prev) => [...prev, stroke])
+      setAssessment(null)
+    }
+    setCurrentStroke([])
+  }, [])
+
   // 3. Các nút điều khiển nét
   const handleUndo = () => {
     if (userStrokes.length > 0) {
@@ -370,10 +448,18 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
         canvas_width: CANVAS_SIZE,
         canvas_height: CANVAS_SIZE,
         reference_strokes: refStrokes,
+        input_mode: isHand ? 'air' : 'mouse',
       })
 
       if (response.success) {
         setAssessment(response)
+        persistResult({
+          practiceMode: 'FREEHAND',
+          totalScore: response.overall_score,
+          strokeCountExpected: response.total_strokes_expected,
+          strokeCountDrawn: response.total_strokes_received,
+          detail: response.stroke_details,
+        })
       } else {
         setErrorMessage(response.feedback || 'Không thể đánh giá nét vẽ.')
       }
@@ -546,8 +632,30 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
             </button>
           </div>
 
-          <div className="text-[11px] font-semibold text-gray-400 hidden sm:block">
-            {practiceMode === 'guided' ? '💡 Nhận diện & phản hồi từng nét tức thì' : '🤖 Chấm điểm tổng thể toàn bộ chữ'}
+          {/* Công tắc nguồn nhập: Chuột / Bằng tay (camera) */}
+          <div className="flex items-center gap-1 p-1 bg-surface rounded-2xl border border-gray-200/80 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setInputMode('mouse')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                !isHand ? 'bg-indigo-600 text-white shadow-xs' : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50/60'
+              }`}
+            >
+              <MousePointer className="w-3.5 h-3.5" />
+              <span>Chuột</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInputMode('hand')}
+              disabled={!navigator.mediaDevices?.getUserMedia}
+              title="Viết trên không bằng ngón trỏ trước webcam"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                isHand ? 'bg-sky-600 text-white shadow-xs' : 'text-gray-600 hover:text-sky-600 hover:bg-sky-50/60'
+              }`}
+            >
+              <Hand className="w-3.5 h-3.5" />
+              <span>Bằng tay</span>
+            </button>
           </div>
         </div>
 
@@ -561,7 +669,15 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                 <HanziWriterPractice
                   character={currentChar}
                   size={CANVAS_SIZE}
+                  inputMode={inputMode}
+                  onFallbackToMouse={() => setInputMode('mouse')}
                   onCompleteQuiz={(summary) => {
+                    persistResult({
+                      practiceMode: 'GUIDED',
+                      totalScore: summary.accuracyScore,
+                      strokeCountExpected: expectedStrokes,
+                      totalMistakes: summary.totalMistakes,
+                    })
                     setAssessment({
                       success: true,
                       character: summary.character,
@@ -644,16 +760,27 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                     ref={canvasRef}
                     width={CANVAS_SIZE}
                     height={CANVAS_SIZE}
-                    className="w-full h-full cursor-crosshair relative z-10"
-                    onMouseDown={handleStart}
-                    onMouseMove={handleMove}
-                    onMouseUp={handleEnd}
-                    onMouseLeave={handleEnd}
-                    onTouchStart={handleStart}
-                    onTouchMove={handleMove}
-                    onTouchEnd={handleEnd}
+                    className={`w-full h-full relative z-10 ${isHand ? '' : 'cursor-crosshair'}`}
+                    onMouseDown={isHand ? undefined : handleStart}
+                    onMouseMove={isHand ? undefined : handleMove}
+                    onMouseUp={isHand ? undefined : handleEnd}
+                    onMouseLeave={isHand ? undefined : handleEnd}
+                    onTouchStart={isHand ? undefined : handleStart}
+                    onTouchMove={isHand ? undefined : handleMove}
+                    onTouchEnd={isHand ? undefined : handleEnd}
                   />
+
+                  {isHand && (
+                    <HandInputLayer
+                      size={CANVAS_SIZE}
+                      onStrokeStart={handleHandStart}
+                      onStrokeMove={handleHandMove}
+                      onStrokeEnd={handleHandEnd}
+                      onFallbackToMouse={() => setInputMode('mouse')}
+                    />
+                  )}
                 </div>
+                {isHand && <HandInputHint />}
 
                 {/* Thanh công cụ vẽ: Xóa nét, Xóa hết, Chấm điểm */}
                 <div className="flex items-center gap-2 mt-4 w-full justify-center">
@@ -708,6 +835,19 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
 
           {/* Cột phải: Bảng kết quả chấm điểm & Nhận xét sư phạm (5 cột) */}
           <div className="lg:col-span-5 flex flex-col space-y-4">
+            {/* Lịch sử luyện chữ này (theo chế độ + nguồn nhập đang chọn) */}
+            {currentModeStat && (
+              <div className="px-4 py-2.5 rounded-md border border-indigo-100 bg-indigo-50/50 text-xs flex items-center justify-between gap-3">
+                <span className="text-gray-600">
+                  {logLessonId != null ? 'Trong bài này' : 'Lịch sử'}: <b className="text-gray-800">{currentModeStat.attempts}</b> lần luyện
+                </span>
+                <span className="text-gray-600">
+                  Cao nhất <b className="text-indigo-700">{Math.round(currentModeStat.bestScore)}</b> • Gần nhất{' '}
+                  <b className="text-gray-800">{Math.round(currentModeStat.lastScore)}</b>
+                  {currentModeStat.passed && <span className="ml-1 text-emerald-600 font-bold">✓ Đạt</span>}
+                </span>
+              </div>
+            )}
             {assessment ? (
               <div className="bg-slate-50/80 rounded-md p-5 border border-gray-200 flex flex-col space-y-4 h-full">
                 {/* Thẻ điểm tổng thể */}
@@ -735,6 +875,20 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                   </div>
 
                   <p className="text-xs font-medium mt-1">{assessment.feedback}</p>
+                  {isHand && (
+                    <p className="text-[10px] font-semibold text-sky-700 mt-1">✋ Viết bằng tay — áp dụng ngưỡng chấm nới</p>
+                  )}
+                  {saveInfo && (
+                    <p className="text-[10px] font-semibold mt-1 text-gray-500">
+                      {saveInfo.status === 'saving'
+                        ? 'Đang lưu kết quả...'
+                        : saveInfo.status === 'error'
+                          ? '⚠️ Chưa lưu được kết quả'
+                          : saveInfo.newBest
+                            ? '🏆 Đã lưu — kỷ lục mới!'
+                            : '✓ Đã lưu vào lịch sử luyện viết'}
+                    </p>
+                  )}
                 </div>
 
                 {/* Danh sách phân tích từng nét */}

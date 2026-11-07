@@ -34,6 +34,8 @@ export interface StrokeAssessmentRequest {
   canvas_width?: number
   canvas_height?: number
   reference_strokes?: ReferenceStroke[]
+  /** 'air' = viết bằng tay qua camera → AI dùng ngưỡng chấm nới. Mặc định 'mouse' */
+  input_mode?: 'mouse' | 'air'
 }
 
 export interface StrokeEvaluationDetail {

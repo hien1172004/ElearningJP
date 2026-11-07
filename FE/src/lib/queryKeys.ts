@@ -121,4 +121,10 @@ export const QUERY_KEYS = {
     unreadCount: ['notifications', 'unread-count'] as const,
     recent: ['notifications', 'recent'] as const,
   },
+  handwriting: {
+    /** Key gốc — invalidate sau khi lưu một lần luyện viết. */
+    all: ['handwriting'] as const,
+    summary: (character: string, lessonId?: number) =>
+      ['handwriting', 'summary', character, lessonId ?? null] as const,
+  },
 }

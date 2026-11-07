@@ -23,6 +23,8 @@ declare module 'hanzi-writer' {
   }
 
   export interface QuizOptions {
+    /** Độ dễ khi so khớp nét (mặc định 1, lớn hơn = dễ hơn) */
+    leniency?: number
     onMistake?: (strokeData: {
       strokeNum: number
       mistakesOnStroke: number
