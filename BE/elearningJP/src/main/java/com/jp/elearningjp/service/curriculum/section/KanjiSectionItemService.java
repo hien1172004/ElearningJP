@@ -313,7 +313,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
 
-        OrderIndexResolver.bulkReorder(
+        currentItems = OrderIndexResolver.bulkReorder(
                 currentItems,
                 request.getItemIds(),
                 LessonKanjiItem::getId,

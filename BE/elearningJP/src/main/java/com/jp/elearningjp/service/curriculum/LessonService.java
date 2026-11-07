@@ -300,7 +300,7 @@ public class LessonService {
         }
 
         // 3) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
-        OrderIndexResolver.bulkReorder(
+        currentLessons = OrderIndexResolver.bulkReorder(
                 currentLessons,
                 request.getLessonIds(),
                 Lesson::getId,

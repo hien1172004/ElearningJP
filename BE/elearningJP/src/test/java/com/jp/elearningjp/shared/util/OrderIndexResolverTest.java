@@ -210,6 +210,26 @@ class OrderIndexResolverTest {
         }
 
         @Test
+        @DisplayName("bulkReorder + persistSequential giữ đúng thứ tự mới (không bị ghi đè về thứ tự cũ)")
+        void reorderThenPersistKeepsNewOrder() {
+            LessonVocabularyItem a = vocab(1), b = vocab(2), c = vocab(3);
+            a.setId(1L); b.setId(2L); c.setId(3L);
+            List<LessonVocabularyItem> list = new ArrayList<>(List.of(a, b, c));
+
+            List<LessonVocabularyItem> ordered = OrderIndexResolver.bulkReorder(
+                    list,
+                    List.of(c.getId(), a.getId(), b.getId()),
+                    LessonVocabularyItem::getId,
+                    LessonVocabularyItem::setOrderIndex
+            );
+            assertThat(ordered).containsExactly(c, a, b);
+
+            OrderIndexResolver.persistSequential(
+                    ordered, LessonVocabularyItem::getId, LessonVocabularyItem::setOrderIndex, () -> {});
+            assertThat(List.of(a, b, c)).extracting(LessonVocabularyItem::getOrderIndex).containsExactly(2, 3, 1);
+        }
+
+        @Test
         @DisplayName("ID không tồn tại → AppException")
         void unknownId() {
             LessonVocabularyItem a = vocab(1);

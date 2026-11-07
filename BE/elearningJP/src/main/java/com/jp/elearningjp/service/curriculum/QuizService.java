@@ -512,7 +512,7 @@ public class QuizService {
         }
 
         // 1) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
-        OrderIndexResolver.bulkReorder(
+        currentQuestions = OrderIndexResolver.bulkReorder(
                 currentQuestions,
                 request.getItemIds(),
                 QuizQuestion::getId,
