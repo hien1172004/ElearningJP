@@ -3,7 +3,7 @@ Tập trung toàn bộ Schemas (Pydantic Models) cho API của AI Service.
 Đảm bảo xác thực dữ liệu chặt chẽ và sinh tài liệu Swagger UI OpenAPI tự động.
 """
 
-from typing import List, Optional
+from typing import Literal, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -67,6 +67,10 @@ class StrokeAssessmentRequest(BaseModel):
     reference_strokes: Optional[List[ReferenceStroke]] = Field(
         None,
         description="Dữ liệu nét chuẩn từ KanjiVG (nếu BE truyền vào). Nếu bỏ trống, AI service sẽ tự tìm trong kho KanjiVG nội bộ.",
+    )
+    input_mode: Literal["mouse", "air"] = Field(
+        "mouse",
+        description="Nguồn nhập nét: 'mouse' (chuột/cảm ứng, ngưỡng chuẩn) hoặc 'air' (viết bằng tay qua camera, ngưỡng nới).",
     )
 
 
