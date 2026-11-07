@@ -1,5 +1,5 @@
 import { confirmDialog } from '@/components/common/ConfirmModal'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Pencil, Plus, BookOpen, Eye, EyeOff, Trash2, Clock, Edit3, Megaphone } from 'lucide-react'
 import { Button as AntdButton, Modal } from 'antd'
@@ -63,6 +63,14 @@ export const TeacherCourseEditorPage: React.FC = () => {
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false)
   const [editingLesson, setEditingLesson] = useState<LessonDetail | null>(null)
   const [deleteLessonTarget, setDeleteLessonTarget] = useState<LessonOutline | null>(null)
+  // Danh sách bài học trong Tổng quan — ô "Bài học" cuộn tới đây + nháy viền nhẹ
+  const lessonListRef = useRef<HTMLDivElement>(null)
+  const [lessonListFlash, setLessonListFlash] = useState(false)
+  useEffect(() => {
+    if (!lessonListFlash) return
+    const t = setTimeout(() => setLessonListFlash(false), 1200)
+    return () => clearTimeout(t)
+  }, [lessonListFlash])
 
   // Đề thi & bài kiểm tra của khóa học
   const [courseExams, setCourseExams] = useState<ExamSummary[]>([])
@@ -188,17 +196,30 @@ export const TeacherCourseEditorPage: React.FC = () => {
   const overviewPanel = (
     <div className={`${CARD} p-6 space-y-4`}>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-        <div
-          onClick={() => (lessons[0] ? select({ view: 'lesson', lessonId: lessons[0].id }) : openCreateLesson())}
+        {/* Ô "Bài học": cuộn xuống danh sách bên dưới (chưa có bài → mở form thêm bài) */}
+        <button
+          type="button"
+          title={lessons.length ? 'Xem danh sách bài học' : 'Thêm bài học đầu tiên'}
+          onClick={() => {
+            if (!lessons.length) return openCreateLesson()
+            lessonListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            setLessonListFlash(true)
+          }}
           className="p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50 transition cursor-pointer"
         >
           <p className="text-2xl font-black text-indigo-600">{lessons.length}</p>
           <p className="text-xs text-gray-500 mt-1">Bài học</p>
-        </div>
-        <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100">
+        </button>
+        {/* Ô "Học viên": mở mục Học viên */}
+        <button
+          type="button"
+          title="Xem học viên của khóa"
+          onClick={() => select({ view: 'students' })}
+          className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50 transition cursor-pointer"
+        >
           <p className="text-2xl font-black text-emerald-600">{course.totalEnrollments ?? 0}</p>
           <p className="text-xs text-gray-500 mt-1">Học viên</p>
-        </div>
+        </button>
         <div className="p-3.5 rounded-xl bg-gray-50/50 border border-gray-200">
           <p className="text-2xl font-black text-gray-600">{course.jlptLevel}</p>
           <p className="text-xs text-gray-500 mt-1">Cấp độ</p>
@@ -221,6 +242,10 @@ export const TeacherCourseEditorPage: React.FC = () => {
           }
         />
       ) : (
+        <div
+          ref={lessonListRef}
+          className={`scroll-mt-24 rounded-xl transition-shadow duration-500 ${lessonListFlash ? 'ring-2 ring-indigo-300 ring-offset-4 ring-offset-surface' : ''}`}
+        >
         <CourseLessonList
           lessons={lessons}
           onOpen={(l) => select({ view: 'lesson', lessonId: l.id })}
@@ -230,6 +255,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
           onMove={handleReorder}
           reorderPending={reorderLessons.isPending}
         />
+        </div>
       )}
       <p className="text-xs text-slate-500">
         Bấm vào một bài để soạn từ vựng, ngữ pháp, chữ Hán và quiz.
