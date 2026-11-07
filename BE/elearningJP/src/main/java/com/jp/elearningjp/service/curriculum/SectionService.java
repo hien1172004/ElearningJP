@@ -285,7 +285,7 @@ public class SectionService {
         }
 
         // Dùng helper generic để gán lại orderIndex theo list mới (1..N)
-        OrderIndexResolver.bulkReorder(
+        currentSections = OrderIndexResolver.bulkReorder(
                 currentSections,
                 request.getItemIds(),
                 LessonSection::getId,

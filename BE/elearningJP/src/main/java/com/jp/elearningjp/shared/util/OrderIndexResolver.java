@@ -4,6 +4,7 @@ import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -191,13 +192,19 @@ public final class OrderIndexResolver {
             }
         }
 
+        // Trả list MỚI theo đúng thứ tự client gửi — caller phải truyền list này cho
+        // persistSequential (hàm đó đánh 1..N theo thứ tự phần tử trong list; truyền list cũ
+        // sẽ ghi đè lại thứ tự ban đầu → reorder "không có tác dụng").
+        List<T> ordered = new ArrayList<>(orderedIds.size());
         int newIdx = 1;
         for (ID id : orderedIds) {
-            idxSetter.accept(byId.get(id), newIdx++);
+            T e = byId.get(id);
+            idxSetter.accept(e, newIdx++);
+            ordered.add(e);
         }
 
         log.info("[ORDER] Bulk reordered {} entity(s) sequentially (1..{})", orderedIds.size(), orderedIds.size());
-        return entities;
+        return ordered;
     }
 
     // ============================================================
