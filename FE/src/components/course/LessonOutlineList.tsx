@@ -1,6 +1,6 @@
-﻿import React from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Circle, PlayCircle, Sparkles, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Circle, PlayCircle, Sparkles, ChevronRight, Mic } from 'lucide-react'
 import { toSlug } from '@/utils'
 import { LESSON_FROM_COURSE_STATE } from '@/utils/lessonNav'
 import type { LessonOutline, ProgressStatus } from '@/types'
@@ -76,6 +76,11 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
                   <h4 className="font-semibold text-sm text-gray-900 truncate">
                     {lesson.title}
                   </h4>
+                  {lesson.hasSpeaking && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+                      <Mic className="w-3 h-3" /> Hội thoại AI
+                    </span>
+                  )}
                   {lesson.hasQuiz && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
                       <Sparkles className="w-3 h-3" /> Có quiz

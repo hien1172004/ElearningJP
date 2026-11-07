@@ -8,6 +8,7 @@ import com.jp.elearningjp.dto.request.curriculum.LessonUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.LessonDetailResponse;
 import com.jp.elearningjp.dto.response.curriculum.LessonOutlineResponse;
+import com.jp.elearningjp.dto.response.curriculum.LessonSpeakingResponse;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.curriculum.LessonSection;
@@ -64,6 +65,7 @@ public class LessonService {
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
     LessonProgressRecorder lessonProgressRecorder;
+    LessonSpeakingService lessonSpeakingService;
 
     /**
      * Xem nội dung chi tiết bài học (kèm sections + items).
@@ -91,6 +93,11 @@ public class LessonService {
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(lesson);
         // "Lesson có quiz" = lesson_quizzes có row chưa bị xoá (refactor V20, source of truth là bảng lesson_quizzes)
         response.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lessonId));
+
+        List<LessonSpeakingResponse> speakingList = lessonSpeakingService.getSpeakingListForLesson(lessonId, currentUser.getId());
+        response.setHasSpeaking(!speakingList.isEmpty());
+        response.setSpeakingScenarios(speakingList);
+        response.setSpeakingScenario(!speakingList.isEmpty() ? speakingList.get(0) : null);
         if (progress != null) {
             response.setStatus(progress.getStatus());
             response.setBestScore(progress.getBestScore());
@@ -223,6 +230,9 @@ public class LessonService {
 
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(updated);
         response.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lessonId));
+        LessonSpeakingResponse speaking = lessonSpeakingService.getSpeakingForLesson(lessonId, null);
+        response.setHasSpeaking(speaking != null);
+        response.setSpeakingScenario(speaking);
 
         // Load sections sau khi update
         List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);

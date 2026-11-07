@@ -19,6 +19,7 @@ import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
 import com.jp.elearningjp.repository.curriculum.CourseRepository;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
+import com.jp.elearningjp.repository.curriculum.LessonSpeakingScenarioRepository;
 import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
@@ -63,11 +64,13 @@ class CurriculumBugfixTest {
     @Mock CourseEnrollmentRepository enrollmentRepository;
     @Mock UserLessonProgressRepository progressRepository;
     @Mock QuizRepository quizRepository;
+    @Mock LessonSpeakingScenarioRepository lessonSpeakingRepo;
     @Mock CourseMapper courseMapper;
     @Mock LessonSectionMapper lessonSectionMapper;
     @Mock CurrentUserService currentUserService;
     @Mock CourseAccessGuard courseAccessGuard;
     @Mock SectionService sectionService;
+    @Mock LessonSpeakingService lessonSpeakingService;
     @Spy LessonMapper lessonMapper = new LessonMapperImpl();
 
     @InjectMocks CourseService courseService;

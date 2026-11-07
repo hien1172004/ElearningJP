@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { ChevronUp, ChevronDown, Pencil, Trash2, Sparkles } from 'lucide-react'
+import React from 'react'
+import { ChevronUp, ChevronDown, Pencil, Trash2, Sparkles, Mic } from 'lucide-react'
 import type { LessonSummary, LessonOutline } from '@/types'
 
 interface LessonCardProps {
@@ -51,6 +51,11 @@ export const LessonCard: React.FC<LessonCardProps> = ({
           <h4 className="font-semibold text-sm text-gray-900 truncate group-hover:text-indigo-700 transition">
             {lesson.title}
           </h4>
+          {lesson.hasSpeaking && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+              <Mic className="w-3 h-3" /> Hội thoại AI
+            </span>
+          )}
           {lesson.hasQuiz && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
               <Sparkles className="w-3 h-3" /> Có quiz

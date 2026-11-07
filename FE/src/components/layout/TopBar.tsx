@@ -81,10 +81,23 @@ export const TopBar: React.FC = () => {
               <NotificationBell />
               <Link
                 to="/profile"
-                className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 max-w-[160px] truncate"
-                title="Tài khoản"
+                className="inline-flex items-center gap-2 text-sm font-semibold px-2.5 py-1.5 rounded-full text-gray-700 hover:bg-gray-100 max-w-[200px] transition border border-transparent hover:border-gray-200"
+                title="Tài khoản cá nhân"
               >
-                <UserIcon className="w-4 h-4 shrink-0" />
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.fullName || 'Avatar'}
+                    className="w-7 h-7 rounded-full object-cover shrink-0 border border-indigo-200 shadow-2xs"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-200 text-xs font-bold">
+                    {user?.fullName ? user.fullName.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
+                  </div>
+                )}
                 <span className="truncate">
                   {user?.fullName || user?.email || 'Tài khoản'}
                 </span>

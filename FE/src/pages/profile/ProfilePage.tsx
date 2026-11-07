@@ -87,6 +87,9 @@ export const ProfilePage: React.FC = () => {
 
     // Gọi API đổi avatar
     changeAvatar(file, {
+      onSuccess: () => {
+        setPreviewAvatar(null)
+      },
       onError: () => {
         setPreviewAvatar(null)
       },

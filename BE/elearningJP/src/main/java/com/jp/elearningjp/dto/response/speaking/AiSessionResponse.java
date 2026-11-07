@@ -19,6 +19,8 @@ public class AiSessionResponse {
 
     private Long userId;
 
+    private Long lessonId;
+
     private AiScenarioResponse scenario;
 
     private AiPracticeMode mode;

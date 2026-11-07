@@ -31,6 +31,7 @@ public class AiSpeakingMapper {
                 .grammar(scenario.getGrammar())
                 .tips(scenario.getTips())
                 .isPremium(scenario.isPremium())
+                .isLessonOnly(scenario.isLessonOnly())
                 .thumbnailUrl(scenario.getThumbnailUrl())
                 .createdAt(scenario.getCreatedAt())
                 .build();
@@ -61,6 +62,7 @@ public class AiSpeakingMapper {
         return AiSessionResponse.builder()
                 .id(session.getId())
                 .userId(session.getUser() != null ? session.getUser().getId() : null)
+                .lessonId(session.getLesson() != null ? session.getLesson().getId() : null)
                 .scenario(toScenarioResponse(session.getScenario()))
                 .mode(session.getMode())
                 .title(session.getTitle())
@@ -76,6 +78,7 @@ public class AiSpeakingMapper {
         return AiSessionResponse.builder()
                 .id(session.getId())
                 .userId(session.getUser() != null ? session.getUser().getId() : null)
+                .lessonId(session.getLesson() != null ? session.getLesson().getId() : null)
                 .scenario(toScenarioResponse(session.getScenario()))
                 .mode(session.getMode())
                 .title(session.getTitle())

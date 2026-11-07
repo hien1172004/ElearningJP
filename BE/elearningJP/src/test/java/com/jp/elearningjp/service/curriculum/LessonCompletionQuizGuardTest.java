@@ -58,6 +58,7 @@ class LessonCompletionQuizGuardTest {
     @Mock EnrollmentService enrollmentService;
     @Mock ApplicationEventPublisher eventPublisher;
     @Mock LessonProgressRecorder progressRecorder;
+    @Mock LessonSpeakingService lessonSpeakingService;
 
     @InjectMocks ProgressService progressService;
     @InjectMocks LessonService lessonService;

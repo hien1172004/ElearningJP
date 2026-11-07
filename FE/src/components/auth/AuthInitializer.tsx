@@ -4,6 +4,8 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { userService } from '@/services/user.service'
 import {
   extractEmailFromToken,
+  extractFullNameFromToken,
+  extractAvatarUrlFromToken,
   extractRolesFromToken,
   extractUserIdFromToken,
 } from '@/utils/jwt'
@@ -21,7 +23,8 @@ function userFromToken(token: string): User | null {
   return {
     id: userId ?? 0,
     email: extractEmailFromToken(token),
-    fullName: '',
+    fullName: extractFullNameFromToken(token),
+    avatarUrl: extractAvatarUrlFromToken(token),
     role: roles[0] ?? 'STUDENT',
     roles,
   }

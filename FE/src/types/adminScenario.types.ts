@@ -21,6 +21,7 @@ export interface AdminScenario {
   grammar: ScenarioGrammar[]
   tips: string[]
   isPremium: boolean
+  isLessonOnly?: boolean
   thumbnailUrl?: string | null
   /** null = kịch bản hệ thống hoặc do khách chưa đăng nhập tạo */
   createdById?: number | null
@@ -46,6 +47,7 @@ export interface AdminScenarioPayload {
   grammar: { pattern: string; meaning: string; example?: string; exampleMeaning?: string }[]
   tips: string[]
   isPremium: boolean
+  isLessonOnly?: boolean
   thumbnailUrl?: string
 }
 

@@ -56,14 +56,16 @@ export function useUpdateProfile() {
 export function useChangeAvatar() {
   const queryClient = useQueryClient()
   const setUser = useAuthStore((s) => s.setUser)
-  const currentUser = useAuthStore((s) => s.user)
 
   return useMutation({
     mutationFn: async (file: File) => {
       return userService.changeAvatar(file)
     },
     onSuccess: (res) => {
-      const newAvatarUrl = res.data
+      // Backend trả về { avatarUrl: string }
+      const rawData = res.data as any
+      const newAvatarUrl = typeof rawData === 'string' ? rawData : rawData?.avatarUrl || ''
+      const currentUser = useAuthStore.getState().user
       if (newAvatarUrl && currentUser) {
         setUser({
           ...currentUser,

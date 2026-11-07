@@ -132,6 +132,9 @@ public class AdminScenarioService {
         s.setGrammar(buildGrammar(r.getGrammar()));
         s.setTips(buildTips(r.getTips()));
         s.setPremium(Boolean.TRUE.equals(r.getIsPremium()));
+        if (r.getIsLessonOnly() != null) {
+            s.setLessonOnly(r.getIsLessonOnly());
+        }
         s.setThumbnailUrl(blankToNull(r.getThumbnailUrl()));
     }
 
@@ -240,6 +243,7 @@ public class AdminScenarioService {
                 .grammar(s.getGrammar())
                 .tips(s.getTips())
                 .isPremium(s.isPremium())
+                .isLessonOnly(s.isLessonOnly())
                 .thumbnailUrl(s.getThumbnailUrl())
                 .createdById(owner != null ? owner.getId() : null)
                 .createdByName(owner != null ? owner.getFullName() : null)

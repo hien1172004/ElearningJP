@@ -56,6 +56,11 @@ public class Lesson extends SoftDeletableEntity {
     @OrderBy("orderIndex ASC")
     private List<LessonSection> sections = new ArrayList<>();
 
+    @Builder.Default
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    private List<LessonSpeakingScenario> speakingScenarios = new ArrayList<>();
+
     public void addSection(LessonSection child) {
         sections.add(child);
         child.setLesson(this);

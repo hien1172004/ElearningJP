@@ -64,6 +64,10 @@ public class AiScenario extends BaseEntity {
     @Builder.Default
     private boolean isPremium = false;
 
+    @Column(name = "is_lesson_only", nullable = false)
+    @Builder.Default
+    private boolean isLessonOnly = false;
+
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 

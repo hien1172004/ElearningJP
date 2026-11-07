@@ -1,6 +1,7 @@
 package com.jp.elearningjp.entity.speaking;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.shared.enums.AiPracticeMode;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
@@ -31,6 +32,10 @@ public class AiSession extends SoftDeletableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scenario_id")
     private AiScenario scenario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lesson_id")
+    private Lesson lesson;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "mode", nullable = false, length = 20)

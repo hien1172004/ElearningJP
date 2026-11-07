@@ -18,6 +18,10 @@ public interface AiSessionRepository extends JpaRepository<AiSession, Long> {
 
     Optional<AiSession> findByIdAndUser_IdAndDeletedFalse(Long id, Long userId);
 
+    Optional<AiSession> findFirstByLesson_IdAndUser_IdAndDeletedFalseOrderByCreatedAtDesc(Long lessonId, Long userId);
+
+    Optional<AiSession> findFirstByLesson_IdAndScenario_IdAndUser_IdAndDeletedFalseOrderByCreatedAtDesc(Long lessonId, Long scenarioId, Long userId);
+
     List<AiSession> findByUser_IdAndDeletedFalseOrderByCreatedAtDesc(Long userId);
 
     Page<AiSession> findByUser_IdAndDeletedFalseOrderByCreatedAtDesc(Long userId, Pageable pageable);

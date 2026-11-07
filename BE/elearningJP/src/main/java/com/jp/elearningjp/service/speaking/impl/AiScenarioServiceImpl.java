@@ -33,16 +33,17 @@ public class AiScenarioServiceImpl implements AiScenarioService {
         List<AiScenario> scenarios;
 
         if (topicId != null && !topicId.isBlank() && jlptLevel != null) {
-            scenarios = scenarioRepository.findByTopicIdAndJlptLevel(topicId.trim(), jlptLevel);
+            scenarios = scenarioRepository.findByTopicIdAndJlptLevelAndIsLessonOnlyFalse(topicId.trim(), jlptLevel);
         } else if (topicId != null && !topicId.isBlank()) {
-            scenarios = scenarioRepository.findByTopicId(topicId.trim());
+            scenarios = scenarioRepository.findByTopicIdAndIsLessonOnlyFalse(topicId.trim());
         } else if (jlptLevel != null) {
-            scenarios = scenarioRepository.findByJlptLevel(jlptLevel);
+            scenarios = scenarioRepository.findByJlptLevelAndIsLessonOnlyFalse(jlptLevel);
         } else {
-            scenarios = scenarioRepository.findAllByOrderByCreatedAtDesc();
+            scenarios = scenarioRepository.findAllByIsLessonOnlyFalseOrderByCreatedAtDesc();
         }
 
         return scenarios.stream()
+                .filter(s -> !s.isLessonOnly() && !"LESSON_PRACTICE".equalsIgnoreCase(s.getTopicId()))
                 .map(speakingMapper::toScenarioResponse)
                 .collect(Collectors.toList());
     }
