@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -13,6 +13,7 @@ import {
   ReadOutlined,
   EditOutlined,
   FileTextOutlined,
+  AudioOutlined,
 } from '@ant-design/icons'
 import { PageHeader, LoadingState, StudyTimerTracker, BackButton } from '@/components/common'
 import { CommentSection } from '@/components/comment'
@@ -21,6 +22,7 @@ import {
   KanjiStudyView,
   VocabStudyView,
   GrammarStudyView,
+  SpeakingStudyView,
   QuizStudyView,
 } from '@/components/course/lesson-viewer'
 import {
@@ -41,7 +43,7 @@ import type {
   LessonGrammarItem,
 } from '@/types'
 
-type PageKind = 'KANJI' | 'VOCAB' | 'GRAMMAR' | 'QUIZ'
+type PageKind = 'KANJI' | 'VOCAB' | 'GRAMMAR' | 'SPEAKING' | 'QUIZ'
 
 interface NavItem {
   kind: PageKind
@@ -179,6 +181,14 @@ export const LessonViewerPage: React.FC = () => {
         })
       }
     }
+    // Luyện nói hội thoại nếu bài học có kịch bản hội thoại
+    if (lesson.speakingScenario) {
+      items.push({
+        kind: 'SPEAKING',
+        label: 'Luyện nói',
+        icon: <AudioOutlined className="text-base" />,
+      })
+    }
     // Test (Quiz) cuối cùng nếu lesson có quiz
     if (lesson.hasQuiz) {
       items.push({
@@ -192,20 +202,99 @@ export const LessonViewerPage: React.FC = () => {
 
   // Trang hiện tại
   const [pageIdx, setPageIdx] = useState(0)
+  // Trạng thái đang trực tiếp luyện nói cùng AI (để tối ưu layout toàn màn hình, chống cuộn 2 thanh scroll)
+  const [isSpeakingChatActive, setIsSpeakingChatActive] = useState(false)
   // Reset khi lesson đổi
   useEffect(() => {
     setPageIdx(0)
+    setIsSpeakingChatActive(false)
   }, [lId])
 
-  // Track trang nào đã "xem xong" (KANJI/VOCAB/GRAMMAR cuối trang, QUIZ đạt passingScore)
-  const [sectionDone, setSectionDone] = useState<SectionDoneMap>({})
+  // Khóa lưu tiến độ các phần trong bài học vào localStorage theo user & lesson
+  const storageKey = user?.id && lId ? `lesson_sections_done_${user.id}_${lId}` : null
+
+  // Kiểm tra tình trạng kịch bản luyện nói từ backend:
+  const speakingList = lesson?.speakingScenarios ?? (lesson?.speakingScenario ? [lesson.speakingScenario] : [])
+  const hasSpeakingScenarios = speakingList.length > 0
+  const areAllSpeakingScenariosDone = hasSpeakingScenarios && speakingList.every((s) => s.completed)
+
+  // Track trang nào đã "xem xong" (KANJI/VOCAB/GRAMMAR cuối trang, SPEAKING đạt mục tiêu, QUIZ đạt passingScore)
+  const [sectionDone, setSectionDone] = useState<SectionDoneMap>(() => {
+    if (!storageKey) return {}
+    try {
+      const saved = localStorage.getItem(storageKey)
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
+
+  // Khi đổi bài học hoặc trạng thái bài học thay đổi
   useEffect(() => {
+    const speakingDoneVal = hasSpeakingScenarios ? areAllSpeakingScenariosDone : true
+
+    if (lesson?.status === 'COMPLETED' && (!hasSpeakingScenarios || areAllSpeakingScenariosDone)) {
+      const allDone: SectionDoneMap = {
+        KANJI: true,
+        VOCAB: true,
+        GRAMMAR: true,
+        SPEAKING: speakingDoneVal,
+        QUIZ: true,
+      }
+      setSectionDone(allDone)
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(allDone))
+        } catch {}
+      }
+      return
+    }
+
+    if (storageKey) {
+      try {
+        const saved = localStorage.getItem(storageKey)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          // Đảm bảo SPEAKING không bị lưu oan là true nếu các tình huống nói chưa xong hết
+          if (hasSpeakingScenarios && !areAllSpeakingScenariosDone) {
+            parsed.SPEAKING = false
+            try {
+              localStorage.setItem(storageKey, JSON.stringify(parsed))
+            } catch {}
+          }
+          setSectionDone(parsed)
+          return
+        }
+      } catch {}
+    }
     setSectionDone({})
-  }, [lId])
+  }, [lId, lesson?.status, storageKey, hasSpeakingScenarios, areAllSpeakingScenariosDone])
 
   const markSectionDone = (kind: PageKind) => {
-    setSectionDone((prev) => (prev[kind] ? prev : { ...prev, [kind]: true }))
+    if (kind === 'SPEAKING' && hasSpeakingScenarios && !areAllSpeakingScenariosDone) {
+      return
+    }
+    setSectionDone((prev) => {
+      if (prev[kind]) return prev
+      const updated = { ...prev, [kind]: true }
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(updated))
+        } catch {}
+      }
+      return updated
+    })
   }
+
+  // Section done map chính xác tuyệt đối:
+  // Nếu bài học có kịch bản nói (SPEAKING), chỉ coi là DONE khi TOÀN BỘ các tình huống luyện nói đều đã hoàn thành.
+  const effectiveSectionDone = useMemo<SectionDoneMap>(() => {
+    const res = { ...sectionDone }
+    if (hasSpeakingScenarios) {
+      res.SPEAKING = Boolean(areAllSpeakingScenariosDone)
+    }
+    return res
+  }, [sectionDone, hasSpeakingScenarios, areAllSpeakingScenariosDone])
 
   const safePageIdx = Math.max(0, Math.min(pageIdx, Math.max(0, navItems.length - 1)))
   const currentPage = navItems[safePageIdx]
@@ -217,37 +306,48 @@ export const LessonViewerPage: React.FC = () => {
    *   (xem trang cuối với Kanji/Vocab/Grammar, đạt passingScore với Quiz).
    */
   const totalKinds = navItems.length
-  const completedKinds = navItems.filter((it) => sectionDone[it.kind]).length
+  const completedKinds = navItems.filter((it) => effectiveSectionDone[it.kind]).length
   const isLessonCompleteable = totalKinds > 0 && completedKinds === totalKinds
   const isCompleted = lesson?.status === 'COMPLETED'
 
+  // Tự động ghi nhận hoàn thành bài học vào Database khi người học hoàn thành tất cả các phần
+  useEffect(() => {
+    if (isLessonCompleteable && !isCompleted && !isPreview && !completeLesson.isPending) {
+      completeLesson.mutate()
+    }
+  }, [isLessonCompleteable, isCompleted, isPreview, completeLesson])
+
   /**
-   * Cơ chế khóa tuần tự: KANJI → VOCAB → GRAMMAR → QUIZ.
-   * - KANJI (luôn mở)
-   * - VOCAB mở khi KANJI đã xong
-   * - GRAMMAR mở khi KANJI + VOCAB đã xong
-   * - QUIZ mở khi cả KANJI + VOCAB + GRAMMAR đều đã xong
-   *
-   * Nếu lesson không có KANJI/VOCAB/GRAMMAR thì chỉ cần các dạng có mặt đều done.
-   * Nếu lesson không có cả 3 dạng lý thuyết → QUIZ mở luôn (chỉ cần 0 dạng prerequisite).
+   * Cơ chế mở khóa tuần tự linh hoạt:
+   * Dựa theo THỨ TỰ THỰC TẾ của các phần trong bài học (navItems):
+   * - Dạng bài đầu tiên luôn luôn mở.
+   * - Mỗi dạng bài tiếp theo sẽ mở khi dạng bài liền trước nó đã hoàn thành.
+   * - Khi bài học đã COMPLETED hoặc chế độ xem trước (preview) -> Mở tất cả 100%.
    */
   const lockedMap = useMemo<Record<PageKind, boolean>>(() => {
-    if (isPreview) return { KANJI: false, VOCAB: false, GRAMMAR: false, QUIZ: false }
-    const hasKanji = navItems.some((it) => it.kind === 'KANJI')
-    const hasVocab = navItems.some((it) => it.kind === 'VOCAB')
-    const hasGrammar = navItems.some((it) => it.kind === 'GRAMMAR')
-
-    const kanjiDone = hasKanji ? !!sectionDone.KANJI : true
-    const vocabDone = hasVocab ? !!sectionDone.VOCAB : true
-    const grammarDone = hasGrammar ? !!sectionDone.GRAMMAR : true
-
-    return {
+    const res: Record<PageKind, boolean> = {
       KANJI: false,
-      VOCAB: !kanjiDone,
-      GRAMMAR: !(kanjiDone && vocabDone),
-      QUIZ: !(kanjiDone && vocabDone && grammarDone),
+      VOCAB: false,
+      GRAMMAR: false,
+      SPEAKING: false,
+      QUIZ: false,
     }
-  }, [navItems, sectionDone, isPreview])
+    if (isPreview || isCompleted) return res
+
+    let prevDone = true
+    for (let i = 0; i < navItems.length; i++) {
+      const it = navItems[i]
+      if (i === 0) {
+        res[it.kind] = false
+      } else {
+        res[it.kind] = !prevDone
+      }
+      if (!effectiveSectionDone[it.kind]) {
+        prevDone = false
+      }
+    }
+    return res
+  }, [navItems, effectiveSectionDone, isPreview, isCompleted])
 
   // Defensive: nếu trang hiện tại bị khóa (vd: pageIdx trỏ tới QUIZ mà chưa đủ điều kiện)
   // → tự động nhảy về trang đầu tiên KHÔNG bị khóa.
@@ -336,6 +436,10 @@ export const LessonViewerPage: React.FC = () => {
 
   const goPrevPage = () => setPageIdx((p) => Math.max(0, p - 1))
   const goNextPage = () => {
+    // Đánh dấu dạng bài hiện tại đã hoàn thành khi người học nhấn Next (chỉ cho lý thuyết KANJI/VOCAB/GRAMMAR; SPEAKING và QUIZ phải đạt điều kiện riêng)
+    if (currentPage && currentPage.kind !== 'SPEAKING' && currentPage.kind !== 'QUIZ') {
+      markSectionDone(currentPage.kind)
+    }
     if (safePageIdx < navItems.length - 1) {
       // Tìm trang kế tiếp KHÔNG bị khóa (bỏ qua các trang bị khóa)
       for (let i = safePageIdx + 1; i < navItems.length; i++) {
@@ -484,8 +588,8 @@ export const LessonViewerPage: React.FC = () => {
 
       <div className="max-w-[1650px] mx-auto px-3 sm:px-4 lg:px-5 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar */}
-          <div className="lg:w-72 xl:w-80 shrink-0">
+          {/* Sidebar cố định khi cuộn trang (Sticky) */}
+          <div className="lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-4 self-start space-y-3">
             <LessonNavSidebar
               courseId={cId}
               courseSlug={course?.slug ?? ''}
@@ -498,7 +602,7 @@ export const LessonViewerPage: React.FC = () => {
               items={navItems}
               currentIdx={safePageIdx}
               onSelect={setPageIdx}
-              doneMap={sectionDone}
+              doneMap={effectiveSectionDone}
               lockedMap={lockedMap}
             />
           </div>
@@ -525,6 +629,16 @@ export const LessonViewerPage: React.FC = () => {
                   onSectionDone={() => markSectionDone('GRAMMAR')}
                 />
               )}
+              {currentPage?.kind === 'SPEAKING' && ((lesson.speakingScenarios && lesson.speakingScenarios.length > 0) || lesson.speakingScenario) && (
+                <SpeakingStudyView
+                  lessonId={lId}
+                  scenario={lesson.speakingScenario || undefined}
+                  scenarios={lesson.speakingScenarios}
+                  previewMode={isPreview}
+                  onSectionDone={() => markSectionDone('SPEAKING')}
+                  onChatModeChange={setIsSpeakingChatActive}
+                />
+              )}
               {currentPage?.kind === 'QUIZ' && (
                 <QuizStudyView
                   lessonId={lId}
@@ -541,35 +655,37 @@ export const LessonViewerPage: React.FC = () => {
               )}
             </div>
 
-            {/* Footer: Back / Next (luôn hiển thị để user điều hướng) */}
-            <div className="mt-6 flex items-center justify-between gap-3 bg-surface rounded-md border border-gray-200/80 shadow-xs p-4">
-              <button
-                type="button"
-                onClick={goPrevPage}
-                disabled={safePageIdx <= 0}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-surface text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Quay lại
-              </button>
-              <AntdButton
-                type="primary"
-                onClick={goNextPage}
-                disabled={nextUnlockedIdx < 0 && !nextLesson}
-                title={
-                  nextUnlockedIdx < 0 && !nextLesson
-                    ? 'Hoàn thành tất cả phần học để tiếp tục'
-                    : undefined
-                }
-                className="!rounded-md !font-semibold"
-              >
-                {nextButtonLabel}
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </AntdButton>
-            </div>
+            {/* Footer: Back / Next (ẩn khi đang ở phòng luyện nói trực tiếp cùng AI để tránh xuất hiện 2 thanh cuộn) */}
+            {!isSpeakingChatActive && (
+              <div className="mt-6 flex items-center justify-between gap-3 bg-surface rounded-md border border-gray-200/80 shadow-xs p-4">
+                <button
+                  type="button"
+                  onClick={goPrevPage}
+                  disabled={safePageIdx <= 0}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-md border border-gray-200 bg-surface text-sm font-semibold text-gray-700 hover:border-indigo-300 hover:text-indigo-600 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Quay lại
+                </button>
+                <AntdButton
+                  type="primary"
+                  onClick={goNextPage}
+                  disabled={nextUnlockedIdx < 0 && !nextLesson}
+                  title={
+                    nextUnlockedIdx < 0 && !nextLesson
+                      ? 'Hoàn thành tất cả phần học để tiếp tục'
+                      : undefined
+                  }
+                  className="!rounded-md !font-semibold"
+                >
+                  {nextButtonLabel}
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </AntdButton>
+              </div>
+            )}
 
-            {/* Bình luận bài học (đặt dưới card nội dung, trên footer Back/Next) */}
-            {lId > 0 && (
+            {/* Bình luận bài học (ẩn khi đang ở phòng luyện nói trực tiếp cùng AI) */}
+            {lId > 0 && !isSpeakingChatActive && (
               <div className="mt-6">
                 <CommentSection targetType="LESSON" targetId={lId} focus={commentFocus} />
               </div>
@@ -601,6 +717,8 @@ function defaultTitleForPage(kind: PageKind): string {
       return 'Từ vựng'
     case 'GRAMMAR':
       return 'Ngữ pháp'
+    case 'SPEAKING':
+      return 'Luyện nói'
     case 'QUIZ':
       return 'Bài kiểm tra'
   }
@@ -662,7 +780,9 @@ const PageNavigator: React.FC<PageNavigatorProps> = ({
               <span className="text-[10px] font-bold text-gray-400 uppercase">Khóa</span>
             ) : (
               <>
-                {active && <span className="text-[10px] font-bold text-indigo-600">ĐANG HỌC</span>}
+                {active && !isDone && (
+                  <span className="text-[10px] font-bold text-indigo-600">ĐANG HỌC</span>
+                )}
                 {isDone && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
               </>
             )}

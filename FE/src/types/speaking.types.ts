@@ -46,6 +46,7 @@ export interface AiScenario {
   grammar: ScenarioGrammar[]
   tips: string[]
   isPremium: boolean
+  isLessonOnly?: boolean
   thumbnailUrl?: string
   createdAt?: string
 }
@@ -71,6 +72,7 @@ export interface AiMessage {
 export interface AiSession {
   id: number
   userId: number
+  lessonId?: number
   scenario?: AiScenario | null
   mode: AiPracticeMode
   title: string
@@ -126,6 +128,7 @@ export interface TranslateResponse {
 export interface CreateSessionRequest {
   mode: AiPracticeMode
   scenarioId?: number
+  lessonId?: number
   topic?: string
   jlptLevel?: JlptLevel
 }

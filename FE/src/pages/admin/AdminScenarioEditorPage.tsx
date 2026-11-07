@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { MessageSquareText, Plus, Trash2 } from 'lucide-react'
-import { Button as AntdButton, Form, Input, Select, Switch } from 'antd'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { MessageSquareText, Plus, Trash2, FileText, Languages, Sparkles } from 'lucide-react'
+import { Button as AntdButton, Form, Input, Select, Switch, Modal } from 'antd'
 import type { AxiosError } from 'axios'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -9,6 +9,8 @@ import { BackButton, LoadingState, EmptyState, MediaUploadField } from '@/compon
 import { SCENARIO_TOPICS } from '@/components/admin'
 import { useAdminScenario, useCreateScenario, useUpdateScenario } from '@/hooks'
 import { toScenarioErrorMessage } from '@/hooks/useAdminScenarios'
+import { speakingService } from '@/services/speaking.service'
+import { lessonSpeakingService } from '@/services/lessonSpeaking.service'
 import type {
   AdminScenario,
   AdminScenarioPayload,
@@ -37,6 +39,7 @@ const schema = z.object({
     .regex(/^$|^https?:\/\/\S+$/, 'URL ảnh không hợp lệ')
     .optional(),
   isPremium: z.boolean().optional(),
+  isLessonOnly: z.boolean().optional(),
   tasks: z
     .array(z.object({ text: z.string().trim().min(1, 'Nội dung nhiệm vụ không được để trống').max(300, 'Mỗi nhiệm vụ tối đa 300 ký tự') }))
     .min(1, 'Cần ít nhất 1 nhiệm vụ')
@@ -85,6 +88,7 @@ const EMPTY_FORM: FormValues = {
   aiRole: '',
   thumbnailUrl: '',
   isPremium: false,
+  isLessonOnly: false,
   tasks: [{ text: '' }],
   sampleDialogue: [],
   vocabulary: [],
@@ -102,6 +106,7 @@ const toFormValues = (s: AdminScenario): FormValues => ({
   aiRole: s.aiRole,
   thumbnailUrl: s.thumbnailUrl ?? '',
   isPremium: s.isPremium,
+  isLessonOnly: s.isLessonOnly ?? false,
   tasks: (s.tasks ?? []).map((t) => ({ text: t.text ?? '' })),
   sampleDialogue: (s.sampleDialogue ?? []).map((d) => {
     const who = (d.speaker ?? d.role ?? '').toUpperCase()
@@ -136,6 +141,7 @@ const toPayload = (v: z.output<typeof schema>): AdminScenarioPayload => ({
   aiRole: v.aiRole,
   thumbnailUrl: emptyToUndefined(v.thumbnailUrl),
   isPremium: !!v.isPremium,
+  isLessonOnly: !!v.isLessonOnly,
   tasks: v.tasks,
   sampleDialogue: v.sampleDialogue.map((d) => ({ ...d, vi: emptyToUndefined(d.vi) })),
   vocabulary: v.vocabulary.map((w) => ({ ...w, reading: emptyToUndefined(w.reading) })),
@@ -148,15 +154,19 @@ const toPayload = (v: z.output<typeof schema>): AdminScenarioPayload => ({
 })
 
 /** Khung một phần của form. */
-const Section: React.FC<{ title: string; hint?: string; children: React.ReactNode }> = ({
-  title,
-  hint,
-  children,
-}) => (
+const Section: React.FC<{
+  title: React.ReactNode
+  hint?: string
+  extra?: React.ReactNode
+  children: React.ReactNode
+}> = ({ title, hint, extra, children }) => (
   <section className="bg-surface rounded-xl border border-slate-200 p-4 space-y-3">
-    <div>
-      <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
-      {hint && <p className="text-xs text-slate-500 mt-0.5">{hint}</p>}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+        {hint && <p className="text-xs text-slate-500 mt-0.5">{hint}</p>}
+      </div>
+      {extra && <div className="flex items-center gap-2">{extra}</div>}
     </div>
     {children}
   </section>
@@ -173,9 +183,56 @@ const RemoveButton: React.FC<{ onClick: () => void; label: string }> = ({ onClic
   />
 )
 
+/** Hàm phân tích cú pháp kịch bản hội thoại thô dạng text thành danh sách câu thoại. */
+function parseDialogueScript(rawText: string): Array<{ speaker: ScenarioSpeaker; text: string; vi?: string }> {
+  const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean)
+  const result: Array<{ speaker: ScenarioSpeaker; text: string; vi?: string }> = []
+
+  lines.forEach((line, index) => {
+    let speaker: ScenarioSpeaker = index % 2 === 0 ? 'AI' : 'USER'
+    let content = line
+
+    // Nhận diện tiền tố: AI:, USER:, A:, B:, Người học:, Bạn:, Maziiko:
+    const speakerMatch = content.match(/^(AI|A|BOT|MAZIIKO|USER|B|NGƯỜI HỌC|BẠN|HỌC VIÊN)\s*[:：\-–]\s*(.*)$/i)
+    if (speakerMatch) {
+      const prefix = speakerMatch[1].toUpperCase()
+      if (['AI', 'A', 'BOT', 'MAZIIKO'].includes(prefix)) {
+        speaker = 'AI'
+      } else {
+        speaker = 'USER'
+      }
+      content = speakerMatch[2].trim()
+    }
+
+    // Tách tiếng Nhật và dịch tiếng Việt nếu có dấu | hoặc //
+    let text = content
+    let vi = ''
+    if (content.includes('|')) {
+      const parts = content.split('|')
+      text = parts[0].trim()
+      vi = parts.slice(1).join('|').trim()
+    } else if (content.includes('//')) {
+      const parts = content.split('//')
+      text = parts[0].trim()
+      vi = parts.slice(1).join('//').trim()
+    }
+
+    if (text) {
+      result.push({ speaker, text, vi: vi || undefined })
+    }
+  })
+
+  return result
+}
+
 export const AdminScenarioEditorPage: React.FC = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const returnLessonId = searchParams.get('returnLessonId')
+  const returnCourseId = searchParams.get('courseId')
+  const initialLevel = searchParams.get('level') as JlptLevel | null
+
   const scenarioId = id && /^\d+$/.test(id) ? Number(id) : null
   const isEdit = scenarioId !== null
 
@@ -185,10 +242,84 @@ export const AdminScenarioEditorPage: React.FC = () => {
   const updateScenario = useUpdateScenario(scenarioId ?? 0)
   const saving = createScenario.isPending || updateScenario.isPending
 
-  // Nạp dữ liệu kịch bản vào form khi mở trang sửa
+  // State nhập nhanh hội thoại
+  const [isQuickModalOpen, setIsQuickModalOpen] = useState(false)
+  const [quickScriptText, setQuickScriptText] = useState('')
+  const [isTranslatingDialogue, setIsTranslatingDialogue] = useState(false)
+
+  // Áp dụng đoạn script thô vào form
+  const handleApplyQuickScript = () => {
+    const parsed = parseDialogueScript(quickScriptText)
+    if (parsed.length === 0) {
+      toast.error('Không tìm thấy câu thoại hợp lệ trong văn bản.')
+      return
+    }
+    if (parsed.length > 30) {
+      toast.error('Kịch bản tối đa 30 câu thoại. Vui lòng rút gọn.')
+      return
+    }
+
+    form.setFieldsValue({ sampleDialogue: parsed })
+    setIsQuickModalOpen(false)
+    setQuickScriptText('')
+    toast.success(`Đã áp dụng thành công ${parsed.length} câu thoại vào kịch bản!`)
+  }
+
+  // Dịch tự động tất cả các câu thoại chưa có tiếng Việt
+  const handleAutoTranslateAll = async () => {
+    const dialogue = (form.getFieldValue('sampleDialogue') as Array<{ speaker: ScenarioSpeaker; text: string; vi?: string }>) || []
+    if (dialogue.length === 0) {
+      toast.info('Chưa có câu thoại nào để dịch.')
+      return
+    }
+
+    const untranslatedIndices = dialogue
+      .map((d, idx) => ({ idx, text: d.text, vi: d.vi }))
+      .filter((d) => d.text && !d.vi)
+
+    if (untranslatedIndices.length === 0) {
+      toast.info('Tất cả các câu thoại đều đã có nghĩa tiếng Việt.')
+      return
+    }
+
+    setIsTranslatingDialogue(true)
+    const toastId = toast.loading(`Đang dùng AI dịch tự động ${untranslatedIndices.length} câu thoại...`)
+    try {
+      const updated = [...dialogue]
+      await Promise.all(
+        untranslatedIndices.map(async (item) => {
+          try {
+            const res = await speakingService.translate(item.text)
+            updated[item.idx] = { ...updated[item.idx], vi: res.translatedText }
+          } catch (e) {
+            console.error('Lỗi dịch câu:', item.text, e)
+          }
+        }),
+      )
+      form.setFieldsValue({ sampleDialogue: updated })
+      toast.success('Dịch tự động thành công!', { id: toastId })
+    } catch {
+      toast.error('Có lỗi xảy ra khi dịch tự động.', { id: toastId })
+    } finally {
+      setIsTranslatingDialogue(false)
+    }
+  }
+
+  // Nạp dữ liệu kịch bản vào form khi mở trang sửa hoặc gán level mặc định khi tạo mới
   useEffect(() => {
-    if (scenario) form.setFieldsValue(toFormValues(scenario))
-  }, [scenario, form])
+    if (scenario) {
+      form.setFieldsValue(toFormValues(scenario))
+    } else {
+      const initVals: Partial<FormValues> = {}
+      if (initialLevel && LEVELS.includes(initialLevel)) {
+        initVals.jlptLevel = initialLevel
+      }
+      if (returnLessonId) {
+        initVals.isLessonOnly = true
+      }
+      form.setFieldsValue(initVals)
+    }
+  }, [scenario, isEdit, initialLevel, returnLessonId, form])
 
   const handleFinish = (values: FormValues) => {
     const parsed = schema.safeParse(values)
@@ -197,12 +328,39 @@ export const AdminScenarioEditorPage: React.FC = () => {
       return
     }
     const payload = toPayload(parsed.data)
-    const onSuccess = () => navigate('/admin/scenarios')
+    if (returnLessonId) {
+      payload.isLessonOnly = true
+    }
+    const onSuccess = async (res: any) => {
+      const createdId = res?.data?.id
+      if (returnLessonId && createdId) {
+        try {
+          await lessonSpeakingService.assignSpeakingScenario(Number(returnLessonId), {
+            scenarioId: createdId,
+            minTurns: 3,
+          })
+          toast.success('Đã tự động gán kịch bản vào bài học!')
+        } catch (e) {
+          console.error('Lỗi tự động gán kịch bản vào bài học:', e)
+        }
+        if (returnCourseId) {
+          navigate(`/teacher/courses/${returnCourseId}/lessons/${returnLessonId}?tab=speaking`)
+          return
+        }
+        navigate(-1)
+        return
+      }
+      navigate('/admin/scenarios')
+    }
     if (isEdit) updateScenario.mutate(payload, { onSuccess })
     else createScenario.mutate(payload, { onSuccess })
   }
 
-  const backButton = <BackButton to="/admin/scenarios" />
+  const backToUrl = returnLessonId && returnCourseId
+    ? `/teacher/courses/${returnCourseId}/lessons/${returnLessonId}?tab=speaking`
+    : '/admin/scenarios'
+  const backLabel = returnLessonId ? 'Quay lại bài học' : 'Quay lại danh sách'
+  const backButton = <BackButton to={backToUrl} label={backLabel} />
 
   if (isEdit && isLoading) {
     return (
@@ -233,12 +391,22 @@ export const AdminScenarioEditorPage: React.FC = () => {
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
       <div>{backButton}</div>
 
+      {returnLessonId && (
+        <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-indigo-900 font-medium">
+            <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>
+              Đang soạn kịch bản riêng cho <strong>Bài học #{returnLessonId}</strong>. Sau khi hoàn tất lưu, kịch bản sẽ tự động được gán vào bài học của bạn.
+            </span>
+          </div>
+        </div>
+      )}
+
       <Form<FormValues>
         form={form}
         layout="vertical"
-        initialValues={EMPTY_FORM}
+        initialValues={initialLevel && LEVELS.includes(initialLevel) ? { ...EMPTY_FORM, jlptLevel: initialLevel } : EMPTY_FORM}
         onFinish={handleFinish}
-        requiredMark={false}
         className="space-y-4"
       >
         {/* ======================== Thông tin chung ======================== */}
@@ -287,9 +455,17 @@ export const AdminScenarioEditorPage: React.FC = () => {
               placeholder="Bối cảnh người học sẽ gặp, VD: Bạn vừa bước vào một quán mì Ramen ở Tokyo..."
             />
           </Form.Item>
-          <div className="grid md:grid-cols-[1fr_auto] gap-x-4 items-end">
-            <Form.Item name="thumbnailUrl" label="Ảnh bìa (không bắt buộc)">
+          <div className="grid md:grid-cols-[1fr_auto_auto] gap-x-4 items-end">
+            <Form.Item name="thumbnailUrl" label="Ảnh bìa">
               <MediaUploadField accept="image" folder="elearningJP/scenarios/thumbnails" />
+            </Form.Item>
+            <Form.Item
+              name="isLessonOnly"
+              label="Dành riêng bài học"
+              valuePropName="checked"
+              tooltip="Nếu bật, kịch bản chỉ dùng trong các bài học, không xuất hiện ở sảnh Luyện hội thoại tự do."
+            >
+              <Switch />
             </Form.Item>
             <Form.Item name="isPremium" label="Premium" valuePropName="checked">
               <Switch />
@@ -298,7 +474,14 @@ export const AdminScenarioEditorPage: React.FC = () => {
         </Section>
 
         {/* ======================== Nhiệm vụ ======================== */}
-        <Section title="Nhiệm vụ" hint="Những việc người học cần hoàn thành trong hội thoại (1–10 nhiệm vụ).">
+        <Section
+          title={
+            <span>
+              Nhiệm vụ <span className="text-rose-500">*</span>
+            </span>
+          }
+          hint="Những việc người học cần hoàn thành trong hội thoại (1–10 nhiệm vụ)."
+        >
           <Form.List name="tasks">
             {(fields, { add, remove }) => (
               <div className="space-y-2">
@@ -326,7 +509,29 @@ export const AdminScenarioEditorPage: React.FC = () => {
         </Section>
 
         {/* ======================== Hội thoại mẫu ======================== */}
-        <Section title="Hội thoại mẫu" hint="Các câu thoại mẫu giữa AI và người học (tối đa 30 câu).">
+        <Section
+          title="Hội thoại mẫu"
+          hint="Các câu thoại mẫu giữa AI và người học (tối đa 30 câu)."
+          extra={
+            <div className="flex flex-wrap items-center gap-2">
+              <AntdButton
+                size="small"
+                icon={<FileText className="w-3.5 h-3.5" />}
+                onClick={() => setIsQuickModalOpen(true)}
+              >
+                Nhập nhanh kịch bản
+              </AntdButton>
+              <AntdButton
+                size="small"
+                icon={<Languages className="w-3.5 h-3.5" />}
+                loading={isTranslatingDialogue}
+                onClick={handleAutoTranslateAll}
+              >
+                Dịch tự động tiếng Việt
+              </AntdButton>
+            </div>
+          }
+        >
           <Form.List name="sampleDialogue">
             {(fields, { add, remove }) => (
               <div className="space-y-2">
@@ -348,7 +553,7 @@ export const AdminScenarioEditorPage: React.FC = () => {
                       <Input maxLength={500} placeholder="Câu tiếng Nhật" />
                     </Form.Item>
                     <Form.Item name={[field.name, 'vi']} className="flex-1 mb-0">
-                      <Input maxLength={500} placeholder="Nghĩa tiếng Việt (không bắt buộc)" />
+                      <Input maxLength={500} placeholder="Nghĩa tiếng Việt" />
                     </Form.Item>
                     <RemoveButton onClick={() => remove(field.name)} label="Xóa câu thoại" />
                   </div>
@@ -433,10 +638,10 @@ export const AdminScenarioEditorPage: React.FC = () => {
                         <Input maxLength={300} placeholder="Ý nghĩa" />
                       </Form.Item>
                       <Form.Item name={[field.name, 'example']} className="mb-0">
-                        <Input maxLength={300} placeholder="Ví dụ (không bắt buộc)" />
+                        <Input maxLength={300} placeholder="Ví dụ" />
                       </Form.Item>
                       <Form.Item name={[field.name, 'exampleMeaning']} className="mb-0">
-                        <Input maxLength={300} placeholder="Nghĩa ví dụ (không bắt buộc)" />
+                        <Input maxLength={300} placeholder="Nghĩa ví dụ" />
                       </Form.Item>
                     </div>
                     <RemoveButton onClick={() => remove(field.name)} label="Xóa mẫu ngữ pháp" />
@@ -492,6 +697,104 @@ export const AdminScenarioEditorPage: React.FC = () => {
           </AntdButton>
         </div>
       </Form>
+
+      {/* Modal nhập nhanh kịch bản hội thoại */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-base font-semibold text-slate-800">
+            <FileText className="w-5 h-5 text-indigo-600" />
+            <span>Nhập nhanh kịch bản hội thoại</span>
+          </div>
+        }
+        open={isQuickModalOpen}
+        onCancel={() => setIsQuickModalOpen(false)}
+        width={680}
+        footer={[
+          <AntdButton key="cancel" onClick={() => setIsQuickModalOpen(false)}>
+            Huỷ
+          </AntdButton>,
+          <AntdButton
+            key="apply"
+            type="primary"
+            icon={<Sparkles className="w-4 h-4" />}
+            onClick={handleApplyQuickScript}
+          >
+            Áp dụng vào kịch bản
+          </AntdButton>,
+        ]}
+      >
+        <div className="space-y-4 py-2">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-600 space-y-1.5">
+            <p className="font-semibold text-slate-700">💡 Hướng dẫn định dạng (Hệ thống tự động phân tích):</p>
+            <ul className="list-disc list-inside space-y-0.5 text-slate-600">
+              <li>
+                Dạng chuẩn: <code>AI: [Câu tiếng Nhật] | [Dịch tiếng Việt]</code> hoặc <code>USER: ...</code>
+              </li>
+              <li>
+                Hỗ trợ tiền tố: <code>A:</code> / <code>B:</code>, <code>Bot:</code> / <code>Bạn:</code>
+              </li>
+              <li>Nếu không có tiền tố người nói, hệ thống sẽ tự xen kẽ <b>AI</b> và <b>Người học</b> theo thứ tự dòng.</li>
+              <li>Dấu gạch đứng <code>|</code> hoặc <code>//</code> dùng để phân tách câu tiếng Nhật và dịch tiếng Việt.</li>
+            </ul>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-slate-700">Chèn kịch bản mẫu:</span>
+              <div className="flex flex-wrap gap-1.5">
+                <AntdButton
+                  size="small"
+                  onClick={() =>
+                    setQuickScriptText(
+                      `AI: いらっしゃいませ！何名様ですか？ | Xin chào quý khách! Quý khách đi mấy người ạ?\nUSER: 一人です。 | Tôi đi một mình.\nAI: こちらへどうぞ。ご注文はお決まりですか？ | Mời anh vào lối này. Anh đã chọn món chưa ạ?\nUSER: 醤油ラーメンを一つください。 | Cho tôi một bát Shoyu Ramen.\nAI: かしこまりました。大盛りにしますか？ | Vâng tôi hiểu rồi. Anh có muốn làm bát lớn không ạ?\nUSER: 普通でお願いします。 | Cho tôi phần bình thường thôi nhé.`
+                    )
+                  }
+                >
+                  N5 Gọi món
+                </AntdButton>
+                <AntdButton
+                  size="small"
+                  onClick={() =>
+                    setQuickScriptText(
+                      `AI: すみません、何かお困りですか？ | Xin lỗi, bạn có cần giúp đỡ gì không?\nUSER: すみません、東京駅行きの電車はどのホームですか？ | Xin lỗi, tàu đi ga Tokyo ở sân ga nào vậy?\nAI: 3番線ですよ。あちらの階段を上がってください。 | Là sân ga số 3 nhé. Bạn hãy lên cầu thang đằng kia.\nUSER: ありがとうございます。次の電車は何時ですか？ | Cảm ơn bạn. Chuyến tàu tiếp theo lúc mấy giờ vậy?\nAI: 10時15分発の快速です。あと5分で来ますよ。 | Là tàu nhanh khởi hành lúc 10h15. Còn 5 phút nữa tàu đến.`
+                    )
+                  }
+                >
+                  N4 Hỏi đường
+                </AntdButton>
+                <AntdButton
+                  size="small"
+                  onClick={() =>
+                    setQuickScriptText(
+                      `USER: 部長、今お時間よろしいでしょうか。 | Thưa trưởng phòng, bây giờ anh có tiện không ạ?\nAI: はい、何でしょうか。 | Được chứ, có chuyện gì thế?\nUSER: 実は朝から熱がありまして、病院に行きたいのですが。 | Thật ra từ sáng em bị sốt, muốn xin phép đi bệnh viện khám ạ.\nAI: それはいけませんね。仕事の引き継ぎは大丈夫ですか？ | Thế thì không ổn rồi. Đã bàn giao công việc chưa?\nUSER: 今日の会議の資料は田中さんに引き継ぎました。 | Tài liệu cuộc họp em đã bàn giao cho anh Tanaka rồi ạ.\nAI: 分かりました。無理をしないでゆっくり休んでください。 | Tôi hiểu rồi. Nghỉ ngơi cho lại sức nhé.`
+                    )
+                  }
+                >
+                  N3 Xin phép
+                </AntdButton>
+                <AntdButton
+                  size="small"
+                  onClick={() =>
+                    setQuickScriptText(
+                      `AI: 本日は面接にお越しいただき、ありがとうございます。簡単に自己紹介をお願いできますか？ | Cảm ơn bạn đã đến phỏng vấn hôm nay. Bạn có thể giới thiệu ngắn gọn về bản thân không?\nUSER: はじめまして、グエンと申します。大学で情報工学を専攻し、2年間ウェブ開発に携わってまいりました。 | Xin chào, tôi tên là Nguyen. Tôi tốt nghiệp ngành CNTT và đã có 2 năm kinh nghiệm làm phát triển web.\nAI: ありがとうございます。弊社の志望動機についてもお聞かせいただけますでしょうか。 | Cảm ơn bạn. Bạn có thể chia sẻ thêm về lý do ứng tuyển vào công ty chúng tôi được không?\nUSER: 御社の革新的なAI教育プラットフォームに強く共感し、自分の開発スキルを活かして貢献したいと考え応募いたしました。 | Tôi rất ấn tượng với nền tảng giáo dục AI tiên tiến của quý công ty và muốn đem kinh nghiệm lập trình của mình để đóng góp cho sự phát triển của dự án.`
+                    )
+                  }
+                >
+                  N2 Phỏng vấn
+                </AntdButton>
+              </div>
+            </div>
+
+            <Input.TextArea
+              rows={11}
+              value={quickScriptText}
+              onChange={(e) => setQuickScriptText(e.target.value)}
+              placeholder={`Dán kịch bản thoại tại đây. Ví dụ:\nAI: こんにちは！ | Xin chào!\nUSER: こんにちは、はじめまして。 | Chào bạn, rất vui được gặp bạn.`}
+              className="font-mono text-xs"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

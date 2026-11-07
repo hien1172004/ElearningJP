@@ -98,6 +98,24 @@ export function extractEmailFromToken(token: string | null | undefined): string 
 }
 
 /**
+ * Trích fullName từ claim "fullName" (nếu có).
+ */
+export function extractFullNameFromToken(token: string | null | undefined): string {
+  if (!token) return ''
+  const payload = decodeJwt(token)
+  return typeof payload?.fullName === 'string' ? payload.fullName : ''
+}
+
+/**
+ * Trích avatarUrl từ claim "avatarUrl" (nếu có).
+ */
+export function extractAvatarUrlFromToken(token: string | null | undefined): string | undefined {
+  if (!token) return undefined
+  const payload = decodeJwt(token)
+  return typeof payload?.avatarUrl === 'string' && payload.avatarUrl ? payload.avatarUrl : undefined
+}
+
+/**
  * Kiểm tra token có chứa ít nhất 1 role nằm trong `allowed` không.
  * Hữu ích cho client-side guard. BE vẫn là nguồn sự thật cuối cùng.
  */

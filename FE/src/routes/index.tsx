@@ -155,6 +155,10 @@ export const router = createBrowserRouter([
       { path: 'exams', element: <AdminExamsPage /> },
       { path: 'exams/:examId/preview', element: <AdminExamPreviewPage /> },
       { path: 'exams/create', element: <AdminExamCreatePage /> },
+      // Quản lý khóa học & bài học (hỗ trợ cả đường dẫn /admin/courses và /teacher/courses)
+      { path: 'courses', element: <TeacherCoursesPage /> },
+      { path: 'courses/:courseId', element: <TeacherCourseEditorPage /> },
+      { path: 'courses/:courseId/lessons/:lessonId', element: <TeacherLessonEditorPage /> },
       // Kịch bản luyện nói: ADMIN (tất cả) & TEACHER (của mình) — BE kiểm tra quyền theo người tạo
       { path: 'scenarios', element: <AdminScenariosPage /> },
       { path: 'scenarios/new', element: <AdminScenarioEditorPage /> },

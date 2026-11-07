@@ -305,15 +305,23 @@ public class AuthService {
     public String generateToken(User user) {
         Instant now = Instant.now();
 
-        JWTClaimsSet claims = new JWTClaimsSet.Builder()
+        JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
                 .subject(user.getEmail())
                 .issuer("E-Learning JP Service")
                 .issueTime(Date.from(now))
                 .expirationTime(Date.from(now.plus(validDuration, ChronoUnit.SECONDS)))
                 .jwtID(UUID.randomUUID().toString())
                 .claim("scope", buildScope(user))
-                .claim("userId", user.getId())
-                .build();
+                .claim("userId", user.getId());
+
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            claimsBuilder.claim("fullName", user.getFullName());
+        }
+        if (user.getAvatarUrl() != null && !user.getAvatarUrl().isBlank()) {
+            claimsBuilder.claim("avatarUrl", user.getAvatarUrl());
+        }
+
+        JWTClaimsSet claims = claimsBuilder.build();
 
         SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS512), claims);
 

@@ -2,6 +2,7 @@ package com.jp.elearningjp.service.speaking;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.speaking.AiMessage;
 import com.jp.elearningjp.entity.speaking.AiScenario;
 import com.jp.elearningjp.entity.speaking.AiSession;
@@ -30,7 +31,7 @@ public class PromptBuilderService {
         String systemInstruction;
 
         if (session.getMode() == AiPracticeMode.SCENARIO && session.getScenario() != null) {
-            systemInstruction = buildScenarioInstruction(session.getScenario(), session.getCompletedTasks());
+            systemInstruction = buildScenarioInstruction(session.getScenario(), session.getCompletedTasks(), session.getLesson());
         } else {
             systemInstruction = buildFreeChatInstruction(session.getTitle());
         }
@@ -42,9 +43,19 @@ public class PromptBuilderService {
                 .build();
     }
 
-    private String buildScenarioInstruction(AiScenario scenario, JsonNode completedTasks) {
+    private String buildScenarioInstruction(AiScenario scenario, JsonNode completedTasks, Lesson lesson) {
         StringBuilder sb = new StringBuilder();
         sb.append("You are an AI Japanese Speaking Partner roleplaying in a JLPT practice app.\n");
+
+        if (lesson != null) {
+            sb.append("### LESSON CONTEXT:\n");
+            if (lesson.getCourse() != null) {
+                sb.append("- Course: ").append(lesson.getCourse().getTitle()).append("\n");
+            }
+            sb.append("- Lesson: ").append(lesson.getTitle()).append("\n");
+            sb.append("- Focus: Encourage the learner to naturally practice expressions related to this lesson.\n\n");
+        }
+
         sb.append("### SITUATION CONTEXT:\n");
         sb.append("- Topic: ").append(scenario.getTopicId()).append("\n");
         sb.append("- JLPT Level: ").append(scenario.getJlptLevel()).append("\n");

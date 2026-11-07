@@ -17,6 +17,8 @@ public class CreateSessionRequest {
 
     private Long scenarioId; // Bắt buộc nếu mode = SCENARIO
 
+    private Long lessonId; // Tùy chọn: ID bài học nếu luyện nói trong bài học
+
     private String topic; // Bắt buộc nếu mode = FREE (ví dụ: "私の週末", "好きなアニメ")
 
     private JlptLevel jlptLevel; // Trình độ (N5 - N1), mặc định theo scenario hoặc N5 nếu FREE

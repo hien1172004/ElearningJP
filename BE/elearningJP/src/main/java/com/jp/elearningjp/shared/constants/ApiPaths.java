@@ -50,6 +50,8 @@ public final class ApiPaths {
         public static final String BY_ID = "/{id}";
         public static final String COMPLETE = "/{id}/complete";
         public static final String QUIZ = "/{id}/quiz";
+        public static final String SPEAKING = "/{id}/speaking";
+        public static final String SPEAKING_GENERATE = "/{id}/speaking/generate";
         public static final String QUIZ_MANAGE = "/{id}/quiz/manage";
         public static final String QUIZ_SUBMIT = "/{id}/quiz/submit";
         public static final String QUIZ_QUESTIONS = "/{id}/quiz/questions";

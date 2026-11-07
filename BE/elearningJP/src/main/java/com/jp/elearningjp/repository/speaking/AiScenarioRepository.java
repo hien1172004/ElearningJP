@@ -27,4 +27,12 @@ public interface AiScenarioRepository extends JpaRepository<AiScenario, Long>, J
     List<AiScenario> findByTopicIdAndJlptLevel(String topicId, JlptLevel jlptLevel);
 
     List<AiScenario> findAllByOrderByCreatedAtDesc();
+
+    List<AiScenario> findByTopicIdAndIsLessonOnlyFalse(String topicId);
+
+    List<AiScenario> findByJlptLevelAndIsLessonOnlyFalse(JlptLevel jlptLevel);
+
+    List<AiScenario> findByTopicIdAndJlptLevelAndIsLessonOnlyFalse(String topicId, JlptLevel jlptLevel);
+
+    List<AiScenario> findAllByIsLessonOnlyFalseOrderByCreatedAtDesc();
 }

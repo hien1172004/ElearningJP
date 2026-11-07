@@ -29,6 +29,9 @@ public class LessonDetailResponse {
     String title;
     Integer orderIndex;
     boolean hasQuiz;
+    boolean hasSpeaking;
+    LessonSpeakingResponse speakingScenario;
+    List<LessonSpeakingResponse> speakingScenarios;
     ProgressStatus status;
     BigDecimal bestScore;
     Instant lastAccessedAt;

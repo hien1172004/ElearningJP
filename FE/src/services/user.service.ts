@@ -26,7 +26,7 @@ export const userService = {
   /**
    * Đổi ảnh đại diện (upload lên Cloudinary qua backend)
    */
-  changeAvatar: async (file: File): Promise<ApiResponse<string>> => {
+  changeAvatar: async (file: File): Promise<ApiResponse<{ avatarUrl?: string } | string>> => {
     const formData = new FormData()
     formData.append('file', file)
     return axiosClient.post('/users/change-avatar', formData, {

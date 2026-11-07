@@ -76,6 +76,7 @@ export interface LessonSummary {
   title: string
   orderIndex: number
   hasQuiz?: boolean
+  hasSpeaking?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -85,6 +86,7 @@ export interface LessonOutline {
   title: string
   orderIndex: number
   hasQuiz: boolean
+  hasSpeaking?: boolean
   status?: ProgressStatus | null
   bestScore?: number | null
 }
@@ -96,11 +98,36 @@ export interface LessonDetail {
   title: string
   orderIndex: number
   hasQuiz: boolean
+  hasSpeaking?: boolean
+  speakingScenario?: LessonSpeakingScenario | null
+  speakingScenarios?: LessonSpeakingScenario[]
   status?: ProgressStatus | null
   bestScore?: number | null
   lastAccessedAt?: string
   completedAt?: string
   sections?: LessonSection[]
+}
+
+export interface LessonSpeakingScenario {
+  id: number
+  lessonId: number
+  scenarioId: number
+  orderIndex?: number
+  minTurns: number
+  topicId: string
+  jlptLevel: string
+  title: string
+  description: string
+  userRole: string
+  aiRole: string
+  tasks?: Array<{ id: number; text: string }>
+  sampleDialogue?: Array<{ speaker: string; text: string; vi?: string }>
+  vocabulary?: Array<{ word: string; reading?: string; meaning?: string }>
+  grammar?: Array<{ pattern: string; meaning?: string }>
+  tips?: string[]
+  activeSessionId?: number | null
+  userTurnsCount?: number
+  completed?: boolean
 }
 
 export interface LessonCreateRequest {

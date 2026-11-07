@@ -3,7 +3,9 @@ package com.jp.elearningjp.controller.curriculum;
 import com.jp.elearningjp.service.curriculum.CourseService;
 import com.jp.elearningjp.service.curriculum.EnrollmentService;
 import com.jp.elearningjp.service.curriculum.LessonService;
+import com.jp.elearningjp.service.curriculum.LessonSpeakingService;
 import com.jp.elearningjp.service.curriculum.ProgressService;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
@@ -44,6 +46,8 @@ class CurriculumRoutingTest {
         LessonService lessonService = mock(LessonService.class);
         EnrollmentService enrollmentService = mock(EnrollmentService.class);
         ProgressService progressService = mock(ProgressService.class);
+        LessonSpeakingService lessonSpeakingService = mock(LessonSpeakingService.class);
+        CurrentUserService currentUserService = mock(CurrentUserService.class);
 
         // Build MockMvc với Pageable resolver (cần cho endpoint có @PageableDefault)
         mockMvc = MockMvcBuilders
@@ -51,7 +55,8 @@ class CurriculumRoutingTest {
                         new CourseController(courseService),
                         new LessonController(lessonService),
                         new EnrollmentController(enrollmentService),
-                        new ProgressController(progressService)
+                        new ProgressController(progressService),
+                        new LessonSpeakingController(lessonSpeakingService, currentUserService)
                 )
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
@@ -223,5 +228,26 @@ class CurriculumRoutingTest {
     @Test
     void getMyProgressForCourse_route() throws Exception {
         assertRouteExists(get("/api/v1/progress/courses/1"));
+    }
+
+    // ============================================================
+    // LESSON SPEAKING routes (theo LessonSpeakingController)
+    // ============================================================
+
+    @Test
+    void getSpeakingForLesson_route() throws Exception {
+        assertRouteExists(get("/api/v1/lessons/1/speaking"));
+    }
+
+    @Test
+    void assignSpeakingScenario_route() throws Exception {
+        assertRouteExists(post("/api/v1/lessons/1/speaking")
+                .contentType("application/json")
+                .content("{\"scenarioId\": 1, \"minTurns\": 3}"));
+    }
+
+    @Test
+    void removeSpeakingScenario_route() throws Exception {
+        assertRouteExists(delete("/api/v1/lessons/1/speaking"));
     }
 }

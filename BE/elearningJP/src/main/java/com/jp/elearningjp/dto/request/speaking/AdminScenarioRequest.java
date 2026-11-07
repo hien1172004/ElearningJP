@@ -66,6 +66,8 @@ public class AdminScenarioRequest {
 
     Boolean isPremium;
 
+    Boolean isLessonOnly;
+
     @Size(max = 500, message = "URL ảnh tối đa 500 ký tự")
     @Pattern(regexp = "^$|^https?://\\S+$", message = "URL ảnh không hợp lệ")
     String thumbnailUrl;

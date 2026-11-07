@@ -4,11 +4,14 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { authService } from '@/services/auth.service'
+import { userService } from '@/services/user.service'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useAuthModalStore } from '@/stores/useAuthModalStore'
 import {
   decodeJwt,
   extractEmailFromToken,
+  extractFullNameFromToken,
+  extractAvatarUrlFromToken,
   extractRolesFromToken,
   extractUserIdFromToken,
 } from '@/utils/jwt'
@@ -285,11 +288,14 @@ export function useGoogleLogin(options: UseGoogleLoginOptions = {}) {
       const scopeRoles = extractRolesFromToken(data.accessToken)
       const userId = extractUserIdFromToken(data.accessToken)
       const email = extractEmailFromToken(data.accessToken)
+      const tokenFullName = extractFullNameFromToken(data.accessToken)
+      const tokenAvatarUrl = extractAvatarUrlFromToken(data.accessToken)
 
       const user: User = {
         id: userId ?? 0,
         email,
-        fullName: '',
+        fullName: tokenFullName || '',
+        avatarUrl: tokenAvatarUrl,
         role: scopeRoles[0] ?? 'STUDENT',
         roles: scopeRoles,
       }
@@ -300,6 +306,25 @@ export function useGoogleLogin(options: UseGoogleLoginOptions = {}) {
         refreshToken: null,
         remember: true,
       })
+
+      // Cập nhật profile từ server
+      userService
+        .getMyProfile()
+        .then((profileRes) => {
+          if (profileRes?.data) {
+            useAuthStore.getState().setUser({
+              ...user,
+              id: profileRes.data.id || user.id,
+              email: profileRes.data.email || user.email,
+              fullName: profileRes.data.fullName || user.fullName,
+              avatarUrl: profileRes.data.avatarUrl || user.avatarUrl,
+              phone: profileRes.data.phoneNumber,
+              role: profileRes.data.roles?.[0] ?? user.role,
+              roles: profileRes.data.roles ?? user.roles,
+            })
+          }
+        })
+        .catch(() => {})
 
       toast.success('Đăng nhập Google thành công', {
         description: 'Chào mừng bạn đến với ElearningJP!',
@@ -388,10 +413,14 @@ export function useGoogleCallback() {
         return { ok: false, error: 'Token Google không hợp lệ.' }
       }
 
+      const tokenFullName = extractFullNameFromToken(token)
+      const tokenAvatarUrl = extractAvatarUrlFromToken(token)
+
       const user: User = {
         id: userId ?? 0,
         email,
-        fullName: '',
+        fullName: tokenFullName || '',
+        avatarUrl: tokenAvatarUrl,
         role: roles[0] ?? 'STUDENT',
         roles,
       }
@@ -405,6 +434,24 @@ export function useGoogleCallback() {
         refreshToken: null,
         remember,
       })
+
+      userService
+        .getMyProfile()
+        .then((profileRes) => {
+          if (profileRes?.data) {
+            useAuthStore.getState().setUser({
+              ...user,
+              id: profileRes.data.id || user.id,
+              email: profileRes.data.email || user.email,
+              fullName: profileRes.data.fullName || user.fullName,
+              avatarUrl: profileRes.data.avatarUrl || user.avatarUrl,
+              phone: profileRes.data.phoneNumber,
+              role: profileRes.data.roles?.[0] ?? user.role,
+              roles: profileRes.data.roles ?? user.roles,
+            })
+          }
+        })
+        .catch(() => {})
 
       toast.success('Đăng nhập Google thành công', {
         description: 'Chào mừng bạn quay lại với ElearningJP!',

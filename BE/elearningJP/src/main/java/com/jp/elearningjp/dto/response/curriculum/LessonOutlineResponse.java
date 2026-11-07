@@ -22,6 +22,7 @@ public class LessonOutlineResponse {
     String title;
     Integer orderIndex;
     boolean hasQuiz;
+    boolean hasSpeaking;
     ProgressStatus status; // null nếu chưa đăng nhập hoặc chưa bắt đầu
     BigDecimal bestScore;  // null nếu chưa làm quiz
 }

@@ -24,11 +24,16 @@
   --color-nibi: #6b6f78;        /* 鈍色 — chữ phụ: cách đọc, nghĩa phụ, ghi chú */
 
   /* Màu cấp độ JLPT — chỉ dùng cho nhãn nhỏ, không tô cả khối (xem utils/jlpt.ts) */
-  --color-jlpt-n5: #7a9a4e;     /* 抹茶 matcha */
-  --color-jlpt-n4: #4e9a8a;     /* 若竹 wakatake */
-  --color-jlpt-n3: #2e5c8a;     /* 藍 ai */
-  --color-jlpt-n2: #7b6ba8;     /* 藤 fuji */
-  --color-jlpt-n1: #9e3d3f;     /* 臙脂 enji */
+  --color-jlpt-n5: #7a9a4e;
+  /* 抹茶 matcha */
+  --color-jlpt-n4: #4e9a8a;
+  /* 若竹 wakatake */
+  --color-jlpt-n3: #2e5c8a;
+  /* 藍 ai */
+  --color-jlpt-n2: #7b6ba8;
+  /* 藤 fuji */
+  --color-jlpt-n1: #9e3d3f;
+  /* 臙脂 enji */
 
   /* Primary: 藍 Ai (was indigo) — 100 = kamenozoki, 600 = ai */
   --color-indigo-50: #f2f6fa;
@@ -97,13 +102,19 @@
 }
 
 :root {
-  --text: #6b6f78; /* nibi */
-  --text-h: #1f2430; /* sumi */
-  --color-brand: #e6eef5; /* kamenozoki */
-  --bg: #faf7f0; /* kinari */
-  --border: #e7e0d2; /* suna */
+  --text: #6b6f78;
+  /* nibi */
+  --text-h: #1f2430;
+  /* sumi */
+  --color-brand: #e6eef5;
+  /* kamenozoki */
+  --bg: #faf7f0;
+  /* kinari */
+  --border: #e7e0d2;
+  /* suna */
   --code-bg: #f3eee4;
-  --accent: #2e5c8a; /* ai */
+  --accent: #2e5c8a;
+  /* ai */
   --accent-bg: rgba(46, 92, 138, 0.1);
   --accent-border: rgba(46, 92, 138, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
@@ -380,6 +391,7 @@
 }
 
 @layer base {
+
   *,
   ::after,
   ::before,
@@ -388,7 +400,12 @@
     border-color: var(--color-gray-200, currentColor);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     margin: 0;
   }
 
@@ -403,6 +420,33 @@ body {
   padding: 0;
   min-height: 100%;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* Custom sleek scrollbar toàn ứng dụng (Chrome, Edge, Safari, Opera, Brave) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.75);
+}
+
+/* Firefox standard scrollbar only — tránh để Chrome/Edge bật thanh cuộn native có viền xám của Windows */
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+  }
 }
 
 #root {
@@ -442,4 +486,3 @@ rt {
 .hide-furigana rt {
   display: none !important;
 }
-

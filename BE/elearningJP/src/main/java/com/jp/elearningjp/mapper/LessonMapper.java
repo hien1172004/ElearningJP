@@ -15,6 +15,7 @@ public interface LessonMapper {
     Lesson toLessonEntity(LessonCreateRequest request);
 
     @Mapping(target = "hasQuiz", ignore = true)
+    @Mapping(target = "hasSpeaking", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "bestScore", ignore = true)
     LessonOutlineResponse toLessonOutlineResponse(Lesson lesson);
@@ -22,6 +23,8 @@ public interface LessonMapper {
     @Mapping(source = "course.id", target = "courseId")
     @Mapping(source = "course.title", target = "courseTitle")
     @Mapping(target = "hasQuiz", ignore = true)
+    @Mapping(target = "hasSpeaking", ignore = true)
+    @Mapping(target = "speakingScenario", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "bestScore", ignore = true)
     @Mapping(target = "lastAccessedAt", ignore = true)

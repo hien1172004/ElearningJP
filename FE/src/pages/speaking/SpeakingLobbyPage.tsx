@@ -156,7 +156,7 @@ export const SpeakingLobbyPage: React.FC = () => {
   const fetchScenarios = () => {
     speakingService
       .getScenarios()
-      .then((data) => setScenarios(data))
+      .then((data) => setScenarios((data || []).filter((s) => !s.isLessonOnly && s.topicId !== 'LESSON_PRACTICE')))
       .catch((err) => console.error('Lỗi tải kịch bản:', err))
   }
 
@@ -266,6 +266,8 @@ export const SpeakingLobbyPage: React.FC = () => {
   // Lọc kịch bản hiển thị trong Drawer
   const filteredDrawerScenarios = useMemo(() => {
     return scenarios.filter((s) => {
+      if (s.isLessonOnly || s.topicId === 'LESSON_PRACTICE') return false
+
       // 1. Lọc theo tab chủ đề: Nếu tab là COMMUNITY thì lấy các bài topicId === 'COMMUNITY' hoặc không thuộc danh mục tĩnh
       const matchTopic =
         selectedDrawerTopic === 'COMMUNITY'
@@ -391,29 +393,32 @@ export const SpeakingLobbyPage: React.FC = () => {
               </h3>
 
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                {TOPIC_CATEGORIES.filter((t) => t.id !== 'COMMUNITY').map((topic) => (
-                  <div
-                    key={topic.id}
-                    onClick={() => handleOpenDrawer(topic.id)}
-                    className="rounded-xl overflow-hidden border border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group bg-slate-50 text-center"
-                  >
-                    <div className="h-20 w-full overflow-hidden bg-slate-200">
-                      <img
-                        src={topic.image}
-                        alt={topic.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                {TOPIC_CATEGORIES.filter((t) => t.id !== 'COMMUNITY').map((topic) => {
+                  const actualCount = scenarios.filter((s) => s.topicId === topic.id).length
+                  return (
+                    <div
+                      key={topic.id}
+                      onClick={() => handleOpenDrawer(topic.id)}
+                      className="rounded-xl overflow-hidden border border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group bg-slate-50 text-center"
+                    >
+                      <div className="h-20 w-full overflow-hidden bg-slate-200">
+                        <img
+                          src={topic.image}
+                          alt={topic.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                      <div className="px-2 py-2">
+                        <h4 className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">
+                          {topic.name}
+                        </h4>
+                        <span className="text-xs text-slate-400 font-medium">
+                          {actualCount > 0 ? `${actualCount} hội thoại` : 'Chưa có bài'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="px-2 py-2">
-                      <h4 className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">
-                        {topic.name}
-                      </h4>
-                      <span className="text-xs text-slate-400 font-medium">
-                        {topic.count}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>

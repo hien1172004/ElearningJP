@@ -39,6 +39,8 @@ public class AiScenarioResponse {
 
     private boolean isPremium;
 
+    private boolean isLessonOnly;
+
     private String thumbnailUrl;
 
     private Instant createdAt;

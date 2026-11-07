@@ -49,6 +49,7 @@ public class CourseService {
     CourseEnrollmentRepository enrollmentRepository;
     UserLessonProgressRepository progressRepository;
     QuizRepository quizRepository;
+    LessonSpeakingScenarioRepository lessonSpeakingRepo;
     UserRepository userRepository;
     CourseMapper courseMapper;
     LessonMapper lessonMapper;
@@ -123,15 +124,20 @@ public class CourseService {
 
         List<Lesson> lessons = lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId);
         int totalLessons = lessons.size();
+        List<Long> allLessonIds = lessons.stream().map(Lesson::getId).toList();
         Set<Long> lessonIdsWithQuiz = lessons.isEmpty()
                 ? Set.of()
-                : new HashSet<>(quizRepository.findLessonIdsWithQuiz(lessons.stream().map(Lesson::getId).toList()));
+                : new HashSet<>(quizRepository.findLessonIdsWithQuiz(allLessonIds));
+        Set<Long> lessonIdsWithSpeaking = lessons.isEmpty()
+                ? Set.of()
+                : new HashSet<>(lessonSpeakingRepo.findLessonIdsWithSpeaking(allLessonIds));
 
         Map<Long, UserLessonProgress> finalProgressMap = progressMap;
         List<LessonOutlineResponse> outlineList = lessons.stream()
                 .map(lesson -> {
                     LessonOutlineResponse outline = lessonMapper.toLessonOutlineResponse(lesson);
                     outline.setHasQuiz(lessonIdsWithQuiz.contains(lesson.getId()));
+                    outline.setHasSpeaking(lessonIdsWithSpeaking.contains(lesson.getId()));
 
                     UserLessonProgress progress = finalProgressMap.get(lesson.getId());
                     if (progress != null) {

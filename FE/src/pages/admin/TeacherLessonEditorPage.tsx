@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button as AntdButton, Tabs } from 'antd'
-import { BookOpen, ChevronRight, FileCheck, Languages, Pencil, Plus, Trash2, Type } from 'lucide-react'
+import { BookOpen, ChevronRight, FileCheck, Languages, Pencil, Plus, Trash2, Type, Mic } from 'lucide-react'
 import { BackButton, EmptyState, LoadingState } from '@/components/common'
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import { LessonFormModal } from '@/components/course'
@@ -12,14 +12,15 @@ import {
   countSectionItems,
 } from '@/components/course/section-editor'
 import { QuizPanel } from '@/components/course/quiz-editor'
+import { LessonSpeakingPanel } from '@/components/course/speaking-editor/LessonSpeakingPanel'
 import { useCourseDetail, useLessonDetail, useSectionMutations } from '@/hooks'
 import type { LessonSection, LessonSectionType } from '@/types'
 
 const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
 
 /** Tab trên URL (?tab=) ↔ loại section. */
-export type LessonEditorTab = 'vocab' | 'grammar' | 'kanji' | 'quiz'
-const TAB_TO_TYPE: Record<Exclude<LessonEditorTab, 'quiz'>, LessonSectionType> = {
+export type LessonEditorTab = 'vocab' | 'grammar' | 'kanji' | 'speaking' | 'quiz'
+const TAB_TO_TYPE: Record<Exclude<LessonEditorTab, 'quiz' | 'speaking'>, LessonSectionType> = {
   vocab: 'VOCABULARY',
   grammar: 'GRAMMAR',
   kanji: 'KANJI',
@@ -30,7 +31,7 @@ export const SECTION_TYPE_TO_TAB: Record<LessonSectionType, LessonEditorTab> = {
   KANJI: 'kanji',
 }
 const isTab = (v: string | null): v is LessonEditorTab =>
-  v === 'vocab' || v === 'grammar' || v === 'kanji' || v === 'quiz'
+  v === 'vocab' || v === 'grammar' || v === 'kanji' || v === 'speaking' || v === 'quiz'
 
 /** Đường dẫn trang soạn bài học (dùng ở trang soạn khóa học). */
 export const lessonEditorPath = (courseId: number, lessonId: number, tab?: LessonEditorTab) =>
@@ -169,7 +170,7 @@ export const TeacherLessonEditorPage: React.FC = () => {
     </span>
   )
 
-  const typeTab = (key: Exclude<LessonEditorTab, 'quiz'>, icon: React.ReactNode) => {
+  const typeTab = (key: Exclude<LessonEditorTab, 'quiz' | 'speaking'>, icon: React.ReactNode) => {
     const type = TAB_TO_TYPE[key]
     return {
       key,
@@ -208,6 +209,17 @@ export const TeacherLessonEditorPage: React.FC = () => {
             typeTab('vocab', <BookOpen className="w-4 h-4" />),
             typeTab('grammar', <Languages className="w-4 h-4" />),
             typeTab('kanji', <Type className="w-4 h-4" />),
+            {
+              key: 'speaking',
+              label: tabLabel(<Mic className="w-4 h-4" />, 'Hội thoại'),
+              children: (
+                <LessonSpeakingPanel
+                  lessonId={lessonId}
+                  courseId={courseId}
+                  courseLevel={course?.jlptLevel}
+                />
+              ),
+            },
             {
               key: 'quiz',
               label: tabLabel(<FileCheck className="w-4 h-4" />, 'Quiz'),

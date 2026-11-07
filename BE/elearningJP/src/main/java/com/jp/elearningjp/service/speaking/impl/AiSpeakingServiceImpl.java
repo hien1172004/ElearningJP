@@ -12,9 +12,11 @@ import com.jp.elearningjp.dto.response.speaking.AiSpeakingStreamEvent;
 import com.jp.elearningjp.entity.speaking.AiMessage;
 import com.jp.elearningjp.entity.speaking.AiScenario;
 import com.jp.elearningjp.entity.speaking.AiSession;
+import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
+import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.repository.speaking.AiMessageRepository;
 import com.jp.elearningjp.repository.speaking.AiScenarioRepository;
 import com.jp.elearningjp.repository.speaking.AiSessionRepository;
@@ -55,6 +57,7 @@ public class AiSpeakingServiceImpl implements AiSpeakingService {
     private final AiScenarioRepository scenarioRepository;
     private final AiUsageRepository usageRepository;
     private final UserRepository userRepository;
+    private final LessonRepository lessonRepository;
     private final PromptBuilderService promptBuilderService;
     private final TranslationService translationService;
     private final LlmClient llmClient;
@@ -72,6 +75,11 @@ public class AiSpeakingServiceImpl implements AiSpeakingService {
         String initialGreetingJa;
         String initialGreetingVi;
 
+        Lesson linkedLesson = null;
+        if (request.getLessonId() != null) {
+            linkedLesson = lessonRepository.findByIdAndDeletedFalse(request.getLessonId()).orElse(null);
+        }
+
         if (request.getMode() == AiPracticeMode.SCENARIO) {
             if (request.getScenarioId() == null) {
                 throw new AppException(ErrorCode.AI_SCENARIO_NOT_FOUND);
@@ -82,6 +90,7 @@ public class AiSpeakingServiceImpl implements AiSpeakingService {
             session = AiSession.builder()
                     .user(user)
                     .scenario(scenario)
+                    .lesson(linkedLesson)
                     .mode(AiPracticeMode.SCENARIO)
                     .title(scenario.getTitle())
                     .completedTasks(objectMapper.createArrayNode())
@@ -98,6 +107,7 @@ public class AiSpeakingServiceImpl implements AiSpeakingService {
 
             session = AiSession.builder()
                     .user(user)
+                    .lesson(linkedLesson)
                     .mode(AiPracticeMode.FREE)
                     .title(topic)
                     .completedTasks(objectMapper.createArrayNode())

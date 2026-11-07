@@ -27,6 +27,7 @@ public class AdminScenarioResponse {
     JsonNode grammar;
     JsonNode tips;
     Boolean isPremium;
+    Boolean isLessonOnly;
     String thumbnailUrl;
     /** null = kịch bản hệ thống hoặc do khách chưa đăng nhập tạo. */
     Long createdById;
