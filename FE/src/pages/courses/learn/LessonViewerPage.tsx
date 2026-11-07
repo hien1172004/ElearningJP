@@ -509,6 +509,7 @@ export const LessonViewerPage: React.FC = () => {
               {currentPage?.kind === 'KANJI' && (
                 <KanjiStudyView
                   items={currentPage.kanjiItems ?? []}
+                  lessonId={lId || undefined}
                   onSectionDone={() => markSectionDone('KANJI')}
                 />
               )}
