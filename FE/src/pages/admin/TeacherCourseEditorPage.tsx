@@ -9,6 +9,7 @@ import {
   CourseFormModal,
   LessonFormModal,
   CourseOutlineSidebar,
+  CourseLessonList,
   CourseStudentsPanel,
   parseSelection,
   toSearchParams,
@@ -31,7 +32,8 @@ const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
 
 /**
  * Không gian soạn khóa học (giáo viên) — bố cục 2 cột:
- * trái là mục lục (Tổng quan · Bài học → mục/quiz · Bài kiểm tra · Học viên · Cài đặt),
+ * trái là mục lục (Tổng quan · Bài kiểm tra · Học viên · Cài đặt); danh sách bài học
+ * (tìm kiếm + phân trang) nằm trong Tổng quan,
  * phải là nội dung của mục đang chọn. Mục đang chọn lưu trên URL (xem `workspaceSelection`).
  */
 export const TeacherCourseEditorPage: React.FC = () => {
@@ -208,7 +210,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
           <p className="text-xs text-gray-500 mt-1">Cập nhật lần cuối</p>
         </div>
       </div>
-      {lessons.length === 0 && (
+      {lessons.length === 0 ? (
         <EmptyState
           title="Chưa có bài học nào"
           description="Thêm bài học đầu tiên để bắt đầu giảng dạy."
@@ -218,9 +220,19 @@ export const TeacherCourseEditorPage: React.FC = () => {
             </AntdButton>
           }
         />
+      ) : (
+        <CourseLessonList
+          lessons={lessons}
+          onOpen={(l) => select({ view: 'lesson', lessonId: l.id })}
+          onAdd={openCreateLesson}
+          onEdit={openEditLesson}
+          onDelete={setDeleteLessonTarget}
+          onMove={handleReorder}
+          reorderPending={reorderLessons.isPending}
+        />
       )}
       <p className="text-xs text-slate-500">
-        Chọn một bài ở mục lục bên trái để soạn chữ Hán, từ vựng, ngữ pháp và quiz.
+        Bấm vào một bài để soạn từ vựng, ngữ pháp, chữ Hán và quiz.
       </p>
     </div>
   )
@@ -498,19 +510,14 @@ export const TeacherCourseEditorPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[18rem_minmax(0,1fr)] gap-4 items-start">
-        <aside className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-[15rem_minmax(0,1fr)] gap-4 items-start">
+        <aside className="lg:sticky lg:top-20">
           <CourseOutlineSidebar
-            lessons={lessons}
+            lessonCount={lessons.length}
             selection={selection}
             onSelect={select}
             examCount={courseExams.length}
             studentCount={course.totalEnrollments ?? 0}
-            onAddLesson={openCreateLesson}
-            onEditLesson={openEditLesson}
-            onDeleteLesson={setDeleteLessonTarget}
-            onMoveLesson={handleReorder}
-            reorderPending={reorderLessons.isPending}
           />
         </aside>
         <main className="min-w-0">{mainPanel}</main>
