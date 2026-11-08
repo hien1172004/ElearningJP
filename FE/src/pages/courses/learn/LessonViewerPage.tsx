@@ -17,6 +17,7 @@ import {
 } from '@ant-design/icons'
 import { PageHeader, LoadingState, StudyTimerTracker, BackButton } from '@/components/common'
 import { CommentSection } from '@/components/comment'
+import { PracticeSheetButton } from '@/components/course/practice-sheet'
 import {
   LessonNavSidebar,
   KanjiStudyView,
@@ -49,6 +50,8 @@ interface NavItem {
   kind: PageKind
   label: string
   icon: React.ReactNode
+  /** Id section (nhóm) của trang — dùng chọn sẵn nhóm khi in phiếu luyện viết. */
+  sectionId?: number
   /** items đã load sẵn từ lesson.sections[].xxxItems[] (cho KANJI/VOCAB/GRAMMAR). */
   kanjiItems?: LessonKanjiItem[]
   vocabItems?: LessonVocabularyItem[]
@@ -157,6 +160,7 @@ export const LessonViewerPage: React.FC = () => {
         if (list.length === 0) continue
         items.push({
           kind: 'KANJI',
+          sectionId: sec.id,
           label: sec.title || defaultTitleForPage('KANJI'),
           icon: <BookOutlined className="text-base" />,
           kanjiItems: list,
@@ -166,6 +170,7 @@ export const LessonViewerPage: React.FC = () => {
         if (list.length === 0) continue
         items.push({
           kind: 'VOCAB',
+          sectionId: sec.id,
           label: sec.title || defaultTitleForPage('VOCAB'),
           icon: <ReadOutlined className="text-base" />,
           vocabItems: list,
@@ -610,6 +615,18 @@ export const LessonViewerPage: React.FC = () => {
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-6 md:p-8">
+              {(currentPage?.kind === 'KANJI' || currentPage?.kind === 'VOCAB') && (isEnrolled || isPreview) && (
+                <div className="mb-4 flex justify-end">
+                  <PracticeSheetButton
+                    lessonId={lId}
+                    lessonTitle={lesson.title}
+                    type={currentPage.kind === 'KANJI' ? 'KANJI' : 'VOCABULARY'}
+                    sections={lesson.sections ?? []}
+                    initialSectionId={currentPage.sectionId}
+                    size="middle"
+                  />
+                </div>
+              )}
               {currentPage?.kind === 'KANJI' && (
                 <KanjiStudyView
                   items={currentPage.kanjiItems ?? []}

@@ -163,4 +163,16 @@ public class LessonGrammarItemController {
                 .data(grammarImportService.commit(sectionId, file))
                 .build();
     }
+
+    // ============================================================
+    // EXPORT EXCEL (cùng định dạng mẫu import)
+    // ============================================================
+
+    @Operation(summary = "[GV/Admin] Xuất ngữ pháp (+ câu ví dụ) của section ra file Excel (cùng định dạng mẫu import)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @GetMapping(ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.GRAMMAR_EXPORT)
+    public ResponseEntity<byte[]> exportGrammarSection(@PathVariable Long sectionId) {
+        return grammarImportService.exportSection(sectionId).toResponse();
+    }
 }

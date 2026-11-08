@@ -2,6 +2,7 @@ package com.jp.elearningjp.controller.curriculum;
 
 import com.jp.elearningjp.service.curriculum.CourseService;
 import com.jp.elearningjp.service.curriculum.EnrollmentService;
+import com.jp.elearningjp.service.curriculum.LessonPracticeSheetService;
 import com.jp.elearningjp.service.curriculum.LessonService;
 import com.jp.elearningjp.service.curriculum.LessonSpeakingService;
 import com.jp.elearningjp.service.curriculum.ProgressService;
@@ -53,7 +54,7 @@ class CurriculumRoutingTest {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(
                         new CourseController(courseService),
-                        new LessonController(lessonService),
+                        new LessonController(lessonService, mock(LessonPracticeSheetService.class)),
                         new EnrollmentController(enrollmentService),
                         new ProgressController(progressService),
                         new LessonSpeakingController(lessonSpeakingService, currentUserService)

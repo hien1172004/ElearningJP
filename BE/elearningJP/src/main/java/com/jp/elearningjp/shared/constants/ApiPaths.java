@@ -56,6 +56,9 @@ public final class ApiPaths {
         public static final String QUIZ_SUBMIT = "/{id}/quiz/submit";
         public static final String QUIZ_QUESTIONS = "/{id}/quiz/questions";
         public static final String QUIZ_QUESTIONS_REORDER = "/{id}/quiz/questions/reorder";
+        /** In phiếu luyện viết (PDF) cho mục Chữ Hán / Từ vựng của bài + kiểm tra ký tự thiếu nét trước khi in. */
+        public static final String PRACTICE_SHEET = "/{id}/practice-sheet";
+        public static final String PRACTICE_SHEET_CHECK = "/{id}/practice-sheet/check";
 
         // ===== Section endpoints =====
         // Lưu ý: phải có prefix BASE ("/lessons") để path đầy đủ là
@@ -81,12 +84,15 @@ public final class ApiPaths {
         public static final String KANJI_IMPORT_TEMPLATE = "/kanji-items/import/template";
         public static final String KANJI_IMPORT_PREVIEW = "/{sectionId}/kanji-items/import/preview";
         public static final String KANJI_IMPORT_COMMIT = "/{sectionId}/kanji-items/import";
+        public static final String KANJI_EXPORT = "/{sectionId}/kanji-items/export";
         public static final String VOCABULARY_IMPORT_TEMPLATE = "/vocabulary-items/import/template";
         public static final String VOCABULARY_IMPORT_PREVIEW = "/{sectionId}/vocabulary-items/import/preview";
         public static final String VOCABULARY_IMPORT_COMMIT = "/{sectionId}/vocabulary-items/import";
+        public static final String VOCABULARY_EXPORT = "/{sectionId}/vocabulary-items/export";
         public static final String GRAMMAR_IMPORT_TEMPLATE = "/grammar-items/import/template";
         public static final String GRAMMAR_IMPORT_PREVIEW = "/{sectionId}/grammar-items/import/preview";
         public static final String GRAMMAR_IMPORT_COMMIT = "/{sectionId}/grammar-items/import";
+        public static final String GRAMMAR_EXPORT = "/{sectionId}/grammar-items/export";
 
         // ===== Lesson examples endpoints (controller riêng) =====
         public static final String LESSON_VOCABULARY_ITEMS = "/lesson-vocabulary-items";

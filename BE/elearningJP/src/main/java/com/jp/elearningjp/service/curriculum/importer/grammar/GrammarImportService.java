@@ -53,6 +53,7 @@ public class GrammarImportService {
 
     public static final String TEMPLATE_TYPE = "LESSON_GRAMMAR";
     public static final int TEMPLATE_VERSION = 1;
+    static final String TEMPLATE_FILE_NAME = "mau_import_ngu_phap_v" + TEMPLATE_VERSION + ".xlsx";
     static final String ITEM_SHEET = "NguPhap";
     static final String EXAMPLE_SHEET = "ViDu";
     /** Sheet tra cứu: toàn bộ tên điểm ngữ pháp theo cấp, làm nguồn dropdown cho cột title. */
@@ -98,6 +99,11 @@ public class GrammarImportService {
 
     @Transactional(readOnly = true)
     public ImportTemplateFile buildTemplate() {
+        return new ImportTemplateFile(TEMPLATE_FILE_NAME, excel.toBytes(createWorkbook()));
+    }
+
+    /** Workbook mẫu (Hướng dẫn + _meta + các sheet dữ liệu trống) — dùng cho cả tải mẫu và xuất dữ liệu. */
+    private XSSFWorkbook createWorkbook() {
         List<String> guide = new ArrayList<>(List.of(
                 "Cách dùng:",
                 "1. Điền mỗi điểm ngữ pháp 1 dòng ở sheet 'NguPhap'. Chọn tên ở dropdown cột title (lấy từ sheet '"
@@ -126,7 +132,42 @@ public class GrammarImportService {
             excel.addListValidation(exampleSheet, EXAMPLE_COLUMNS.indexOf(EX_TITLE), range, MAX_EXAMPLES);
         }
         wb.setActiveSheet(wb.getSheetIndex(ITEM_SHEET));
-        return new ImportTemplateFile("mau_import_ngu_phap_v" + TEMPLATE_VERSION + ".xlsx", excel.toBytes(wb));
+        return wb;
+    }
+
+    // ============================================================
+    // EXPORT — xuất dữ liệu section theo đúng mẫu import (import lại được sang section khác)
+    // ============================================================
+
+    /**
+     * Xuất điểm ngữ pháp (+ câu ví dụ) của section ra file Excel cùng định dạng mẫu import.
+     * Cột tuỳ chỉnh: null → để trống (lấy theo từ điển), "" → '-' (để trống trong bài).
+     */
+    @Transactional(readOnly = true)
+    public ImportTemplateFile exportSection(Long sectionId) {
+        LessonSection section = sectionResolver.requireEditable(sectionId, LessonSectionType.GRAMMAR);
+        List<String[]> itemRows = new ArrayList<>();
+        List<String[]> exampleRows = new ArrayList<>();
+        for (LessonGrammarItem item : grammarItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId)) {
+            GrammarPoint g = item.getGrammar();
+            if (g == null) continue;
+            String level = g.getJlptLevel() != null ? g.getJlptLevel().name() : null;
+            itemRows.add(new String[]{
+                    g.getTitle(),
+                    level,
+                    ExcelImportSupport.fromOverride(item.getCustomMeaning()),
+                    ExcelImportSupport.fromOverride(item.getCustomStructure()),
+                    item.getNote()});
+            item.getExamples().stream()
+                    .filter(e -> !e.isDeleted())
+                    .forEach(e -> exampleRows.add(new String[]{g.getTitle(), level, e.getExampleJp(), e.getExampleVi()}));
+        }
+        XSSFWorkbook wb = createWorkbook();
+        excel.writeRows(wb.getSheet(ITEM_SHEET), itemRows);
+        excel.writeRows(wb.getSheet(EXAMPLE_SHEET), exampleRows);
+        log.info("[GRAMMAR-EXPORT] section id={} exported {} items, {} examples",
+                sectionId, itemRows.size(), exampleRows.size());
+        return new ImportTemplateFile(ExcelImportSupport.exportFileName("ngu_phap", section), excel.toBytes(wb));
     }
 
     /** Sheet tra cứu: title | jlpt_level | nghĩa, sắp theo cấp N5 → N1 rồi theo tên. Trả về số dòng. */

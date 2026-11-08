@@ -26,6 +26,8 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.util.Optional;
 
+import com.jp.elearningjp.shared.util.JapaneseReadingService;
+
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -69,7 +71,8 @@ class SectionItemPermissionTest {
         LessonVocabularyItemRepository itemRepo = mock(LessonVocabularyItemRepository.class);
         VocabularyRepository vocabRepo = mock(VocabularyRepository.class);
         VocabularySectionItemService service = new VocabularySectionItemService(sectionRepo, itemRepo,
-                mock(LessonVocabularyExampleRepository.class), vocabRepo, mock(LessonSectionMapper.class), guard);
+                mock(LessonVocabularyExampleRepository.class), vocabRepo, mock(LessonSectionMapper.class), guard,
+                mock(JapaneseReadingService.class));
         LessonSection section = section(LessonSectionType.VOCABULARY);
         LessonVocabularyItem item = new LessonVocabularyItem();
         item.setSection(section);

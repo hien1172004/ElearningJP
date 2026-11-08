@@ -48,6 +48,43 @@ export const overrideColumn = (
   },
 })
 
+/** Nguồn của giá trị Hiragana/Romaji do BE chọn (khớp ImportVocabularyLookup). */
+const SOURCE_TAG: Record<string, { color: string; label: string; hint: string }> = {
+  FILE: { color: 'blue', label: 'file', hint: 'Lấy từ file Excel' },
+  DICT: { color: 'default', label: 'từ điển', hint: 'Lấy từ từ điển' },
+  AUTO: { color: 'orange', label: 'tự sinh', hint: 'Hệ thống tự sinh (Kuromoji) — nên kiểm tra lại' },
+}
+
+/**
+ * Cột giá trị BE đã chọn cuối cùng (file → từ điển → tự sinh) kèm nhãn nguồn.
+ * Giá trị rỗng ('-' trong file) hiển thị "không hiển thị".
+ */
+export const resolvedColumn = (
+  key: string,
+  sourceKey: string,
+  title: string,
+  width = 160,
+  jp = false,
+): ColumnType<ImportRowResult> => ({
+  title,
+  key,
+  width,
+  render: (_, row) => {
+    const source = SOURCE_TAG[String(row.data[sourceKey] ?? '')]
+    if (!source) return EMPTY
+    const raw = row.data[key]
+    const v = str(raw)
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1" title={source.hint}>
+        {v ? <span className={jp ? 'text-base' : ''}>{v}</span> : raw === '' ? <Tag>không hiển thị</Tag> : EMPTY}
+        <Tag color={source.color} className="!m-0 !text-[10px] !leading-4">
+          {source.label}
+        </Tag>
+      </span>
+    )
+  },
+})
+
 /** Cột giá trị tra từ điển (không có trong file). */
 export const dictColumn = (key: string, title: string, width = 200): ColumnType<ImportRowResult> => ({
   title,

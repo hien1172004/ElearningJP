@@ -3,7 +3,8 @@ package com.jp.elearningjp.service.speaking;
 import com.jp.elearningjp.dto.response.speaking.FuriganaResponse;
 import com.jp.elearningjp.dto.response.speaking.FuriganaTokenDto;
 import com.jp.elearningjp.service.speaking.impl.FuriganaServiceImpl;
-import com.jp.elearningjp.service.speaking.util.JapaneseKanaUtil;
+import com.jp.elearningjp.shared.util.JapaneseKanaUtil;
+import com.jp.elearningjp.shared.util.JapaneseReadingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,8 +17,7 @@ class FuriganaServiceTest {
 
     @BeforeEach
     void setUp() {
-        furiganaService = new FuriganaServiceImpl();
-        furiganaService.init();
+        furiganaService = new FuriganaServiceImpl(new JapaneseReadingService());
     }
 
     @Test

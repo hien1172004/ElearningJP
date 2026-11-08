@@ -33,3 +33,12 @@ export function useSectionImport(api: SectionImportApi, lessonId: number, sectio
 
   return { downloadTemplate, preview, commit }
 }
+
+/** Xuất dữ liệu 1 section ra file Excel (cùng định dạng mẫu import). */
+export function useSectionExport(api: SectionImportApi, sectionId: number) {
+  return useMutation({
+    mutationFn: (fileName: string) => api.exportSection(sectionId, fileName),
+    onSuccess: () => toast.success('Đã xuất file Excel'),
+    onError: (e) => toast.error('Xuất file Excel thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') }),
+  })
+}
