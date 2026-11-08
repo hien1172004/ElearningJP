@@ -32,6 +32,8 @@ import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Optional;
 
+import com.jp.elearningjp.shared.util.JapaneseReadingService;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
@@ -44,6 +46,9 @@ class SectionImportServiceTest {
     private ImportSectionResolver resolver;
     private VocabularyRepository vocabularyRepository;
     private LessonSection section;
+    private ImportVocabularyLookup lookup;
+    /** Kuromoji nạp từ điển khá nặng → dùng chung 1 instance cho cả class. */
+    private static final JapaneseReadingService READING = new JapaneseReadingService();
 
     @BeforeEach
     void setUp() {
@@ -52,10 +57,12 @@ class SectionImportServiceTest {
         section = new LessonSection();
         section.setId(10L);
         when(resolver.requireEditable(eq(10L), any())).thenReturn(section);
+        lookup = new ImportVocabularyLookup(vocabularyRepository, READING);
     }
 
     private static Vocabulary vocab(long id, String word, String hiragana) {
-        Vocabulary v = Vocabulary.builder().word(word).hiragana(hiragana).meaningVi("nghĩa " + word).build();
+        Vocabulary v = Vocabulary.builder().word(word).hiragana(hiragana).romaji("rmj-" + hiragana)
+                .meaningVi("nghĩa " + word).build();
         v.setId(id);
         return v;
     }
@@ -85,7 +92,7 @@ class SectionImportServiceTest {
 
     private VocabularyImportService vocabService(LessonVocabularyItemRepository itemRepo,
                                                  VocabularySectionItemService itemService) {
-        return new VocabularyImportService(excel, resolver, vocabularyRepository, itemRepo, itemService);
+        return new VocabularyImportService(excel, resolver, lookup, itemRepo, itemService);
     }
 
     @Test
@@ -171,7 +178,7 @@ class SectionImportServiceTest {
         VocabularyImportService vocab = vocabService(mock(LessonVocabularyItemRepository.class),
                 mock(VocabularySectionItemService.class));
         KanjiImportService kanji = new KanjiImportService(excel, resolver, mock(WritingCharacterRepository.class),
-                vocabularyRepository, mock(LessonKanjiItemRepository.class), mock(KanjiSectionItemService.class));
+                lookup, mock(LessonKanjiItemRepository.class), mock(KanjiSectionItemService.class));
         MockMultipartFile kanjiFile = fill(kanji.buildTemplate().content(), new String[][]{{"Kanji"}, {"日"}});
 
         assertThatThrownBy(() -> vocab.preview(10L, kanjiFile))
@@ -191,6 +198,122 @@ class SectionImportServiceTest {
                 .isEqualTo(ErrorCode.IMPORT_FILE_INVALID);
     }
 
+    @Test
+    void vocabulary_readings_fileThenDictThenAuto() throws Exception {
+        LessonVocabularyItemRepository itemRepo = mock(LessonVocabularyItemRepository.class);
+        VocabularySectionItemService itemService = mock(VocabularySectionItemService.class);
+        when(itemRepo.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(10L)).thenReturn(List.of());
+        // Katakana trong file được chuẩn hoá về Hiragana trước khi tra từ điển
+        when(vocabularyRepository.findFirstByWordAndHiraganaAndDeletedFalseOrderBySenseNoAsc("食べる", "たべる"))
+                .thenReturn(Optional.of(vocab(1L, "食べる", "たべる")));
+        // Từ điển thiếu romaji → tự sinh từ hiragana
+        Vocabulary noRomaji = vocab(2L, "学校", "がっこう");
+        noRomaji.setRomaji(null);
+        when(vocabularyRepository.findFirstByWordAndDeletedFalseOrderBySenseNoAsc("学校")).thenReturn(Optional.of(noRomaji));
+        // Từ điển đủ dữ liệu → giữ nguyên từ điển (không ghi đè)
+        when(vocabularyRepository.findFirstByWordAndDeletedFalseOrderBySenseNoAsc("水"))
+                .thenReturn(Optional.of(vocab(3L, "水", "みず")));
+        when(itemService.importVocabularyItems(any(), anyList())).thenAnswer(inv -> ((List<?>) inv.getArgument(1)).size());
+
+        VocabularyImportService service = vocabService(itemRepo, itemService);
+        MockMultipartFile file = fill(service.buildTemplate().content(),
+                new String[][]{{"TuVung"},
+                        {"食べる", "タベル", null, "taberu!"},
+                        {"学校"},
+                        {"水"}},
+                new String[][]{{"ViDu"},
+                        {"食べる", "たべる", "私は学校へ行きます。", "Tôi đi học."},
+                        {"水", null, "水を飲む。", "Uống nước.", "mizu wo nomu (gv)"}});
+
+        SectionImportPreviewResponse preview = service.preview(10L, file);
+        assertThat(preview.isCanCommit()).isTrue();
+        assertThat(preview.getItemRows().get(0).getData())
+                .containsEntry("hiragana", "たべる")
+                .containsEntry("hiraganaSource", "FILE")
+                .containsEntry("romajiSource", "FILE");
+        assertThat(preview.getItemRows().get(1).getData())
+                .containsEntry("resolvedRomaji", "gakkou")
+                .containsEntry("romajiSource", "AUTO");
+        assertThat(preview.getItemRows().get(1).getStatus()).isEqualTo(ImportRowStatus.WARNING);
+        assertThat(preview.getItemRows().get(2).getData()).containsEntry("romajiSource", "DICT");
+        assertThat(preview.getChildRows().get(0).getData()).containsEntry("romajiSource", "AUTO");
+
+        service.commit(10L, file);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<LessonVocabularyItemCreateRequest>> captor = ArgumentCaptor.forClass(List.class);
+        verify(itemService).importVocabularyItems(same(section), captor.capture());
+        List<LessonVocabularyItemCreateRequest> requests = captor.getValue();
+        assertThat(requests.get(0).getCustomRomaji()).isEqualTo("taberu!");
+        assertThat(requests.get(0).getCustomHiragana()).isNull();
+        assertThat(requests.get(0).getExamples().get(0).getExampleRomaji())
+                .startsWith("watashi wa gakkou e ");
+        assertThat(requests.get(1).getCustomRomaji()).isEqualTo("gakkou");
+        assertThat(requests.get(2).getCustomRomaji()).isNull();
+        assertThat(requests.get(2).getExamples().get(0).getExampleRomaji()).isEqualTo("mizu wo nomu (gv)");
+    }
+
+    @Test
+    void vocabulary_ambiguousWord_usesKuromojiReadingToPickSense() throws Exception {
+        LessonVocabularyItemRepository itemRepo = mock(LessonVocabularyItemRepository.class);
+        when(itemRepo.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(10L)).thenReturn(List.of());
+        String guess = READING.toHiragana("今日");
+        when(vocabularyRepository.findFirstByWordAndDeletedFalseOrderBySenseNoAsc("今日"))
+                .thenReturn(Optional.of(vocab(1L, "今日", "こんにち")));
+        when(vocabularyRepository.countByWordAndDeletedFalse("今日")).thenReturn(2L);
+        when(vocabularyRepository.findFirstByWordAndHiraganaAndDeletedFalseOrderBySenseNoAsc("今日", guess))
+                .thenReturn(Optional.of(vocab(2L, "今日", guess)));
+
+        VocabularyImportService service = vocabService(itemRepo, mock(VocabularySectionItemService.class));
+        MockMultipartFile file = fill(service.buildTemplate().content(), new String[][]{{"TuVung"}, {"今日"}});
+
+        SectionImportPreviewResponse preview = service.preview(10L, file);
+        assertThat(preview.getItemRows().get(0).getData()).containsEntry("vocabId", 2L);
+        assertThat(preview.getItemRows().get(0).getStatus()).isEqualTo(ImportRowStatus.WARNING);
+    }
+
+    @Test
+    void vocabulary_export_writesTemplateFormat_andCanBeImportedIntoAnotherSection() throws Exception {
+        section.setTitle("Từ mới");
+        Vocabulary taberu = vocab(1L, "食べる", "たべる");
+        var item = com.jp.elearningjp.entity.curriculum.LessonVocabularyItem.builder()
+                .vocab(taberu).customMeaning("ăn (riêng)").customRomaji("").note("Động từ nhóm 2").build();
+        var primary = com.jp.elearningjp.entity.curriculum.LessonVocabularyExample.builder()
+                .exampleJp("ご飯を食べる。").exampleVi("Ăn cơm.").primary(true).build();
+        var deleted = com.jp.elearningjp.entity.curriculum.LessonVocabularyExample.builder()
+                .exampleJp("xoá").exampleVi("xoá").build();
+        deleted.setDeleted(true);
+        item.getExamples().addAll(List.of(primary, deleted));
+
+        LessonVocabularyItemRepository exportRepo = mock(LessonVocabularyItemRepository.class);
+        when(exportRepo.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(10L)).thenReturn(List.of(item));
+        ImportTemplateFile exported = vocabService(exportRepo, mock(VocabularySectionItemService.class)).exportSection(10L);
+        assertThat(exported.fileName()).isEqualTo("tu_vung_tu-moi.xlsx");
+
+        try (Workbook wb = new XSSFWorkbook(new ByteArrayInputStream(exported.content()))) {
+            Row row = wb.getSheet("TuVung").getRow(1);
+            assertThat(row.getCell(0).getStringCellValue()).isEqualTo("食べる");
+            assertThat(row.getCell(1).getStringCellValue()).isEqualTo("たべる");
+            assertThat(row.getCell(2).getStringCellValue()).isEqualTo("ăn (riêng)");
+            assertThat(row.getCell(3).getStringCellValue()).isEqualTo("-");    // "" → '-' (để trống trong bài)
+            assertThat(row.getCell(4)).isNull();                              // null → lấy theo từ điển
+            assertThat(wb.getSheet("ViDu").getLastRowNum()).isEqualTo(1);     // bỏ câu ví dụ đã xoá
+            assertThat(wb.getSheet("ViDu").getRow(1).getCell(6).getStringCellValue()).isEqualTo("x");
+        }
+
+        // Import lại file vừa xuất vào 1 section khác (chưa có từ này) → hợp lệ
+        LessonVocabularyItemRepository emptyRepo = mock(LessonVocabularyItemRepository.class);
+        when(emptyRepo.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(10L)).thenReturn(List.of());
+        when(vocabularyRepository.findFirstByWordAndHiraganaAndDeletedFalseOrderBySenseNoAsc("食べる", "たべる"))
+                .thenReturn(Optional.of(taberu));
+        MockMultipartFile file = new MockMultipartFile("file", exported.fileName(),
+                ImportTemplateFile.XLSX_MIME, exported.content());
+        SectionImportPreviewResponse preview =
+                vocabService(emptyRepo, mock(VocabularySectionItemService.class)).preview(10L, file);
+        assertThat(preview.isCanCommit()).isTrue();
+        assertThat(preview.getTotalItems()).isEqualTo(1);
+        assertThat(preview.getTotalChildren()).isEqualTo(1);
+    }
+
     // ============================================================
     // KANJI
     // ============================================================
@@ -208,7 +331,7 @@ class SectionImportServiceTest {
                 .thenReturn(Optional.of(vocab(7L, "日本", "にほん")));
         when(itemService.importKanjiItems(any(), anyList())).thenAnswer(inv -> ((List<?>) inv.getArgument(1)).size());
 
-        KanjiImportService service = new KanjiImportService(excel, resolver, charRepo, vocabularyRepository,
+        KanjiImportService service = new KanjiImportService(excel, resolver, charRepo, lookup,
                 itemRepo, itemService);
         byte[] template = service.buildTemplate().content();
 

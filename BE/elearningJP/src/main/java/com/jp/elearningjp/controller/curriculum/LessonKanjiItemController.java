@@ -165,4 +165,16 @@ public class LessonKanjiItemController {
                 .data(kanjiImportService.commit(sectionId, file))
                 .build();
     }
+
+    // ============================================================
+    // EXPORT EXCEL (cùng định dạng mẫu import)
+    // ============================================================
+
+    @Operation(summary = "[GV/Admin] Xuất chữ Hán (+ từ liên quan) của section ra file Excel (cùng định dạng mẫu import)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @GetMapping(ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.KANJI_EXPORT)
+    public ResponseEntity<byte[]> exportKanjiSection(@PathVariable Long sectionId) {
+        return kanjiImportService.exportSection(sectionId).toResponse();
+    }
 }

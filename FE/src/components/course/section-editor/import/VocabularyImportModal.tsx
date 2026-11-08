@@ -4,7 +4,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { vocabularyImportService } from '@/services'
 import type { ImportRowResult } from '@/types'
 import { ImportStepsLayout } from './ImportStepsLayout'
-import { countColumn, linkedRowColumn, overrideColumn, textColumn } from './importColumns'
+import { countColumn, linkedRowColumn, overrideColumn, resolvedColumn, textColumn } from './importColumns'
 
 interface Props {
   open: boolean
@@ -15,9 +15,9 @@ interface Props {
 
 const ITEM_COLUMNS: ColumnsType<ImportRowResult> = [
   textColumn('word', 'Từ vựng', 110, true),
-  overrideColumn('hiragana', 'dictHiragana', 'Cách đọc', 120),
+  resolvedColumn('resolvedHiragana', 'hiraganaSource', 'Cách đọc', 140, true),
   overrideColumn('meaning_vi', 'dictMeaning', 'Nghĩa', 220),
-  textColumn('romaji', 'Romaji (riêng)', 120),
+  resolvedColumn('resolvedRomaji', 'romajiSource', 'Romaji', 150),
   textColumn('image_url', 'Ảnh', 140),
   textColumn('note', 'Ghi chú', 160),
   countColumn('exampleCount', 'Câu ví dụ', 'lấy từ điển'),
@@ -28,7 +28,7 @@ const EXAMPLE_COLUMNS: ColumnsType<ImportRowResult> = [
   linkedRowColumn('TuVung'),
   textColumn('example_jp', 'Câu tiếng Nhật', 240, true),
   textColumn('example_vi', 'Bản dịch', 220),
-  textColumn('example_romaji', 'Romaji', 160),
+  resolvedColumn('resolvedRomaji', 'romajiSource', 'Romaji', 200),
   {
     title: 'Câu chính',
     key: 'primary',
@@ -48,6 +48,10 @@ const RULES: React.ReactNode[] = [
   </>,
   <>
     Cột tuỳ chỉnh để trống = lấy dữ liệu từ điển, nhập <b>-</b> = để trống (không hiển thị) trường đó trong bài.
+  </>,
+  <>
+    Hiragana / Romaji: ưu tiên giá trị trong file → từ điển → hệ thống <b>tự sinh</b> (nhãn cam, nên kiểm tra lại).
+    Romaji câu ví dụ để trống sẽ tự sinh từ câu tiếng Nhật.
   </>,
   <>Từ đã có trong section hoặc không có trong từ điển sẽ bị báo lỗi. Tối đa 500 từ mỗi file.</>,
 ]

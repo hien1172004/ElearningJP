@@ -163,4 +163,16 @@ public class LessonVocabularyItemController {
                 .data(vocabularyImportService.commit(sectionId, file))
                 .build();
     }
+
+    // ============================================================
+    // EXPORT EXCEL (cùng định dạng mẫu import)
+    // ============================================================
+
+    @Operation(summary = "[GV/Admin] Xuất từ vựng (+ câu ví dụ) của section ra file Excel (cùng định dạng mẫu import)")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @GetMapping(ApiPaths.API_V1 + ApiPaths.Lesson.LESSON_SECTIONS + ApiPaths.Lesson.VOCABULARY_EXPORT)
+    public ResponseEntity<byte[]> exportVocabularySection(@PathVariable Long sectionId) {
+        return vocabularyImportService.exportSection(sectionId).toResponse();
+    }
 }

@@ -20,6 +20,7 @@ import com.jp.elearningjp.repository.curriculum.LessonVocabularyExampleRepositor
 import com.jp.elearningjp.repository.curriculum.LessonVocabularyItemRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
+import com.jp.elearningjp.shared.util.JapaneseReadingService;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     private final VocabularyRepository vocabularyRepository;
     private final LessonSectionMapper lessonSectionMapper;
     private final CourseAccessGuard courseAccessGuard;
+    private final JapaneseReadingService readingService;
 
     public VocabularySectionItemService(
             LessonSectionRepository lessonSectionRepository,
@@ -59,7 +61,8 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
             LessonVocabularyExampleRepository vocabExampleRepository,
             VocabularyRepository vocabularyRepository,
             LessonSectionMapper lessonSectionMapper,
-            CourseAccessGuard courseAccessGuard
+            CourseAccessGuard courseAccessGuard,
+            JapaneseReadingService readingService
     ) {
         super(lessonSectionRepository);
         this.vocabItemRepository = vocabItemRepository;
@@ -67,6 +70,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         this.vocabularyRepository = vocabularyRepository;
         this.lessonSectionMapper = lessonSectionMapper;
         this.courseAccessGuard = courseAccessGuard;
+        this.readingService = readingService;
     }
 
     // ============================================================
@@ -419,7 +423,10 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
                     .vocabItem(item)
                     .exampleJp(src.getExampleJp())
                     .exampleVi(src.getExampleVi())
-                    .exampleRomaji(src.getExampleRomaji())
+                    // Ví dụ trong từ điển thiếu romaji → tự sinh bằng Kuromoji
+                    .exampleRomaji(src.getExampleRomaji() != null && !src.getExampleRomaji().isBlank()
+                            ? src.getExampleRomaji()
+                            : readingService.toRomaji(src.getExampleJp()))
                     .audioUrl(src.getAudioUrl())
                     .orderIndex(exOrderIndex)
                     .primary(src.isPrimary())

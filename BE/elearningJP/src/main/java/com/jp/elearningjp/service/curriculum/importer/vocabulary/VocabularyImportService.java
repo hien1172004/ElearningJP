@@ -10,12 +10,12 @@ import com.jp.elearningjp.entity.curriculum.LessonSection;
 import com.jp.elearningjp.entity.curriculum.LessonVocabularyItem;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
-import com.jp.elearningjp.repository.content.VocabularyRepository;
 import com.jp.elearningjp.repository.curriculum.LessonVocabularyItemRepository;
 import com.jp.elearningjp.service.curriculum.importer.ExcelImportSupport;
 import com.jp.elearningjp.service.curriculum.importer.ImportColumn;
 import com.jp.elearningjp.service.curriculum.importer.ImportSectionResolver;
 import com.jp.elearningjp.service.curriculum.importer.ImportTemplateFile;
+import com.jp.elearningjp.service.curriculum.importer.ImportVocabularyLookup;
 import com.jp.elearningjp.service.curriculum.section.VocabularySectionItemService;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +52,7 @@ public class VocabularyImportService {
 
     public static final String TEMPLATE_TYPE = "LESSON_VOCABULARY";
     public static final int TEMPLATE_VERSION = 1;
+    static final String TEMPLATE_FILE_NAME = "mau_import_tu_vung_v" + TEMPLATE_VERSION + ".xlsx";
     static final String ITEM_SHEET = "TuVung";
     static final String EXAMPLE_SHEET = "ViDu";
     static final int MAX_ITEMS = 500;
@@ -62,11 +63,12 @@ public class VocabularyImportService {
     static final ImportColumn WORD = ImportColumn.required("word", 16,
             "Từ vựng (kanji/kana) đúng như trong từ điển. Vd: 食べる");
     static final ImportColumn HIRAGANA = ImportColumn.optional("hiragana", 16,
-            "Cách đọc để chọn đúng từ khi 1 chữ có nhiều cách đọc. Bỏ trống = lấy nghĩa đầu tiên");
+            "Cách đọc (Hiragana/Katakana đều được) để chọn đúng từ khi 1 chữ có nhiều cách đọc. "
+                    + "Bỏ trống = lấy theo từ điển (hệ thống tự nhận diện cách đọc nếu có nhiều)");
     static final ImportColumn MEANING = ImportColumn.optional("meaning_vi", 30,
             "Nghĩa tiếng Việt riêng cho bài. Trống = lấy từ điển, '-' = để trống");
     static final ImportColumn ROMAJI = ImportColumn.optional("romaji", 16,
-            "Romaji riêng cho bài. Trống = lấy từ điển, '-' = để trống");
+            "Romaji riêng cho bài. Trống = lấy từ điển (từ điển thiếu thì tự sinh), '-' = để trống");
     static final ImportColumn AUDIO = ImportColumn.optional("audio_url", 30,
             "Link audio riêng (http/https). Trống = lấy từ điển, '-' = không có audio");
     static final ImportColumn IMAGE = ImportColumn.optional("image_url", 30,
@@ -82,7 +84,7 @@ public class VocabularyImportService {
             "Giống cột hiragana của từ đó ở sheet TuVung (có thể bỏ trống nếu word không trùng)");
     static final ImportColumn EX_JP = ImportColumn.required("example_jp", 40, "Câu ví dụ tiếng Nhật");
     static final ImportColumn EX_VI = ImportColumn.required("example_vi", 40, "Bản dịch tiếng Việt");
-    static final ImportColumn EX_ROMAJI = ImportColumn.optional("example_romaji", 30, "Romaji của câu (tuỳ chọn)");
+    static final ImportColumn EX_ROMAJI = ImportColumn.optional("example_romaji", 30, "Romaji của câu. Trống = tự sinh từ câu tiếng Nhật, '-' = để trống");
     static final ImportColumn EX_AUDIO = ImportColumn.optional("audio_url", 30, "Link audio câu ví dụ (http/https)");
     static final ImportColumn EX_PRIMARY = ImportColumn.optional("primary", 10,
             "Chọn 'x' để đánh dấu câu ví dụ chính (mỗi từ 1 câu)").withAllowedValues(List.of("x"));
@@ -91,7 +93,7 @@ public class VocabularyImportService {
 
     private final ExcelImportSupport excel;
     private final ImportSectionResolver sectionResolver;
-    private final VocabularyRepository vocabularyRepository;
+    private final ImportVocabularyLookup vocabLookup;
     private final LessonVocabularyItemRepository vocabItemRepository;
     private final VocabularySectionItemService vocabularySectionItemService;
 
@@ -100,11 +102,17 @@ public class VocabularyImportService {
     // ============================================================
 
     public ImportTemplateFile buildTemplate() {
+        return new ImportTemplateFile(TEMPLATE_FILE_NAME, excel.toBytes(createWorkbook()));
+    }
+
+    /** Workbook mẫu (Hướng dẫn + _meta + các sheet dữ liệu trống) — dùng cho cả tải mẫu và xuất dữ liệu. */
+    private XSSFWorkbook createWorkbook() {
         List<String> guide = new ArrayList<>(List.of(
                 "Cách dùng:",
                 "1. Điền mỗi từ vựng 1 dòng ở sheet 'TuVung'. Từ phải có sẵn trong từ điển của hệ thống.",
                 "2. (Tuỳ chọn) Điền câu ví dụ ở sheet 'ViDu'. Từ nào không có câu ví dụ sẽ tự lấy ví dụ từ từ điển.",
                 "3. Ô trống ở cột tuỳ chỉnh = lấy dữ liệu từ điển; nhập '-' = để trống trường đó trong bài.",
+                "   Hiragana/Romaji: ưu tiên giá trị trong file → từ điển → hệ thống tự sinh (nên kiểm tra lại).",
                 "4. Không đổi tên sheet, tên cột hoặc thứ tự cột. Không xoá sheet ẩn '_meta'.",
                 "5. Tối đa " + MAX_ITEMS + " từ và " + MAX_EXAMPLES + " câu ví dụ mỗi file, file ≤ 2MB.",
                 "6. Từ đã có trong section sẽ bị báo lỗi. Cột có dấu * là bắt buộc.",
@@ -120,7 +128,51 @@ public class VocabularyImportService {
         excel.addDataSheet(wb, ITEM_SHEET, ITEM_COLUMNS, MAX_ITEMS);
         excel.addDataSheet(wb, EXAMPLE_SHEET, EXAMPLE_COLUMNS, MAX_EXAMPLES);
         wb.setActiveSheet(wb.getSheetIndex(ITEM_SHEET));
-        return new ImportTemplateFile("mau_import_tu_vung_v" + TEMPLATE_VERSION + ".xlsx", excel.toBytes(wb));
+        return wb;
+    }
+
+    // ============================================================
+    // EXPORT — xuất dữ liệu section theo đúng mẫu import (import lại được sang section khác)
+    // ============================================================
+
+    /**
+     * Xuất từ vựng (+ câu ví dụ) của section ra file Excel cùng định dạng mẫu import.
+     * Cột tuỳ chỉnh: null → để trống (lấy theo từ điển), "" → '-' (để trống trong bài).
+     * Cột hiragana xuất cách đọc trong từ điển để khi import lại tra đúng từ.
+     */
+    @Transactional(readOnly = true)
+    public ImportTemplateFile exportSection(Long sectionId) {
+        LessonSection section = sectionResolver.requireEditable(sectionId, LessonSectionType.VOCABULARY);
+        List<String[]> itemRows = new ArrayList<>();
+        List<String[]> exampleRows = new ArrayList<>();
+        for (LessonVocabularyItem item : vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId)) {
+            Vocabulary vocab = item.getVocab();
+            if (vocab == null) continue;
+            itemRows.add(new String[]{
+                    vocab.getWord(),
+                    vocab.getHiragana(),
+                    ExcelImportSupport.fromOverride(item.getCustomMeaning()),
+                    ExcelImportSupport.fromOverride(item.getCustomRomaji()),
+                    ExcelImportSupport.fromOverride(item.getCustomAudioUrl()),
+                    item.getImageUrl(),
+                    item.getNote()});
+            item.getExamples().stream()
+                    .filter(e -> !e.isDeleted())
+                    .forEach(e -> exampleRows.add(new String[]{
+                            vocab.getWord(),
+                            vocab.getHiragana(),
+                            e.getExampleJp(),
+                            e.getExampleVi(),
+                            ExcelImportSupport.fromOverride(e.getExampleRomaji()),
+                            e.getAudioUrl(),
+                            e.isPrimary() ? "x" : null}));
+        }
+        XSSFWorkbook wb = createWorkbook();
+        excel.writeRows(wb.getSheet(ITEM_SHEET), itemRows);
+        excel.writeRows(wb.getSheet(EXAMPLE_SHEET), exampleRows);
+        log.info("[VOCAB-EXPORT] section id={} exported {} items, {} examples",
+                sectionId, itemRows.size(), exampleRows.size());
+        return new ImportTemplateFile(ExcelImportSupport.exportFileName("tu_vung", section), excel.toBytes(wb));
     }
 
     // ============================================================
@@ -230,7 +282,8 @@ public class VocabularyImportService {
     /** Kiểm tra 1 dòng sheet TuVung. Trả về draft nếu tra được từ điển (dòng có thể vẫn lỗi ở cột khác). */
     private Draft parseItemRow(ImportRowResult r, Set<Long> existingVocabIds, Map<Long, Integer> seenVocabRow) {
         String word = excel.text(r, WORD, 100);
-        String hiragana = excel.text(r, HIRAGANA, 100);
+        excel.text(r, HIRAGANA, 100);
+        String hiragana = vocabLookup.normalizeHiragana(r, HIRAGANA);
         String meaning = excel.text(r, MEANING, 5000);
         String romaji = excel.text(r, ROMAJI, 150);
         String audio = excel.text(r, AUDIO, 500);
@@ -245,26 +298,13 @@ public class VocabularyImportService {
             return null;
         }
 
-        Optional<Vocabulary> found = hiragana != null
-                ? vocabularyRepository.findFirstByWordAndHiraganaAndDeletedFalseOrderBySenseNoAsc(word, hiragana)
-                : vocabularyRepository.findFirstByWordAndDeletedFalseOrderBySenseNoAsc(word);
+        Optional<Vocabulary> found = vocabLookup.find(r, word, hiragana);
         if (found.isEmpty()) {
-            String readings = hiragana != null ? readingsOf(word) : null;
-            if (readings != null) {
-                r.error("Từ '" + word + "' không có cách đọc '" + hiragana + "' trong từ điển. Các cách đọc có: " + readings);
-            } else {
-                r.error("Không tìm thấy từ '" + word + "' trong từ điển");
-            }
             return null;
         }
         Vocabulary vocab = found.get();
-        r.getData().put("vocabId", vocab.getId());
-        r.getData().put("dictHiragana", vocab.getHiragana());
-        r.getData().put("dictMeaning", vocab.getMeaningVi());
-        if (hiragana == null && vocabularyRepository.countByWordAndDeletedFalse(word) > 1) {
-            r.warn("Từ '" + word + "' có nhiều nghĩa/cách đọc (" + readingsOf(word) + "), đã chọn '"
-                    + vocab.getHiragana() + "'. Điền cột hiragana để chọn chính xác");
-        }
+        // Hiragana / Romaji: file → từ điển → tự sinh (Kuromoji + JapaneseKanaUtil)
+        ImportVocabularyLookup.Reading reading = vocabLookup.resolveReading(r, vocab, hiragana, romaji);
 
         if (existingVocabIds.contains(vocab.getId())) {
             r.error("Từ này đã có trong section");
@@ -277,8 +317,10 @@ public class VocabularyImportService {
 
         LessonVocabularyItemCreateRequest request = LessonVocabularyItemCreateRequest.builder()
                 .vocabId(vocab.getId())
+                // null = lấy theo từ điển; chỉ ghi đè khi giá trị đến từ file hoặc được tự sinh
+                .customHiragana(reading.hiraganaAuto() ? reading.hiragana() : null)
+                .customRomaji(ImportVocabularyLookup.SOURCE_DICT.equals(reading.romajiSource()) ? null : reading.romaji())
                 .customMeaning(ExcelImportSupport.toOverride(meaning))
-                .customRomaji(ExcelImportSupport.toOverride(romaji))
                 .customAudioUrl(ExcelImportSupport.toOverride(audio))
                 .imageUrl(image)
                 .note(note)
@@ -288,7 +330,8 @@ public class VocabularyImportService {
 
     private void parseExampleRow(ImportRowResult r, Map<String, Draft> draftsByKey) {
         String word = excel.text(r, EX_WORD, 100);
-        String hiragana = excel.text(r, EX_HIRAGANA, 100);
+        excel.text(r, EX_HIRAGANA, 100);
+        String hiragana = vocabLookup.normalizeHiragana(r, EX_HIRAGANA);
         String jp = excel.text(r, EX_JP, 5000);
         String vi = excel.text(r, EX_VI, 5000);
         String romaji = excel.text(r, EX_ROMAJI, 5000);
@@ -325,20 +368,11 @@ public class VocabularyImportService {
         draft.examples.add(LessonVocabularyExampleCreateRequest.builder()
                 .exampleJp(jp)
                 .exampleVi(vi)
-                .exampleRomaji(romaji)
+                // Romaji: file → tự sinh bằng Kuromoji từ câu tiếng Nhật
+                .exampleRomaji(vocabLookup.resolveSentenceRomaji(r, jp, romaji))
                 .audioUrl(audio)
                 .isPrimary(isPrimary)
                 .build());
-    }
-
-    /** Các cách đọc (không trùng) của 1 từ trong từ điển, nối bằng dấu phẩy; null nếu từ không có. */
-    private String readingsOf(String word) {
-        List<String> readings = vocabularyRepository.findByWordAndDeletedFalseOrderBySenseNoAsc(word).stream()
-                .map(Vocabulary::getHiragana)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        return readings.isEmpty() ? null : String.join(", ", readings);
     }
 
     /** Tìm từ theo word+hiragana; nếu câu ví dụ bỏ trống hiragana thì nhận khi word là duy nhất. */

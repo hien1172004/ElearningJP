@@ -3,7 +3,9 @@ package com.jp.elearningjp.service.curriculum.importer;
 import com.jp.elearningjp.dto.response.curriculum.importer.ImportRowResult;
 import com.jp.elearningjp.dto.response.curriculum.importer.ImportRowStatus;
 import com.jp.elearningjp.dto.response.curriculum.importer.SectionImportPreviewResponse;
+import com.jp.elearningjp.entity.curriculum.LessonSection;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
+import com.jp.elearningjp.shared.util.SlugUtils;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
@@ -296,6 +298,42 @@ public class ExcelImportSupport {
         validation.setErrorStyle(DataValidation.ErrorStyle.WARNING);
         validation.setShowErrorBox(true);
         sheet.addValidationData(validation);
+    }
+
+    // ============================================================
+    // XUẤT DỮ LIỆU (dùng đúng mẫu import để có thể import lại sang section khác)
+    // ============================================================
+
+    /** Ghi các dòng dữ liệu vào sheet, bắt đầu từ dòng 2 (dưới tiêu đề). Ô null bỏ trống. */
+    public void writeRows(Sheet sheet, List<String[]> rows) {
+        for (int r = 0; r < rows.size(); r++) {
+            Row row = sheet.createRow(r + 1);
+            String[] values = rows.get(r);
+            for (int c = 0; c < values.length; c++) {
+                if (values[c] != null && !values[c].isEmpty()) {
+                    row.createCell(c).setCellValue(values[c]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Ngược với {@link #toOverride}: null → ô trống (lấy theo từ điển),
+     * "" → {@code -} (để trống trong bài), còn lại giữ nguyên.
+     */
+    public static String fromOverride(String value) {
+        if (value == null) return null;
+        return value.isEmpty() ? CLEAR_MARKER : value;
+    }
+
+    /** Tên file xuất: {@code <prefix>_<bài học>_<mục>.xlsx} (không dấu). */
+    public static String exportFileName(String prefix, LessonSection section) {
+        String lesson = section.getLesson() != null ? SlugUtils.toSlug(section.getLesson().getTitle()) : "";
+        String name = prefix
+                + (lesson.isEmpty() ? "" : "_" + lesson)
+                + "_" + (SlugUtils.toSlug(section.getTitle()).isEmpty() ? "muc-" + section.getId()
+                        : SlugUtils.toSlug(section.getTitle()));
+        return (name.length() > 120 ? name.substring(0, 120) : name) + ".xlsx";
     }
 
     public byte[] toBytes(Workbook wb) {

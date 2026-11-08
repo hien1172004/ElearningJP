@@ -11,13 +11,13 @@ import com.jp.elearningjp.entity.curriculum.LessonKanjiItem;
 import com.jp.elearningjp.entity.curriculum.LessonSection;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
-import com.jp.elearningjp.repository.content.VocabularyRepository;
 import com.jp.elearningjp.repository.content.WritingCharacterRepository;
 import com.jp.elearningjp.repository.curriculum.LessonKanjiItemRepository;
 import com.jp.elearningjp.service.curriculum.importer.ExcelImportSupport;
 import com.jp.elearningjp.service.curriculum.importer.ImportColumn;
 import com.jp.elearningjp.service.curriculum.importer.ImportSectionResolver;
 import com.jp.elearningjp.service.curriculum.importer.ImportTemplateFile;
+import com.jp.elearningjp.service.curriculum.importer.ImportVocabularyLookup;
 import com.jp.elearningjp.service.curriculum.section.KanjiSectionItemService;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +52,7 @@ public class KanjiImportService {
 
     public static final String TEMPLATE_TYPE = "LESSON_KANJI";
     public static final int TEMPLATE_VERSION = 1;
+    static final String TEMPLATE_FILE_NAME = "mau_import_kanji_v" + TEMPLATE_VERSION + ".xlsx";
     static final String ITEM_SHEET = "Kanji";
     static final String RELATED_SHEET = "TuLienQuan";
     static final int MAX_ITEMS = 500;
@@ -72,7 +73,7 @@ public class KanjiImportService {
     static final ImportColumn REL_WORD = ImportColumn.required("word", 16,
             "Từ vựng liên quan có trong từ điển, nên chứa chữ Hán đó. Vd: 日本");
     static final ImportColumn REL_HIRAGANA = ImportColumn.optional("hiragana", 16,
-            "Cách đọc để chọn đúng từ. Bỏ trống = lấy nghĩa đầu tiên");
+            "Cách đọc (Hiragana/Katakana) để chọn đúng từ. Bỏ trống = hệ thống tự nhận diện, không được thì lấy nghĩa đầu");
     static final ImportColumn REL_NOTE = ImportColumn.optional("note", 30,
             "Ghi chú cho từ liên quan (tối đa 2000 ký tự)");
     static final List<ImportColumn> RELATED_COLUMNS = List.of(REL_KANJI, REL_WORD, REL_HIRAGANA, REL_NOTE);
@@ -80,7 +81,7 @@ public class KanjiImportService {
     private final ExcelImportSupport excel;
     private final ImportSectionResolver sectionResolver;
     private final WritingCharacterRepository writingCharacterRepository;
-    private final VocabularyRepository vocabularyRepository;
+    private final ImportVocabularyLookup vocabLookup;
     private final LessonKanjiItemRepository kanjiItemRepository;
     private final KanjiSectionItemService kanjiSectionItemService;
 
@@ -89,6 +90,11 @@ public class KanjiImportService {
     // ============================================================
 
     public ImportTemplateFile buildTemplate() {
+        return new ImportTemplateFile(TEMPLATE_FILE_NAME, excel.toBytes(createWorkbook()));
+    }
+
+    /** Workbook mẫu (Hướng dẫn + _meta + các sheet dữ liệu trống) — dùng cho cả tải mẫu và xuất dữ liệu. */
+    private XSSFWorkbook createWorkbook() {
         List<String> guide = new ArrayList<>(List.of(
                 "Cách dùng:",
                 "1. Điền mỗi chữ Hán 1 dòng ở sheet 'Kanji'. Chữ phải có sẵn trong từ điển của hệ thống.",
@@ -111,7 +117,34 @@ public class KanjiImportService {
         excel.addDataSheet(wb, ITEM_SHEET, ITEM_COLUMNS, MAX_ITEMS);
         excel.addDataSheet(wb, RELATED_SHEET, RELATED_COLUMNS, MAX_RELATED);
         wb.setActiveSheet(wb.getSheetIndex(ITEM_SHEET));
-        return new ImportTemplateFile("mau_import_kanji_v" + TEMPLATE_VERSION + ".xlsx", excel.toBytes(wb));
+        return wb;
+    }
+
+    // ============================================================
+    // EXPORT — xuất dữ liệu section theo đúng mẫu import (import lại được sang section khác)
+    // ============================================================
+
+    /** Xuất chữ Hán (+ từ liên quan) của section ra file Excel cùng định dạng mẫu import. */
+    @Transactional(readOnly = true)
+    public ImportTemplateFile exportSection(Long sectionId) {
+        LessonSection section = sectionResolver.requireEditable(sectionId, LessonSectionType.KANJI);
+        List<String[]> itemRows = new ArrayList<>();
+        List<String[]> relatedRows = new ArrayList<>();
+        for (LessonKanjiItem item : kanjiItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(sectionId)) {
+            if (item.getCharacter() == null) continue;
+            String kanji = item.getCharacter().getCharacter();
+            itemRows.add(new String[]{kanji, item.getNote()});
+            item.getRelatedVocabulary().stream()
+                    .filter(rv -> !rv.isDeleted() && rv.getVocab() != null)
+                    .forEach(rv -> relatedRows.add(new String[]{
+                            kanji, rv.getVocab().getWord(), rv.getVocab().getHiragana(), rv.getNote()}));
+        }
+        XSSFWorkbook wb = createWorkbook();
+        excel.writeRows(wb.getSheet(ITEM_SHEET), itemRows);
+        excel.writeRows(wb.getSheet(RELATED_SHEET), relatedRows);
+        log.info("[KANJI-EXPORT] section id={} exported {} items, {} related",
+                sectionId, itemRows.size(), relatedRows.size());
+        return new ImportTemplateFile(ExcelImportSupport.exportFileName("chu_han", section), excel.toBytes(wb));
     }
 
     // ============================================================
@@ -265,7 +298,8 @@ public class KanjiImportService {
     private void parseRelatedRow(ImportRowResult r, Map<String, Draft> draftsByKanji) {
         String kanji = excel.text(r, REL_KANJI, 8);
         String word = excel.text(r, REL_WORD, 100);
-        String hiragana = excel.text(r, REL_HIRAGANA, 100);
+        excel.text(r, REL_HIRAGANA, 100);
+        String hiragana = vocabLookup.normalizeHiragana(r, REL_HIRAGANA);
         String note = excel.text(r, REL_NOTE, 2000);
         if (kanji == null || word == null) {
             return;
@@ -277,25 +311,13 @@ public class KanjiImportService {
         }
         r.getData().put("linkedRow", draft.row.getRowNumber());
 
-        Optional<Vocabulary> found = hiragana != null
-                ? vocabularyRepository.findFirstByWordAndHiraganaAndDeletedFalseOrderBySenseNoAsc(word, hiragana)
-                : vocabularyRepository.findFirstByWordAndDeletedFalseOrderBySenseNoAsc(word);
+        Optional<Vocabulary> found = vocabLookup.find(r, word, hiragana);
         if (found.isEmpty()) {
-            r.error(hiragana != null
-                    ? "Không tìm thấy từ '" + word + "' (" + hiragana + ") trong từ điển"
-                    : "Không tìm thấy từ '" + word + "' trong từ điển");
             return;
         }
         Vocabulary vocab = found.get();
-        r.getData().put("vocabId", vocab.getId());
-        r.getData().put("dictHiragana", vocab.getHiragana());
-        r.getData().put("dictMeaning", vocab.getMeaningVi());
         if (!word.contains(kanji)) {
             r.warn("Từ '" + word + "' không chứa chữ '" + kanji + "'");
-        }
-        if (hiragana == null && vocabularyRepository.countByWordAndDeletedFalse(word) > 1) {
-            r.warn("Từ '" + word + "' có nhiều nghĩa/cách đọc, đã chọn '" + vocab.getHiragana()
-                    + "'. Điền cột hiragana để chọn chính xác");
         }
         Integer firstRow = draft.relatedVocabRow.putIfAbsent(vocab.getId(), r.getRowNumber());
         if (firstRow != null) {

@@ -1,33 +1,23 @@
 package com.jp.elearningjp.service.speaking.impl;
 
 import com.atilika.kuromoji.ipadic.Token;
-import com.atilika.kuromoji.ipadic.Tokenizer;
 import com.jp.elearningjp.dto.response.speaking.FuriganaResponse;
 import com.jp.elearningjp.dto.response.speaking.FuriganaTokenDto;
 import com.jp.elearningjp.service.speaking.FuriganaService;
-import com.jp.elearningjp.service.speaking.util.JapaneseKanaUtil;
-import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import com.jp.elearningjp.shared.util.JapaneseKanaUtil;
+import com.jp.elearningjp.shared.util.JapaneseReadingService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/** Sinh furigana (thẻ ruby) + romaji cho câu tiếng Nhật, dùng Kuromoji qua {@link JapaneseReadingService}. */
 @Service
-@Slf4j
+@RequiredArgsConstructor
 public class FuriganaServiceImpl implements FuriganaService {
 
-    private Tokenizer tokenizer;
-
-    @PostConstruct
-    public void init() {
-        try {
-            this.tokenizer = new Tokenizer();
-            log.info("Kuromoji tokenizer initialized successfully.");
-        } catch (Exception e) {
-            log.error("Failed to initialize Kuromoji tokenizer: {}", e.getMessage(), e);
-        }
-    }
+    private final JapaneseReadingService readingService;
 
     @Override
     public FuriganaResponse parseFurigana(String textJa) {
@@ -40,11 +30,7 @@ public class FuriganaServiceImpl implements FuriganaService {
                     .build();
         }
 
-        if (tokenizer == null) {
-            tokenizer = new Tokenizer();
-        }
-
-        List<Token> kuromojiTokens = tokenizer.tokenize(textJa);
+        List<Token> kuromojiTokens = readingService.tokenize(textJa);
         List<FuriganaTokenDto> tokenDtos = new ArrayList<>();
         StringBuilder rubyBuilder = new StringBuilder();
         StringBuilder romajiBuilder = new StringBuilder();
@@ -53,51 +39,37 @@ public class FuriganaServiceImpl implements FuriganaService {
             String surface = token.getSurface();
             String rawReading = token.getReading();
             boolean hasKanji = JapaneseKanaUtil.containsKanji(surface);
-
+            String romaji = readingService.tokenRomaji(token);
             String furigana = null;
-            String romaji;
 
-            if (hasKanji) {
-                if (rawReading != null && !rawReading.equals("*")) {
-                    furigana = JapaneseKanaUtil.katakanaToHiragana(rawReading);
-                    romaji = JapaneseKanaUtil.kanaToRomaji(furigana);
+            if (hasKanji && rawReading != null && !rawReading.equals("*")) {
+                furigana = JapaneseKanaUtil.katakanaToHiragana(rawReading);
 
-                    // Tách okurigana đuôi (ví dụ: surface '食べ', reading 'たべ' -> '<ruby>食<rt>た</rt></ruby>べ')
-                    int trailingKanaCount = 0;
-                    while (trailingKanaCount < surface.length() && trailingKanaCount < furigana.length()) {
-                        char sChar = surface.charAt(surface.length() - 1 - trailingKanaCount);
-                        char fChar = furigana.charAt(furigana.length() - 1 - trailingKanaCount);
-                        if (sChar == fChar && !JapaneseKanaUtil.containsKanji(String.valueOf(sChar))) {
-                            trailingKanaCount++;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    if (trailingKanaCount > 0) {
-                        String kanjiPart = surface.substring(0, surface.length() - trailingKanaCount);
-                        String rtPart = furigana.substring(0, furigana.length() - trailingKanaCount);
-                        String okurigana = surface.substring(surface.length() - trailingKanaCount);
-                        rubyBuilder.append("<ruby>").append(kanjiPart).append("<rt>").append(rtPart).append("</rt></ruby>").append(okurigana);
+                // Tách okurigana đuôi (ví dụ: surface '食べ', reading 'たべ' -> '<ruby>食<rt>た</rt></ruby>べ')
+                int trailingKanaCount = 0;
+                while (trailingKanaCount < surface.length() && trailingKanaCount < furigana.length()) {
+                    char sChar = surface.charAt(surface.length() - 1 - trailingKanaCount);
+                    char fChar = furigana.charAt(furigana.length() - 1 - trailingKanaCount);
+                    if (sChar == fChar && !JapaneseKanaUtil.containsKanji(String.valueOf(sChar))) {
+                        trailingKanaCount++;
                     } else {
-                        rubyBuilder.append("<ruby>").append(surface).append("<rt>").append(furigana).append("</rt></ruby>");
+                        break;
                     }
+                }
+
+                if (trailingKanaCount > 0) {
+                    String kanjiPart = surface.substring(0, surface.length() - trailingKanaCount);
+                    String rtPart = furigana.substring(0, furigana.length() - trailingKanaCount);
+                    String okurigana = surface.substring(surface.length() - trailingKanaCount);
+                    rubyBuilder.append("<ruby>").append(kanjiPart).append("<rt>").append(rtPart).append("</rt></ruby>").append(okurigana);
                 } else {
-                    romaji = surface;
-                    rubyBuilder.append(surface);
+                    rubyBuilder.append("<ruby>").append(surface).append("<rt>").append(furigana).append("</rt></ruby>");
                 }
             } else {
-                if ("助詞".equals(token.getPartOfSpeechLevel1())) {
-                    if ("は".equals(surface)) romaji = "wa";
-                    else if ("へ".equals(surface)) romaji = "e";
-                    else romaji = JapaneseKanaUtil.kanaToRomaji(surface);
-                } else {
-                    romaji = JapaneseKanaUtil.kanaToRomaji(surface);
-                }
                 rubyBuilder.append(surface);
             }
 
-            if (romajiBuilder.length() > 0 && !romaji.isBlank() && !surface.matches("^[、。！？,.!? ]+$")) {
+            if (romajiBuilder.length() > 0 && !romaji.isBlank() && !JapaneseReadingService.isPunctuation(surface)) {
                 romajiBuilder.append(" ");
             }
             romajiBuilder.append(romaji);
