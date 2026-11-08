@@ -67,6 +67,10 @@ public enum ErrorCode {
     IMPORT_TOO_MANY_ROWS(1235, "File Excel vượt quá số dòng cho phép", HttpStatus.BAD_REQUEST),
     IMPORT_NO_ROWS(1236, "File Excel không có dòng dữ liệu nào", HttpStatus.BAD_REQUEST),
     IMPORT_HAS_ERRORS(1237, "File Excel còn dòng lỗi, hãy sửa rồi import lại", HttpStatus.BAD_REQUEST),
+    // In phiếu luyện viết từ bài học (1238-1239, 1222)
+    PRACTICE_SHEET_NO_ITEMS(1238, "Chưa chọn từ nào để in phiếu luyện viết", HttpStatus.BAD_REQUEST),
+    PRACTICE_SHEET_TYPE_INVALID(1239, "Chỉ in phiếu luyện viết cho mục Chữ Hán hoặc Từ vựng", HttpStatus.BAD_REQUEST),
+    PRACTICE_SHEET_TOO_MANY_ITEMS(1222, "Mỗi lần in tối đa 300 mục, hãy chọn bớt", HttpStatus.BAD_REQUEST),
     LESSON_KANJI_RELATED_VOCAB_TOO_MANY(1221, "Số từ vựng liên quan vượt quá giới hạn 200 từ cho 1 chữ Hán", HttpStatus.BAD_REQUEST),
 
     // CURRICULUM MODULE — Enrollment (1300-1399)

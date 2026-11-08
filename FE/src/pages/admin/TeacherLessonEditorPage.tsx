@@ -13,6 +13,7 @@ import {
 } from '@/components/course/section-editor'
 import { QuizPanel } from '@/components/course/quiz-editor'
 import { LessonSpeakingPanel } from '@/components/course/speaking-editor/LessonSpeakingPanel'
+import { PracticeSheetButton } from '@/components/course/practice-sheet'
 import { useCourseDetail, useLessonDetail, useSectionMutations } from '@/hooks'
 import type { LessonSection, LessonSectionType } from '@/types'
 
@@ -49,9 +50,10 @@ export const lessonEditorPath = (courseId: number, lessonId: number, tab?: Lesso
  */
 const SectionTypeTab: React.FC<{
   lessonId: number
+  lessonTitle?: string
   type: LessonSectionType
   allSections: LessonSection[]
-}> = ({ lessonId, type, allSections }) => {
+}> = ({ lessonId, lessonTitle, type, allSections }) => {
   const { createSection, deleteSection } = useSectionMutations(lessonId)
   const label = SECTION_TYPE_LABEL[type]
   const sections = allSections
@@ -102,6 +104,15 @@ const SectionTypeTab: React.FC<{
             </p>
             <div className="flex items-center gap-2">
               <SectionImportButton lessonId={lessonId} section={s} />
+              {type !== 'GRAMMAR' && (
+                <PracticeSheetButton
+                  lessonId={lessonId}
+                  lessonTitle={lessonTitle}
+                  type={type}
+                  sections={allSections}
+                  initialSectionId={s.id}
+                />
+              )}
               {multi && (
                 <AntdButton size="small" danger icon={<Trash2 className="w-3.5 h-3.5" />} onClick={() => removeSection(s)}>
                   Xóa nhóm
@@ -175,7 +186,7 @@ export const TeacherLessonEditorPage: React.FC = () => {
     return {
       key,
       label: tabLabel(icon, SECTION_TYPE_LABEL[type], countOf(type)),
-      children: <SectionTypeTab lessonId={lessonId} type={type} allSections={sections} />,
+      children: <SectionTypeTab lessonId={lessonId} lessonTitle={lesson.title} type={type} allSections={sections} />,
     }
   }
 

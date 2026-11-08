@@ -20,3 +20,4 @@ export * from './courseStudent.service'
 // (service này gọi /progress/lessons/* — lesson progress).
 export { progressService as learningProgressService } from './progress.service'
 export * from './sectionImport.service'
+export * from './practiceSheet.service'

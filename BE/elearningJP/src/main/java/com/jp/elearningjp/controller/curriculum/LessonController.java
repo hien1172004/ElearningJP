@@ -3,9 +3,12 @@ package com.jp.elearningjp.controller.curriculum;
 import com.jp.elearningjp.dto.request.curriculum.LessonCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonUpdateRequest;
+import com.jp.elearningjp.dto.request.curriculum.PracticeSheetRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.LessonDetailResponse;
 import com.jp.elearningjp.dto.response.curriculum.LessonOutlineResponse;
+import com.jp.elearningjp.dto.response.curriculum.PracticeSheetCheckResponse;
+import com.jp.elearningjp.service.curriculum.LessonPracticeSheetService;
 import com.jp.elearningjp.service.curriculum.LessonService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
@@ -17,9 +20,14 @@ import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Tag(name = "Lessons", description = "Quản lý bài học, xem nội dung bài giảng và theo dõi tiến độ")
@@ -29,6 +37,7 @@ import java.util.List;
 public class LessonController {
 
     LessonService lessonService;
+    LessonPracticeSheetService practiceSheetService;
 
     @Operation(summary = "Xem nội dung chi tiết bài học", description = "Chỉ người dùng ĐÃ ĐĂNG KÝ KHÓA HỌC mới có quyền xem bài giảng. Tự động ghi nhận trạng thái IN_PROGRESS.")
     @SecurityRequirement(name = "bearerAuth")
@@ -110,5 +119,31 @@ public class LessonController {
                 .message("Chúc mừng bạn đã hoàn thành bài học!")
                 .data(lessonService.completeLesson(id))
                 .build();
+    }
+
+    @Operation(summary = "Kiểm tra ký tự thiếu dữ liệu nét trước khi in phiếu luyện viết",
+            description = "Admin, chủ khóa học hoặc học viên đã đăng ký. Trả về các mục có ký tự chưa có thứ tự nét.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.PRACTICE_SHEET_CHECK)
+    public ApiResponse<PracticeSheetCheckResponse> checkPracticeSheet(
+            @PathVariable Long id, @Valid @RequestBody PracticeSheetRequest request) {
+        return ApiResponse.<PracticeSheetCheckResponse>builder()
+                .success(true)
+                .data(practiceSheetService.check(id, request))
+                .build();
+    }
+
+    @Operation(summary = "In phiếu luyện viết (PDF) cho mục Chữ Hán / Từ vựng của bài học",
+            description = "In các mục đã chọn, nhóm theo từng nhóm (section) của bài. Ký tự thiếu nét chỉ in chữ mẫu và chữ mờ.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.PRACTICE_SHEET)
+    public ResponseEntity<byte[]> printPracticeSheet(
+            @PathVariable Long id, @Valid @RequestBody PracticeSheetRequest request) {
+        LessonPracticeSheetService.PracticeSheetFile file = practiceSheetService.render(id, request);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(file.fileName(), StandardCharsets.UTF_8).build().toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(file.content());
     }
 }
