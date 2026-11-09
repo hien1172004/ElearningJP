@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.shared.util.VersionCheck;
 import java.time.Instant;
 import com.jp.elearningjp.dto.request.curriculum.CourseCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.CourseUpdateRequest;
@@ -14,6 +15,9 @@ import com.jp.elearningjp.mapper.CourseMapper;
 import com.jp.elearningjp.mapper.LessonMapper;
 import com.jp.elearningjp.repository.curriculum.*;
 import com.jp.elearningjp.repository.user.UserRepository;
+import com.jp.elearningjp.service.curriculum.snapshot.CourseSnapshot;
+import com.jp.elearningjp.service.curriculum.snapshot.CourseSnapshotReader;
+import com.jp.elearningjp.shared.enums.CourseReviewStatus;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.response.PageResponse;
@@ -55,6 +59,9 @@ public class CourseService {
     LessonMapper lessonMapper;
     CurrentUserService currentUserService;
     CourseAccessGuard courseAccessGuard;
+    CourseReviewService courseReviewService;
+    CourseSnapshotReader courseSnapshotReader;
+    CoursePublishedVersionRepository publishedVersionRepository;
     ApplicationEventPublisher eventPublisher;
 
     private static final String DEFAULT_SLUG = "khoa-hoc";
@@ -69,27 +76,43 @@ public class CourseService {
                 ? courseRepository.findByJlptLevelAndPublishedTrueAndDeletedFalse(jlptLevel, pageable)
                 : courseRepository.findByPublishedTrueAndDeletedFalse(pageable);
 
-        return toCoursePageResponse(coursePage, page, size);
+        return toCoursePageResponse(coursePage, page, size, true);
     }
 
     /**
      * Danh sách khóa học cho trang quản lý (kể cả chưa xuất bản):
-     * ADMIN thấy toàn bộ; TEACHER chỉ thấy khóa học do chính mình tạo.
+     * ADMIN thấy toàn bộ; TEACHER chỉ thấy khóa học được giao cho mình.
      */
     @Transactional(readOnly = true)
     public PageResponse<CourseResponse> getAllCoursesForAdmin(int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Course> coursePage = currentUserService.isAdmin()
-                ? courseRepository.findByDeletedFalse(pageable)
-                : courseRepository.findByCreatedByIdAndDeletedFalse(currentUserService.getCurrentUserId(), pageable);
+        return getAllCoursesForAdmin(page, size, false);
+    }
 
-        return toCoursePageResponse(coursePage, page, size);
+    /**
+     * @param pendingChangesOnly true = chỉ khóa có thay đổi chưa duyệt (bản đang soạn khác bản học viên đang học)
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<CourseResponse> getAllCoursesForAdmin(int page, int size, boolean pendingChangesOnly) {
+        Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Course> coursePage;
+        if (currentUserService.isAdmin()) {
+            coursePage = pendingChangesOnly
+                    ? courseRepository.findByDeletedFalseAndHasUnpublishedChangesTrue(pageable)
+                    : courseRepository.findByDeletedFalse(pageable);
+        } else {
+            Long teacherId = currentUserService.getCurrentUserId();
+            coursePage = pendingChangesOnly
+                    ? courseRepository.findAssignedToTeacherWithPendingChanges(teacherId, pageable)
+                    : courseRepository.findAssignedToTeacher(teacherId, pageable);
+        }
+
+        return toCoursePageResponse(coursePage, page, size, false);
     }
 
     /**
      * Xem chi tiết khóa học và mục lục lộ trình bài học
      * Tự động nhận diện tài khoản: nếu đã đăng ký thì trả về isEnrolled = true và % tiến độ.
-     * Khóa chưa xuất bản chỉ admin, chủ khóa học và học viên đã đăng ký thấy được;
+     * Khóa chưa xuất bản chỉ admin, giáo viên được giao và học viên đã đăng ký thấy được;
      * người khác nhận 404 để không lộ sự tồn tại của khóa.
      */
     @Transactional(readOnly = true)
@@ -113,17 +136,24 @@ public class CourseService {
             }
         }
 
+        boolean canManage = currentUser != null
+                && (currentUserService.isAdmin() || courseAccessGuard.isAssignedTeacher(course, currentUser.getId()));
         if (!Boolean.TRUE.equals(course.getPublished())) {
-            Long viewerId = currentUser != null ? currentUser.getId() : null;
-            boolean allowed = isEnrolled || currentUserService.isAdmin()
-                    || courseAccessGuard.isOwner(course, viewerId);
-            if (!allowed) {
+            if (!isEnrolled && !canManage) {
                 throw new AppException(ErrorCode.COURSE_NOT_FOUND);
             }
         }
 
+        // Học viên của khóa đã có bản xuất bản: mục lục theo bản đã duyệt
+        Optional<CourseSnapshot> snapshot = canManage
+                ? Optional.empty()
+                : courseSnapshotReader.findCourse(course.getPublishedVersionId());
+        if (snapshot.isPresent()) {
+            return buildCourseDetail(course, snapshot.get().getLessons(), progressMap, isEnrolled, false,
+                    completedCount, currentUser);
+        }
+
         List<Lesson> lessons = lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId);
-        int totalLessons = lessons.size();
         List<Long> allLessonIds = lessons.stream().map(Lesson::getId).toList();
         Set<Long> lessonIdsWithQuiz = lessons.isEmpty()
                 ? Set.of()
@@ -132,23 +162,32 @@ public class CourseService {
                 ? Set.of()
                 : new HashSet<>(lessonSpeakingRepo.findLessonIdsWithSpeaking(allLessonIds));
 
-        Map<Long, UserLessonProgress> finalProgressMap = progressMap;
         List<LessonOutlineResponse> outlineList = lessons.stream()
                 .map(lesson -> {
                     LessonOutlineResponse outline = lessonMapper.toLessonOutlineResponse(lesson);
                     outline.setHasQuiz(lessonIdsWithQuiz.contains(lesson.getId()));
                     outline.setHasSpeaking(lessonIdsWithSpeaking.contains(lesson.getId()));
-
-                    UserLessonProgress progress = finalProgressMap.get(lesson.getId());
-                    if (progress != null) {
-                        outline.setStatus(progress.getStatus());
-                        outline.setBestScore(progress.getBestScore());
-                    } else {
-                        outline.setStatus(ProgressStatus.NOT_STARTED);
-                    }
                     return outline;
                 })
                 .toList();
+
+        return buildCourseDetail(course, outlineList, progressMap, isEnrolled, canManage, completedCount, currentUser);
+    }
+
+    /** Mục lục bài (bản đang soạn hoặc snapshot) + ghép tiến độ của người dùng. */
+    private CourseDetailResponse buildCourseDetail(Course course, List<LessonOutlineResponse> outlineList,
+                                                   Map<Long, UserLessonProgress> progressMap, boolean isEnrolled,
+                                                   boolean canManage, int completedCount, User currentUser) {
+        Long courseId = course.getId();
+        for (LessonOutlineResponse outline : outlineList) {
+            UserLessonProgress progress = progressMap.get(outline.getId());
+            if (progress != null) {
+                outline.setStatus(progress.getStatus());
+                outline.setBestScore(progress.getBestScore());
+            } else {
+                outline.setStatus(ProgressStatus.NOT_STARTED);
+            }
+        }
 
         // Bước 2: dùng query SQL tổng hợp đã có sẵn (chính xác, tránh lệch do tính tay)
         BigDecimal progressPercent = isEnrolled && currentUser != null
@@ -158,7 +197,14 @@ public class CourseService {
 
         CourseDetailResponse response = courseMapper.toCourseDetailResponse(course);
         response.setEnrolled(isEnrolled);
-        response.setTotalLessons(totalLessons);
+        response.setCanManage(canManage);
+        if (canManage && course.getPublishedVersionId() != null) {
+            publishedVersionRepository.findById(course.getPublishedVersionId()).ifPresent(v -> {
+                response.setPublishedVersionNo(v.getVersionNo());
+                response.setPublishedVersionAt(v.getCreatedAt());
+            });
+        }
+        response.setTotalLessons(outlineList.size());
         // Trước đây field này không được gán → trang quản lý / chi tiết khóa học luôn hiện 0 học viên
         response.setTotalEnrollments(enrollmentRepository.countActiveByCourseId(courseId));
         response.setCompletedLessonsCount(completedCount);
@@ -169,8 +215,7 @@ public class CourseService {
     }
 
     /**
-     * Admin/Teacher tạo khóa học mới.
-     * ADMIN tạo được tất cả. TEACHER tạo được và course sẽ gán createdBy = teacher.
+     * ADMIN tạo khóa học mới (createdBy = admin). Giáo viên được giao sau qua {@code CourseTeacherService}.
      */
     @Transactional
     public CourseResponse createCourse(CourseCreateRequest request) {
@@ -189,7 +234,10 @@ public class CourseService {
         Course course = courseMapper.toCourseEntity(request);
         course.setSlug(slug);
         course.setCreatedBy(owner);
-        course.setPublished(request.getPublished() != null ? request.getPublished() : false);
+        // Khóa mới luôn là nháp: chỉ lên cho học viên khi giáo viên gửi duyệt và ADMIN duyệt
+        course.setPublished(false);
+        course.setReviewStatus(CourseReviewStatus.EDITING);
+        course.setHasUnpublishedChanges(false);
 
         Course saved = courseRepository.save(course);
         log.info("[COURSE] Created course id={}, title='{}' by user id={}", saved.getId(), saved.getTitle(), owner.getId());
@@ -200,16 +248,18 @@ public class CourseService {
     }
 
     /**
-     * Admin hoặc Teacher (chỉ course do mình tạo) cập nhật thông tin khóa học.
+     * ADMIN cập nhật thông tin khóa học (tiêu đề, mô tả, ảnh bìa, cấp JLPT) — có hiệu lực ngay.
      */
     @Transactional
     public CourseResponse updateCourse(Long courseId, CourseUpdateRequest request) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        ensureCourseOwnerOrAdmin(course);
+        VersionCheck.requireVersion(course, request.getVersion());
 
         courseMapper.updateCourseFromRequest(request, course);
+        // flush để response mang version mới
         Course updated = courseRepository.save(course);
+        courseRepository.flush();
         log.info("[COURSE] Updated course id={}", updated.getId());
 
         CourseResponse response = courseMapper.toCourseResponse(updated);
@@ -219,13 +269,12 @@ public class CourseService {
     }
 
     /**
-     * Admin hoặc Teacher (chỉ course do mình tạo) xóa mềm khóa học.
+     * ADMIN xóa mềm khóa học.
      */
     @Transactional
     public void deleteCourse(Long courseId) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        ensureCourseOwnerOrAdmin(course);
 
         course.softDelete();
         courseRepository.save(course);
@@ -237,16 +286,22 @@ public class CourseService {
     }
 
     /**
-     * Admin hoặc Teacher (chỉ course do mình tạo) bật/tắt xuất bản khóa học.
+     * ADMIN chuyển nháp ({@code publish=false}) hoặc mở lại khóa ({@code publish=true}).
+     * Mở lại chỉ hiện lại <b>bản đã duyệt gần nhất</b> — nội dung mới chỉ tới học viên qua duyệt yêu cầu.
      */
     @Transactional
     public CourseResponse publishCourse(Long courseId, boolean publish) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        ensureCourseOwnerOrAdmin(course);
+        if (publish && course.getPublishedVersionId() == null) {
+            throw new AppException(ErrorCode.COURSE_NOT_YET_APPROVED);
+        }
 
         boolean changed = !Boolean.valueOf(publish).equals(course.getPublished());
         course.setPublished(publish);
+        if (changed) {
+            courseReviewService.onAdminPublishChanged(course, publish);
+        }
         Course saved = courseRepository.save(course);
         log.info("[COURSE] Course id={} published status set to {}", courseId, publish);
 
@@ -275,7 +330,7 @@ public class CourseService {
             throw new AppException(ErrorCode.COURSE_NOT_ENROLLED);
         }
 
-        int totalLessons = (int) lessonRepository.countByCourseIdAndDeletedFalse(courseId);
+        int totalLessons = (int) lessonRepository.countLearnerLessons(courseId);
         int completedLessons = (int) progressRepository.countCompletedLessonsByCourse(
                 user.getId(), courseId, ProgressStatus.COMPLETED);
 
@@ -298,11 +353,18 @@ public class CourseService {
     // =========================================================
 
     /** Map trang khóa học, đếm số bài và số học viên bằng query gộp thay vì 1 query cho mỗi khóa. */
-    private PageResponse<CourseResponse> toCoursePageResponse(Page<Course> coursePage, int page, int size) {
+    /**
+     * @param learnerCounts true = đếm số bài học viên đang học (bản xuất bản) cho trang công khai;
+     *                      false = đếm bài của bản đang soạn cho trang quản lý.
+     */
+    private PageResponse<CourseResponse> toCoursePageResponse(Page<Course> coursePage, int page, int size,
+                                                              boolean learnerCounts) {
         List<Long> courseIds = coursePage.getContent().stream().map(Course::getId).toList();
         Map<Long, Long> lessonCounts = courseIds.isEmpty()
                 ? Map.of()
-                : lessonRepository.countActiveLessonsByCourseIds(courseIds).stream()
+                : (learnerCounts
+                        ? lessonRepository.countLearnerLessonsByCourseIds(courseIds)
+                        : lessonRepository.countActiveLessonsByCourseIds(courseIds)).stream()
                         .collect(Collectors.toMap(
                                 LessonRepository.CourseLessonCount::getCourseId,
                                 LessonRepository.CourseLessonCount::getLessonCount));
@@ -329,16 +391,6 @@ public class CourseService {
                 .totalElements(coursePage.getTotalElements())
                 .totalPages(coursePage.getTotalPages())
                 .build();
-    }
-
-    /**
-     * Kiểm tra quyền sửa/xoá/publish course:
-     *  - ADMIN: luôn pass
-     *  - TEACHER: chỉ pass nếu course.createdBy == currentUser
-     *  - Các role khác: 403
-     */
-    private void ensureCourseOwnerOrAdmin(Course course) {
-        courseAccessGuard.requireOwnerOrAdmin(course);
     }
 
     /**

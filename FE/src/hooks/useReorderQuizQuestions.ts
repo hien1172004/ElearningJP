@@ -5,6 +5,7 @@ import { axiosClient } from '@/services/api/axiosClient'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import type { ApiResponse } from '@/types'
 import type { LessonQuizItem } from './useQuizItemMutations'
+import { toVersionMap } from '@/utils/versions'
 
 /**
  * Hook reorder hàng loạt câu hỏi trong quiz của 1 lesson (drag-drop / nút ↑↓).
@@ -12,7 +13,7 @@ import type { LessonQuizItem } from './useQuizItemMutations'
  * <p><b>BE contract:</b></p>
  * <ul>
  *   <li>Endpoint: {@code POST /lessons/{id}/quiz/questions/reorder}</li>
- *   <li>Body: {@code { itemIds: number[] }} (theo thứ tự MỚI)</li>
+ *   <li>Body: {@code { itemIds: number[], versions?: { [id]: version } }} (theo thứ tự MỚI)</li>
  *   <li>Yêu cầu: danh sách phải chứa <b>đúng tất cả</b> active question hiện tại
  *       (không thiếu, không thừa, không trùng). Nếu sai → 400.</li>
  *   <li>Quyền: ADMIN hoặc TEACHER (chỉ trong course do mình tạo).</li>
@@ -29,12 +30,13 @@ export function useReorderQuizQuestions(lessonId: number) {
   return useMutation<
     ApiResponse<LessonQuizItem[]>,
     AxiosError<ApiResponse<unknown>>,
-    number[]
+    { id: number; version?: number }[]
   >({
-    mutationFn: async (questionIds: number[]) => {
+    /** Câu hỏi theo thứ tự MỚI (kèm version đang thấy để BE chặn ghi đè). */
+    mutationFn: async (questions) => {
       const res = await axiosClient.post<ApiResponse<LessonQuizItem[]>>(
         `/lessons/${lessonId}/quiz/questions/reorder`,
-        { itemIds: questionIds },
+        { itemIds: questions.map((q) => q.id), versions: toVersionMap(questions) },
       )
       return res.data
     },

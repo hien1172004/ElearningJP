@@ -20,6 +20,7 @@ import com.jp.elearningjp.shared.event.comment.CommentDeletedEvent;
 import com.jp.elearningjp.shared.event.comment.CommentModeratedEvent;
 import com.jp.elearningjp.dto.response.comment.ModerationItemResponse;
 import com.jp.elearningjp.shared.response.PageResponse;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +53,7 @@ class CommentModerationServiceTest {
     private CommentReportRepository reportRepository;
     private LessonRepository lessonRepository;
     private CurrentUserService currentUserService;
+    private CourseAccessGuard courseAccessGuard;
     private ApplicationEventPublisher eventPublisher;
     private CommentModerationService service;
 
@@ -78,15 +80,16 @@ class CommentModerationServiceTest {
         reportRepository = mock(CommentReportRepository.class);
         lessonRepository = mock(LessonRepository.class);
         currentUserService = mock(CurrentUserService.class);
+        courseAccessGuard = mock(CourseAccessGuard.class);
         eventPublisher = mock(ApplicationEventPublisher.class);
         service = new CommentModerationService(commentRepository, replyRepository, reportRepository, lessonRepository,
                 mock(VocabularyRepository.class), mock(WritingCharacterRepository.class),
-                mock(GrammarPointRepository.class), currentUserService, eventPublisher);
+                mock(GrammarPointRepository.class), currentUserService, courseAccessGuard, eventPublisher);
 
-        // Bài học thuộc khóa do TEACHER_ID tạo
+        // Bài học thuộc khóa TEACHER_ID được giao
         Course course = new Course();
         course.setId(10L);
-        course.setCreatedBy(user(TEACHER_ID));
+        when(courseAccessGuard.isAssignedTeacher(course, TEACHER_ID)).thenReturn(true);
         Lesson lesson = Lesson.builder().course(course).title("Bài 1").build();
         lesson.setId(LESSON_ID);
         when(lessonRepository.findById(LESSON_ID)).thenReturn(Optional.of(lesson));

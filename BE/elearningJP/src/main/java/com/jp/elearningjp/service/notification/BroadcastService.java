@@ -36,7 +36,7 @@ import java.util.Set;
  * Gửi thông báo hàng loạt.
  *
  * <p>Phạm vi: ADMIN — toàn bộ người dùng / theo role / học viên một khóa bất kỳ;
- * TEACHER — chỉ học viên khóa do mình tạo. Người nhận luôn là tài khoản đang ACTIVE,
+ * TEACHER — chỉ học viên khóa được giao. Người nhận luôn là tài khoản đang ACTIVE,
  * chưa xóa, không gồm người gửi.</p>
  *
  * <p>Thông báo cho mọi người nhận được chèn bằng 1 câu INSERT ... SELECT; realtime đẩy sau
@@ -155,8 +155,8 @@ public class BroadcastService {
                 if (courseId == null) throw new AppException(ErrorCode.BROADCAST_INVALID_AUDIENCE);
                 Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                         .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-                // TEACHER chỉ gửi cho học viên khóa do mình tạo
-                courseAccessGuard.requireOwnerOrAdmin(course, ErrorCode.BROADCAST_FORBIDDEN);
+                // TEACHER chỉ gửi cho học viên khóa được giao
+                courseAccessGuard.requireAssignedOrAdmin(course, ErrorCode.BROADCAST_FORBIDDEN);
                 return new Target(audience, null, course);
             }
             default -> throw new AppException(ErrorCode.BROADCAST_INVALID_AUDIENCE);

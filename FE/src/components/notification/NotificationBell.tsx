@@ -128,6 +128,19 @@ export const NotificationBell: React.FC = () => {
 
     const data = notification.dataJson
 
+    // Được giao khóa / luồng duyệt: mở đường dẫn đính kèm (trang soạn khóa hoặc hàng chờ duyệt).
+    // Bị gỡ khỏi khóa: không còn quyền nên không có link → không điều hướng.
+    if (notification.type === 'COURSE_TEACHER_ASSIGNMENT' || notification.type === 'COURSE_REVIEW') {
+      const link = typeof data?.link === 'string' && data.link.startsWith('/') && !data.link.startsWith('//')
+        ? data.link
+        : null
+      if (link) {
+        handleOpenChange(false)
+        navigate(link)
+      }
+      return
+    }
+
     // Thông báo hàng loạt / đổi trạng thái khóa học: mở đường dẫn đính kèm, hoặc trang khóa học liên quan
     if (notification.type === 'ANNOUNCEMENT' || notification.type === 'COURSE_STATUS_CHANGED') {
       const link =

@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatusCode;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public enum ErrorCode {
+    CONCURRENT_MODIFICATION(9001, "Nội dung đã bị người khác thay đổi, vui lòng tải lại trước khi lưu", HttpStatus.CONFLICT),
     UNCAUGHT_EXCEPTION(9999, "Đã xảy ra lỗi không mong muốn, vui lòng thử lại sau", HttpStatus.INTERNAL_SERVER_ERROR),
     USER_EXISTED(1001, "Email này đã được sử dụng", HttpStatus.BAD_REQUEST),
     USER_NOT_FOUND(1002, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),
@@ -35,6 +36,21 @@ public enum ErrorCode {
     COURSE_ARCHIVED(1102, "Khóa học đã được lưu trữ", HttpStatus.BAD_REQUEST),
     COURSE_SLUG_ALREADY_EXISTS(1103, "Đường dẫn (slug) của khóa học đã tồn tại", HttpStatus.CONFLICT),
     COURSE_DELETED(1104, "Khóa học đã bị xóa", HttpStatus.GONE),
+    COURSE_TEACHER_INVALID(1105, "Người dùng này không phải giáo viên đang hoạt động", HttpStatus.BAD_REQUEST),
+    COURSE_TEACHER_ALREADY_ASSIGNED(1106, "Giáo viên này đã được giao khóa học", HttpStatus.CONFLICT),
+    COURSE_TEACHER_NOT_ASSIGNED(1107, "Giáo viên này chưa được giao khóa học", HttpStatus.NOT_FOUND),
+    COURSE_PENDING_REVIEW_LOCKED(1108, "Khóa học đang chờ duyệt nên tạm khóa chỉnh sửa. Hãy rút yêu cầu duyệt nếu cần sửa tiếp", HttpStatus.CONFLICT),
+    COURSE_REVIEW_ALREADY_PENDING(1109, "Khóa học đã có yêu cầu duyệt đang chờ", HttpStatus.CONFLICT),
+    COURSE_REVIEW_NOT_PENDING(1110, "Yêu cầu duyệt không còn ở trạng thái chờ", HttpStatus.CONFLICT),
+    COURSE_REVIEW_NO_CHANGES(1111, "Khóa học không có thay đổi nào mới để gửi duyệt", HttpStatus.BAD_REQUEST),
+    COURSE_REVIEW_NO_LESSONS(1112, "Khóa học cần có ít nhất 1 bài học trước khi gửi duyệt", HttpStatus.BAD_REQUEST),
+    COURSE_REVIEW_REQUEST_NOT_FOUND(1113, "Không tìm thấy yêu cầu duyệt", HttpStatus.NOT_FOUND),
+    COURSE_REVIEW_WITHDRAW_FORBIDDEN(1114, "Chỉ người gửi mới rút được yêu cầu duyệt", HttpStatus.FORBIDDEN),
+    COURSE_NOT_YET_APPROVED(1115, "Khóa học chưa có bản nào được duyệt — giáo viên cần gửi duyệt trước", HttpStatus.BAD_REQUEST),
+    COURSE_CONTENT_ADMIN_READ_ONLY(1116, "Quản trị viên chỉ duyệt nội dung khóa học, không chỉnh sửa", HttpStatus.FORBIDDEN),
+    COURSE_REVIEW_COMMENT_NOT_FOUND(1117, "Không tìm thấy nhận xét duyệt", HttpStatus.NOT_FOUND),
+    COURSE_REVIEW_COMMENT_TARGET_INVALID(1118, "Bài học hoặc mục được nhận xét không thuộc khóa học này", HttpStatus.BAD_REQUEST),
+    COURSE_REVIEW_SUBMIT_FORBIDDEN(1119, "Chỉ giáo viên được giao mới gửi khóa học lên duyệt", HttpStatus.FORBIDDEN),
 
     // CURRICULUM MODULE — Lesson (1200-1299)
     LESSON_NOT_FOUND(1200, "Không tìm thấy bài học", HttpStatus.NOT_FOUND),
@@ -126,6 +142,7 @@ public enum ErrorCode {
     EXAM_ATTEMPT_FORBIDDEN(5005, "Bạn không có quyền truy cập bài làm này", HttpStatus.FORBIDDEN),
     EXAM_QUESTION_NOT_FOUND(5006, "Không tìm thấy câu hỏi trong đề thi", HttpStatus.NOT_FOUND),
     EXAM_OPTION_NOT_FOUND(5007, "Không tìm thấy phương án trả lời", HttpStatus.NOT_FOUND),
+    EXAM_NOT_YET_APPROVED(5009, "Đề thi gắn khóa chưa được duyệt — đề sẽ lên cùng lần duyệt khóa học", HttpStatus.BAD_REQUEST),
     EXAM_HAS_IN_PROGRESS_ATTEMPTS(5008, "Không thể xóa câu hỏi hoặc đề thi khi đang có thí sinh làm bài trực tiếp", HttpStatus.CONFLICT),
 
     // AI Speaking Practice (6000 - 6099)

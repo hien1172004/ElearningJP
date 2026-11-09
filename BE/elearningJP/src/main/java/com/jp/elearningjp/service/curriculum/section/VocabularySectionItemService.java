@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.shared.util.VersionCheck;
 import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyExampleCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyExampleUpsertRequest;
@@ -19,6 +20,7 @@ import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.repository.curriculum.LessonVocabularyExampleRepository;
 import com.jp.elearningjp.repository.curriculum.LessonVocabularyItemRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.JapaneseReadingService;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
@@ -30,6 +32,7 @@ import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -53,6 +56,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     private final VocabularyRepository vocabularyRepository;
     private final LessonSectionMapper lessonSectionMapper;
     private final CourseAccessGuard courseAccessGuard;
+    private final PublishedLessonResolver publishedLessonResolver;
     private final JapaneseReadingService readingService;
 
     public VocabularySectionItemService(
@@ -62,6 +66,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
             VocabularyRepository vocabularyRepository,
             LessonSectionMapper lessonSectionMapper,
             CourseAccessGuard courseAccessGuard,
+            PublishedLessonResolver publishedLessonResolver,
             JapaneseReadingService readingService
     ) {
         super(lessonSectionRepository);
@@ -70,6 +75,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         this.vocabularyRepository = vocabularyRepository;
         this.lessonSectionMapper = lessonSectionMapper;
         this.courseAccessGuard = courseAccessGuard;
+        this.publishedLessonResolver = publishedLessonResolver;
         this.readingService = readingService;
     }
 
@@ -98,8 +104,8 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     @Transactional
     public LessonVocabularyItemResponse addVocabularyItem(Long sectionId, LessonVocabularyItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.VOCABULARY);
-        // Chỉ chủ khóa học hoặc ADMIN được sửa nội dung section
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Chỉ giáo viên được giao hoặc ADMIN được sửa nội dung section
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         // Eager-load vocab kèm examples chỉ khi cần auto-copy (teacher không gửi examples HOẶC gửi []).
         // Khi teacher cung cấp examples, dùng findByIdAndDeletedFalse cho nhẹ.
@@ -170,6 +176,17 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     public LessonVocabularyItemResponse getVocabularyItem(Long itemId) {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
+        // Học viên của khóa đã xuất bản: item theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published =
+                publishedLessonResolver.forReading(item.getSection().getLesson().getId());
+        if (published.isPresent()) {
+            return published.get().snapshot().getSections().stream()
+                    .filter(s -> s.getVocabularyItems() != null)
+                    .flatMap(s -> s.getVocabularyItems().stream())
+                    .filter(i -> itemId.equals(i.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
+        }
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);
         }
@@ -200,7 +217,8 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     public LessonVocabularyItemResponse updateVocabularyItem(Long itemId, LessonVocabularyItemUpdateRequest request) {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        VersionCheck.requireVersion(item, request.getVersion());
+        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);
         }
@@ -259,7 +277,9 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         //   - examples = [...]  → upsert từng entry
         int examplesAffected = handleExamplesUpdate(item, request.getExamples());
 
+        // flush để response mang version mới
         LessonVocabularyItem saved = vocabItemRepository.save(item);
+        vocabItemRepository.flush();
         log.info("[VOCAB-ITEM] Updated vocab item id={} (examples affected: {})", itemId, examplesAffected);
         return lessonSectionMapper.toVocabularyItemResponse(saved);
     }
@@ -271,7 +291,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     public void deleteVocabularyItem(Long itemId) {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) return;
         item.softDelete();
         // Cascade soft-delete examples
@@ -287,12 +307,12 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
      * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> vocab item active
      * của section hiện tại (không thiếu, không thừa, không trùng).</p>
      *
-     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course được giao).</p>
      */
     @Transactional
     public List<LessonVocabularyItemResponse> reorderVocabularyItems(Long sectionId, ItemBulkReorderRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.VOCABULARY);
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
@@ -310,6 +330,7 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         if (!requestedIds.equals(currentIds)) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
+        VersionCheck.requireVersions(currentItems, request.getVersions());
 
         currentItems = OrderIndexResolver.bulkReorder(
                 currentItems,

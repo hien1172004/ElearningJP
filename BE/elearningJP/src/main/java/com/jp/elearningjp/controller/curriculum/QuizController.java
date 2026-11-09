@@ -84,7 +84,7 @@ public class QuizController {
 
     @Operation(
             summary = "[Giáo viên / Admin] Thêm câu hỏi trắc nghiệm vào bài học",
-            description = "Thêm 1 câu hỏi (kèm options nếu MULTIPLE_CHOICE/MATCHING) vào quiz của lesson. Nếu lesson chưa có quiz thì tự tạo. Teacher chỉ thêm được câu hỏi vào lesson thuộc course do mình tạo."
+            description = "Thêm 1 câu hỏi (kèm options nếu MULTIPLE_CHOICE/MATCHING) vào quiz của lesson. Nếu lesson chưa có quiz thì tự tạo. Teacher chỉ thêm được câu hỏi vào lesson thuộc course được giao."
     )
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
@@ -102,7 +102,7 @@ public class QuizController {
 
     @Operation(
             summary = "[Giáo viên / Admin] Cập nhật câu hỏi trắc nghiệm",
-            description = "Sửa nội dung câu hỏi quiz. Hỗ trợ partial update — chỉ field nào gửi mới thay đổi. Nếu gửi options sẽ THAY THẾ toàn bộ options cũ. Teacher chỉ sửa được câu hỏi thuộc course do mình tạo."
+            description = "Sửa nội dung câu hỏi quiz. Hỗ trợ partial update — chỉ field nào gửi mới thay đổi. Nếu gửi options sẽ THAY THẾ toàn bộ options cũ. Teacher chỉ sửa được câu hỏi thuộc course được giao."
     )
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
@@ -120,7 +120,7 @@ public class QuizController {
 
     @Operation(
             summary = "[Giáo viên / Admin] Xoá mềm câu hỏi trắc nghiệm",
-            description = "Xoá mềm 1 câu hỏi theo questionId. Teacher chỉ xoá được câu hỏi thuộc course do mình tạo. Idempotent — gọi lại với câu đã xoá sẽ trả 404."
+            description = "Xoá mềm 1 câu hỏi theo questionId. Teacher chỉ xoá được câu hỏi thuộc course được giao. Idempotent — gọi lại với câu đã xoá sẽ trả 404."
     )
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
@@ -136,7 +136,7 @@ public class QuizController {
     @Operation(
             summary = "[Giáo viên / Admin] Sắp xếp lại thứ tự hàng loạt các câu hỏi trong quiz (drag-drop)",
             description = "Reorder nhiều câu hỏi cùng lúc. Body chứa danh sách questionId theo thứ tự MỚI. " +
-                    "Danh sách phải chứa đúng tất cả câu hỏi active của quiz. (Teacher chỉ reorder trong course do mình tạo)"
+                    "Danh sách phải chứa đúng tất cả câu hỏi active của quiz. (Teacher chỉ reorder trong course được giao)"
     )
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")

@@ -60,9 +60,9 @@ public class EnrollmentService {
 
         if (course.getPublished() == null || !course.getPublished()) {
             // Người ngoài nhận 404 như getCourseDetail để không dò được khóa nháp;
-            // chỉ admin/chủ khóa (vốn đã biết khóa tồn tại) mới thấy lý do thật.
+            // chỉ admin/giáo viên được giao (vốn đã biết khóa tồn tại) mới thấy lý do thật.
             boolean canSeeDraft = currentUserService.isAdmin()
-                    || courseAccessGuard.isOwner(course, currentUser.getId());
+                    || courseAccessGuard.isAssignedTeacher(course, currentUser.getId());
             throw new AppException(canSeeDraft ? ErrorCode.COURSE_NOT_PUBLISHED : ErrorCode.COURSE_NOT_FOUND);
         }
         if (course.getArchivedAt() != null) {

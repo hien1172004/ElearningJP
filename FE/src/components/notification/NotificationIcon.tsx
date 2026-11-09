@@ -13,6 +13,7 @@ import {
   Megaphone,
   type LucideIcon,
   GraduationCap,
+  ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import type { NotificationType } from '@/types'
@@ -34,6 +35,8 @@ const ICONS: Record<NotificationType, IconSpec> = {
   COMMENT_MODERATED: { Icon: ShieldAlert, tone: 'bg-amber-50 text-amber-600' },
   ANNOUNCEMENT: { Icon: Megaphone, tone: 'bg-violet-50 text-violet-600' },
   COURSE_STATUS_CHANGED: { Icon: GraduationCap, tone: 'bg-sky-50 text-sky-600' },
+  COURSE_TEACHER_ASSIGNMENT: { Icon: GraduationCap, tone: 'bg-emerald-50 text-emerald-600' },
+  COURSE_REVIEW: { Icon: ClipboardCheck, tone: 'bg-amber-50 text-amber-600' },
   COMMUNITY_REPLY: {
     Icon: MessageCircle,
     tone: 'bg-indigo-50 text-indigo-600',

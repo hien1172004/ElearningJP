@@ -18,5 +18,7 @@ public interface CourseMapper {
 
     CourseDetailResponse toCourseDetailResponse(Course course);
 
+    // version do VersionCheck kiểm tra, không bao giờ chép từ request vào entity (@Version)
+    @Mapping(target = "version", ignore = true)
     void updateCourseFromRequest(CourseUpdateRequest request, @MappingTarget Course course);
 }

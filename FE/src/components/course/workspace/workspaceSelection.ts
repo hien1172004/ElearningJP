@@ -1,7 +1,7 @@
 /**
  * Mục đang mở trong không gian soạn khóa học, lưu trên URL để F5 / chia sẻ link /
  * nút quay lại của trình duyệt đều đúng chỗ:
- *   ?view=overview | exams | students | settings
+ *   ?view=overview | review | exams | students | teachers | settings
  *   ?lesson=5                → tổng quan bài 5 (danh sách mục)
  *   ?lesson=5&section=12     → editor của mục (section) 12
  *   ?lesson=5&section=quiz   → quiz của bài 5
@@ -10,6 +10,8 @@ export type WorkspaceSelection =
   | { view: 'overview' }
   | { view: 'exams' }
   | { view: 'students' }
+  | { view: 'teachers' }
+  | { view: 'review' }
   | { view: 'settings' }
   | { view: 'lesson'; lessonId: number; section?: number | 'quiz' }
 
@@ -26,7 +28,7 @@ export const parseSelection = (params: URLSearchParams): WorkspaceSelection => {
     return { view: 'lesson', lessonId, section }
   }
   const view = params.get('view')
-  if (view === 'exams' || view === 'students' || view === 'settings') return { view }
+  if (view === 'exams' || view === 'students' || view === 'teachers' || view === 'review' || view === 'settings') return { view }
   return { view: 'overview' }
 }
 

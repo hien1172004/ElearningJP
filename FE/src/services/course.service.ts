@@ -66,6 +66,8 @@ export const courseService = {
   getAllCoursesAdmin(params?: {
     page?: number
     size?: number
+    /** Chỉ khóa có thay đổi chưa duyệt. */
+    pendingChanges?: boolean
   }): Promise<ApiResponse<PageResponse<CourseSummary>>> {
     return axiosClient.get('/courses/admin', { params })
   },

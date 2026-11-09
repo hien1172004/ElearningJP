@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Search as SearchLucide,
   GraduationCap,
+  ClipboardCheck,
   BookOpen,
   Bookmark,
   Home,
@@ -131,6 +132,13 @@ const navItems: NavItem[] = [
       //   icon: <UserCheck className="w-4 h-4" />,
       //   match: isActiveOrStartsWith('/teacher/students'),
       // },
+      {
+        to: '/admin/course-reviews',
+        label: 'Hàng chờ duyệt',
+        icon: <ClipboardCheck className="w-4 h-4" />,
+        match: isActiveOrStartsWith('/admin/course-reviews'),
+        requiresRoles: ['ADMIN'],
+      },
       {
         to: '/admin/exams',
         label: 'Đề thi',

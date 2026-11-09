@@ -1,6 +1,22 @@
-import { QueryClient } from '@tanstack/react-query'
+import { MutationCache, QueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 
-export const queryClient = new QueryClient({
+/** Mã lỗi BE `CONCURRENT_MODIFICATION`: bản ghi đã bị người khác sửa (optimistic locking). */
+export const CONCURRENT_MODIFICATION_CODE = 9001
+
+export const isConcurrentModification = (error: unknown): boolean =>
+  isAxiosError(error) && (error.response?.data as { code?: number } | undefined)?.code === CONCURRENT_MODIFICATION_CODE
+
+export const queryClient: QueryClient = new QueryClient({
+  // Xung đột khi lưu (người khác vừa sửa cùng nội dung): tải lại dữ liệu đang hiển thị để người dùng
+  // thấy bản mới nhất. Hook vẫn tự hiện toast lỗi (message BE); form không đóng nên giữ phần vừa nhập.
+  mutationCache: new MutationCache({
+    onError: (error) => {
+      if (isConcurrentModification(error)) {
+        void queryClient.invalidateQueries()
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
       // Ngắn (30s) để sau mỗi mutation, query đang inactive có thể tự coi là stale

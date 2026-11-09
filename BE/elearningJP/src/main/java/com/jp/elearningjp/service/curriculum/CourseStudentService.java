@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 
 /**
  * Theo dõi học viên của khóa học: danh sách kèm tiến độ và chi tiết từng bài.
- * ADMIN xem mọi khóa; TEACHER chỉ khóa do mình tạo ({@link CourseAccessGuard#requireOwnerOrAdmin}).
+ * ADMIN xem mọi khóa; TEACHER chỉ khóa được giao ({@link CourseAccessGuard#requireAssignedOrAdmin}).
  */
 @Service
 @RequiredArgsConstructor
@@ -174,7 +174,7 @@ public class CourseStudentService {
     private Course findManageableCourse(Long courseId) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(course);
+        courseAccessGuard.requireAssignedOrAdmin(course);
         return course;
     }
 

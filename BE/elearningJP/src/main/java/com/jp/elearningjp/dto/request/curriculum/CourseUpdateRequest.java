@@ -14,6 +14,12 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CourseUpdateRequest {
 
+    /**
+     * Version bản ghi client đã đọc (optimistic locking). Lệch → 409 CONCURRENT_MODIFICATION.
+     * Không gửi → bỏ qua kiểm tra.
+     */
+    Long version;
+
     @NotBlank(message = "Tiêu đề khóa học không được để trống")
     @Size(max = 255, message = "Tiêu đề tối đa 255 ký tự")
     String title;

@@ -23,6 +23,8 @@ import java.util.List;
 public class LessonVocabularyItemResponse {
 
     Long id;
+    /** Version để gửi lại khi cập nhật (optimistic locking). */
+    Long version;
     Integer orderIndex;
     String note;
 

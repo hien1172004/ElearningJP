@@ -9,7 +9,11 @@ import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** Load section đích của import + kiểm tra loại section và quyền chỉnh sửa (chủ khóa hoặc ADMIN). */
+/**
+ * Load section đích của import + kiểm tra loại section và quyền (giáo viên được giao hoặc ADMIN).
+ * {@link #requireEditable} cho thao tác chỉ đọc (xem trước, xuất Excel);
+ * {@link #requireWritable} cho thao tác ghi (commit) — bị khóa khi khóa đang chờ duyệt.
+ */
 @Component
 @RequiredArgsConstructor
 public class ImportSectionResolver {
@@ -24,7 +28,13 @@ public class ImportSectionResolver {
         if (section.getSectionType() != expectedType) {
             throw new AppException(ErrorCode.LESSON_SECTION_TYPE_INVALID);
         }
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireAssignedOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        return section;
+    }
+
+    public LessonSection requireWritable(Long sectionId, LessonSectionType expectedType) {
+        LessonSection section = requireEditable(sectionId, expectedType);
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         return section;
     }
 }

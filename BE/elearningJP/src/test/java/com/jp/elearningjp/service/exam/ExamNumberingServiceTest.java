@@ -17,6 +17,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +29,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,6 +68,12 @@ class ExamNumberingServiceTest {
     @Mock
     private ExamMapper examMapper;
 
+    @Mock
+    private CourseAccessGuard courseAccessGuard;
+
+    @Mock
+    private CurrentUserService currentUserService;
+
     @InjectMocks
     private AdminExamServiceImpl adminExamService;
 
@@ -75,6 +84,9 @@ class ExamNumberingServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Kiểm tra quyền quản lý đề: đề độc lập (không gắn khóa) → không cần phân công
+        lenient().when(examRepository.findByIdAndDeletedFalse(anyLong()))
+                .thenAnswer(inv -> Optional.of(Exam.builder().title("Đề độc lập").build()));
         taskBased = MondaiType.builder().code("TASK_BASED").nameVi("Hiểu nhiệm vụ").skillType(SkillType.LISTENING).build();
         keyPoint = MondaiType.builder().code("KEY_POINT").nameVi("Hiểu điểm mấu chốt").skillType(SkillType.LISTENING).build();
 

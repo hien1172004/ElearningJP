@@ -4,7 +4,14 @@ import { Button as AntdButton, Tabs } from 'antd'
 import { BookOpen, ChevronRight, FileCheck, Languages, Pencil, Plus, Trash2, Type, Mic } from 'lucide-react'
 import { BackButton, EmptyState, LoadingState } from '@/components/common'
 import { confirmDialog } from '@/components/common/ConfirmModal'
-import { LessonFormModal } from '@/components/course'
+import {
+  CourseEditLockBanner,
+  CourseEditLockContext,
+  LessonFormModal,
+  courseEditLockReason,
+  LessonReviewComments,
+  useCourseEditLocked,
+} from '@/components/course'
 import {
   SECTION_TYPE_LABEL,
   SectionImportButton,
@@ -16,6 +23,8 @@ import { LessonSpeakingPanel } from '@/components/course/speaking-editor/LessonS
 import { PracticeSheetButton } from '@/components/course/practice-sheet'
 import { useCourseDetail, useLessonDetail, useSectionMutations } from '@/hooks'
 import type { LessonSection, LessonSectionType } from '@/types'
+import { useAuthStore } from '@/stores'
+import { isAdmin } from '@/utils/roles'
 
 const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
 
@@ -55,6 +64,7 @@ const SectionTypeTab: React.FC<{
   allSections: LessonSection[]
 }> = ({ lessonId, lessonTitle, type, allSections }) => {
   const { createSection, deleteSection } = useSectionMutations(lessonId)
+  const locked = useCourseEditLocked()
   const label = SECTION_TYPE_LABEL[type]
   const sections = allSections
     .filter((s) => s.sectionType === type)
@@ -84,7 +94,7 @@ const SectionTypeTab: React.FC<{
         title={`Bài học chưa có ${label.toLowerCase()}`}
         description={`Bắt đầu thêm ${label.toLowerCase()} cho bài học này (thêm từng mục hoặc import Excel).`}
         action={
-          <AntdButton type="primary" icon={<Plus className="w-4 h-4" />} loading={createSection.isPending} onClick={addSection}>
+          <AntdButton type="primary" icon={<Plus className="w-4 h-4" />} loading={createSection.isPending} disabled={locked} onClick={addSection}>
             Bắt đầu thêm {label.toLowerCase()}
           </AntdButton>
         }
@@ -114,7 +124,7 @@ const SectionTypeTab: React.FC<{
                 />
               )}
               {multi && (
-                <AntdButton size="small" danger icon={<Trash2 className="w-3.5 h-3.5" />} onClick={() => removeSection(s)}>
+                <AntdButton size="small" danger icon={<Trash2 className="w-3.5 h-3.5" />} disabled={locked} onClick={() => removeSection(s)}>
                   Xóa nhóm
                 </AntdButton>
               )}
@@ -123,7 +133,7 @@ const SectionTypeTab: React.FC<{
           <SectionItemsEditor lessonId={lessonId} section={s} />
         </div>
       ))}
-      <AntdButton type="dashed" block icon={<Plus className="w-4 h-4" />} loading={createSection.isPending} onClick={addSection}>
+      <AntdButton type="dashed" block icon={<Plus className="w-4 h-4" />} loading={createSection.isPending} disabled={locked} onClick={addSection}>
         Thêm nhóm {label.toLowerCase()}
       </AntdButton>
     </div>
@@ -151,6 +161,12 @@ export const TeacherLessonEditorPage: React.FC = () => {
 
   const { data: course } = useCourseDetail(courseId)
   const { data: lesson, isLoading } = useLessonDetail(lessonId || undefined)
+  // Đang chờ duyệt: giáo viên tạm khóa sửa (ADMIN vẫn sửa được)
+  const currentUser = useAuthStore((s) => s.user)
+  const admin = isAdmin(currentUser)
+  // ADMIN chỉ xem & duyệt; giáo viên bị khóa sửa khi khóa đang chờ duyệt
+  const lockReason = courseEditLockReason(course, admin)
+  const locked = lockReason !== null
   const coursePath = `/teacher/courses/${courseId}`
 
   if (isLoading && !lesson) return <LoadingState message="Đang tải bài học..." />
@@ -191,7 +207,8 @@ export const TeacherLessonEditorPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 space-y-4 pb-12">
+    <CourseEditLockContext.Provider value={lockReason}>
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 space-y-4 pb-12" data-edit-locked={locked || undefined}>
       <BackButton onClick={() => navigate(coursePath)} />
 
       {/* Header: breadcrumb khóa học → bài học + sửa bài học */}
@@ -206,10 +223,14 @@ export const TeacherLessonEditorPage: React.FC = () => {
             {lesson.title}
           </h1>
         </div>
-        <AntdButton size="small" icon={<Pencil className="w-3.5 h-3.5" />} onClick={() => setEditOpen(true)}>
+        <AntdButton size="small" icon={<Pencil className="w-3.5 h-3.5" />} disabled={locked} onClick={() => setEditOpen(true)}>
           Sửa bài học
         </AntdButton>
       </div>
+
+      <CourseEditLockBanner />
+
+      <LessonReviewComments courseId={courseId} lessonId={lessonId} sections={sections} admin={admin} />
 
       <div className={`${CARD} px-4 pb-4`}>
         <Tabs
@@ -242,5 +263,6 @@ export const TeacherLessonEditorPage: React.FC = () => {
 
       <LessonFormModal open={editOpen} courseId={courseId} lesson={lesson} onClose={() => setEditOpen(false)} />
     </div>
+    </CourseEditLockContext.Provider>
   )
 }

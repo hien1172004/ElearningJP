@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react'
+import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { ItemPreviewModal } from './ItemPreviewModal'
 import { Plus, Pencil, Trash2, BookOpen, Eye, Search, Link2, X as XIcon, Volume2 } from 'lucide-react'
 import { Modal, Form, Input, InputNumber, App, Select, Spin, Empty, Tag } from 'antd'
@@ -347,6 +348,8 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
   sectionId,
   items,
 }) => {
+  // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
+  const locked = useCourseEditLocked()
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [isOpen, setIsOpen] = useState(false)
@@ -593,7 +596,8 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
             orderIndex: e.orderIndex,
           })),
         }
-        await updateGrammarItem.mutateAsync({ id: editing.id, payload })
+        // version đã đọc: người khác vừa sửa mục này → BE trả 409 thay vì ghi đè
+        await updateGrammarItem.mutateAsync({ id: editing.id, payload: { ...payload, version: editing.version } })
       } else {
         const payload: LessonGrammarItemCreateRequest = {
           grammarId: data.grammarId,
@@ -646,6 +650,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
         </h4>
         <button
           type="button"
+          disabled={locked}
           onClick={openCreate}
           className="inline-flex items-center gap-1 px-2 py-1 rounded bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition"
         >
@@ -695,6 +700,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
               </button> */}
               <button
                 type="button"
+                disabled={locked}
                 onClick={() => openEdit(item)}
                 className="p-1 text-gray-400 hover:text-indigo-600 rounded"
                 title="Sửa"
@@ -703,6 +709,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
               </button>
               <button
                 type="button"
+                disabled={locked}
                 onClick={() => deleteGrammarItem.mutate(item.id)}
                 className="p-1 text-gray-400 hover:text-rose-600 rounded"
                 title="Xoá"

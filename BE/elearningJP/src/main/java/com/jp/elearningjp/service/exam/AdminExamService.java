@@ -23,7 +23,15 @@ public interface AdminExamService {
             com.jp.elearningjp.shared.enums.ExamType examType,
             Boolean published,
             org.springframework.data.domain.Pageable pageable);
-    void deleteExam(Long examId);
+    /**
+     * Xóa đề. Đề gắn khóa đã được duyệt chỉ được đánh dấu chờ gỡ (xóa thật khi duyệt khóa).
+     *
+     * @return true nếu đã xóa ngay, false nếu chỉ đánh dấu chờ gỡ
+     */
+    boolean deleteExam(Long examId);
+
+    /** Hủy yêu cầu gỡ đề gắn khóa (trước khi khóa được duyệt). */
+    void cancelExamRemoval(Long examId);
     void updateSectionAudio(Long examId, Long sectionId, String audioUrl);
     void updatePassage(Long examId, Long passageId, com.jp.elearningjp.dto.request.exam.UpdatePassageRequest request);
     void deletePassage(Long examId, Long passageId);

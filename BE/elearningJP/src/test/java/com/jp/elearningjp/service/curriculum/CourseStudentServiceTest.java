@@ -62,7 +62,7 @@ class CourseStudentServiceTest {
 
     @Test
     void notCourseOwner_forbidden() {
-        doThrow(new AppException(ErrorCode.FORBIDDEN_COURSE_ACCESS)).when(guard).requireOwnerOrAdmin(course);
+        doThrow(new AppException(ErrorCode.FORBIDDEN_COURSE_ACCESS)).when(guard).requireAssignedOrAdmin(course);
 
         assertThatThrownBy(() -> service.getStudents(10L, null, null, 1, 20))
                 .extracting(e -> ((AppException) e).getErrorCode()).isEqualTo(ErrorCode.FORBIDDEN_COURSE_ACCESS);

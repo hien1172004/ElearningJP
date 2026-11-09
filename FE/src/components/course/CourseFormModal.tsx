@@ -73,6 +73,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           jlptLevel: v.jlptLevel,
           description: v.description || undefined,
           thumbnailUrl: v.thumbnailUrl || undefined,
+          version: course.version,
         }
         await update.mutateAsync(payload)
         onSuccess?.(true)

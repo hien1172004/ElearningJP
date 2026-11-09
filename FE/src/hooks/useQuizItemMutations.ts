@@ -64,11 +64,15 @@ export interface LessonQuizItemUpdateRequest {
   options?: QuizOptionPayload[]
   vocabId?: number | null
   characterId?: number | null
+  /** Version câu hỏi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
 }
 
 /** Câu hỏi trả về từ BE. */
 export interface LessonQuizItem {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   questionText: string
   orderIndex?: number
   questionType?: QuizQuestionType
@@ -177,10 +181,11 @@ export function useQuizItemMutations(lessonId: number) {
     {
       id: number
       orderIndex?: number
+      version?: number
       payload: LessonQuizItemCreateRequest
     }
   >({
-    mutationFn: async ({ id, orderIndex, payload }) => {
+    mutationFn: async ({ id, orderIndex, version, payload }) => {
       // Map từ CreateRequest → UpdateRequest.
       // - options: luôn gửi (BE sẽ thay thế).
       // - vocabId/characterId: không có ở CreateRequest nên bỏ qua.
@@ -192,6 +197,7 @@ export function useQuizItemMutations(lessonId: number) {
         correctTextAnswer: payload.correctTextAnswer,
         matchingData: payload.matchingData,
         options: payload.options,
+        version,
       }
       const res: any = await axiosClient.put<ApiResponse<LessonQuizItem>>(
         `/quiz/questions/${id}`,

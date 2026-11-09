@@ -61,6 +61,13 @@ public class Lesson extends SoftDeletableEntity {
     @OrderBy("orderIndex ASC")
     private List<LessonSpeakingScenario> speakingScenarios = new ArrayList<>();
 
+    /**
+     * Bài có trong phiên bản đang xuất bản (dùng tính tiến độ học viên).
+     * Chỉ đọc: ghi bằng câu lệnh khi tạo snapshot ({@code CourseSnapshotService}).
+     */
+    @Column(name = "in_published_version", insertable = false, updatable = false)
+    private Boolean inPublishedVersion;
+
     public void addSection(LessonSection child) {
         sections.add(child);
         child.setLesson(this);

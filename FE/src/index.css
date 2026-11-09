@@ -486,3 +486,9 @@ rt {
 .hide-furigana rt {
   display: none !important;
 }
+
+/* Khóa học đang chờ duyệt: nút sửa (kể cả <button> thường, không phải antd) bị disabled → làm mờ */
+[data-edit-locked] button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

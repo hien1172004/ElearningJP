@@ -61,7 +61,8 @@ export const LessonFormModal: React.FC<LessonFormModalProps> = ({
         return
       }
       if (isEdit && lesson) {
-        const payload: LessonUpdateRequest = parsed.data
+        // Gửi kèm version đã đọc: người khác vừa sửa bài này → BE trả 409 thay vì ghi đè
+        const payload: LessonUpdateRequest = { ...parsed.data, version: lesson.version }
         const res = await update.mutateAsync(payload)
         if (res?.data) onSuccess?.(res.data as LessonDetail)
       } else {

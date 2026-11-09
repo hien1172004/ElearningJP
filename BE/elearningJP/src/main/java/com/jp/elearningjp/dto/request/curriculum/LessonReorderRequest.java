@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -21,4 +22,7 @@ public class LessonReorderRequest {
     @NotEmpty(message = "LESSON_REORDER_LIST_EMPTY")
     @NotNull(message = "LESSON_REORDER_LIST_REQUIRED")
     List<Long> lessonIds;
+
+    /** Version client đang thấy của từng phần tử (id → version) — lệch thì 409 (optimistic locking). Không bắt buộc. */
+    Map<Long, Long> versions;
 }

@@ -18,6 +18,8 @@ export function usePublishCourse(id: number) {
       })
       qc.invalidateQueries({ queryKey: ['courses'] })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detail(id) })
+      // Xuất bản trực tiếp đóng yêu cầu duyệt đang chờ (nếu có)
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.courseReview.all })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const msg =

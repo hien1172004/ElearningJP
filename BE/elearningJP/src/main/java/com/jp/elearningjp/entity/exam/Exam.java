@@ -68,6 +68,11 @@ public class Exam extends SoftDeletableEntity {
     @Column(name = "is_published", nullable = false)
     private boolean published = false;
 
+    /** Đề gắn khóa đã duyệt mà giáo viên yêu cầu gỡ: học viên vẫn thi tới khi ADMIN duyệt lần tới. */
+    @Builder.Default
+    @Column(name = "pending_removal", nullable = false)
+    private boolean pendingRemoval = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -75,6 +80,10 @@ public class Exam extends SoftDeletableEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
     private Course course;
+
+    /** Snapshot học viên đang thi (chỉ đề gắn khóa); null = đọc đề trực tiếp như cũ. */
+    @Column(name = "published_version_id")
+    private Long publishedVersionId;
 
     @Builder.Default
     @OneToMany(mappedBy = "exam", cascade = CascadeType.ALL, orphanRemoval = true)

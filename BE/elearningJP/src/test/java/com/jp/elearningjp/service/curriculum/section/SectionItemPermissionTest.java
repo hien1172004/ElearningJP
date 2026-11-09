@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonVocabularyItemCreateRequest;
@@ -45,7 +46,7 @@ class SectionItemPermissionTest {
         sectionRepo = mock(LessonSectionRepository.class);
         guard = mock(CourseAccessGuard.class);
         doThrow(new AppException(ErrorCode.FORBIDDEN_LESSON_ACCESS))
-                .when(guard).requireOwnerOrAdmin(eq(course), any(ErrorCode.class));
+                .when(guard).requireContentEditable(eq(course), any(ErrorCode.class));
     }
 
     private LessonSection section(LessonSectionType type) {
@@ -67,12 +68,12 @@ class SectionItemPermissionTest {
     }
 
     @Test
-    void vocabulary_addUpdateDelete_requireOwnerOrAdmin() {
+    void vocabulary_addUpdateDelete_requireAssignedOrAdmin() {
         LessonVocabularyItemRepository itemRepo = mock(LessonVocabularyItemRepository.class);
         VocabularyRepository vocabRepo = mock(VocabularyRepository.class);
         VocabularySectionItemService service = new VocabularySectionItemService(sectionRepo, itemRepo,
                 mock(LessonVocabularyExampleRepository.class), vocabRepo, mock(LessonSectionMapper.class), guard,
-                mock(JapaneseReadingService.class));
+                mock(PublishedLessonResolver.class), mock(JapaneseReadingService.class));
         LessonSection section = section(LessonSectionType.VOCABULARY);
         LessonVocabularyItem item = new LessonVocabularyItem();
         item.setSection(section);
@@ -91,7 +92,8 @@ class SectionItemPermissionTest {
         KanjiSectionItemService service = new KanjiSectionItemService(sectionRepo, itemRepo,
                 mock(LessonKanjiRelatedVocabRepository.class), mock(WritingCharacterRepository.class),
                 mock(VocabularyRepository.class), mock(VocabularyCharacterRepository.class),
-                mock(LessonSectionMapper.class), mock(DictionaryService.class), mock(CurrentUserService.class), guard);
+                mock(LessonSectionMapper.class), mock(DictionaryService.class), mock(CurrentUserService.class), guard,
+                mock(PublishedLessonResolver.class));
         section(LessonSectionType.KANJI);
 
         assertForbidden(() -> service.addKanjiItem(1L, LessonKanjiItemCreateRequest.builder().character("日").build()));
@@ -103,7 +105,8 @@ class SectionItemPermissionTest {
         LessonGrammarItemRepository itemRepo = mock(LessonGrammarItemRepository.class);
         GrammarPointRepository grammarRepo = mock(GrammarPointRepository.class);
         GrammarSectionItemService service = new GrammarSectionItemService(sectionRepo, itemRepo,
-                mock(LessonGrammarExampleRepository.class), grammarRepo, mock(LessonSectionMapper.class), guard);
+                mock(LessonGrammarExampleRepository.class), grammarRepo, mock(LessonSectionMapper.class), guard,
+                mock(PublishedLessonResolver.class));
         section(LessonSectionType.GRAMMAR);
 
         assertForbidden(() -> service.addGrammarItem(1L, LessonGrammarItemCreateRequest.builder().grammarId(3L).build()));

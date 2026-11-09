@@ -49,7 +49,7 @@ public class LessonController {
                 .build();
     }
 
-    @Operation(summary = "[Admin/Teacher] Thêm bài học mới vào khóa học", description = "Thêm bài học mới, tự động tính số thứ tự tiếp theo nếu không nhập (Teacher chỉ thêm được lesson vào course do mình tạo)")
+    @Operation(summary = "[Admin/Teacher] Thêm bài học mới vào khóa học", description = "Thêm bài học mới, tự động tính số thứ tự tiếp theo nếu không nhập (Teacher chỉ thêm được lesson vào course được giao)")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.Course.BASE + ApiPaths.Course.LESSONS)
@@ -65,7 +65,7 @@ public class LessonController {
                 .build();
     }
 
-    @Operation(summary = "[Admin/Teacher] Chỉnh sửa bài học", description = "Cập nhật tiêu đề hoặc thứ tự bài học (Teacher chỉ sửa được lesson trong course do mình tạo)")
+    @Operation(summary = "[Admin/Teacher] Chỉnh sửa bài học", description = "Cập nhật tiêu đề hoặc thứ tự bài học (Teacher chỉ sửa được lesson trong course được giao)")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @PutMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.BY_ID)
@@ -80,7 +80,7 @@ public class LessonController {
                 .build();
     }
 
-    @Operation(summary = "[Admin/Teacher] Xóa mềm bài học", description = "Ẩn bài học khỏi khóa học (Teacher chỉ xoá được lesson trong course do mình tạo)")
+    @Operation(summary = "[Admin/Teacher] Xóa mềm bài học", description = "Ẩn bài học khỏi khóa học (Teacher chỉ xoá được lesson trong course được giao)")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @DeleteMapping(ApiPaths.API_V1 + ApiPaths.Lesson.BASE + ApiPaths.Lesson.BY_ID)
@@ -94,7 +94,7 @@ public class LessonController {
 
     @Operation(summary = "[Admin/Teacher] Sắp xếp lại thứ tự hàng loạt các bài học",
             description = "Reorder nhiều lesson cùng lúc (drag-drop). Body chứa danh sách lessonId theo thứ tự MỚI (index 0 = orderIndex 1). " +
-                    "Danh sách phải chứa đúng tất cả lesson active của course. (Teacher chỉ reorder được lesson trong course do mình tạo)")
+                    "Danh sách phải chứa đúng tất cả lesson active của course. (Teacher chỉ reorder được lesson trong course được giao)")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @PostMapping(ApiPaths.API_V1 + ApiPaths.Course.BASE + ApiPaths.Course.LESSON_REORDER)

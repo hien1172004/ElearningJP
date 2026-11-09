@@ -44,4 +44,9 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
            "LEFT JOIN FETCH e.scoreGroups " +
            "WHERE e.id = :id AND e.deleted = false")
     Optional<Exam> findByIdWithSectionsAndScoreGroups(@Param("id") Long id);
+
+    /** Id đề gắn khóa đang xuất bản nhưng chưa có snapshot (dữ liệu trước V56). */
+    @Query("SELECT e.id FROM Exam e WHERE e.course IS NOT NULL AND e.published = true AND e.deleted = false "
+            + "AND e.publishedVersionId IS NULL")
+    java.util.List<Long> findPublishedCourseExamIdsWithoutSnapshot();
 }

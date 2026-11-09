@@ -159,7 +159,7 @@ public class KanjiImportService {
 
     @Transactional
     public SectionImportCommitResponse commit(Long sectionId, MultipartFile file) {
-        LessonSection section = sectionResolver.requireEditable(sectionId, LessonSectionType.KANJI);
+        LessonSection section = sectionResolver.requireWritable(sectionId, LessonSectionType.KANJI);
         Parsed parsed = parse(section, file);
         if (!parsed.preview().isCanCommit()) {
             throw new AppException(ErrorCode.IMPORT_HAS_ERRORS);

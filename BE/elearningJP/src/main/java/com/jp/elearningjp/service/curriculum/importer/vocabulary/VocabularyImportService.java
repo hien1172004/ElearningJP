@@ -187,7 +187,7 @@ public class VocabularyImportService {
 
     @Transactional
     public SectionImportCommitResponse commit(Long sectionId, MultipartFile file) {
-        LessonSection section = sectionResolver.requireEditable(sectionId, LessonSectionType.VOCABULARY);
+        LessonSection section = sectionResolver.requireWritable(sectionId, LessonSectionType.VOCABULARY);
         Parsed parsed = parse(section, file);
         if (!parsed.preview().isCanCommit()) {
             throw new AppException(ErrorCode.IMPORT_HAS_ERRORS);

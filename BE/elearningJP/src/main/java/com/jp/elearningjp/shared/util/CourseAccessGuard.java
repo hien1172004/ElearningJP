@@ -3,10 +3,12 @@ package com.jp.elearningjp.shared.util;
 import com.jp.elearningjp.entity.curriculum.LessonSection;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.curriculum.Course;
-import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
+import com.jp.elearningjp.repository.curriculum.CourseRepository;
+import com.jp.elearningjp.repository.curriculum.CourseTeacherRepository;
+import com.jp.elearningjp.shared.enums.CourseReviewStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,9 +23,9 @@ import org.springframework.stereotype.Component;
  * <ul>
  *   <li>{@link #requireEnrolled(Long)} — user phải có enrollment chưa xoá
  *       (ACTIVE hoặc COMPLETED) cho course; admin thì pass.</li>
- *   <li>{@link #requireOwnerOrAdmin(Course)} — admin luôn pass; teacher chỉ
- *       pass khi là người tạo course.</li>
- *   <li>{@link #requireContentAccess(Course)} — xem nội dung: admin, chủ khóa học
+ *   <li>{@link #requireAssignedOrAdmin(Course)} — admin luôn pass; teacher chỉ
+ *       pass khi được giao course (bảng {@code course_teachers}).</li>
+ *   <li>{@link #requireContentAccess(Course)} — xem nội dung: admin, giáo viên được giao
  *       hoặc user đã enroll (kể cả đã học xong).</li>
  * </ul>
  */
@@ -34,6 +36,8 @@ public class CourseAccessGuard {
 
     private final CurrentUserService currentUserService;
     private final CourseEnrollmentRepository enrollmentRepository;
+    private final CourseTeacherRepository courseTeacherRepository;
+    private final CourseRepository courseRepository;
 
     /**
      * Bắt buộc user hiện tại đã enroll course hoặc là admin.
@@ -54,15 +58,15 @@ public class CourseAccessGuard {
     }
 
     /**
-     * BẢO VỆ BẢN QUYỀN: chỉ admin, chủ khóa học hoặc học viên đã đăng ký mới được xem nội dung.
-     * Khác {@link #requireEnrolled(Long)}: cho giáo viên xem bài của chính mình.
+     * BẢO VỆ BẢN QUYỀN: chỉ admin, giáo viên được giao hoặc học viên đã đăng ký mới được xem nội dung.
+     * Khác {@link #requireEnrolled(Long)}: cho giáo viên được giao xem bài của khóa.
      */
     public void requireContentAccess(Course course) {
         if (currentUserService.isAdmin()) {
             return;
         }
         Long userId = currentUserService.getCurrentUserId();
-        if (isOwner(course, userId)
+        if (isAssignedTeacher(course, userId)
                 || enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(userId, course.getId())) {
             return;
         }
@@ -105,49 +109,90 @@ public class CourseAccessGuard {
 
     /**
      * Ai được thấy nội dung gắn với khóa chưa publish (vd: bình luận của bài học):
-     * admin, chủ khóa hoặc người đã đăng ký. {@code userId} null (chưa đăng nhập) → không.
+     * admin, giáo viên được giao hoặc người đã đăng ký. {@code userId} null (chưa đăng nhập) → không.
      */
     public boolean canViewUnpublished(Course course, Long userId) {
         if (userId == null) {
             return false;
         }
         return currentUserService.isAdmin()
-                || isOwner(course, userId)
+                || isAssignedTeacher(course, userId)
                 || enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(userId, course.getId());
     }
 
-    /** User có phải người tạo course không ({@code userId} null = chưa đăng nhập). */
-    public boolean isOwner(Course course, Long userId) {
+    /**
+     * User có phải giáo viên được ADMIN giao quản lý course không
+     * ({@code userId} null = chưa đăng nhập → false).
+     */
+    public boolean isAssignedTeacher(Course course, Long userId) {
         return userId != null
-                && course.getCreatedBy() != null
-                && userId.equals(course.getCreatedBy().getId());
+                && course != null
+                && course.getId() != null
+                && courseTeacherRepository.existsByCourseIdAndTeacherId(course.getId(), userId);
     }
 
     /**
-     * Bắt buộc user hiện tại phải là người tạo course (teacher) hoặc admin.
-     * Dùng cho: create/update/delete course, lesson, section, quiz...
+     * Bắt buộc user hiện tại là ADMIN hoặc giáo viên được giao course.
+     * Dùng cho: quản lý bài học, section, quiz, đề thi gắn với khóa, xem học viên của khóa...
      *
      * @param course           course cần kiểm tra
      * @param forbiddenError   ErrorCode ném ra nếu fail (mặc định FORBIDDEN_COURSE_ACCESS).
      *                         Một số module (lesson, quiz) muốn trả code riêng.
      */
-    public void requireOwnerOrAdmin(Course course, ErrorCode forbiddenError) {
+    public void requireAssignedOrAdmin(Course course, ErrorCode forbiddenError) {
         if (currentUserService.isAdmin()) {
             return;
         }
-        User currentUser = currentUserService.getCurrentUser();
-        if (course.getCreatedBy() == null
-                || !course.getCreatedBy().getId().equals(currentUser.getId())) {
-            log.warn("[SECURITY] User id={} attempted to modify course id={} without ownership",
-                    currentUser.getId(), course.getId());
+        Long userId = currentUserService.getCurrentUserId();
+        if (!isAssignedTeacher(course, userId)) {
+            log.warn("[SECURITY] User id={} attempted to manage course id={} without assignment",
+                    userId, course.getId());
             throw new AppException(forbiddenError);
         }
     }
 
     /**
-     * Shortcut tương đương {@code requireOwnerOrAdmin(course, FORBIDDEN_COURSE_ACCESS)}.
+     * Dùng cho MỌI thao tác GHI nội dung khóa (bài học, section, item, quiz, đề thi gắn khóa...):
+     * <ol>
+     *   <li>chỉ giáo viên được giao — ADMIN chỉ duyệt, không soạn ({@code COURSE_CONTENT_ADMIN_READ_ONLY});</li>
+     *   <li>khóa đang PENDING_REVIEW → khóa sửa tới khi ADMIN quyết định / giáo viên rút yêu cầu;</li>
+     *   <li>đánh dấu bản đang soạn có thay đổi chưa duyệt.</li>
+     * </ol>
      */
-    public void requireOwnerOrAdmin(Course course) {
-        requireOwnerOrAdmin(course, ErrorCode.FORBIDDEN_COURSE_ACCESS);
+    public void requireContentEditable(Course course, ErrorCode forbiddenError) {
+        // ADMIN chỉ duyệt: không soạn nội dung khóa (giáo viên được giao soạn, ADMIN duyệt)
+        if (currentUserService.isAdmin()) {
+            throw new AppException(ErrorCode.COURSE_CONTENT_ADMIN_READ_ONLY);
+        }
+        requireAssignedTeacher(course, forbiddenError);
+        if (course.getReviewStatus() == CourseReviewStatus.PENDING_REVIEW) {
+            throw new AppException(ErrorCode.COURSE_PENDING_REVIEW_LOCKED);
+        }
+        // Không set field trên entity: làm entity "bẩn" sẽ ghi lại cả dòng courses và tăng version,
+        // khiến các giáo viên sửa những bài khác nhau cùng lúc xung đột optimistic lock trên khóa.
+        if (!Boolean.TRUE.equals(course.getHasUnpublishedChanges())) {
+            courseRepository.markUnpublishedChanges(course.getId());
+        }
+    }
+
+    /** Shortcut tương đương {@code requireContentEditable(course, FORBIDDEN_COURSE_ACCESS)}. */
+    /** Bắt buộc user hiện tại là giáo viên được giao course (ADMIN không tính). */
+    public void requireAssignedTeacher(Course course, ErrorCode forbiddenError) {
+        Long userId = currentUserService.getCurrentUserId();
+        if (!isAssignedTeacher(course, userId)) {
+            log.warn("[SECURITY] User id={} is not an assigned teacher of course id={}", userId, course.getId());
+            throw new AppException(forbiddenError);
+        }
+    }
+
+    public void requireContentEditable(Course course) {
+        requireContentEditable(course, ErrorCode.FORBIDDEN_COURSE_ACCESS);
+    }
+
+    /**
+     * Shortcut tương đương {@code requireAssignedOrAdmin(course, FORBIDDEN_COURSE_ACCESS)}.
+     */
+    public void requireAssignedOrAdmin(Course course) {
+        requireAssignedOrAdmin(course, ErrorCode.FORBIDDEN_COURSE_ACCESS);
     }
 }

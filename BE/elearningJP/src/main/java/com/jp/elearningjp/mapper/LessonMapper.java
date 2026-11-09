@@ -34,5 +34,7 @@ public interface LessonMapper {
 
     // orderIndex do LessonService xử lý (kẹp + đánh số lại) — mapper không được ghi đè giá trị thô từ request.
     @Mapping(target = "orderIndex", ignore = true)
+    // version do VersionCheck kiểm tra, không bao giờ chép từ request vào entity (@Version)
+    @Mapping(target = "version", ignore = true)
     void updateLessonFromRequest(LessonUpdateRequest request, @MappingTarget Lesson lesson);
 }

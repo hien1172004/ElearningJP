@@ -3,13 +3,18 @@ import { toast } from 'sonner'
 import { AxiosError } from 'axios'
 import { lessonService } from '@/services'
 import { QUERY_KEYS } from '@/lib/queryKeys'
-import type { ApiResponse } from '@/types'
+import type { ApiResponse, LessonOutline } from '@/types'
+import { toVersionMap } from '@/utils/versions'
 
 export function useReorderLessons(courseId: number) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (lessonIds: number[]) => {
-      return lessonService.reorderLessons(courseId, { lessonIds })
+    /** Danh sách bài theo thứ tự MỚI (kèm version đang thấy). */
+    mutationFn: async (lessons: Pick<LessonOutline, 'id' | 'version'>[]) => {
+      return lessonService.reorderLessons(courseId, {
+        lessonIds: lessons.map((l) => l.id),
+        versions: toVersionMap(lessons),
+      })
     },
     onSuccess: () => {
       toast.success('Đã cập nhật thứ tự bài học')

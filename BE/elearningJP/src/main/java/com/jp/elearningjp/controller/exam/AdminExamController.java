@@ -94,7 +94,8 @@ public class AdminExamController {
     }
 
     @PostMapping(ApiPaths.AdminExam.PUBLISH)
-    @Operation(summary = "Phát hành đề thi chính thức cho học viên thi thử")
+    @Operation(summary = "Phát hành đề thi chính thức cho học viên thi thử",
+            description = "Đề gắn khóa: chỉ quản trị viên, hiện lại bản đã duyệt (đề chưa duyệt sẽ lên cùng lần duyệt khóa — lỗi 5009)")
     public ApiResponse<Void> publishExam(@PathVariable Long id) {
         adminExamService.publishExam(id);
         return ApiResponse.<Void>builder()
@@ -207,13 +208,28 @@ public class AdminExamController {
     }
 
     @DeleteMapping(ApiPaths.AdminExam.BY_ID)
-    @Operation(summary = "Xóa đề thi")
+    @Operation(summary = "Xóa đề thi",
+            description = "Đề gắn khóa đã được duyệt: chỉ đánh dấu chờ gỡ (học viên vẫn thi), "
+                    + "đề bị xóa khi quản trị viên duyệt khóa lần tới. Đề khác: xóa ngay")
     public ApiResponse<Void> deleteExam(@PathVariable Long id) {
-        adminExamService.deleteExam(id);
+        boolean removedNow = adminExamService.deleteExam(id);
         return ApiResponse.<Void>builder()
                 .success(true)
                 .code(HttpStatus.OK.value())
-                .message("Xóa đề thi thành công")
+                .message(removedNow
+                        ? "Xóa đề thi thành công"
+                        : "Đã đánh dấu gỡ đề thi — đề sẽ được gỡ khi quản trị viên duyệt khóa lần tới")
+                .build();
+    }
+
+    @PostMapping(ApiPaths.AdminExam.CANCEL_REMOVAL)
+    @Operation(summary = "Hủy yêu cầu gỡ đề thi gắn khóa", description = "Trước khi khóa được duyệt")
+    public ApiResponse<Void> cancelExamRemoval(@PathVariable Long id) {
+        adminExamService.cancelExamRemoval(id);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Đã hủy yêu cầu gỡ đề thi")
                 .build();
     }
 

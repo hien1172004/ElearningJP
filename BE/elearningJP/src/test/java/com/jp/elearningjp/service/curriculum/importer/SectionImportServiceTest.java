@@ -57,6 +57,8 @@ class SectionImportServiceTest {
         section = new LessonSection();
         section.setId(10L);
         when(resolver.requireEditable(eq(10L), any())).thenReturn(section);
+        // commit dùng requireWritable (khóa khi khóa học đang chờ duyệt)
+        when(resolver.requireWritable(eq(10L), any())).thenReturn(section);
         lookup = new ImportVocabularyLookup(vocabularyRepository, READING);
     }
 

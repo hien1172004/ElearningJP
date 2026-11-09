@@ -73,5 +73,9 @@ public class ExamAttempt extends SoftDeletableEntity {
     @Column(name = "status", nullable = false, length = 20)
     private AttemptStatus status = AttemptStatus.IN_PROGRESS;
 
+    /** Snapshot đề dùng cho lượt thi này (null = lượt thi trên đề trực tiếp). */
+    @Column(name = "published_version_id")
+    private Long publishedVersionId;
+
 
 }

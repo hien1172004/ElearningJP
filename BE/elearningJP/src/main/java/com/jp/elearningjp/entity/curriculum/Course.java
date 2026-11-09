@@ -1,6 +1,7 @@
 package com.jp.elearningjp.entity.curriculum;
 
 import com.jp.elearningjp.entity.user.User;
+import com.jp.elearningjp.shared.enums.CourseReviewStatus;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
 import jakarta.persistence.Column;
@@ -54,5 +55,20 @@ public class Course extends SoftDeletableEntity {
 
     @Column(name = "archived_at")
     private Instant archivedAt;
+
+    /** Trạng thái bản đang soạn: EDITING | PENDING_REVIEW (chờ ADMIN duyệt, giáo viên bị khóa sửa). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status", nullable = false, length = 20)
+    @Builder.Default
+    private CourseReviewStatus reviewStatus = CourseReviewStatus.EDITING;
+
+    /** Bản đang soạn có thay đổi chưa được duyệt / xuất bản. */
+    @Column(name = "has_unpublished_changes", nullable = false)
+    @Builder.Default
+    private Boolean hasUnpublishedChanges = false;
+
+    /** Phiên bản xuất bản học viên đang học ({@code course_published_versions.id}); null = chưa có snapshot. */
+    @Column(name = "published_version_id")
+    private Long publishedVersionId;
 
 }

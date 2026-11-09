@@ -6,6 +6,7 @@ import com.jp.elearningjp.entity.comment.Comment;
 import com.jp.elearningjp.entity.comment.CommentReply;
 import com.jp.elearningjp.entity.comment.CommentReport;
 import com.jp.elearningjp.entity.curriculum.Course;
+import com.jp.elearningjp.entity.curriculum.CourseTeacher;
 import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
@@ -24,6 +25,7 @@ import com.jp.elearningjp.shared.enums.ReportStatus;
 import com.jp.elearningjp.shared.event.comment.CommentDeletedEvent;
 import com.jp.elearningjp.shared.event.comment.CommentModeratedEvent;
 import com.jp.elearningjp.shared.response.PageResponse;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import jakarta.persistence.criteria.*;
 import lombok.AccessLevel;
@@ -48,7 +50,7 @@ import java.util.stream.Collectors;
  * Kiểm duyệt bình luận / trả lời.
  *
  * <p>Phạm vi: ADMIN — mọi bình luận; TEACHER — chỉ bình luận trong bài học (LESSON) thuộc
- * khóa học do chính mình tạo. Từ vựng / kanji / ngữ pháp là dữ liệu chung nên chỉ ADMIN.</p>
+ * khóa học được giao. Từ vựng / kanji / ngữ pháp là dữ liệu chung nên chỉ ADMIN.</p>
  *
  * <p>Ẩn (HIDDEN) gỡ nội dung khỏi trang công khai nhưng khôi phục được; xóa là xóa mềm như
  * khi chủ bình luận tự xóa. Ẩn/xóa đóng mọi báo cáo OPEN thành RESOLVED và gửi thông báo
@@ -79,6 +81,7 @@ public class CommentModerationService {
     WritingCharacterRepository writingCharacterRepository;
     GrammarPointRepository grammarPointRepository;
     CurrentUserService currentUserService;
+    CourseAccessGuard courseAccessGuard;
     ApplicationEventPublisher eventPublisher;
 
     // =========================================================
@@ -388,7 +391,7 @@ public class CommentModerationService {
     // PHÂN QUYỀN
     // =========================================================
 
-    /** null = ADMIN (không giới hạn); khác null = id giáo viên, chỉ bình luận bài học trong khóa của mình. */
+    /** null = ADMIN (không giới hạn); khác null = id giáo viên, chỉ bình luận bài học trong khóa được giao. */
     private Long teacherScopeId() {
         return currentUserService.isAdmin() ? null : currentUserService.getCurrentUserId();
     }
@@ -399,12 +402,11 @@ public class CommentModerationService {
             throw new AppException(ErrorCode.COMMENT_MODERATION_FORBIDDEN);
         }
         Long me = currentUserService.getCurrentUserId();
-        boolean ownsCourse = lessonRepository.findById(root.getTargetId())
+        boolean assigned = lessonRepository.findById(root.getTargetId())
                 .map(Lesson::getCourse)
-                .map(Course::getCreatedBy)
-                .map(owner -> Objects.equals(owner.getId(), me))
+                .map(course -> courseAccessGuard.isAssignedTeacher(course, me))
                 .orElse(false);
-        if (!ownsCourse) {
+        if (!assigned) {
             throw new AppException(ErrorCode.COMMENT_MODERATION_FORBIDDEN);
         }
     }
@@ -583,14 +585,19 @@ public class CommentModerationService {
                 cb.like(cb.lower(user.get("email")), pattern)));
     }
 
-    /** targetType = LESSON và bài học thuộc khóa do {@code teacherId} tạo. */
+    /** targetType = LESSON và bài học thuộc khóa {@code teacherId} được giao. */
     private static Predicate lessonOwnedBy(Path<CommentTargetType> targetType, Path<Long> targetId, Long teacherId,
                                            CriteriaQuery<?> query, CriteriaBuilder cb) {
         Subquery<Long> sub = query.subquery(Long.class);
         Root<Lesson> lesson = sub.from(Lesson.class);
+        Subquery<Long> assigned = query.subquery(Long.class);
+        Root<CourseTeacher> ct = assigned.from(CourseTeacher.class);
+        assigned.select(ct.get("id")).where(
+                cb.equal(ct.get("course"), lesson.get("course")),
+                cb.equal(ct.get("teacher").get("id"), teacherId));
         sub.select(lesson.get("id")).where(
                 cb.equal(lesson.get("id"), targetId),
-                cb.equal(lesson.get("course").get("createdBy").get("id"), teacherId));
+                cb.exists(assigned));
         return cb.and(cb.equal(targetType, CommentTargetType.LESSON), cb.exists(sub));
     }
 

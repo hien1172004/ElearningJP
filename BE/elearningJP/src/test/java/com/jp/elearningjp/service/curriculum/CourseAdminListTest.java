@@ -62,14 +62,14 @@ class CourseAdminListTest {
         PageResponse<CourseResponse> res = courseService.getAllCoursesForAdmin(1, 10);
 
         assertThat(res.getItems()).hasSize(2);
-        verify(courseRepository, never()).findByCreatedByIdAndDeletedFalse(anyLong(), any(Pageable.class));
+        verify(courseRepository, never()).findAssignedToTeacher(anyLong(), any(Pageable.class));
     }
 
     @Test
-    void teacher_seesOnlyOwnCourses() {
+    void teacher_seesOnlyAssignedCourses() {
         when(currentUserService.isAdmin()).thenReturn(false);
         when(currentUserService.getCurrentUserId()).thenReturn(TEACHER_ID);
-        when(courseRepository.findByCreatedByIdAndDeletedFalse(eq(TEACHER_ID), any(Pageable.class)))
+        when(courseRepository.findAssignedToTeacher(eq(TEACHER_ID), any(Pageable.class)))
                 .thenAnswer(inv -> new PageImpl<>(List.of(course(7)), inv.getArgument(1), 1));
         when(courseMapper.toCourseResponse(any(Course.class))).thenAnswer(inv -> new CourseResponse());
 
@@ -78,6 +78,33 @@ class CourseAdminListTest {
         assertThat(res.getItems()).hasSize(1);
         assertThat(res.getTotalElements()).isEqualTo(1);
         verify(courseRepository, never()).findByDeletedFalse(any(Pageable.class));
+    }
+
+    @Test
+    void admin_pendingChangesFilter_onlyCoursesWithUnreviewedChanges() {
+        when(currentUserService.isAdmin()).thenReturn(true);
+        when(courseRepository.findByDeletedFalseAndHasUnpublishedChangesTrue(any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(course(3)), inv.getArgument(0), 1));
+        when(courseMapper.toCourseResponse(any(Course.class))).thenAnswer(inv -> new CourseResponse());
+
+        PageResponse<CourseResponse> res = courseService.getAllCoursesForAdmin(1, 10, true);
+
+        assertThat(res.getTotalElements()).isEqualTo(1);
+        verify(courseRepository, never()).findByDeletedFalse(any(Pageable.class));
+    }
+
+    @Test
+    void teacher_pendingChangesFilter_staysWithinAssignedCourses() {
+        when(currentUserService.isAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentUserId()).thenReturn(TEACHER_ID);
+        when(courseRepository.findAssignedToTeacherWithPendingChanges(eq(TEACHER_ID), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(course(7)), inv.getArgument(1), 1));
+        when(courseMapper.toCourseResponse(any(Course.class))).thenAnswer(inv -> new CourseResponse());
+
+        PageResponse<CourseResponse> res = courseService.getAllCoursesForAdmin(1, 10, true);
+
+        assertThat(res.getItems()).hasSize(1);
+        verify(courseRepository, never()).findByDeletedFalseAndHasUnpublishedChangesTrue(any(Pageable.class));
     }
 
     private static CourseEnrollmentRepository.CourseEnrollmentCount enrollmentCount(long courseId, long count) {

@@ -21,6 +21,8 @@ import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.pdf.PracticeSheetBlock;
 import com.jp.elearningjp.shared.pdf.PracticeSheetGroup;
 import com.jp.elearningjp.shared.pdf.PracticeSheetRenderer;
+import com.jp.elearningjp.service.curriculum.snapshot.LessonSnapshot;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.JapaneseKanaUtil;
 import com.jp.elearningjp.shared.util.JapaneseReadingService;
@@ -61,6 +63,7 @@ public class LessonPracticeSheetService {
     CharacterStrokeRepository strokeRepository;
     CourseAccessGuard courseAccessGuard;
     PracticeSheetRenderer renderer;
+    PublishedLessonResolver publishedLessonResolver;
 
     /** File PDF trả về cho trình duyệt. */
     public record PracticeSheetFile(String fileName, byte[] content) {
@@ -113,6 +116,17 @@ public class LessonPracticeSheetService {
     private record Collected(Lesson lesson, List<Entry> entries, Map<String, String> titles) {
     }
 
+    /** Id các mục Chữ Hán / Từ vựng của bài trong bản xuất bản. */
+    private static Set<Long> publishedItemIds(LessonSnapshot snapshot, LessonSectionType type) {
+        return snapshot.getSections().stream()
+                .flatMap(s -> type == LessonSectionType.KANJI
+                        ? (s.getKanjiItems() == null ? java.util.stream.Stream.<Long>empty()
+                                : s.getKanjiItems().stream().map(i -> i.getId()))
+                        : (s.getVocabularyItems() == null ? java.util.stream.Stream.<Long>empty()
+                                : s.getVocabularyItems().stream().map(i -> i.getId())))
+                .collect(Collectors.toSet());
+    }
+
     private Collected collect(Long lessonId, PracticeSheetRequest request) {
         LessonSectionType type = request.sectionType();
         if (type != LessonSectionType.KANJI && type != LessonSectionType.VOCABULARY) {
@@ -123,9 +137,19 @@ public class LessonPracticeSheetService {
         if (wanted.isEmpty()) throw new AppException(ErrorCode.PRACTICE_SHEET_NO_ITEMS);
         if (wanted.size() > MAX_ITEMS) throw new AppException(ErrorCode.PRACTICE_SHEET_TOO_MANY_ITEMS);
 
-        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-        courseAccessGuard.requireLessonContentAccess(lesson);
+        Lesson lesson;
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forReading(lessonId);
+        if (published.isPresent()) {
+            // Học viên của khóa đã xuất bản: chỉ in các mục có trong bản đã duyệt
+            lesson = published.get().lesson();
+            Set<Long> publishedItemIds = publishedItemIds(published.get().snapshot(), type);
+            wanted = wanted.stream().filter(publishedItemIds::contains).collect(Collectors.toSet());
+            if (wanted.isEmpty()) throw new AppException(ErrorCode.PRACTICE_SHEET_NO_ITEMS);
+        } else {
+            lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                    .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+            courseAccessGuard.requireLessonContentAccess(lesson);
+        }
 
         // Bước 1: ký tự cần nét của từng mục đã chọn, theo thứ tự nhóm → thứ tự mục trong nhóm
         record Draft(Long itemId, LessonSection section, String word, String reading,

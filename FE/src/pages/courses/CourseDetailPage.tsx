@@ -34,7 +34,7 @@ export const CourseDetailPage: React.FC = () => {
   const myEnrollment = enrollments.find((e) => e.courseId === courseId)
   const isEnrolled = course?.isEnrolled ?? !!myEnrollment
   // Admin (mọi khóa) / giáo viên chủ khóa được xem bài học mà không cần đăng ký
-  const isPreview = !isEnrolled && canPreviewCourse(user, course?.createdByUserId)
+  const isPreview = !isEnrolled && canPreviewCourse(user, course?.canManage)
   const canOpenLessons = isEnrolled || isPreview
 
   if (isLoading) return <LoadingState message="Đang tải thông tin khóa học..." fullHeight />

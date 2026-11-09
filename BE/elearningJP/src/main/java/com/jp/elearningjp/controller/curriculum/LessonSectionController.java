@@ -128,7 +128,7 @@ public class LessonSectionController {
         return ApiResponse.<LessonSectionResponse>builder()
                 .success(true)
                 .message("Cập nhật section thành công")
-                .data(sectionService.updateSection(sectionId, request.getTitle(), request.getOrderIndex()))
+                .data(sectionService.updateSection(sectionId, request.getTitle(), request.getOrderIndex(), request.getVersion()))
                 .build();
     }
 
@@ -157,7 +157,7 @@ public class LessonSectionController {
     @Operation(
             summary = "[Giáo viên / Admin] Sắp xếp lại thứ tự hàng loạt các section",
             description = "Reorder nhiều section cùng lúc (drag-drop). Body chứa danh sách sectionId theo thứ tự MỚI. " +
-                    "Danh sách phải chứa đúng tất cả section active của lesson. (Teacher chỉ reorder trong course do mình tạo)"
+                    "Danh sách phải chứa đúng tất cả section active của lesson. (Teacher chỉ reorder trong course được giao)"
     )
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")

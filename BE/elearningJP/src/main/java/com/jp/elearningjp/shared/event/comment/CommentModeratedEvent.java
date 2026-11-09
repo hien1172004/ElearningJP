@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 
 /**
- * Phát ra khi người kiểm duyệt (ADMIN / TEACHER chủ khóa) ẩn hoặc xóa bình luận / trả lời
+ * Phát ra khi người kiểm duyệt (ADMIN / TEACHER được giao khóa) ẩn hoặc xóa bình luận / trả lời
  * của người khác — để module thông báo báo cho người viết.
  *
  * <p>Mọi field đã resolve sẵn (listener chạy AFTER_COMMIT, không lazy-load được nữa).</p>

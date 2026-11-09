@@ -18,6 +18,8 @@ import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
 import com.jp.elearningjp.shared.enums.EnrollmentStatus;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.event.curriculum.LessonStartedEvent;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
+import com.jp.elearningjp.service.curriculum.snapshot.QuizSnapshot;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,7 @@ public class ProgressService {
     private final CourseAccessGuard courseAccessGuard;
     private final ApplicationEventPublisher eventPublisher;
     private final LessonProgressRecorder lessonProgressRecorder;
+    private final PublishedLessonResolver publishedLessonResolver;
 
     // ============================================================
     // START LESSON
@@ -58,10 +61,7 @@ public class ProgressService {
     @Transactional
     public ProgressResponse startLesson(Long lessonId) {
         User currentUser = currentUserService.getCurrentUser();
-        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-
-        courseAccessGuard.requireEnrolledInLesson(lesson);
+        Lesson lesson = resolveLessonForLearning(lessonId);
 
         // Khoá dòng progress (tạo nếu chưa có): 2 request đồng thời không còn cùng INSERT → 500.
         UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lessonId);
@@ -99,11 +99,11 @@ public class ProgressService {
     @Transactional
     public ProgressResponse completeLesson(Long lessonId) {
         User currentUser = currentUserService.getCurrentUser();
-        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forLearning(lessonId);
+        Lesson lesson = published.map(PublishedLessonResolver.PublishedLesson::lesson)
+                .orElseGet(() -> requireLiveLessonForLearning(lessonId));
 
         Long courseId = lesson.getCourse().getId();
-        courseAccessGuard.requireEnrolledInLesson(lesson);
 
         // Khoá dòng: request trùng chờ request đầu xong rồi nhận PROGRESS_ALREADY_COMPLETED thay vì 500.
         UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lessonId);
@@ -112,11 +112,14 @@ public class ProgressService {
             throw new AppException(ErrorCode.PROGRESS_ALREADY_COMPLETED);
         }
 
-        Optional<Quiz> quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId);
-        boolean isMiniTest = quiz.isPresent();
+        // Học viên của khóa đã xuất bản: quiz theo bản đã duyệt
+        Optional<Integer> passingScore = published.isPresent()
+                ? Optional.ofNullable(published.get().snapshot().getQuiz()).map(QuizSnapshot::getPassingScorePercent)
+                : quizRepository.findByLessonIdAndDeletedFalse(lessonId).map(Quiz::getPassingScorePercent);
+        boolean isMiniTest = passingScore.isPresent();
         if (isMiniTest) {
             BigDecimal bestScore = progress.getBestScore();
-            if (bestScore == null || bestScore.compareTo(BigDecimal.valueOf(quiz.get().getPassingScorePercent())) < 0) {
+            if (bestScore == null || bestScore.compareTo(BigDecimal.valueOf(passingScore.get())) < 0) {
                 throw new AppException(ErrorCode.CANNOT_COMPLETE_LESSON);
             }
         }
@@ -167,7 +170,8 @@ public class ProgressService {
                 .findByUserAndCourseWithLesson(currentUser.getId(), courseId);
 
         // Tính stats
-        long totalLessons = lessonRepository.countByCourse_IdAndDeletedFalse(courseId);
+        // Số bài học viên đang học (bản xuất bản nếu khóa đã có)
+        long totalLessons = lessonRepository.countLearnerLessons(courseId);
         long completed = progresses.stream()
                 .filter(p -> p.getStatus() == ProgressStatus.COMPLETED).count();
         long inProgress = progresses.stream()
@@ -215,4 +219,18 @@ public class ProgressService {
     // ============================================================
     // (Đã chuyển logic check enrollment sang CourseAccessGuard)
     // ============================================================
+
+    /** Bài trong bản xuất bản (học viên) hoặc bản đang soạn — kèm kiểm tra đã đăng ký. */
+    private Lesson resolveLessonForLearning(Long lessonId) {
+        return publishedLessonResolver.forLearning(lessonId)
+                .map(PublishedLessonResolver.PublishedLesson::lesson)
+                .orElseGet(() -> requireLiveLessonForLearning(lessonId));
+    }
+
+    private Lesson requireLiveLessonForLearning(Long lessonId) {
+        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        courseAccessGuard.requireEnrolledInLesson(lesson);
+        return lesson;
+    }
 }

@@ -19,6 +19,18 @@ export { useModerationQueue, useModerationBrowse, useModerationAction } from './
 export { useReportComment } from './useReportComment'
 export { useRecipientCount, useBroadcastHistory, useSendBroadcast } from './useBroadcasts'
 export { useCourseStudents, useStudentCourseDetail } from './useCourseStudents'
+export { useCourseTeachers, useAssignCourseTeacher, useUnassignCourseTeacher } from './useCourseTeachers'
+export {
+  useCourseReviewHistory,
+  useCourseReviewQueue,
+  useSubmitCourseReview,
+  useWithdrawCourseReview,
+  useApproveCourseReview,
+  useRejectCourseReview,
+  useCourseChanges,
+  useCourseReviewComments,
+  useCourseReviewCommentMutations,
+} from './useCourseReview'
 
 // Đăng nhập bằng Google (GSI idToken + luồng OAuth2 redirect)
 export { useGoogleLogin, useGoogleCallback } from './useGoogleLogin'

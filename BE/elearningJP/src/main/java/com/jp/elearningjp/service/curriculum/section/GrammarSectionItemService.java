@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.shared.util.VersionCheck;
 import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleUpsertRequest;
@@ -18,6 +19,7 @@ import com.jp.elearningjp.repository.curriculum.LessonGrammarExampleRepository;
 import com.jp.elearningjp.repository.curriculum.LessonGrammarItemRepository;
 import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -29,6 +31,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -52,6 +55,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     private final GrammarPointRepository grammarPointRepository;
     private final LessonSectionMapper lessonSectionMapper;
     private final CourseAccessGuard courseAccessGuard;
+    private final PublishedLessonResolver publishedLessonResolver;
 
     public GrammarSectionItemService(
             LessonSectionRepository lessonSectionRepository,
@@ -59,7 +63,8 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
             LessonGrammarExampleRepository grammarExampleRepository,
             GrammarPointRepository grammarPointRepository,
             LessonSectionMapper lessonSectionMapper,
-            CourseAccessGuard courseAccessGuard
+            CourseAccessGuard courseAccessGuard,
+            PublishedLessonResolver publishedLessonResolver
     ) {
         super(lessonSectionRepository);
         this.grammarItemRepository = grammarItemRepository;
@@ -67,6 +72,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         this.grammarPointRepository = grammarPointRepository;
         this.lessonSectionMapper = lessonSectionMapper;
         this.courseAccessGuard = courseAccessGuard;
+        this.publishedLessonResolver = publishedLessonResolver;
     }
 
     // ============================================================
@@ -94,8 +100,8 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     @Transactional
     public LessonGrammarItemResponse addGrammarItem(Long sectionId, LessonGrammarItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.GRAMMAR);
-        // Chỉ chủ khóa học hoặc ADMIN được sửa nội dung section
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Chỉ giáo viên được giao hoặc ADMIN được sửa nội dung section
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         GrammarPoint grammar = grammarPointRepository.findByIdAndDeletedFalse(request.getGrammarId())
                 .orElseThrow(() -> new AppException(ErrorCode.GRAMMAR_NOT_FOUND));
@@ -153,6 +159,17 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     public LessonGrammarItemResponse getGrammarItem(Long itemId) {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
+        // Học viên của khóa đã xuất bản: item theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published =
+                publishedLessonResolver.forReading(item.getSection().getLesson().getId());
+        if (published.isPresent()) {
+            return published.get().snapshot().getSections().stream()
+                    .filter(s -> s.getGrammarItems() != null)
+                    .flatMap(s -> s.getGrammarItems().stream())
+                    .filter(i -> itemId.equals(i.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
+        }
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);
         }
@@ -183,7 +200,8 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     public LessonGrammarItemResponse updateGrammarItem(Long itemId, LessonGrammarItemUpdateRequest request) {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        VersionCheck.requireVersion(item, request.getVersion());
+        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);
         }
@@ -230,7 +248,9 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         // Xử lý examples (3-state)
         int examplesAffected = handleExamplesUpdate(item, request.getExamples());
 
+        // flush để response mang version mới
         LessonGrammarItem saved = grammarItemRepository.save(item);
+        grammarItemRepository.flush();
         log.info("[GRAMMAR-ITEM] Updated grammar item id={} (examples affected: {})", itemId, examplesAffected);
         return lessonSectionMapper.toGrammarItemResponse(saved);
     }
@@ -242,7 +262,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     public void deleteGrammarItem(Long itemId) {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) return;
         item.softDelete();
         // Cascade soft-delete examples
@@ -258,12 +278,12 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
      * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> grammar item active
      * của section hiện tại (không thiếu, không thừa, không trùng).</p>
      *
-     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course được giao).</p>
      */
     @Transactional
     public List<LessonGrammarItemResponse> reorderGrammarItems(Long sectionId, ItemBulkReorderRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.GRAMMAR);
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
@@ -281,6 +301,7 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         if (!requestedIds.equals(currentIds)) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
+        VersionCheck.requireVersions(currentItems, request.getVersions());
 
         currentItems = OrderIndexResolver.bulkReorder(
                 currentItems,

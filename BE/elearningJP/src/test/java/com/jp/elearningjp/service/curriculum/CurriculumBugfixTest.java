@@ -1,5 +1,7 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.service.curriculum.snapshot.CourseSnapshotReader;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.dto.request.curriculum.CourseCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonUpdateRequest;
@@ -73,6 +75,8 @@ class CurriculumBugfixTest {
     @Mock LessonSpeakingService lessonSpeakingService;
     @Spy LessonMapper lessonMapper = new LessonMapperImpl();
 
+    @Mock PublishedLessonResolver publishedLessonResolver;
+    @Mock CourseSnapshotReader courseSnapshotReader;
     @InjectMocks CourseService courseService;
     @InjectMocks LessonService lessonService;
 
@@ -132,7 +136,7 @@ class CurriculumBugfixTest {
 
         SectionService service = new SectionService(sectionRepository, lessonRepository, courseRepository,
                 courseAccessGuard, null, null, null, null, null, null, null, quizRepository, null,
-                lessonSectionMapper);
+                lessonSectionMapper, null);
         service.createSection(LESSON_ID, LessonSectionType.KANJI, "Mới", null);
 
         assertThat(indexAtInsert[0]).isEqualTo(4);
@@ -213,7 +217,7 @@ class CurriculumBugfixTest {
     private Course unpublishedCourseWithOwner(Long ownerId) {
         Course course = activeCourse();
         course.setPublished(false);
-        when(courseAccessGuard.isOwner(eq(course), eq(ownerId))).thenReturn(true);
+        when(courseAccessGuard.isAssignedTeacher(eq(course), eq(ownerId))).thenReturn(true);
         when(courseMapper.toCourseDetailResponse(course))
                 .thenReturn(new com.jp.elearningjp.dto.response.curriculum.CourseDetailResponse());
         return course;

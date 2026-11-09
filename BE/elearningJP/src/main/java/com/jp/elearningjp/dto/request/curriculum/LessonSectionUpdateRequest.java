@@ -21,6 +21,12 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LessonSectionUpdateRequest {
 
+    /**
+     * Version bản ghi client đã đọc (optimistic locking). Lệch → 409 CONCURRENT_MODIFICATION.
+     * Không gửi → bỏ qua kiểm tra.
+     */
+    Long version;
+
     @Size(max = 255, message = "Tiêu đề section tối đa 255 ký tự")
     @Schema(description = "Tiêu đề mới của section (bỏ qua nếu không đổi)", example = "Phần 1: Chữ Hán nâng cao")
     String title;

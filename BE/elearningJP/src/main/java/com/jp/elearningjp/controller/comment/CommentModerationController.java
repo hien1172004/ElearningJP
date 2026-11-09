@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * Kiểm duyệt bình luận. ADMIN: mọi bình luận; TEACHER: bình luận trong bài học thuộc khóa
- * do mình tạo (kiểm tra ở service, ngoài phạm vi → 403).
+ * được giao (kiểm tra ở service, ngoài phạm vi → 403).
  */
 @RestController
 @RequestMapping(ApiPaths.API_V1 + ApiPaths.AdminModeration.BASE)

@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonGrammarExampleUpsertRequest;
@@ -52,6 +53,7 @@ class GrammarSectionItemServiceTest {
     @Mock LessonSectionMapper mapper;
     @Mock CourseAccessGuard courseAccessGuard;
 
+    @Mock PublishedLessonResolver publishedLessonResolver;
     @InjectMocks GrammarSectionItemService service;
 
     private static final ObjectMapper M = new ObjectMapper();

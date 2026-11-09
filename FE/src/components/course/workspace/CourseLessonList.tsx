@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Button as AntdButton, Input, Pagination } from 'antd'
 import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useCourseEditLockHint, useCourseEditLocked } from '@/components/course/edit-lock'
 import type { LessonOutline } from '@/types'
 
 const PAGE_SIZE = 10
@@ -29,6 +30,9 @@ export const CourseLessonList: React.FC<CourseLessonListProps> = ({
   onMove,
   reorderPending,
 }) => {
+  // Khóa đang chờ duyệt: tạm khóa thêm / sửa / xóa / sắp xếp
+  const locked = useCourseEditLocked()
+  const lockHint = useCourseEditLockHint()
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(1)
 
@@ -67,7 +71,14 @@ export const CourseLessonList: React.FC<CourseLessonListProps> = ({
               className="!w-56"
             />
           )}
-          <AntdButton type="primary" icon={<Plus className="w-4 h-4" />} onClick={onAdd} className="!rounded-md">
+          <AntdButton
+            type="primary"
+            icon={<Plus className="w-4 h-4" />}
+            onClick={onAdd}
+            disabled={locked}
+            title={lockHint}
+            className="!rounded-md"
+          >
             Thêm bài học
           </AntdButton>
         </div>
@@ -90,20 +101,20 @@ export const CourseLessonList: React.FC<CourseLessonListProps> = ({
                 {lesson.title}
               </span>
               <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                <IconAction label="Lên trên" disabled={idx === 0 || reorderPending} onClick={() => onMove(lesson.id, 'up')}>
+                <IconAction label="Lên trên" disabled={locked || idx === 0 || reorderPending} onClick={() => onMove(lesson.id, 'up')}>
                   <ChevronUp className="w-4 h-4" />
                 </IconAction>
                 <IconAction
                   label="Xuống dưới"
-                  disabled={idx === lessons.length - 1 || reorderPending}
+                  disabled={locked || idx === lessons.length - 1 || reorderPending}
                   onClick={() => onMove(lesson.id, 'down')}
                 >
                   <ChevronDown className="w-4 h-4" />
                 </IconAction>
-                <IconAction label="Sửa bài học" onClick={() => onEdit(lesson)}>
+                <IconAction label="Sửa bài học" disabled={locked} onClick={() => onEdit(lesson)}>
                   <Pencil className="w-4 h-4" />
                 </IconAction>
-                <IconAction label="Xóa bài học" danger onClick={() => onDelete(lesson)}>
+                <IconAction label="Xóa bài học" danger disabled={locked} onClick={() => onDelete(lesson)}>
                   <Trash2 className="w-4 h-4" />
                 </IconAction>
               </div>

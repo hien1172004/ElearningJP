@@ -110,6 +110,25 @@ public class GlobalExceptionHandle {
                         .build());
     }
 
+    /**
+     * Hai giao dịch cùng sửa 1 bản ghi chồng nhau (JPA {@code @Version}) → 409 thay vì 500,
+     * để FE báo người dùng tải lại.
+     */
+    @ExceptionHandler(value = {
+            org.springframework.orm.ObjectOptimisticLockingFailureException.class,
+            jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ApiResponse<?>> handleOptimisticLock(Exception e) {
+        org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class)
+                .warn("[CONCURRENT] Optimistic lock conflict: {}", e.getMessage());
+        ErrorCode errorCode = ErrorCode.CONCURRENT_MODIFICATION;
+        return ResponseEntity.status(errorCode.getHttpStatusCode()).body(
+                ApiResponse.builder()
+                        .code(errorCode.getCode())
+                        .message(errorCode.getMessage())
+                        .build());
+    }
+
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ApiResponse<?>> handleGenericException(Exception e) {
         // ClientAbort / AsyncRequestNotUsable = client closed connection before response was sent.

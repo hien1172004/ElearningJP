@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.shared.util.VersionCheck;
 import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonSectionResponse;
 import com.jp.elearningjp.entity.content.Vocabulary;
@@ -24,6 +25,7 @@ import com.jp.elearningjp.repository.curriculum.LessonVocabularyItemRepository;
 import com.jp.elearningjp.repository.curriculum.QuizOptionRepository;
 import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
 import lombok.AccessLevel;
@@ -37,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -76,6 +79,7 @@ public class SectionService {
     QuizRepository quizRepository;
     QuizOptionRepository quizOptionRepository;
     LessonSectionMapper lessonSectionMapper;
+    PublishedLessonResolver publishedLessonResolver;
 
     // ============================================================
     // READ
@@ -86,6 +90,11 @@ public class SectionService {
      */
     @Transactional(readOnly = true)
     public List<LessonSectionResponse> getLessonSections(Long lessonId) {
+        // Học viên của khóa đã xuất bản: section theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forReading(lessonId);
+        if (published.isPresent()) {
+            return published.get().snapshot().getSections();
+        }
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         courseAccessGuard.requireLessonContentAccess(lesson);
@@ -102,6 +111,14 @@ public class SectionService {
     public LessonSectionResponse getSection(Long sectionId) {
         LessonSection section = lessonSectionRepository.findById(sectionId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
+        Optional<PublishedLessonResolver.PublishedLesson> published =
+                publishedLessonResolver.forReading(section.getLesson().getId());
+        if (published.isPresent()) {
+            return published.get().snapshot().getSections().stream()
+                    .filter(s -> sectionId.equals(s.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
+        }
         courseAccessGuard.requireSectionContentAccess(section);
         // Load full graph theo lesson
         List<LessonSection> sections = lessonSectionRepository
@@ -136,7 +153,7 @@ public class SectionService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         // Teacher chỉ được tạo section trong course do mình làm chủ (admin bypass).
-        courseAccessGuard.requireOwnerOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         // SEQUENTIAL RENUMBER: chèn section vào vị trí đích trong bộ nhớ, rồi
         // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
@@ -181,13 +198,14 @@ public class SectionService {
      * (giống logic của lesson).
      */
     @Transactional
-    public LessonSectionResponse updateSection(Long sectionId, String title, Integer orderIndex) {
+    public LessonSectionResponse updateSection(Long sectionId, String title, Integer orderIndex, Long version) {
         LessonSection section = lessonSectionRepository.findById(sectionId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
         if (section.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
         }
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        VersionCheck.requireVersion(section, version);
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         if (title != null) {
             section.setTitle(title);
@@ -217,7 +235,9 @@ public class SectionService {
             }
         }
 
+        // flush để response mang version mới
         lessonSectionRepository.save(section);
+        lessonSectionRepository.flush();
         log.info("[SECTION] Updated section id={}, orderIndex={}", sectionId, section.getOrderIndex());
 
         return lessonSectionMapper.toSectionResponse(section);
@@ -237,7 +257,7 @@ public class SectionService {
         if (section.isDeleted()) {
             return; // đã xoá rồi, idempotent
         }
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         section.softDelete();
         lessonSectionRepository.save(section);
         log.info("[SECTION] Soft-deleted section id={}", sectionId);
@@ -249,7 +269,7 @@ public class SectionService {
      * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> section active
      * của lesson hiện tại (không thiếu, không thừa, không trùng).</p>
      *
-     * <p>Quyền: Admin hoặc Teacher (chỉ reorder section trong course do mình tạo).</p>
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder section trong course được giao).</p>
      *
      * @param lessonId lesson cần reorder
      * @param request  danh sách section ID theo thứ tự MỚI
@@ -263,7 +283,7 @@ public class SectionService {
                         .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND))
                         .getCourse().getId()
         ).orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(course, ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(course, ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
@@ -283,6 +303,7 @@ public class SectionService {
         if (!requestedIds.equals(currentIds)) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
+        VersionCheck.requireVersions(currentSections, request.getVersions());
 
         // Dùng helper generic để gán lại orderIndex theo list mới (1..N)
         currentSections = OrderIndexResolver.bulkReorder(

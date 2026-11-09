@@ -18,6 +18,10 @@ export interface ExamSummary {
   overallPassingScore: number
   totalQuestions: number
   published: boolean
+  /** Đề gắn khóa: phiên bản đã duyệt; null = chưa duyệt (lên cùng lần duyệt khóa). */
+  publishedVersionId?: number | null
+  /** Đề gắn khóa đang chờ gỡ: học viên vẫn thi tới khi khóa được duyệt lần tới. */
+  pendingRemoval?: boolean
   courseId?: number
   status?: string
   passingScore?: number
@@ -189,6 +193,8 @@ export interface AdminTakingOption {
 
 export interface AdminTakingQuestion {
   id: number
+  /** Version để gửi lại khi sửa inline (optimistic locking). */
+  version?: number
   questionNumber: number
   mondaiCode?: string
   mondaiNameVi?: string
@@ -232,6 +238,8 @@ export interface AdminExamPreview {
 }
 
 export interface UpdateQuestionInlinePayload {
+  /** Version câu hỏi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
   questionText?: string
   imageUrl?: string
   audioUrl?: string

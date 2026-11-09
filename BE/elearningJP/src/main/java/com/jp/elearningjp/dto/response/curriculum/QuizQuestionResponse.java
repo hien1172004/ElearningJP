@@ -16,6 +16,8 @@ import com.jp.elearningjp.shared.enums.QuizQuestionType;
 public class QuizQuestionResponse {
 
     Long id;
+    /** Version để gửi lại khi cập nhật (optimistic locking). */
+    Long version;
     String questionText;
     Integer orderIndex;
     QuizQuestionType questionType;

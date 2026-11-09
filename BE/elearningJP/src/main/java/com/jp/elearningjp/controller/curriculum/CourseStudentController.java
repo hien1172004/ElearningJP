@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(ApiPaths.API_V1 + ApiPaths.TeacherStudents.BASE)
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Tag(name = "Teacher Students", description = "Theo dõi học viên của khóa học (Quản trị viên: mọi khóa; Giáo viên: khóa của mình)")
+@Tag(name = "Teacher Students", description = "Theo dõi học viên của khóa học (Quản trị viên: mọi khóa; Giáo viên: khóa được giao)")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
 public class CourseStudentController {

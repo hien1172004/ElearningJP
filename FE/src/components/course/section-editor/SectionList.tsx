@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useCourseEditLocked } from '@/components/course/edit-lock'
+import { toVersionMap } from '@/utils/versions'
 import { Plus, ChevronUp, ChevronDown, Pencil, Trash2, BookOpen, List } from 'lucide-react'
 import { Modal, Form, Input, Select, InputNumber, App } from 'antd'
 import { z } from 'zod'
@@ -37,6 +39,8 @@ export const SectionList: React.FC<SectionListProps> = ({
   sections,
   onManageItems,
 }) => {
+  // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
+  const locked = useCourseEditLocked()
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -84,7 +88,7 @@ export const SectionList: React.FC<SectionListProps> = ({
         }
         await updateSection.mutateAsync({
           id: editingSection.id,
-          payload: { title: parsed.data.title, orderIndex: parsed.data.orderIndex },
+          payload: { title: parsed.data.title, orderIndex: parsed.data.orderIndex, version: editingSection.version },
         })
       } else {
         const parsed = schema.safeParse(values)
@@ -112,6 +116,7 @@ export const SectionList: React.FC<SectionListProps> = ({
       ;[newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]]
     await reorderSections.mutateAsync({
       itemIds: newOrder.map((s) => s.id),
+      versions: toVersionMap(newOrder),
     })
   }
 
@@ -144,6 +149,7 @@ export const SectionList: React.FC<SectionListProps> = ({
         </h3>
         <button
           type="button"
+          disabled={locked}
           onClick={openCreate}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition"
         >
@@ -191,19 +197,19 @@ export const SectionList: React.FC<SectionListProps> = ({
               )} */}
               {/* ===== TEMP: disabled reorder up/down ===== */}
               {false && (
-                <button type="button" onClick={() => handleReorder('up', idx)} disabled={idx === 0} className="p-1 text-gray-400 hover:text-indigo-600 rounded transition disabled:opacity-30">
+                <button type="button" onClick={() => handleReorder('up', idx)} disabled={locked || idx === 0} className="p-1 text-gray-400 hover:text-indigo-600 rounded transition disabled:opacity-30">
                   <ChevronUp className="w-4 h-4" />
                 </button>
               )}
               {false && (
-                <button type="button" onClick={() => handleReorder('down', idx)} disabled={idx === sorted.length - 1} className="p-1 text-gray-400 hover:text-indigo-600 rounded transition disabled:opacity-30">
+                <button type="button" onClick={() => handleReorder('down', idx)} disabled={locked || idx === sorted.length - 1} className="p-1 text-gray-400 hover:text-indigo-600 rounded transition disabled:opacity-30">
                   <ChevronDown className="w-4 h-4" />
                 </button>
               )}
-              <button type="button" onClick={() => openEdit(section)} className="p-1 text-gray-400 hover:text-indigo-600 rounded transition">
+              <button type="button" disabled={locked} onClick={() => openEdit(section)} className="p-1 text-gray-400 hover:text-indigo-600 rounded transition">
                 <Pencil className="w-4 h-4" />
               </button>
-              <button type="button" onClick={() => deleteSection.mutate(section.id)} className="p-1 text-gray-400 hover:text-rose-600 rounded transition">
+              <button type="button" disabled={locked} onClick={() => deleteSection.mutate(section.id)} className="p-1 text-gray-400 hover:text-rose-600 rounded transition">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>

@@ -41,7 +41,7 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
      * Hàng chờ kiểm duyệt: gom báo cáo theo nội dung bị báo cáo, nhiều báo cáo nhất lên đầu.
      * Mỗi dòng: [comment_id, reply_id, số báo cáo, thời điểm báo cáo gần nhất].
      *
-     * <p>{@code teacherId} khác null → chỉ bình luận trong bài học thuộc khóa do giáo viên đó tạo.</p>
+     * <p>{@code teacherId} khác null → chỉ bình luận trong bài học thuộc khóa giáo viên đó được giao.</p>
      */
     @Query(value = """
             SELECT r.comment_id, r.reply_id, COUNT(*) AS cnt, MAX(r.created_at) AS latest
@@ -51,7 +51,9 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
             LEFT JOIN lessons l ON c.target_type = 'LESSON' AND l.id = c.target_id
             LEFT JOIN courses co ON co.id = l.course_id
             WHERE r.status = :status
-              AND (CAST(:teacherId AS BIGINT) IS NULL OR co.created_by = CAST(:teacherId AS BIGINT))
+              AND (CAST(:teacherId AS BIGINT) IS NULL OR EXISTS (
+                    SELECT 1 FROM course_teachers ct
+                    WHERE ct.course_id = co.id AND ct.teacher_id = CAST(:teacherId AS BIGINT)))
             GROUP BY r.comment_id, r.reply_id
             ORDER BY cnt DESC, latest DESC
             """,
@@ -64,7 +66,9 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
                 LEFT JOIN lessons l ON c.target_type = 'LESSON' AND l.id = c.target_id
                 LEFT JOIN courses co ON co.id = l.course_id
                 WHERE r.status = :status
-                  AND (CAST(:teacherId AS BIGINT) IS NULL OR co.created_by = CAST(:teacherId AS BIGINT))
+                  AND (CAST(:teacherId AS BIGINT) IS NULL OR EXISTS (
+                    SELECT 1 FROM course_teachers ct
+                    WHERE ct.course_id = co.id AND ct.teacher_id = CAST(:teacherId AS BIGINT)))
                 GROUP BY r.comment_id, r.reply_id
             ) grouped
             """,
