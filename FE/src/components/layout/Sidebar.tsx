@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -181,8 +182,7 @@ const navItems: NavItem[] = [
   },
 ]
 
-// Chiều cao header (phải khớp với <TopBar />): h-14 = 56px
-// (dùng Tailwind class `top-14` để JIT tạo class tương ứng)
+// Chiều cao header dùng biến CSS --topbar-h (index.css) — khớp với <TopBar />
 
 // ============================================================================
 // Hooks
@@ -424,20 +424,10 @@ export const Sidebar: React.FC = () => {
   }, [location.pathname, closeMobile])
 
   // Khoá scroll body khi drawer mobile mở
-  useEffect(() => {
-    if (!isMobile) return
-    if (mobileOpen) {
-      const prev = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = prev
-      }
-    }
-    return
-  }, [mobileOpen, isMobile])
+  useBodyScrollLock(isMobile && mobileOpen)
 
   // Trên mobile: full-height drawer bắt đầu từ top=0
-  // Trên desktop: bắt đầu từ dưới header (top-14 = 56px)
+  // Trên desktop: bắt đầu từ dưới header (top = --topbar-h)
   const sidebarClasses = cn(
     'flex flex-col bg-surface border-r border-gray-200 z-40',
     'transition-[width,transform] duration-300 ease-in-out',
@@ -449,7 +439,7 @@ export const Sidebar: React.FC = () => {
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
         )
       : cn(
-          'top-14 bottom-0', // đúng chiều cao TopBar (h-14 = 56px)
+          'top-(--topbar-h) bottom-0', // đúng chiều cao TopBar
           collapsed ? 'w-16' : 'w-60',
           'translate-x-0',
         ),

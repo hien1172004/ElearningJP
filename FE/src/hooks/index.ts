@@ -120,3 +120,6 @@ export { useSrsSavedIds } from './useSrsSavedIds'
 
 // Module Web Push Notification
 export { useWebPush } from './useWebPush'
+
+// Khoá cuộn trang khi modal / drawer tự dựng đang mở
+export { useBodyScrollLock } from './useBodyScrollLock'

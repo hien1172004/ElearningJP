@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   X,
@@ -190,6 +191,8 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
   onClose,
   onSelectCharacter,
 }) => {
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(isOpen)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const handsRef = useRef<any>(null)
@@ -1235,7 +1238,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div
         className="relative bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col"
         style={{ maxHeight: '94vh' }}
@@ -1561,7 +1564,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             </div>
 
             {/* Danh sách các ứng viên ký tự */}
-            <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 max-h-[300px] md:max-h-[460px]">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-2.5 max-h-[300px] md:max-h-[460px]">
               {/* Trạng thái chưa có nét vẽ nào */}
               {strokesCount === 0 && (
                 <div className="h-full min-h-[220px] flex flex-col items-center justify-center p-4 text-center text-slate-400">

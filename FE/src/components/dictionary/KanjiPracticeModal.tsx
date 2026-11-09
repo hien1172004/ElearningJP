@@ -1,4 +1,5 @@
-﻿import React, { useRef, useState, useEffect, useCallback } from 'react'
+﻿import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   X,
@@ -108,6 +109,8 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
   initialInputMode = 'mouse',
   lessonId,
 }) => {
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(isOpen)
   const [selectedChar, setSelectedChar] = useState<string>(propChar || '木')
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
@@ -137,11 +140,9 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
     setErrorMessage(null)
   }, [inputMode])
 
-  // Hỗ trợ gõ chữ bất kỳ & chọn theo cấp độ JLPT
+  // Hỗ trợ gõ chữ bất kỳ để luyện
   const [customInputChar, setCustomInputChar] = useState<string>('')
   const [isLoadingChar, setIsLoadingChar] = useState<boolean>(false)
-  const [selectedLevel, setSelectedLevel] = useState<string>('N5')
-  const [levelChars, setLevelChars] = useState<string[]>([])
   const [customCharData, setCustomCharData] = useState<{
     character: string
     han_viet?: string
@@ -160,20 +161,6 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
       setErrorMessage(null)
     }
   }, [propChar])
-
-  // Tải danh sách chữ theo cấp độ JLPT / Kana
-  useEffect(() => {
-    if (isOpen) {
-      aiService
-        .getKanjiList(selectedLevel, 80)
-        .then((res) => {
-          if (res.items) {
-            setLevelChars(res.items.map((it) => it.character))
-          }
-        })
-        .catch(() => {})
-    }
-  }, [isOpen, selectedLevel])
 
   // Hàm tải dữ liệu nét của một chữ bất kỳ trong 2,353 chữ
   const loadAnyCharacter = async (charToLoad: string) => {
@@ -264,10 +251,6 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
       st.practiceMode === (practiceMode === 'guided' ? 'GUIDED' : 'FREEHAND') &&
       st.inputMode === (isHand ? 'AIR' : 'MOUSE'),
   )
-
-  const handleSelectChar = (char: string) => {
-    loadAnyCharacter(char)
-  }
 
   const CANVAS_SIZE = 320
 
@@ -478,7 +461,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
   const expectedStrokes = activeStrokes.length
 
   return createPortal(
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 overscroll-contain z-[2000] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-surface rounded-md shadow-2xl border border-gray-100 w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
@@ -502,25 +485,6 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {/* Quick Kanji pills */}
-            <div className="flex items-center gap-1 bg-surface p-1 rounded-md border border-gray-200 text-xs shadow-2xs">
-              <span className="text-[11px] font-semibold text-gray-400 px-1">Chữ mẫu:</span>
-              {Object.keys(PRESET_KANJI).map((char) => (
-                <button
-                  key={char}
-                  type="button"
-                  onClick={() => handleSelectChar(char)}
-                  className={`px-2.5 py-1 rounded font-black transition cursor-pointer text-sm ${
-                    currentChar === char
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600'
-                  }`}
-                >
-                  {char}
-                </button>
-              ))}
-            </div>
-
             <button
               type="button"
               onClick={onClose}
@@ -531,7 +495,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
           </div>
         </div>
 
-        {/* Thanh công cụ: Ô nhập ký tự bất kỳ & Chọn theo cấp độ JLPT */}
+        {/* Thanh công cụ: Ô nhập ký tự bất kỳ */}
         <div className="px-6 py-2.5 bg-slate-50/80 border-b border-gray-100 flex flex-col gap-2">
           {/* Ô nhập bất kỳ ký tự nào */}
           <div className="flex items-center gap-2">
@@ -561,45 +525,6 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
               )}
               <span>Tải chữ</span>
             </button>
-          </div>
-
-          {/* Dải chọn nhanh theo cấp độ JLPT / Kana */}
-          <div className="flex items-center gap-2 overflow-x-auto py-0.5 text-xs">
-            <div className="flex items-center gap-1 shrink-0 font-bold text-gray-500">
-              {['N5', 'N4', 'N3', 'N2', 'N1', 'KANA'].map((lvl) => (
-                <button
-                  key={lvl}
-                  type="button"
-                  onClick={() => setSelectedLevel(lvl)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
-                    selectedLevel === lvl
-                      ? 'bg-amber-500 text-white shadow-2xs'
-                      : 'bg-surface border border-gray-200 text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              ))}
-            </div>
-
-            <div className="h-4 w-px bg-gray-200 shrink-0" />
-
-            <div className="flex items-center gap-1 overflow-x-auto py-0.5">
-              {levelChars.slice(0, 40).map((char) => (
-                <button
-                  key={char}
-                  type="button"
-                  onClick={() => loadAnyCharacter(char)}
-                  className={`w-7 h-7 rounded font-serif font-black flex items-center justify-center transition cursor-pointer shrink-0 text-sm ${
-                    currentChar === char
-                      ? 'bg-indigo-600 text-white shadow-xs scale-105'
-                      : 'bg-surface border border-gray-200/90 text-gray-800 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-300'
-                  }`}
-                >
-                  {char}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -660,7 +585,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
         </div>
 
         {/* Thân Modal: Khung vẽ & Bảng kết quả */}
-        <div className="p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="p-6 overflow-y-auto overscroll-contain flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Cột trái: Khung tương tác (7 cột) */}
           <div className="lg:col-span-7 flex flex-col items-center">
             {practiceMode === 'guided' ? (
@@ -892,7 +817,7 @@ export const KanjiPracticeModal: React.FC<KanjiPracticeModalProps> = ({
                 </div>
 
                 {/* Danh sách phân tích từng nét */}
-                <div className="space-y-2 flex-1 overflow-y-auto max-h-72 pr-1">
+                <div className="space-y-2 flex-1 overflow-y-auto overscroll-contain max-h-72 pr-1">
                   <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
                     Chi tiết từng nét ({assessment.stroke_details.length} nét):
                   </span>

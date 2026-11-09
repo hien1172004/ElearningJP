@@ -1,4 +1,5 @@
-﻿import React, { useRef, useState, useEffect, useCallback } from 'react'
+﻿import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Trash2, RotateCcw, Search, Sparkles, Loader2, Delete } from 'lucide-react'
 import { aiService, type PredictionItem } from '../../services/ai.service'
@@ -98,15 +99,8 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
     }
   }, [isOpen])
 
-  // Khóa scroll body khi modal mở (tránh Antd mask chồng lên khi scroll)
-  useEffect(() => {
-    if (!isOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [isOpen])
+  // Khóa scroll body khi modal mở (dùng chung bộ đếm với các modal khác)
+  useBodyScrollLock(isOpen)
 
   // 2. Gửi ảnh sang AI Service để nhận diện (Debounce 450ms)
   const triggerPrediction = useCallback(async () => {
@@ -255,7 +249,7 @@ export const KanjiHandwritingModal: React.FC<KanjiHandwritingModalProps> = ({
   if (!isOpen) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 overscroll-contain z-[2000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
         className="bg-surface rounded-md shadow-2xl w-full max-w-6xl border border-gray-100 overflow-hidden transform animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}

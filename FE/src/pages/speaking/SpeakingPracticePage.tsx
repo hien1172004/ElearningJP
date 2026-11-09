@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -80,6 +81,8 @@ export const SpeakingPracticePage: React.FC = () => {
 
   // Floating Action Popups: Nhiệm vụ | Gợi ý
   const [showTasksModal, setShowTasksModal] = useState(false)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(showTasksModal)
   const [showInlineSuggestion, setShowInlineSuggestion] = useState(false)
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
   const [suggestionList, setSuggestionList] = useState<Array<{ ja: string; vi?: string }>>([])
@@ -440,7 +443,8 @@ export const SpeakingPracticePage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 1. Header Mazii: < Quay lại | Tiêu đề | ⚙️ Cài đặt */}
       {/* ==================================================================== */}
-      <div className="sticky top-0 z-30">
+      {/* Header dính ngay dưới TopBar (không trượt xuống dưới header), nền cùng màu trang che nội dung cuộn */}
+      <div className="sticky-below-topbar z-20 bg-kinari pt-2">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between bg-surface rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-3">
             <BackButton to="/speaking" />
@@ -1082,7 +1086,7 @@ export const SpeakingPracticePage: React.FC = () => {
       {/* Modal: Danh sách nhiệm vụ */}
       {/* ==================================================================== */}
       {showTasksModal && session.scenario?.tasks && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
             <button
               onClick={() => setShowTasksModal(false)}

@@ -29,7 +29,7 @@ import { cn } from '@/utils/cn'
  * Phần điều hướng chính (Trang chủ, Tra từ điển, Khóa học, Quản lý)
  * đã được chuyển vào Sidebar — Header không chứa nav.
  *
- * Sidebar bắt đầu từ dưới header này (top: h-14 = 56px).
+ * Sidebar bắt đầu từ dưới header này (top: var(--topbar-h) = 56px, khai báo ở index.css).
  */
 export const TopBar: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -43,8 +43,8 @@ export const TopBar: React.FC = () => {
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen)
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-md border-b border-gray-200/80 h-14">
-      <div className="h-14 flex items-center justify-between gap-2 pl-0 pr-3 sm:pr-4 lg:pr-5">
+    <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-md border-b border-gray-200/80 h-(--topbar-h)">
+      <div className="h-(--topbar-h) flex items-center justify-between gap-2 pl-0 pr-3 sm:pr-4 lg:pr-5">
         {/* Trái: hamburger/toggle + logo */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Hamburger — chỉ hiện trên mobile (mở drawer overlay) */}

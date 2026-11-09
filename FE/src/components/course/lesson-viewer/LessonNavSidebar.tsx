@@ -55,12 +55,12 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
   const next = currentIdx < lessons.length - 1 ? lessons[currentIdx + 1] : null
 
   return (
-    <aside className="sticky top-16 w-full bg-surface rounded-md border border-gray-200/80 shadow-xs overflow-hidden">
+    <aside className="w-full bg-surface rounded-md border border-gray-200/80 shadow-xs overflow-hidden">
       <div className="p-4 border-b border-gray-100">
         <h3 className="font-bold text-sm text-gray-800">Nội dung bài học</h3>
         <p className="text-xs text-gray-500 mt-0.5">{lessons.length} bài học</p>
       </div>
-      <nav className="max-h-[50vh] overflow-y-auto p-2 space-y-1">
+      <nav className="max-h-[50vh] overflow-y-auto overscroll-contain p-2 space-y-1">
         {lessons.map((lesson) => {
           const isActive = lesson.id === currentLessonId
           return (
@@ -91,7 +91,7 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
               Bài kiểm tra khóa học ({courseExams.length})
             </h4>
           </div>
-          <div className="space-y-1.5 max-h-[25vh] overflow-y-auto">
+          <div className="space-y-1.5 max-h-[25vh] overflow-y-auto overscroll-contain">
             {courseExams.map((exam) => (
               <Link
                 key={exam.id}

@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useState, useEffect, useRef } from 'react'
 import { Volume2, Sparkles, X } from 'lucide-react'
 import type { KanaMatrix, KanaCharacter, CharacterType } from '@/types'
@@ -13,6 +14,8 @@ export const KanaMatrixTab: React.FC = () => {
 
   // Trạng thái ký tự đang được click để xem nét viết modal
   const [selectedKana, setSelectedKana] = useState<KanaCharacter | null>(null)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(!!selectedKana)
 
   // Trạng thái chữ đang được đọc tự động (phục vụ highlight ô chữ khi đọc cả hàng)
   const [activeReadingChar, setActiveReadingChar] = useState<string | null>(null)
@@ -232,7 +235,7 @@ export const KanaMatrixTab: React.FC = () => {
 
       {/* Modal xem chi tiết và thứ tự nét viết khi bấm vào 1 chữ cái */}
       {selectedKana && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-surface rounded-md shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150 relative">
             <button
               type="button"

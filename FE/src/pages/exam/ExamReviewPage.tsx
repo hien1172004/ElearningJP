@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { examService } from '../../services/exam.service'
@@ -31,6 +32,8 @@ export const ExamReviewPage: React.FC = () => {
 
   // Modal zoom image
   const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(!!zoomImageUrl)
 
   // Toggle Scripts/Transcript theo questionId: Record<number, { showJp: boolean; showVi: boolean }>
   const [transcriptState, setTranscriptState] = useState<Record<number, { showJp: boolean; showVi: boolean }>>({})
@@ -723,7 +726,7 @@ export const ExamReviewPage: React.FC = () => {
 
             {/* Grid numbers */}
             {activeSection?.sessionType === 'LISTENING' ? (
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto overscroll-contain pr-1">
                 {listeningReviewMondaiGroups.map((group, gIdx) => (
                   <div key={group.mondaiCode || gIdx} className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
@@ -764,7 +767,7 @@ export const ExamReviewPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto overscroll-contain pr-1">
                 {allQuestions.map((q) => {
                   const isCorrect = q.studentAnswer?.correct ?? false
                   const isAnswered =
@@ -810,10 +813,10 @@ export const ExamReviewPage: React.FC = () => {
       {/* Lightbox zoom modal */}
       {zoomImageUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 overscroll-contain z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setZoomImageUrl(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] overflow-auto bg-surface rounded-2xl p-2 shadow-2xl">
+          <div className="relative max-w-4xl max-h-[90vh] overflow-auto overscroll-contain bg-surface rounded-2xl p-2 shadow-2xl">
             <button
               onClick={() => setZoomImageUrl(null)}
               className="absolute top-4 right-4 bg-slate-900/70 hover:bg-slate-900 text-white p-2 rounded-full transition z-10"

@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useState, useEffect } from 'react'
 import { Tooltip } from 'antd'
 import { X, Volume2, BookmarkPlus, Check, Sparkles, PenTool, Plus, Network } from 'lucide-react'
@@ -21,6 +22,8 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
   onClose,
   onSelectVocab,
 }) => {
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(!!character)
   const [detail, setDetail] = useState<KanjiDetail | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const { isSaved } = useSrsSavedIds()
@@ -74,15 +77,18 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
         sinoVietnamese: detail.hanViet?.split(',')?.[0]?.trim()?.toUpperCase() || '',
         meaning: detail.meaningVi || '',
         partOfSpeech: 'Chữ Hán',
+        itemType: 'KANJI',
+        characterId: detail.id,
       }
     : {
         word: character || '',
         reading: '',
         meaning: '',
+        itemType: 'KANJI',
       }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+    <div className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
       <div className="bg-surface rounded-md shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header Modal */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
@@ -149,7 +155,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
         </div>
 
         {/* Body Modal */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-6 space-y-6">
           {isLoading ? (
             <div className="text-center py-16 text-gray-500 animate-pulse">
               Đang tải chi tiết chữ Hán & thứ tự nét viết...
@@ -269,7 +275,7 @@ export const KanjiDetailModal: React.FC<KanjiDetailModalProps> = ({
                                 {comp.h && <span>[{comp.h}]</span>}
                               </div>
                               {comp.d ? (
-                                <div className="text-gray-100 whitespace-pre-line text-[11px] leading-5 max-h-40 overflow-y-auto pr-1">
+                                <div className="text-gray-100 whitespace-pre-line text-[11px] leading-5 max-h-40 overflow-y-auto overscroll-contain pr-1">
                                   {comp.d}
                                 </div>
                               ) : (
