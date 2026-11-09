@@ -1,6 +1,7 @@
 import React from 'react'
 import { MoreVertical, Trash2, Edit3, Share2, FolderInput } from 'lucide-react'
 import { Dropdown } from 'antd'
+import { formatNotebookCounts } from './itemTypeMeta'
 import type { MenuProps } from 'antd'
 import type { Notebook } from '@/types'
 
@@ -127,7 +128,7 @@ export const NotebookCard: React.FC<NotebookCardProps> = ({
       {/* Bottom: Số từ + Ngày tạo chuẩn Mazii */}
       <div className="mt-4 pt-2.5 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
         <span className="font-medium text-gray-600">
-          {notebook.wordCount || 0} từ
+          {formatNotebookCounts(notebook)}
         </span>
         <span>{formattedDate}</span>
       </div>

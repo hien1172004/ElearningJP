@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -207,6 +208,10 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
 
   // 3 Nút tính năng nổi: 🎯 Nhiệm vụ | ⚡ Dịch nhanh | 💡 Gợi ý
   const [showTasksModal, setShowTasksModal] = useState<boolean>(false)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(!!shadowingLine ||
+      (showTasksModal && !!currentScenario.tasks?.length) ||
+      (showVocabPracticeModal && !!currentScenario.vocabulary?.length))
   const [showInlineSuggestion, setShowInlineSuggestion] = useState<boolean>(false)
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false)
   const [suggestionList, setSuggestionList] = useState<Array<{ ja: string; vi?: string }>>([])
@@ -1012,7 +1017,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-[#F7F5FC] rounded-2xl p-3 sm:p-5 space-y-4 min-h-[360px] max-h-[600px] overflow-y-auto">
+                <div className="bg-[#F7F5FC] rounded-2xl p-3 sm:p-5 space-y-4 min-h-[360px] max-h-[600px] overflow-y-auto overscroll-contain">
                   {currentScenario.sampleDialogue && currentScenario.sampleDialogue.length > 0 ? (
                     currentScenario.sampleDialogue.map((line: SampleDialogueLine, index: number) => {
                       const isUser = line.speaker === 'USER' || (line as any).role === 'USER'
@@ -1443,7 +1448,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
           {/* Khung chat trung tâm - Rộng rãi, cuộn nội bộ tự động khi nhiều tin nhắn */}
           <div
             ref={chatContainerRef}
-            className="flex-1 min-h-0 w-full overflow-y-auto scroll-smooth pr-1"
+            className="flex-1 min-h-0 w-full overflow-y-auto overscroll-contain scroll-smooth pr-1"
           >
             <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-4.5">
               {/* THẺ BỐI CẢNH (Context Pill chuẩn Mazii) */}
@@ -1931,7 +1936,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {/* MODAL 1: DANH SÁCH NHIỆM VỤ (KHI BẤM NÚT "NHIỆM VỤ (0/3)") */}
       {/* ==================================================================== */}
       {showTasksModal && currentScenario.tasks && currentScenario.tasks.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl relative space-y-4">
             <button
               onClick={() => setShowTasksModal(false)}
@@ -1967,7 +1972,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {/* MODAL 2: SHADOWING / LUYỆN ĐỌC THEO CÂU MẪU */}
       {/* ==================================================================== */}
       {shadowingLine && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
             <button
               onClick={() => {
@@ -2070,7 +2075,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {/* MODAL 3: LUYỆN TẬP FLASHCARD TỪ VỰNG */}
       {/* ==================================================================== */}
       {showVocabPracticeModal && currentScenario.vocabulary && currentScenario.vocabulary.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
             <button
               onClick={() => setShowVocabPracticeModal(false)}

@@ -82,6 +82,19 @@ public class Notebook extends SoftDeletableEntity {
     @Column(name = "download_count", nullable = false)
     private Integer downloadCount = 0;
 
+    // Bộ đếm theo loại thẻ (V59) — wordCount vẫn là tổng số thẻ
+    @Builder.Default
+    @Column(name = "vocab_count", nullable = false)
+    private Integer vocabCount = 0;
+
+    @Builder.Default
+    @Column(name = "kanji_count", nullable = false)
+    private Integer kanjiCount = 0;
+
+    @Builder.Default
+    @Column(name = "grammar_count", nullable = false)
+    private Integer grammarCount = 0;
+
     @Builder.Default
     @Column(name = "sr_enabled", nullable = false)
     private Boolean srEnabled = false;

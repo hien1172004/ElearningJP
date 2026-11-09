@@ -511,7 +511,9 @@ export const DictionaryPage: React.FC = () => {
       {/* =========================================================================
           1. THANH TRA CỨU: Ô TÌM KIẾM + CÔNG CỤ AI + TAB + LỌC JLPT (một khối gọn, không banner)
          ========================================================================= */}
-      <div className="bg-surface rounded-xl border border-suna shadow-xs p-3 sm:p-4 space-y-3 sticky top-16 z-30">
+      {/* Lớp bọc sticky sát TopBar, nền cùng màu trang + pt-2: giữ khoảng hở nhưng không để nội dung cuộn lọt qua */}
+      <div className="sticky-below-topbar z-20 bg-kinari -mt-2 pt-2">
+      <div className="bg-surface rounded-xl border border-suna shadow-xs p-3 sm:p-4 space-y-3">
         {/* Ô tìm kiếm & Dropdown Autocomplete */}
         {activeTab !== 'kana' && (
           <div ref={searchContainerRef} className="relative">
@@ -596,7 +598,7 @@ export const DictionaryPage: React.FC = () => {
 
             {/* Dropdown gợi ý tự động ngay khi gõ */}
             {isDropdownOpen && suggestions && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-surface rounded-md shadow-2xl border border-gray-200 text-left overflow-hidden z-50 max-h-[460px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-surface rounded-md shadow-2xl border border-gray-200 text-left overflow-hidden z-50 max-h-[460px] overflow-y-auto overscroll-contain animate-in fade-in slide-in-from-top-2 duration-150">
                 {/* Nhóm Từ vựng */}
                 {suggestions.vocabularies && suggestions.vocabularies.length > 0 && (
                   <div className="p-2 border-b border-gray-100">
@@ -761,6 +763,7 @@ export const DictionaryPage: React.FC = () => {
           )}
         </div>
       </div>
+      </div>
 
       {/* =========================================================================
           3. NỘI DUNG CHÍNH: PHÂN CHIA THEO TRẠNG THÁI (KANA / ĐANG TÌM / CHƯA TÌM)
@@ -786,7 +789,7 @@ export const DictionaryPage: React.FC = () => {
 
             {/* DANH SÁCH TỪ VỰNG */}
             {activeTab === 'vocab' && (
-              <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
                 {isLoadingVocab ? (
                   <div className="py-12 text-center text-sm text-gray-400 animate-pulse">
                     Đang tìm kiếm từ vựng...
@@ -841,7 +844,7 @@ export const DictionaryPage: React.FC = () => {
 
             {/* DANH SÁCH CHỮ HÁN */}
             {activeTab === 'kanji' && (
-              <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
                 {isLoadingKanji ? (
                   <div className="py-12 text-center text-sm text-gray-400 animate-pulse">
                     Đang tìm kiếm chữ Hán...
@@ -896,7 +899,7 @@ export const DictionaryPage: React.FC = () => {
 
             {/* DANH SÁCH NGỮ PHÁP */}
             {activeTab === 'grammar' && (
-              <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[70vh] overflow-y-auto overscroll-contain pr-1">
                 {isLoadingGrammar ? (
                   <div className="py-12 text-center text-sm text-gray-400 animate-pulse">
                     Đang tìm kiếm ngữ pháp...

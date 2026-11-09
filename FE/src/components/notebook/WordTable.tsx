@@ -17,6 +17,7 @@ import {
   CheckOutlined,
 } from '@ant-design/icons'
 import type { NotebookWord, MemoryLevel } from '@/types'
+import { NOTEBOOK_ITEM_TYPE_META, itemTypeOf } from './itemTypeMeta'
 
 interface WordTableProps {
   words: NotebookWord[]
@@ -90,35 +91,59 @@ export const WordTable: React.FC<WordTableProps> = ({
 
   const columns: ColumnsType<NotebookWord> = [
     {
-      title: 'Từ vựng',
+      title: 'Mục',
       dataIndex: 'word',
       key: 'word',
-      width: 220,
-      render: (_, record) => (
-        <div className="flex items-center gap-2">
-          <Button
-            type="text"
-            shape="circle"
-            size="small"
-            icon={<SoundOutlined className="text-blue-500" />}
-            onClick={() => playAudio(record)}
-            aria-label="Phát âm"
-          />
-          <div>
-            <div className="font-bold text-base text-gray-800 leading-tight">
-              {record.word}
-            </div>
-            {record.reading && (
-              <div className="text-xs text-gray-500">{record.reading}</div>
-            )}
-            {(record.sinoVietnamese || record.hanViet) && (
-              <div className="text-[11px] text-emerald-600 font-medium">
-                [{record.sinoVietnamese || record.hanViet}]
+      width: 240,
+      render: (_, record) => {
+        const type = itemTypeOf(record)
+        const meta = NOTEBOOK_ITEM_TYPE_META[type]
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              type="text"
+              shape="circle"
+              size="small"
+              icon={<SoundOutlined className="text-blue-500" />}
+              onClick={() => playAudio(record)}
+              aria-label="Phát âm"
+            />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`font-bold text-gray-800 leading-tight ${type === 'KANJI' ? 'text-2xl font-serif' : 'text-base'}`}
+                >
+                  {record.word}
+                </span>
+                <Tag color={meta.tagColor} className="!m-0 !text-[10px] !leading-4 !px-1.5">
+                  {meta.label}
+                </Tag>
               </div>
-            )}
+              {type === 'KANJI' ? (
+                <div className="text-xs text-gray-500 space-y-0.5">
+                  {record.onyomi && record.onyomi.length > 0 && <div>On: {record.onyomi.join('、')}</div>}
+                  {record.kunyomi && record.kunyomi.length > 0 && <div>Kun: {record.kunyomi.join('、')}</div>}
+                  {!record.onyomi?.length && !record.kunyomi?.length && record.reading && <div>{record.reading}</div>}
+                  {record.strokeCount != null && <div className="text-gray-400">{record.strokeCount} nét</div>}
+                </div>
+              ) : type === 'GRAMMAR' ? (
+                (record.reading || record.grammarStructure) && (
+                  <div className="text-xs text-rose-700 font-mono break-words">
+                    {record.reading || record.grammarStructure}
+                  </div>
+                )
+              ) : (
+                record.reading && <div className="text-xs text-gray-500">{record.reading}</div>
+              )}
+              {type !== 'GRAMMAR' && (record.sinoVietnamese || record.hanViet) && (
+                <div className="text-[11px] text-emerald-600 font-medium">
+                  [{record.sinoVietnamese || record.hanViet}]
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       title: 'Ý nghĩa',
@@ -128,10 +153,18 @@ export const WordTable: React.FC<WordTableProps> = ({
       render: (meaning: string, record) => (
         <div>
           <div className="text-sm font-medium text-gray-700">{meaning || '—'}</div>
-          {record.partOfSpeech && (
+          {record.partOfSpeech && itemTypeOf(record) === 'VOCAB' && (
             <span className="text-[11px] text-gray-400 italic">
               ({record.partOfSpeech})
             </span>
+          )}
+          {record.exampleSentence && (
+            <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1" title={record.exampleMeaning ?? undefined}>
+              VD: {record.exampleSentence}
+            </div>
+          )}
+          {record.sourceLessonTitle && (
+            <div className="text-[11px] text-indigo-500 mt-0.5 line-clamp-1">Từ bài: {record.sourceLessonTitle}</div>
           )}
         </div>
       ),
@@ -211,7 +244,7 @@ export const WordTable: React.FC<WordTableProps> = ({
           <Tooltip title="Xóa khỏi sổ tay">
             <Popconfirm
               title="Xác nhận xóa"
-              description="Bạn có chắc chắn muốn xóa từ này khỏi sổ tay?"
+              description="Bạn có chắc chắn muốn xóa mục này khỏi sổ tay?"
               okText="Xóa"
               cancelText="Hủy"
               okButtonProps={{ danger: true }}
@@ -252,15 +285,15 @@ export const WordTable: React.FC<WordTableProps> = ({
           showSizeChanger: true,
           pageSizeOptions: ['10', '20', '50', '100'],
           onChange: (page, pSize) => onPageChange(page - 1, pSize),
-          showTotal: (totalCount) => `Tổng cộng ${totalCount} từ`,
+          showTotal: (totalCount) => `Tổng cộng ${totalCount} mục`,
         }}
         locale={{
           emptyText: (
             <div className="py-12 text-center text-gray-400">
               <BookOutlined className="text-4xl mb-2 text-gray-300" />
-              <div>Sổ tay này chưa có từ vựng nào.</div>
+              <div>Chưa có mục nào ở đây.</div>
               <div className="text-xs text-gray-400 mt-1">
-                Bấm nút "+ Thêm từ" hoặc "Nhập Excel" để bắt đầu học nhé!
+                Bấm "+ Thêm từ", "Nhập Excel", hoặc lưu từ bài học / từ điển để bắt đầu học nhé!
               </div>
             </div>
           ),

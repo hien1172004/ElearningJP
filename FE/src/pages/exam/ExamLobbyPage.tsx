@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -31,6 +32,8 @@ export const ExamLobbyPage: React.FC = () => {
 
   // State cho Modal chọn chế độ thi
   const [selectedExam, setSelectedExam] = useState<ExamDetail | null>(null)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(!!selectedExam || showLoginModal)
   const [loadingDetailId, setLoadingDetailId] = useState<number | null>(null)
   const [attemptType, setAttemptType] = useState<AttemptType>('FULL_EXAM')
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null)
@@ -232,7 +235,7 @@ export const ExamLobbyPage: React.FC = () => {
         </div>
 
         {/* CỘT PHẢI (4-5 CỘT TRÊN DESKTOP): BẢNG XẾP HẠNG MAZII STICKY */}
-        <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-[80px]" id="leaderboard">
+        <div className="lg:col-span-5 xl:col-span-4 lg:sticky-panel" id="leaderboard">
           <LeaderboardWidget
             initialLevel={selectedLevel === 'ALL' ? 'N5' : selectedLevel}
           />
@@ -241,7 +244,7 @@ export const ExamLobbyPage: React.FC = () => {
 
       {/* Modal Chọn Chế Độ Thi (Full Exam hoặc Practice Section) */}
       {selectedExam && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
               <div>
@@ -412,7 +415,7 @@ export const ExamLobbyPage: React.FC = () => {
 
       {/* Modal Yêu Cầu Đăng Nhập Trước Khi Vào Thi */}
       {showLoginModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-xl max-w-md w-full overflow-hidden shadow-2xl border border-gray-100 p-6 text-center animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
               <Award className="w-6 h-6" />

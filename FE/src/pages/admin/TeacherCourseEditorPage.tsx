@@ -623,7 +623,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
       <CourseEditLockBanner />
 
       {/* Mục lục dạng thanh tab ngang ngay dưới thanh chú thích, nội dung chiếm toàn bộ chiều ngang */}
-      <div className="lg:sticky lg:top-20 z-10">
+      <div className="lg:sticky-panel z-10">
         <CourseOutlineSidebar
           lessonCount={lessons.length}
           selection={selection}

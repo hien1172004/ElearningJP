@@ -24,7 +24,7 @@ public interface NotebookWordService {
 
     List<NotebookWordResponse> getWords(Long notebookId);
 
-    Page<NotebookWordResponse> searchWords(Long notebookId, String keyword, Pageable pageable);
+    Page<NotebookWordResponse> searchWords(Long notebookId, String keyword, com.jp.elearningjp.shared.enums.NotebookItemType itemType, Pageable pageable);
 
     List<NotebookWordResponse> getShuffledWords(Long notebookId);
 
@@ -34,7 +34,11 @@ public interface NotebookWordService {
 
     NotebookStatsResponse getStatsOverview();
 
-    List<com.jp.elearningjp.dto.response.notebook.NotebookReviewItemResponse> getReviewItems(Long notebookId, Integer limit);
+    /**
+     * @param types loại thẻ cần ôn; null/rỗng = mọi loại
+     */
+    List<com.jp.elearningjp.dto.response.notebook.NotebookReviewItemResponse> getReviewItems(
+            Long notebookId, Integer limit, java.util.Set<com.jp.elearningjp.shared.enums.NotebookItemType> types);
 
     com.jp.elearningjp.dto.response.notebook.NotebookReviewSubmitResponse submitReview(Long notebookId, com.jp.elearningjp.dto.request.notebook.NotebookReviewSubmitRequest request);
 }

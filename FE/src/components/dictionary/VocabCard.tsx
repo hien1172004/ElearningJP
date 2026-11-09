@@ -66,6 +66,8 @@ export const VocabCard: React.FC<VocabCardProps> = ({ vocab, onSelectKanji }) =>
     sinoVietnamese: vocab.hanViet || '',
     partOfSpeech: vocab.partOfSpeech || 'Từ vựng',
     audioUrl: vocab.audioUrl,
+    itemType: 'VOCAB',
+    vocabularyId: vocab.id,
   }
 
   return (

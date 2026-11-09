@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import { toast } from 'sonner'
 import React, { useState, useEffect, useMemo } from 'react'
@@ -145,6 +146,8 @@ export const SpeakingLobbyPage: React.FC = () => {
 
   // Modal Tạo tình huống (Screenshot 1)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(showCreateModal || isDrawerOpen)
   const [customMyRole, setCustomMyRole] = useState('')
   const [customAiRole, setCustomAiRole] = useState('')
   const [customDescription, setCustomDescription] = useState('')
@@ -427,7 +430,7 @@ export const SpeakingLobbyPage: React.FC = () => {
           {/* CỘT PHẢI (4/12 cột): Lịch sử luyện tập */}
           {/* ================================================================ */}
           <div className="lg:col-span-4">
-            <div className="bg-surface rounded-xl border border-slate-200/80 p-4 shadow-xs sticky top-20 text-left">
+            <div className="bg-surface rounded-xl border border-slate-200/80 p-4 shadow-xs sticky-panel text-left">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
                 <span className="font-bold text-sm text-slate-800">Lịch sử luyện tập</span>
                 {historySessions.length > 0 && (
@@ -495,7 +498,7 @@ export const SpeakingLobbyPage: React.FC = () => {
       {/* MODAL: TẠO TÌNH HUỐNG (Mô phỏng 1:1 Screenshot 1)                     */}
       {/* ==================================================================== */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+        <div className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-surface rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up border border-slate-100">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
@@ -636,7 +639,7 @@ export const SpeakingLobbyPage: React.FC = () => {
       {/* DRAWER: DANH SÁCH KHÁM PHÁ & CHỦ ĐỀ (Mô phỏng 1:1 Screenshot 2)     */}
       {/* ==================================================================== */}
       {isDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-xs animate-fade-in">
+        <div className="fixed inset-0 overscroll-contain z-50 flex justify-end bg-black/40 backdrop-blur-xs animate-fade-in">
           {/* Backdrop click to close */}
           <div className="flex-1" onClick={() => setIsDrawerOpen(false)} />
 
@@ -731,7 +734,7 @@ export const SpeakingLobbyPage: React.FC = () => {
             </div>
 
             {/* Danh sách các card kịch bản chuẩn Screenshot 2 */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 text-left">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 text-left">
               {filteredDrawerScenarios.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 text-xs">
                   {searchKeyword

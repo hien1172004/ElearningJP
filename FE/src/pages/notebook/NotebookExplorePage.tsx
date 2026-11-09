@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { formatNotebookCounts } from '@/components/notebook/itemTypeMeta'
 import { useNavigate } from 'react-router-dom'
 import {
   Input,
@@ -328,7 +329,7 @@ export const NotebookExplorePage: React.FC = () => {
               {/* Dòng dưới: Số từ + Lượt xem & Avatar tác giả */}
               <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100/80">
                 <div className="flex items-center gap-1.5 font-medium text-gray-600">
-                  <span>{item.wordCount || 0} từ</span>
+                  <span>{formatNotebookCounts(item)}</span>
                   <span>•</span>
                   <span>{formatCount(item.viewCount)} lượt xem</span>
                 </div>
@@ -412,7 +413,7 @@ export const NotebookExplorePage: React.FC = () => {
               onClick={handleCloneFromPreview}
               className="bg-blue-600 hover:bg-blue-700 font-semibold"
             >
-              Tải về sổ tay của tôi ({selectedNotebook?.wordCount || 0} từ)
+              Tải về sổ tay của tôi ({selectedNotebook?.wordCount || 0} mục)
             </Button>
           ),
         ]}
@@ -442,7 +443,7 @@ export const NotebookExplorePage: React.FC = () => {
                 <span className="font-semibold text-gray-700">
                   {selectedNotebook.authorName || 'Ẩn danh'}
                 </span>{' '}
-                • {selectedNotebook.wordCount} từ vựng •{' '}
+                • {formatNotebookCounts(selectedNotebook)} •{' '}
                 {selectedNotebook.downloadCount} lượt tải • {selectedNotebook.likeCount} lượt thích
               </div>
               {selectedNotebook.description && (

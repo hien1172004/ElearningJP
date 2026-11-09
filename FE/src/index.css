@@ -102,6 +102,10 @@
 }
 
 :root {
+  /* Chiều cao TopBar (fixed) — mọi phần tử sticky/offset dưới header dùng biến này, không hard-code */
+  --topbar-h: 56px;
+  /* Khoảng hở giữa TopBar và panel sticky (cột bên, bảng xếp hạng...) */
+  --sticky-gap: 16px;
   --text: #6b6f78;
   /* nibi */
   --text-h: #1f2430;
@@ -388,6 +392,19 @@
   --color-slate-900: #f3eee4;
   --color-slate-950: #faf7f0;
 
+}
+
+/* Thanh sticky sát ngay dưới TopBar (thanh tìm kiếm, header trang con).
+   Đi kèm nền cùng màu trang + padding-top để nội dung cuộn không lọt qua khe hở. */
+@utility sticky-below-topbar {
+  position: sticky;
+  top: var(--topbar-h);
+}
+
+/* Panel/cột bên sticky, cách TopBar một khoảng --sticky-gap */
+@utility sticky-panel {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--sticky-gap));
 }
 
 @layer base {

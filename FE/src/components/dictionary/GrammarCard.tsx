@@ -51,6 +51,8 @@ export const GrammarCard: React.FC<GrammarCardProps> = ({ grammar }) => {
     reading: grammar.structure || '',
     meaning: grammar.meaningVi || '',
     partOfSpeech: 'Ngữ pháp',
+    itemType: 'GRAMMAR',
+    grammarId: grammar.id,
   }
   // Parse examples json nếu có
   const parsedExamples: Array<{ jp?: string; vi?: string }> = (() => {

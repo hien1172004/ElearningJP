@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -84,6 +85,8 @@ export const ScenarioDetailPage: React.FC = () => {
 
   // Báo cáo modal state
   const [showReportModal, setShowReportModal] = useState<boolean>(false)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(!!shadowingLine || showVocabPracticeModal || showReportModal)
   const [reportSuccess, setReportSuccess] = useState<boolean>(false)
 
   useEffect(() => {
@@ -388,7 +391,8 @@ export const ScenarioDetailPage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 1. Header điều hướng Mazii: < Quay lại | Tiêu đề | Báo cáo */}
       {/* ==================================================================== */}
-      <div className="sticky top-0 z-30">
+      {/* Header dính ngay dưới TopBar (không trượt xuống dưới header), nền cùng màu trang che nội dung cuộn */}
+      <div className="sticky-below-topbar z-20 bg-kinari pt-2">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-4 bg-surface rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-4">
             <BackButton to="/speaking" />
@@ -1007,7 +1011,7 @@ export const ScenarioDetailPage: React.FC = () => {
       {/* MODAL: Shadowing / Luyện nhại theo câu */}
       {/* ==================================================================== */}
       {shadowingLine && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
             <button
               onClick={() => {
@@ -1117,7 +1121,7 @@ export const ScenarioDetailPage: React.FC = () => {
       {/* MODAL: Luyện tập Flashcard Từ vựng */}
       {/* ==================================================================== */}
       {showVocabPracticeModal && scenario?.vocabulary && scenario.vocabulary.length > 0 && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
             <button
               onClick={() => setShowVocabPracticeModal(false)}
@@ -1200,7 +1204,7 @@ export const ScenarioDetailPage: React.FC = () => {
       {/* MODAL: Báo cáo tình huống */}
       {/* ==================================================================== */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
             <button
               onClick={() => setShowReportModal(false)}

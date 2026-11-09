@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -90,6 +91,8 @@ export const AdminExamsPage: React.FC = () => {
   const [publishingId, setPublishingId] = useState<number | null>(null)
   const [cloningId, setCloningId] = useState<number | null>(null)
   const [deleteModalExam, setDeleteModalExam] = useState<ExamSummary | null>(null)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(!!deleteModalExam)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null)
@@ -1014,7 +1017,7 @@ export const AdminExamsPage: React.FC = () => {
 
       {/* 5. MODAL XÁC NHẬN XÓA ĐỀ THI AN TOÀN */}
       {deleteModalExam && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-3xl max-w-md w-full p-6 space-y-4 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6 text-rose-600" />

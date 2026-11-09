@@ -377,6 +377,10 @@ public final class ApiPaths {
         public static final String EXPORT_KANJI_PDF_META = "/{id}/export/kanji-pdf/meta";
         public static final String STATS_OVERVIEW = "/stats/overview";
 
+        // Lưu kiến thức từ bài học (V54) & trạng thái "đã lưu"
+        public static final String LESSON_ITEMS = "/lesson-items";
+        public static final String SAVED_IDS = "/saved-ids";
+
         // Review SRS & Quiz
         public static final String REVIEW_ITEMS = "/{id}/review";
         public static final String REVIEW_SUBMIT = "/{id}/review/submit";

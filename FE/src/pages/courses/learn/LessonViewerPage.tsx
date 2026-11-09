@@ -18,6 +18,7 @@ import {
 import { PageHeader, LoadingState, StudyTimerTracker, BackButton } from '@/components/common'
 import { CommentSection } from '@/components/comment'
 import { PracticeSheetButton } from '@/components/course/practice-sheet'
+import { SaveLessonToNotebookButton } from '@/components/course/save-to-notebook'
 import {
   LessonNavSidebar,
   KanjiStudyView,
@@ -528,7 +529,7 @@ export const LessonViewerPage: React.FC = () => {
           <p className="text-xs text-gray-400">Có thể lesson chưa được giáo viên thêm sections hoặc sections chưa có items.</p>
 
           {debugMode && (
-            <div className="mt-6 text-left bg-gray-900 text-green-400 rounded-md p-4 text-xs font-mono overflow-auto max-h-96">
+            <div className="mt-6 text-left bg-gray-900 text-green-400 rounded-md p-4 text-xs font-mono overflow-auto overscroll-contain max-h-96">
               <p className="font-bold text-yellow-400 mb-2">🔍 DEBUG — lesson.sections:</p>
               <pre>{JSON.stringify(debugSections, null, 2)}</pre>
               <p className="font-bold text-yellow-400 mt-4 mb-2">🔍 navItems computed:</p>
@@ -593,8 +594,8 @@ export const LessonViewerPage: React.FC = () => {
 
       <div className="max-w-[1650px] mx-auto px-3 sm:px-4 lg:px-5 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar cố định khi cuộn trang (Sticky) */}
-          <div className="lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-4 self-start space-y-3">
+          {/* Sidebar cố định khi cuộn trang (Sticky) — nằm dưới TopBar, cuộn riêng nếu cao hơn màn hình */}
+          <div className="lg:w-72 xl:w-80 shrink-0 lg:sticky-panel lg:max-h-[calc(100vh-var(--topbar-h)-2*var(--sticky-gap))] lg:overflow-y-auto overscroll-contain self-start space-y-3">
             <LessonNavSidebar
               courseId={cId}
               courseSlug={course?.slug ?? ''}
@@ -615,18 +616,28 @@ export const LessonViewerPage: React.FC = () => {
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-6 md:p-8">
-              {(currentPage?.kind === 'KANJI' || currentPage?.kind === 'VOCAB') && (isEnrolled || isPreview) && (
-                <div className="mb-4 flex justify-end">
-                  <PracticeSheetButton
-                    lessonId={lId}
-                    lessonTitle={lesson.title}
-                    type={currentPage.kind === 'KANJI' ? 'KANJI' : 'VOCABULARY'}
-                    sections={lesson.sections ?? []}
-                    initialSectionId={currentPage.sectionId}
-                    size="middle"
-                  />
-                </div>
-              )}
+              {(currentPage?.kind === 'KANJI' || currentPage?.kind === 'VOCAB' || currentPage?.kind === 'GRAMMAR') &&
+                (isEnrolled || isPreview) && (
+                  <div className="mb-4 flex flex-wrap justify-end gap-2">
+                    {/* Lưu kiến thức của bài vào sổ tay — chọn sẵn nhóm đang xem */}
+                    <SaveLessonToNotebookButton
+                      lessonId={lId}
+                      lessonTitle={lesson.title}
+                      sections={lesson.sections ?? []}
+                      initialSectionId={currentPage.sectionId}
+                    />
+                    {currentPage.kind !== 'GRAMMAR' && (
+                      <PracticeSheetButton
+                        lessonId={lId}
+                        lessonTitle={lesson.title}
+                        type={currentPage.kind === 'KANJI' ? 'KANJI' : 'VOCABULARY'}
+                        sections={lesson.sections ?? []}
+                        initialSectionId={currentPage.sectionId}
+                        size="middle"
+                      />
+                    )}
+                  </div>
+                )}
               {currentPage?.kind === 'KANJI' && (
                 <KanjiStudyView
                   items={currentPage.kanjiItems ?? []}
@@ -637,12 +648,14 @@ export const LessonViewerPage: React.FC = () => {
               {currentPage?.kind === 'VOCAB' && (
                 <VocabStudyView
                   items={currentPage.vocabItems ?? []}
+                  lessonId={lId || undefined}
                   onSectionDone={() => markSectionDone('VOCAB')}
                 />
               )}
               {currentPage?.kind === 'GRAMMAR' && (
                 <GrammarStudyView
                   items={currentPage.grammarItems ?? []}
+                  lessonId={lId || undefined}
                   onSectionDone={() => markSectionDone('GRAMMAR')}
                 />
               )}
@@ -665,7 +678,7 @@ export const LessonViewerPage: React.FC = () => {
                 />
               )}
               {debugMode && (
-                <div className="mt-6 bg-gray-900 text-green-400 rounded-md p-4 text-xs font-mono overflow-auto max-h-48">
+                <div className="mt-6 bg-gray-900 text-green-400 rounded-md p-4 text-xs font-mono overflow-auto overscroll-contain max-h-48">
                   <p className="font-bold text-yellow-400 mb-2">🔍 DEBUG — currentPage:</p>
                   <pre>{JSON.stringify(currentPage, null, 2)}</pre>
                 </div>

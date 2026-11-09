@@ -235,6 +235,8 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
     meaning: vocabDetail?.meaningVi || '',
     partOfSpeech: vocabDetail?.partOfSpeech || 'Từ vựng',
     audioUrl: vocabDetail?.audioUrl,
+    itemType: 'VOCAB',
+    vocabularyId: vocabDetail?.id,
   }
 
   return (

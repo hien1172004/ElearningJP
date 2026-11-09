@@ -8,9 +8,10 @@ import { cn } from '@/utils/cn'
 
 /**
  * MainLayout:
- *  - <TopBar /> fixed top, `h-14` -> rộng full màn hình.
- *  - <Sidebar /> fixed left, `top-14` -> bắt đầu dưới TopBar, không che header.
- *  - <main /> có `md:ml-60|md:ml-16` chừa chỗ cho Sidebar, và `pt-14` chừa chỗ cho TopBar.
+ *  - <TopBar /> fixed top, cao `--topbar-h` (56px, index.css) -> rộng full màn hình.
+ *  - <Sidebar /> fixed left, top = `--topbar-h` -> bắt đầu dưới TopBar, không che header.
+ *  - <main /> có `md:ml-60|md:ml-16` chừa chỗ cho Sidebar, và padding-top `--topbar-h` chừa chỗ cho TopBar.
+ *  - Phần tử sticky trong trang dùng utility `sticky-below-topbar` / `sticky-panel` (index.css).
  */
 export const MainLayout: React.FC = () => {
   const collapsed = useSidebarStore((s) => s.collapsed)
@@ -39,7 +40,7 @@ export const MainLayout: React.FC = () => {
       <div
         className={cn(
           'flex flex-col min-w-0 min-h-screen',
-          'pt-14', // chừa chỗ cho TopBar (h-14 = 56px)
+          'pt-(--topbar-h)', // chừa chỗ cho TopBar
           'transition-[margin] duration-300 ease-in-out',
           // Trên desktop: đẩy nội dung sang phải theo width sidebar
           collapsed ? 'md:ml-16' : 'md:ml-60',

@@ -18,6 +18,9 @@ public interface GrammarPointRepository extends JpaRepository<GrammarPoint, Long
 
     Optional<GrammarPoint> findByIdAndDeletedFalse(Long id);
 
+    /** Sổ tay: tra mẫu ngữ pháp theo tên (lấy bản có id nhỏ nhất nếu trùng tên giữa các cấp). */
+    Optional<GrammarPoint> findFirstByTitleAndDeletedFalseOrderByIdAsc(String title);
+
     /** Import Excel: tra điểm ngữ pháp theo tiêu đề + cấp độ (không có khoá tự nhiên khác). */
     List<GrammarPoint> findByTitleAndJlptLevelAndDeletedFalseOrderByIdAsc(String title, JlptLevel jlptLevel);
 

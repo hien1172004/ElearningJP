@@ -134,11 +134,11 @@ export const ShareNotebookModal: React.FC<ShareNotebookModalProps> = ({
             {isEnabled ? (
               (notebook.wordCount || 0) >= 20 ? (
                 <span className="text-emerald-600 font-medium">
-                  ✓ Sổ tay đã đạt {notebook.wordCount} từ và đang hiển thị trên Khám phá cộng đồng.
+                  ✓ Sổ tay đã đạt {notebook.wordCount} mục và đang hiển thị trên Khám phá cộng đồng.
                 </span>
               ) : (
                 <span className="text-amber-600">
-                  ℹ Sổ tay có {notebook.wordCount || 0}/20 từ. Cần tối thiểu 20 từ để hiển thị trên Khám phá (vẫn chia sẻ qua link và mã bình thường).
+                  ℹ Sổ tay có {notebook.wordCount || 0}/20 mục. Cần tối thiểu 20 mục để hiển thị trên Khám phá (vẫn chia sẻ qua link và mã bình thường).
                 </span>
               )
             ) : (

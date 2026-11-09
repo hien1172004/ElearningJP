@@ -32,7 +32,11 @@ public class NotebookResponse {
     Boolean sharingEnabled;
     String shareCode;
     String jlptLevel;
+    /** Tổng số thẻ (mọi loại). */
     Integer wordCount;
+    Integer vocabCount;
+    Integer kanjiCount;
+    Integer grammarCount;
     Integer likeCount;
     Integer viewCount;
     Integer downloadCount;

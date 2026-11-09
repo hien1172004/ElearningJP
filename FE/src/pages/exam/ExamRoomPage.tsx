@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
@@ -52,6 +53,8 @@ export const ExamRoomPage: React.FC = () => {
 
   // Lightbox xem ảnh tờ rơi phóng to
   const [lightboxImage, setLightboxImage] = useState<string | null>(null)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock((nextSectionModalOpen && !!takingData) || confirmSubmitOpen || !!lightboxImage)
 
   // Câu hỏi đang được focus / kích hoạt khi tương tác với ô trống
   const [activeQuestionId, setActiveQuestionId] = useState<number | null>(null)
@@ -861,7 +864,7 @@ export const ExamRoomPage: React.FC = () => {
 
             {/* Grid các ô số câu hỏi (Cuộn nội bộ êm ái) */}
             {currentSection.sessionType === 'LISTENING' ? (
-              <div className="space-y-3 overflow-y-auto pr-1 py-1 flex-1 min-h-[160px]">
+              <div className="space-y-3 overflow-y-auto overscroll-contain pr-1 py-1 flex-1 min-h-[160px]">
                 {listeningMondaiGroups.map((group, gIdx) => (
                   <div key={group.mondaiCode || gIdx} className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
@@ -911,7 +914,7 @@ export const ExamRoomPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-4 gap-2 overflow-y-auto pr-1 py-1 flex-1 min-h-[160px]">
+              <div className="grid grid-cols-4 gap-2 overflow-y-auto overscroll-contain pr-1 py-1 flex-1 min-h-[160px]">
                 {currentQuestions.map((q) => {
                   const isAnswered = !!answers[q.id]
                   const isFlagged = flaggedQuestions.has(q.id)
@@ -998,7 +1001,7 @@ export const ExamRoomPage: React.FC = () => {
 
       {/* Modal Chuyển Ca Thi (Next Section Modal) */}
       {nextSectionModalOpen && takingData && currentSectionIndex < takingData.sections.length - 1 && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
               <CheckCircle2 className="w-6 h-6" />
@@ -1055,7 +1058,7 @@ export const ExamRoomPage: React.FC = () => {
 
       {/* Modal Xác Nhận Nộp Toàn Bộ Bài */}
       {confirmSubmitOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
               <AlertCircle className="w-6 h-6" />
@@ -1143,7 +1146,7 @@ export const ExamRoomPage: React.FC = () => {
       {lightboxImage && (
         <div
           onClick={() => setLightboxImage(null)}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 overscroll-contain z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 cursor-zoom-out"
         >
           <div className="relative max-w-3xl max-h-[90vh]">
             <img

@@ -77,9 +77,11 @@ export const GrammarDetailPanel: React.FC<GrammarDetailPanelProps> = ({ grammarI
 
   const grammarWordData: AddWordTargetData = {
     word: detail.title,
-    reading: '',
+    reading: detail.structure || '',
     meaning: detail.meaningVi || '',
     partOfSpeech: 'Ngữ pháp',
+    itemType: 'GRAMMAR',
+    grammarId: grammarId,
   }
 
   return (

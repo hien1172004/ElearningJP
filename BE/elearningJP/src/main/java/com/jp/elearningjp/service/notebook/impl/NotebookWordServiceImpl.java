@@ -19,13 +19,24 @@ import com.jp.elearningjp.repository.notebook.NotebookWordRepository;
 import com.jp.elearningjp.service.notebook.NotebookExportService;
 import com.jp.elearningjp.service.notebook.NotebookWordService;
 import com.jp.elearningjp.shared.enums.MemoryLevel;
+import com.jp.elearningjp.shared.enums.NotebookItemType;
+import com.jp.elearningjp.entity.content.GrammarPoint;
+import com.jp.elearningjp.repository.content.GrammarPointRepository;
+import com.jp.elearningjp.service.notebook.NotebookWordCounter;
+import com.jp.elearningjp.service.notebook.NotebookLessonItemService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.jp.elearningjp.dto.response.notebook.NotebookReviewItemResponse;
 import com.jp.elearningjp.dto.request.notebook.NotebookReviewSubmitRequest;
 import com.jp.elearningjp.dto.response.notebook.NotebookReviewSubmitResponse;
 import com.jp.elearningjp.service.srs.Sm2Algorithm;
 import com.jp.elearningjp.shared.enums.SrsRating;
 import java.util.Collections;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
+import org.springframework.data.domain.PageRequest;
 
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import jakarta.persistence.criteria.Predicate;
@@ -68,6 +79,8 @@ public class NotebookWordServiceImpl implements NotebookWordService {
     NotebookMapper notebookMapper;
     NotebookExportService notebookExportService;
     CurrentUserService currentUserService;
+    GrammarPointRepository grammarPointRepository;
+    NotebookWordCounter notebookWordCounter;
 
     private static final int MAX_EXCEL_ROWS = 500;
     private static final long MAX_EXCEL_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -79,8 +92,11 @@ public class NotebookWordServiceImpl implements NotebookWordService {
         Notebook notebook = notebookRepository.findByIdAndUserIdAndDeletedFalse(notebookId, currentUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_NOT_FOUND));
 
+        NotebookItemType type = request.getItemType() != null ? request.getItemType() : NotebookItemType.VOCAB;
+
         NotebookWord word = notebookMapper.toNotebookWord(request);
         word.setNotebook(notebook);
+        word.setItemType(type);
         word.setMemoryLevel(MemoryLevel.NOT_LEARNED);
         word.setIntervalDays(0);
         word.setRepetitionCount(0);
@@ -88,14 +104,27 @@ public class NotebookWordServiceImpl implements NotebookWordService {
         word.setEaseFactor(new BigDecimal("2.50"));
         word.setNextReviewAt(Instant.now());
 
-        // Auto-link từ điển hệ thống nếu chưa truyền vocabularyId
-        linkVocabularyIfAvailable(word);
-        if (word.getReading() != null) {
-            word.setReading(sanitizeReading(word.getReading()));
+        switch (type) {
+            case KANJI -> applyKanjiSource(word, request.getCharacterId());
+            case GRAMMAR -> applyGrammarSource(word, request.getGrammarId());
+            default -> {
+                // Auto-link từ điển hệ thống (ưu tiên vocabularyId client gửi lên)
+                if (request.getVocabularyId() != null) {
+                    vocabularyRepository.findByIdAndDeletedFalse(request.getVocabularyId()).ifPresent(word::setVocabulary);
+                }
+                linkVocabularyIfAvailable(word);
+                if (word.getReading() != null) {
+                    word.setReading(sanitizeReading(word.getReading()));
+                }
+            }
+        }
+
+        if (isDuplicateInNotebook(notebookId, word)) {
+            throw new AppException(ErrorCode.NOTEBOOK_ITEM_ALREADY_EXISTS);
         }
 
         NotebookWord saved = notebookWordRepository.save(word);
-        updateNotebookWordCount(notebook);
+        notebookWordCounter.refresh(notebook);
 
         return notebookMapper.toNotebookWordResponse(saved);
     }
@@ -112,11 +141,18 @@ public class NotebookWordServiceImpl implements NotebookWordService {
                 .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_WORD_NOT_FOUND));
 
         notebookMapper.updateNotebookWordFromRequest(request, word);
-        if (request.getWord() != null) {
-            linkVocabularyIfAvailable(word);
-        }
-        if (word.getReading() != null) {
-            word.setReading(sanitizeReading(word.getReading()));
+        // Chỉ thẻ Từ vựng mới tự liên kết lại từ điển khi đổi mặt chữ; Chữ Hán / Ngữ pháp giữ liên kết gốc
+        if (word.getItemType() == NotebookItemType.VOCAB) {
+            if (request.getWord() != null) {
+                // Đổi mặt chữ khác từ đang liên kết → bỏ liên kết cũ rồi tra lại theo chữ mới
+                if (word.getVocabulary() != null && !word.getWord().trim().equals(word.getVocabulary().getWord())) {
+                    word.setVocabulary(null);
+                }
+                linkVocabularyIfAvailable(word);
+            }
+            if (word.getReading() != null) {
+                word.setReading(sanitizeReading(word.getReading()));
+            }
         }
 
         NotebookWord saved = notebookWordRepository.save(word);
@@ -136,7 +172,7 @@ public class NotebookWordServiceImpl implements NotebookWordService {
 
         word.softDelete();
         notebookWordRepository.save(word);
-        updateNotebookWordCount(notebook);
+        notebookWordCounter.refresh(notebook);
     }
 
     @Override
@@ -154,7 +190,7 @@ public class NotebookWordServiceImpl implements NotebookWordService {
             w.softDelete();
         }
         notebookWordRepository.saveAll(words);
-        updateNotebookWordCount(notebook);
+        notebookWordCounter.refresh(notebook);
     }
 
     @Override
@@ -176,7 +212,7 @@ public class NotebookWordServiceImpl implements NotebookWordService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<NotebookWordResponse> searchWords(Long notebookId, String keyword, Pageable pageable) {
+    public Page<NotebookWordResponse> searchWords(Long notebookId, String keyword, NotebookItemType itemType, Pageable pageable) {
         Long currentUserId = currentUserService.getCurrentUserId();
         Notebook notebook = notebookRepository.findByIdAndDeletedFalse(notebookId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_NOT_FOUND));
@@ -189,6 +225,9 @@ public class NotebookWordServiceImpl implements NotebookWordService {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("notebook").get("id"), notebookId));
             predicates.add(cb.isFalse(root.get("deleted")));
+            if (itemType != null) {
+                predicates.add(cb.equal(root.get("itemType"), itemType));
+            }
 
             if (keyword != null && !keyword.trim().isEmpty()) {
                 String pattern = "%" + keyword.trim().toLowerCase() + "%";
@@ -220,7 +259,8 @@ public class NotebookWordServiceImpl implements NotebookWordService {
 
     private NotebookWordResponse mapToResponseWithDeducedHanViet(NotebookWord word) {
         NotebookWordResponse resp = notebookMapper.toNotebookWordResponse(word);
-        if (resp.getSinoVietnamese() == null || resp.getSinoVietnamese().trim().isEmpty()) {
+        if (word.getItemType() != NotebookItemType.GRAMMAR
+                && (resp.getSinoVietnamese() == null || resp.getSinoVietnamese().trim().isEmpty())) {
             String deduced = deduceHanViet(word.getWord());
             if (deduced != null && !deduced.isEmpty()) {
                 resp.setSinoVietnamese(deduced);
@@ -361,7 +401,7 @@ public class NotebookWordServiceImpl implements NotebookWordService {
 
             if (!newWords.isEmpty()) {
                 notebookWordRepository.saveAll(newWords);
-                updateNotebookWordCount(notebook);
+                notebookWordCounter.refresh(notebook);
             }
 
         } catch (AppException ae) {
@@ -409,30 +449,31 @@ public class NotebookWordServiceImpl implements NotebookWordService {
     private void linkVocabularyIfAvailable(NotebookWord word) {
         if (word == null || word.getWord() == null || word.getWord().trim().isEmpty()) return;
 
-        // 1. Tìm trong từ điển hệ thống theo word
-        if (word.getVocabulary() == null) {
-            vocabularyRepository.findFirstByWordAndDeletedFalseOrderBySenseNoAsc(word.getWord().trim()).ifPresent(vocab -> {
-                word.setVocabulary(vocab);
-                if (word.getReading() == null || word.getReading().trim().isEmpty()) {
-                    word.setReading(vocab.getHiragana());
-                }
-                if (word.getAudioUrl() == null && vocab.getAudioUrl() != null) {
-                    word.setAudioUrl(vocab.getAudioUrl());
-                }
-                if (word.getMeaning() == null || word.getMeaning().trim().isEmpty()) {
-                    word.setMeaning(vocab.getMeaningVi());
-                }
-                if (word.getPartOfSpeech() == null && vocab.getPartOfSpeech() != null) {
-                    word.setPartOfSpeech(vocab.getPartOfSpeech());
-                }
-                if ((word.getSinoVietnamese() == null || word.getSinoVietnamese().trim().isEmpty()) && vocab.getHanViet() != null) {
-                    word.setSinoVietnamese(vocab.getHanViet());
-                }
-                if (word.getJlptLevel() == null && vocab.getJlptLevel() != null) {
-                    word.setJlptLevel(vocab.getJlptLevel().name());
-                }
-            });
-        }
+        // 1. Tìm trong từ điển hệ thống theo word (hoặc dùng vocabulary client đã chỉ định) rồi điền các trường còn trống
+        Optional<Vocabulary> vocabOpt = word.getVocabulary() != null
+                ? Optional.of(word.getVocabulary())
+                : vocabularyRepository.findFirstByWordAndDeletedFalseOrderBySenseNoAsc(word.getWord().trim());
+        vocabOpt.ifPresent(vocab -> {
+            word.setVocabulary(vocab);
+            if (word.getReading() == null || word.getReading().trim().isEmpty()) {
+                word.setReading(vocab.getHiragana());
+            }
+            if (word.getAudioUrl() == null && vocab.getAudioUrl() != null) {
+                word.setAudioUrl(vocab.getAudioUrl());
+            }
+            if (word.getMeaning() == null || word.getMeaning().trim().isEmpty()) {
+                word.setMeaning(vocab.getMeaningVi());
+            }
+            if (word.getPartOfSpeech() == null && vocab.getPartOfSpeech() != null) {
+                word.setPartOfSpeech(vocab.getPartOfSpeech());
+            }
+            if ((word.getSinoVietnamese() == null || word.getSinoVietnamese().trim().isEmpty()) && vocab.getHanViet() != null) {
+                word.setSinoVietnamese(vocab.getHanViet());
+            }
+            if (word.getJlptLevel() == null && vocab.getJlptLevel() != null) {
+                word.setJlptLevel(vocab.getJlptLevel().name());
+            }
+        });
 
         // 2. Tự động suy luận Hán Việt cho các chữ Hán trong từ nếu chưa có
         if (word.getSinoVietnamese() == null || word.getSinoVietnamese().trim().isEmpty()) {
@@ -441,6 +482,109 @@ public class NotebookWordServiceImpl implements NotebookWordService {
                 word.setSinoVietnamese(deduced);
             }
         }
+    }
+
+    // =========================================================
+    // V59: Thẻ Chữ Hán / Ngữ pháp
+    // =========================================================
+
+    /**
+     * Liên kết thẻ Chữ Hán với bản ghi {@code writing_characters} (theo id, hoặc theo mặt chữ)
+     * rồi điền các trường còn trống. Không tìm thấy theo mặt chữ → giữ thẻ tự do (không liên kết).
+     */
+    private void applyKanjiSource(NotebookWord word, Long characterId) {
+        WritingCharacter wc;
+        if (characterId != null) {
+            wc = writingCharacterRepository.findByIdAndDeletedFalse(characterId)
+                    .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_ITEM_SOURCE_NOT_FOUND));
+        } else {
+            wc = writingCharacterRepository.findByCharacterAndDeletedFalse(word.getWord().trim()).orElse(null);
+        }
+        word.setPartOfSpeech(NotebookItemType.KANJI.getLabel());
+        if (wc == null) return;
+
+        word.setCharacter(wc);
+        word.setWord(wc.getCharacter());
+        if (isBlank(word.getReading())) {
+            word.setReading(NotebookLessonItemService.primaryKanjiReading(wc));
+        }
+        if (isBlank(word.getSinoVietnamese()) && !isBlank(wc.getHanViet())) {
+            word.setSinoVietnamese(wc.getHanViet().split(",")[0].trim().toUpperCase());
+        }
+        if (isBlank(word.getMeaning())) {
+            word.setMeaning(!isBlank(wc.getMeaningVi()) ? wc.getMeaningVi() : wc.getCharacter());
+        }
+        if (word.getJlptLevel() == null && wc.getJlptLevel() != null) {
+            word.setJlptLevel(wc.getJlptLevel().name());
+        }
+    }
+
+    /**
+     * Liên kết thẻ Ngữ pháp với bản ghi {@code grammar_points} (theo id, hoặc theo tên mẫu)
+     * rồi điền các trường còn trống. Cột reading của thẻ ngữ pháp = cấu trúc câu.
+     */
+    private void applyGrammarSource(NotebookWord word, Long grammarId) {
+        GrammarPoint g;
+        if (grammarId != null) {
+            g = grammarPointRepository.findByIdAndDeletedFalse(grammarId)
+                    .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_ITEM_SOURCE_NOT_FOUND));
+        } else {
+            g = grammarPointRepository.findFirstByTitleAndDeletedFalseOrderByIdAsc(word.getWord().trim()).orElse(null);
+        }
+        word.setPartOfSpeech(NotebookItemType.GRAMMAR.getLabel());
+        if (g == null) return;
+
+        word.setGrammar(g);
+        word.setWord(truncate(g.getTitle(), 100));
+        if (isBlank(word.getReading())) {
+            word.setReading(truncate(g.getStructure(), 100));
+        }
+        if (isBlank(word.getMeaning())) {
+            word.setMeaning(!isBlank(g.getMeaningVi()) ? g.getMeaningVi() : g.getTitle());
+        }
+        if (word.getJlptLevel() == null && g.getJlptLevel() != null) {
+            word.setJlptLevel(g.getJlptLevel().name());
+        }
+        if (isBlank(word.getExampleSentence())) {
+            String[] ex = firstGrammarExample(g.getExamplesJson());
+            if (ex != null) {
+                word.setExampleSentence(ex[0]);
+                word.setExampleMeaning(ex[1]);
+            }
+        }
+    }
+
+    /** Thẻ đã liên kết bản ghi từ điển và bản ghi đó đã có trong sổ → trùng. Thẻ tự do không kiểm tra. */
+    private boolean isDuplicateInNotebook(Long notebookId, NotebookWord word) {
+        return switch (word.getItemType()) {
+            case VOCAB -> word.getVocabulary() != null && notebookWordRepository
+                    .existsByNotebook_IdAndItemTypeAndVocabulary_Id(notebookId, NotebookItemType.VOCAB, word.getVocabulary().getId());
+            case KANJI -> word.getCharacter() != null && notebookWordRepository
+                    .existsByNotebook_IdAndItemTypeAndCharacter_Id(notebookId, NotebookItemType.KANJI, word.getCharacter().getId());
+            case GRAMMAR -> word.getGrammar() != null && notebookWordRepository
+                    .existsByNotebook_IdAndItemTypeAndGrammar_Id(notebookId, NotebookItemType.GRAMMAR, word.getGrammar().getId());
+        };
+    }
+
+    /** Ví dụ đầu tiên trong {@code grammar_points.examples_json} dạng {@code [{"jp","vi"}]} → [jp, vi]. */
+    static String[] firstGrammarExample(JsonNode examplesJson) {
+        if (examplesJson == null || !examplesJson.isArray()) return null;
+        for (JsonNode node : examplesJson) {
+            String jp = node.path("jp").asText(null);
+            if (jp != null && !jp.isBlank()) {
+                return new String[]{jp, node.path("vi").asText(null)};
+            }
+        }
+        return null;
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null) return null;
+        return s.length() <= max ? s : s.substring(0, max);
     }
 
     private String deduceHanViet(String word) {
@@ -489,11 +633,6 @@ public class NotebookWordServiceImpl implements NotebookWordService {
         return list;
     }
 
-    private void updateNotebookWordCount(Notebook notebook) {
-        long count = notebookWordRepository.countByNotebookIdAndDeletedFalse(notebook.getId());
-        notebook.setWordCount((int) count);
-        notebookRepository.save(notebook);
-    }
 
     private boolean isRowEmpty(Row row) {
         for (int c = row.getFirstCellNum(); c < row.getLastCellNum(); c++) {
@@ -521,56 +660,37 @@ public class NotebookWordServiceImpl implements NotebookWordService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<NotebookReviewItemResponse> getReviewItems(Long notebookId, Integer limit) {
+    public List<NotebookReviewItemResponse> getReviewItems(Long notebookId, Integer limit, Set<NotebookItemType> types) {
         Long currentUserId = currentUserService.getCurrentUserId();
         int fetchLimit = (limit == null || limit <= 0) ? 20 : Math.min(limit, 50);
+        Set<NotebookItemType> typeFilter = (types == null || types.isEmpty())
+                ? EnumSet.allOf(NotebookItemType.class)
+                : EnumSet.copyOf(types);
+        PageRequest duePage = PageRequest.of(0, fetchLimit);
 
-        List<NotebookWord> targetWords = new ArrayList<>();
-        java.util.Set<Long> targetWordIds = new java.util.HashSet<>();
+        List<NotebookWord> dueWords;
         List<NotebookWord> fullPool;
-
         if (notebookId == null || notebookId <= 0) {
             // Luyện tập tất cả các sổ tay của user
-            List<NotebookWord> dueWords = notebookWordRepository.findDueWordsByUserId(
-                    currentUserId, Instant.now(), org.springframework.data.domain.PageRequest.of(0, fetchLimit)
-            );
-            targetWords.addAll(dueWords);
-            for (NotebookWord w : dueWords) {
-                targetWordIds.add(w.getId());
-            }
-
-            fullPool = notebookWordRepository.findByUserIdAndDeletedFalseOrderByDisplayOrderAscIdAsc(currentUserId);
-            if (targetWords.size() < fetchLimit) {
-                for (NotebookWord w : fullPool) {
-                    if (!targetWordIds.contains(w.getId())) {
-                        targetWords.add(w);
-                        targetWordIds.add(w.getId());
-                        if (targetWords.size() >= fetchLimit) break;
-                    }
-                }
-            }
+            dueWords = notebookWordRepository.findDueWordsByUserId(currentUserId, typeFilter, Instant.now(), duePage);
+            fullPool = notebookWordRepository.findPoolByUserId(currentUserId, typeFilter);
         } else {
             notebookRepository.findByIdAndUserIdAndDeletedFalse(notebookId, currentUserId)
                     .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_NOT_FOUND));
+            dueWords = notebookWordRepository.findDueWordsByNotebookId(notebookId, typeFilter, Instant.now(), duePage);
+            fullPool = notebookWordRepository.findPoolByNotebookId(notebookId, typeFilter);
+        }
 
-            // 1. Tìm các từ đến hạn review trong sổ tay này
-            List<NotebookWord> dueWords = notebookWordRepository.findDueWordsByNotebookId(
-                    notebookId, Instant.now(), org.springframework.data.domain.PageRequest.of(0, fetchLimit)
-            );
-            targetWords.addAll(dueWords);
-            for (NotebookWord w : dueWords) {
-                targetWordIds.add(w.getId());
-            }
-
-            fullPool = notebookWordRepository.findByNotebookIdAndDeletedFalseOrderByDisplayOrderAscIdAsc(notebookId);
-            if (targetWords.size() < fetchLimit) {
-                for (NotebookWord w : fullPool) {
-                    if (!targetWordIds.contains(w.getId())) {
-                        targetWords.add(w);
-                        targetWordIds.add(w.getId());
-                        if (targetWords.size() >= fetchLimit) break;
-                    }
-                }
+        // 1. Ưu tiên thẻ đến hạn, thiếu thì bổ sung theo thứ tự trong sổ
+        List<NotebookWord> targetWords = new ArrayList<>(dueWords);
+        Set<Long> targetWordIds = new HashSet<>();
+        for (NotebookWord w : dueWords) {
+            targetWordIds.add(w.getId());
+        }
+        for (NotebookWord w : fullPool) {
+            if (targetWords.size() >= fetchLimit) break;
+            if (targetWordIds.add(w.getId())) {
+                targetWords.add(w);
             }
         }
 
@@ -578,48 +698,40 @@ public class NotebookWordServiceImpl implements NotebookWordService {
             return Collections.emptyList();
         }
 
-        // 3. Chuẩn bị pool các nghĩa và từ để sinh distractors cho quizz trắc nghiệm
-        List<String> poolMeanings = fullPool.stream().map(NotebookWord::getMeaning).filter(m -> m != null && !m.isBlank()).distinct().toList();
-        List<String> poolWords = fullPool.stream().map(NotebookWord::getWord).filter(w -> w != null && !w.isBlank()).distinct().toList();
+        // 2. Pool đáp án nhiễu tách theo loại thẻ: từ vựng chỉ nhiễu bằng từ vựng, chữ Hán bằng chữ Hán...
+        Map<NotebookItemType, List<String>> poolMeanings = new EnumMap<>(NotebookItemType.class);
+        Map<NotebookItemType, List<String>> poolWords = new EnumMap<>(NotebookItemType.class);
+        for (NotebookItemType t : NotebookItemType.values()) {
+            List<NotebookWord> ofType = fullPool.stream().filter(w -> w.getItemType() == t).toList();
+            poolMeanings.put(t, ofType.stream().map(NotebookWord::getMeaning).filter(m -> m != null && !m.isBlank()).distinct().toList());
+            poolWords.put(t, ofType.stream().map(NotebookWord::getWord).filter(w -> w != null && !w.isBlank()).distinct().toList());
+        }
 
         Random rng = new Random();
-
         List<NotebookReviewItemResponse> result = new ArrayList<>();
         for (NotebookWord word : targetWords) {
-            // Sinh 3 distractors cho Nghĩa
-            List<String> meaningOpts = new ArrayList<>();
-            meaningOpts.add(word.getMeaning());
-            List<String> shuffledMeanings = new ArrayList<>(poolMeanings);
-            Collections.shuffle(shuffledMeanings, rng);
-            for (String m : shuffledMeanings) {
-                if (!m.equals(word.getMeaning()) && meaningOpts.size() < 4) {
-                    meaningOpts.add(m);
-                }
-            }
-            Collections.shuffle(meaningOpts, rng);
-
-            // Sinh 3 distractors cho Từ
-            List<String> wordOpts = new ArrayList<>();
-            wordOpts.add(word.getWord());
-            List<String> shuffledWords = new ArrayList<>(poolWords);
-            Collections.shuffle(shuffledWords, rng);
-            for (String w : shuffledWords) {
-                if (!w.equals(word.getWord()) && wordOpts.size() < 4) {
-                    wordOpts.add(w);
-                }
-            }
-            Collections.shuffle(wordOpts, rng);
+            NotebookItemType type = word.getItemType() != null ? word.getItemType() : NotebookItemType.VOCAB;
+            List<String> meaningOpts = buildOptions(word.getMeaning(), poolMeanings.get(type), rng);
+            List<String> wordOpts = buildOptions(word.getWord(), poolWords.get(type), rng);
 
             String sv = word.getSinoVietnamese();
-            if (sv == null || sv.trim().isEmpty()) {
+            if (type != NotebookItemType.GRAMMAR && (sv == null || sv.trim().isEmpty())) {
                 sv = deduceHanViet(word.getWord());
             }
 
+            WritingCharacter wc = word.getCharacter();
+            GrammarPoint g = word.getGrammar();
             result.add(NotebookReviewItemResponse.builder()
                     .id(word.getId())
                     .notebookId(word.getNotebook().getId())
+                    .itemType(type)
+                    .vocabularyId(word.getVocabulary() != null ? word.getVocabulary().getId() : null)
+                    .characterId(wc != null ? wc.getId() : null)
+                    .grammarId(g != null ? g.getId() : null)
+                    .jlptLevel(word.getJlptLevel())
                     .word(word.getWord())
-                    .reading(sanitizeReading(word.getReading()))
+                    // Ngữ pháp: reading là cấu trúc câu → giữ nguyên, không cắt theo dấu phân tách
+                    .reading(type == NotebookItemType.GRAMMAR ? word.getReading() : sanitizeReading(word.getReading()))
                     .sinoVietnamese(sv)
                     .meaning(word.getMeaning())
                     .partOfSpeech(word.getPartOfSpeech())
@@ -630,12 +742,33 @@ public class NotebookWordServiceImpl implements NotebookWordService {
                     .repetitionCount(word.getRepetitionCount())
                     .exampleSentence(word.getExampleSentence())
                     .exampleMeaning(word.getExampleMeaning())
+                    .onyomi(wc != null && wc.getOnyomi() != null ? new ArrayList<>(wc.getOnyomi()) : null)
+                    .kunyomi(wc != null && wc.getKunyomi() != null ? new ArrayList<>(wc.getKunyomi()) : null)
+                    .strokeCount(wc != null ? wc.getStrokeCount() : null)
+                    .grammarStructure(g != null ? g.getStructure() : null)
+                    .usageNotes(g != null ? g.getUsageNotes() : null)
                     .quizMeaningOptions(meaningOpts)
                     .quizWordOptions(wordOpts)
                     .build());
         }
 
         return result;
+    }
+
+    /** 1 đáp án đúng + tối đa 3 đáp án nhiễu lấy ngẫu nhiên từ pool cùng loại, rồi xáo trộn. */
+    private static List<String> buildOptions(String correct, List<String> pool, Random rng) {
+        List<String> opts = new ArrayList<>();
+        opts.add(correct);
+        List<String> shuffled = new ArrayList<>(pool != null ? pool : List.of());
+        Collections.shuffle(shuffled, rng);
+        for (String candidate : shuffled) {
+            if (opts.size() >= 4) break;
+            if (!candidate.equals(correct)) {
+                opts.add(candidate);
+            }
+        }
+        Collections.shuffle(opts, rng);
+        return opts;
     }
 
     @Override

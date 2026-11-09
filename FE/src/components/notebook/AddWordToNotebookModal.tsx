@@ -12,11 +12,16 @@ import { ArrowUpDown } from 'lucide-react'
 import { MaziiFolderIcon } from './NotebookGroupCard'
 import { MaziiNotebookIcon } from './NotebookCard'
 import { CreateNotebookSimpleModal } from './CreateNotebookSimpleModal'
+import { useQueryClient } from '@tanstack/react-query'
 import { notebookService } from '@/services/notebook.service'
+import { NOTEBOOK_QUERY_KEYS, useSaveLessonItemsToNotebook } from '@/hooks/useNotebooks'
+import { NOTEBOOK_ITEM_TYPE_META, formatNotebookCounts } from './itemTypeMeta'
 import type {
   Notebook,
   NotebookGroupWithNotebooks,
   CreateNotebookWordRequest,
+  NotebookItemType,
+  SaveLessonItemsRequest,
 } from '@/types'
 
 export interface AddWordTargetData {
@@ -26,23 +31,50 @@ export interface AddWordTargetData {
   meaning?: string
   partOfSpeech?: string
   audioUrl?: string
+  exampleSentence?: string
+  exampleMeaning?: string
+  jlptLevel?: string
+  /** Loại thẻ — bỏ trống = Từ vựng */
+  itemType?: NotebookItemType
+  /** Id bản ghi gốc trong từ điển (giúp BE liên kết đúng + chống lưu trùng) */
+  vocabularyId?: number
+  characterId?: number
+  grammarId?: number
+}
+
+/** Lưu nhiều mục của 1 bài học cùng lúc (thay cho wordData). */
+export interface LessonSaveTarget extends Omit<SaveLessonItemsRequest, 'notebookId' | 'newNotebookName' | 'groupId'> {
+  /** Mô tả phạm vi lưu, vd "12 mục của bài 3" */
+  label: string
+  /** Tên gợi ý khi tạo sổ tay mới */
+  suggestedName?: string
 }
 
 interface AddWordToNotebookModalProps {
   open: boolean
   wordData: AddWordTargetData | null
+  /** Chế độ lưu kiến thức bài học: chọn sổ → gọi API lưu hàng loạt */
+  lessonSave?: LessonSaveTarget | null
   onClose: () => void
   onSuccess?: (notebookId: number) => void
 }
+
+/** Bỏ các trường chỉ dùng để hiển thị trước khi gửi lên BE */
+const toLessonBody = ({ label: _label, suggestedName: _name, ...body }: LessonSaveTarget) => body
 
 type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc'
 
 export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
   open,
   wordData,
+  lessonSave,
   onClose,
   onSuccess,
 }) => {
+  const queryClient = useQueryClient()
+  const saveLessonItems = useSaveLessonItemsToNotebook()
+  const itemType: NotebookItemType = wordData?.itemType ?? 'VOCAB'
+  const typeLabel = NOTEBOOK_ITEM_TYPE_META[itemType].label.toLowerCase()
   const [groups, setGroups] = useState<NotebookGroupWithNotebooks[]>([])
   const [ungroupedNotebooks, setUngroupedNotebooks] = useState<Notebook[]>([])
   const [loading, setLoading] = useState(false)
@@ -197,9 +229,43 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
   }, [displayItems, safeCurrentPage, pageSize])
 
   // Xử lý thêm từ vào sổ tay
-  const handleSelectNotebook = async (notebook: Notebook) => {
-    if (!wordData || !wordData.word || addingNotebookId) return
+  const invalidateNotebookQueries = () => {
+    queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.all })
+    queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.groups })
+  }
 
+  /** Thông báo kết quả lưu hàng loạt từ bài học */
+  const notifyLessonResult = (res: { notebookName: string; addedCount: number; skippedCount: number }) => {
+    if (res.addedCount === 0) {
+      message.info(`Tất cả ${res.skippedCount} mục đã có sẵn trong sổ tay "${res.notebookName}"`)
+    } else {
+      message.success(
+        `Đã lưu ${res.addedCount} mục vào sổ tay "${res.notebookName}"` +
+          (res.skippedCount > 0 ? ` (bỏ qua ${res.skippedCount} mục đã có)` : ''),
+      )
+    }
+  }
+
+  const handleSelectNotebook = async (notebook: Notebook) => {
+    if (addingNotebookId) return
+
+    // Chế độ lưu kiến thức bài học
+    if (lessonSave) {
+      setAddingNotebookId(notebook.id)
+      try {
+        const res = await saveLessonItems.mutateAsync({ ...toLessonBody(lessonSave), notebookId: notebook.id })
+        if (res.data) notifyLessonResult(res.data)
+        onSuccess?.(notebook.id)
+        onClose()
+      } catch (err: any) {
+        message.warning(err?.response?.data?.message || 'Không thể lưu vào sổ tay')
+      } finally {
+        setAddingNotebookId(null)
+      }
+      return
+    }
+
+    if (!wordData || !wordData.word) return
     setAddingNotebookId(notebook.id)
     try {
       const payload: CreateNotebookWordRequest = {
@@ -207,18 +273,26 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
         reading: wordData.reading?.trim() || undefined,
         sinoVietnamese: wordData.sinoVietnamese?.trim() || undefined,
         meaning: wordData.meaning?.trim() || wordData.sinoVietnamese?.trim() || wordData.word.trim(),
-        partOfSpeech: wordData.partOfSpeech || 'Từ vựng',
+        partOfSpeech: wordData.partOfSpeech || NOTEBOOK_ITEM_TYPE_META[itemType].label,
         audioUrl: wordData.audioUrl || undefined,
+        exampleSentence: wordData.exampleSentence || undefined,
+        exampleMeaning: wordData.exampleMeaning || undefined,
+        jlptLevel: wordData.jlptLevel || undefined,
+        itemType,
+        vocabularyId: itemType === 'VOCAB' ? wordData.vocabularyId : undefined,
+        characterId: itemType === 'KANJI' ? wordData.characterId : undefined,
+        grammarId: itemType === 'GRAMMAR' ? wordData.grammarId : undefined,
       }
 
       await notebookService.addWord(notebook.id, payload)
+      invalidateNotebookQueries()
       message.success(`Đã thêm "${wordData.word}" vào sổ tay "${notebook.name}" thành công!`)
       onSuccess?.(notebook.id)
       onClose()
     } catch (err: any) {
       const errMsg =
         err?.response?.data?.message ||
-        (err?.response?.data?.code === 4001 ? 'Từ này đã có trong sổ tay' : 'Không thể thêm từ vào sổ tay')
+        (err?.response?.data?.code === 7011 ? 'Mục này đã có trong sổ tay' : `Không thể thêm ${typeLabel} vào sổ tay`)
       message.warning(errMsg)
     } finally {
       setAddingNotebookId(null)
@@ -228,6 +302,27 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
   // Xử lý tạo sổ tay nhanh từ nút +
   const handleCreateNotebookSubmit = async (name: string) => {
     setCreatingNotebook(true)
+    // Chế độ bài học: tạo sổ + lưu trong 1 request (BE làm trong cùng transaction)
+    if (lessonSave) {
+      try {
+        const res = await saveLessonItems.mutateAsync({
+          ...toLessonBody(lessonSave),
+          newNotebookName: name,
+          groupId: activeGroup?.id ?? null,
+        })
+        setIsCreateModalOpen(false)
+        if (res.data) {
+          notifyLessonResult(res.data)
+          onSuccess?.(res.data.notebookId)
+        }
+        onClose()
+      } catch (err: any) {
+        message.error(err?.response?.data?.message || 'Không thể tạo sổ tay mới')
+      } finally {
+        setCreatingNotebook(false)
+      }
+      return
+    }
     try {
       const res = await notebookService.createNotebook({
         name,
@@ -238,6 +333,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
       await loadData()
 
       // Tự động thêm từ vào sổ tay vừa tạo nếu người dùng muốn
+      invalidateNotebookQueries()
       if (res.data?.id && wordData?.word) {
         await handleSelectNotebook(res.data)
       }
@@ -285,10 +381,18 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
           {/* 1. Modal Header Title */}
           <div className="flex items-center justify-between pb-1 border-b border-gray-100">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Thêm từ vào sổ tay</h2>
-              {wordData?.word && (
+              <h2 className="text-lg font-bold text-gray-900">
+                {lessonSave ? 'Lưu bài học vào sổ tay' : `Thêm ${typeLabel} vào sổ tay`}
+              </h2>
+              {lessonSave && (
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Từ được thêm: <span className="font-bold text-indigo-600 font-sans">{wordData.word}</span>
+                  Chọn sổ tay để lưu <span className="font-bold text-indigo-600">{lessonSave.label}</span>, hoặc bấm{' '}
+                  <b>+</b> để tạo sổ mới. Mục đã có trong sổ sẽ được bỏ qua.
+                </p>
+              )}
+              {!lessonSave && wordData?.word && (
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {NOTEBOOK_ITEM_TYPE_META[itemType].label} được thêm: <span className="font-bold text-indigo-600 font-sans">{wordData.word}</span>
                   {wordData.reading ? ` 【${wordData.reading}】` : ''}
                   {wordData.sinoVietnamese ? ` (${wordData.sinoVietnamese})` : ''}
                 </p>
@@ -429,7 +533,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
                         {isAdding && <LoadingOutlined className="text-amber-500 text-sm shrink-0" />}
                       </div>
                       <div className="mt-4 pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
-                        <span className="font-medium text-gray-600">{notebook.wordCount ?? 0} từ</span>
+                        <span className="font-medium text-gray-600 truncate">{formatNotebookCounts(notebook)}</span>
                         <span>{formatDate(notebook.createdAt)}</span>
                       </div>
                     </div>
@@ -544,6 +648,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
 
       {/* Modal Tạo sổ tay nhanh lồng nhau */}
       <CreateNotebookSimpleModal
+        defaultName={lessonSave?.suggestedName}
         open={isCreateModalOpen}
         loading={creatingNotebook}
         onClose={() => setIsCreateModalOpen(false)}

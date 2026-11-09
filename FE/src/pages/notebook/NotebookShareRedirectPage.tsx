@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { formatNotebookCounts } from '@/components/notebook/itemTypeMeta'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button, Spin, Tag, message } from 'antd'
 import { BookOutlined, DownloadOutlined, CheckOutlined } from '@ant-design/icons'
@@ -91,7 +92,7 @@ export const NotebookShareRedirectPage: React.FC = () => {
             {notebook.jlptLevel && <Tag color="blue">{notebook.jlptLevel}</Tag>}
           </div>
           <div className="text-xs text-gray-500">
-            Tác giả: <span className="font-semibold text-gray-700">{notebook.authorName || 'Ẩn danh'}</span> • {notebook.wordCount} từ vựng
+            Tác giả: <span className="font-semibold text-gray-700">{notebook.authorName || 'Ẩn danh'}</span> • {formatNotebookCounts(notebook)}
           </div>
           {notebook.description && (
             <div className="text-xs text-gray-600 italic bg-gray-50 p-3 rounded-xl border border-gray-100 max-w-md mx-auto mt-2">

@@ -1,6 +1,7 @@
 package com.jp.elearningjp.dto.response.notebook;
 
 import com.jp.elearningjp.shared.enums.MemoryLevel;
+import com.jp.elearningjp.shared.enums.NotebookItemType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +19,11 @@ public class NotebookReviewItemResponse {
 
     private Long id;
     private Long notebookId;
+    private NotebookItemType itemType;
+    private Long vocabularyId;
+    private Long characterId;
+    private Long grammarId;
+    private String jlptLevel;
     private String word;
     private String reading;
     private String sinoVietnamese;
@@ -32,6 +38,13 @@ public class NotebookReviewItemResponse {
     // Ví dụ mẫu (nếu có từ từ điển hoặc người dùng)
     private String exampleSentence;
     private String exampleMeaning;
+
+    // Thông tin riêng theo loại (KANJI: on/kun/số nét; GRAMMAR: cấu trúc/cách dùng)
+    private List<String> onyomi;
+    private List<String> kunyomi;
+    private Integer strokeCount;
+    private String grammarStructure;
+    private String usageNotes;
 
     // Các lựa chọn gây nhiễu cho bài Quizz trắc nghiệm (gồm 3 distractors + 1 correct)
     private List<String> quizMeaningOptions;

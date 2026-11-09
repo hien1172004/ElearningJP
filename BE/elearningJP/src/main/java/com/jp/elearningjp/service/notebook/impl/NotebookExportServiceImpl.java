@@ -11,6 +11,7 @@ import com.jp.elearningjp.repository.content.CharacterStrokeRepository;
 import com.jp.elearningjp.repository.notebook.NotebookRepository;
 import com.jp.elearningjp.repository.notebook.NotebookWordRepository;
 import com.jp.elearningjp.service.notebook.NotebookExportService;
+import com.jp.elearningjp.shared.enums.NotebookItemType;
 import com.jp.elearningjp.shared.pdf.PracticeSheetBlock;
 import com.jp.elearningjp.shared.pdf.PracticeSheetGroup;
 import com.jp.elearningjp.shared.pdf.PracticeSheetRenderer;
@@ -72,7 +73,7 @@ public class NotebookExportServiceImpl implements NotebookExportService {
             headerRow.setHeightInPoints(24);
             String[] headers = {
                     "STT", "Từ vựng (Word)", "Phiên âm (Reading)", "Âm Hán Việt",
-                    "Nghĩa (Meaning)", "Ví dụ tiếng Nhật", "Nghĩa câu ví dụ", "Ghi chú", "Mức độ ghi nhớ"
+                    "Nghĩa (Meaning)", "Ví dụ tiếng Nhật", "Nghĩa câu ví dụ", "Ghi chú", "Mức độ ghi nhớ", "Loại"
             };
 
             for (int i = 0; i < headers.length; i++) {
@@ -99,6 +100,7 @@ public class NotebookExportServiceImpl implements NotebookExportService {
                 row.createCell(6).setCellValue(w.getExampleMeaning() != null ? w.getExampleMeaning() : "");
                 row.createCell(7).setCellValue(w.getUserNote() != null ? w.getUserNote() : "");
                 row.createCell(8).setCellValue(w.getMemoryLevel() != null ? w.getMemoryLevel().name() : "");
+                row.createCell(9).setCellValue(w.getItemType() != null ? w.getItemType().getLabel() : NotebookItemType.VOCAB.getLabel());
 
                 for (int c = 0; c < headers.length; c++) {
                     row.getCell(c).setCellStyle(dataStyle);
@@ -181,7 +183,11 @@ public class NotebookExportServiceImpl implements NotebookExportService {
         Notebook notebook = notebookRepository.findByIdAndUserIdAndDeletedFalse(notebookId, currentUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_NOT_FOUND));
 
-        List<NotebookWord> words = notebookWordRepository.findByNotebookIdAndDeletedFalseOrderByDisplayOrderAscIdAsc(notebookId);
+        // Phiếu luyện viết chỉ gồm thẻ Chữ Hán và Từ vựng — thẻ Ngữ pháp không có chữ để luyện nét
+        List<NotebookWord> words = notebookWordRepository.findByNotebookIdAndDeletedFalseOrderByDisplayOrderAscIdAsc(notebookId)
+                .stream()
+                .filter(w -> w.getItemType() != NotebookItemType.GRAMMAR)
+                .toList();
 
         List<PracticeSheetBlock> blocks = new ArrayList<>();
         for (NotebookWord w : words) {

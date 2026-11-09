@@ -6,7 +6,8 @@ import {
   ArrowLeftOutlined,
   CheckOutlined,
 } from '@ant-design/icons'
-import type { Notebook } from '@/types'
+import type { Notebook, NotebookItemType } from '@/types'
+import { NOTEBOOK_ITEM_TYPES, NOTEBOOK_ITEM_TYPE_META, formatNotebookCounts } from './itemTypeMeta'
 
 interface ReviewModeSelectModalProps {
   open: boolean
@@ -45,6 +46,22 @@ export const ReviewModeSelectModal: React.FC<ReviewModeSelectModalProps> = ({
     'matching',
   ])
   const [quizAudioEnabled, setQuizAudioEnabled] = useState(true)
+  // Loại kiến thức cần ôn (rỗng = tất cả)
+  const [itemTypes, setItemTypes] = useState<NotebookItemType[]>([])
+
+  // Số thẻ theo loại trong phạm vi đang chọn (1 sổ hoặc tất cả sổ)
+  const scopeNotebooks = selectedNotebookId ? notebooks.filter((nb) => nb.id === selectedNotebookId) : notebooks
+  const typeCount = (t: NotebookItemType) =>
+    scopeNotebooks.reduce((acc, nb) => {
+      const byType = { VOCAB: nb.vocabCount, KANJI: nb.kanjiCount, GRAMMAR: nb.grammarCount }[t]
+      // Sổ cũ chưa có bộ đếm theo loại → coi toàn bộ là từ vựng
+      return acc + (byType ?? (t === 'VOCAB' ? nb.wordCount || 0 : 0))
+    }, 0)
+  const toggleItemType = (t: NotebookItemType) =>
+    setItemTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
+  const itemsQuery = itemTypes.length > 0 && itemTypes.length < NOTEBOOK_ITEM_TYPES.length
+    ? `&items=${itemTypes.join(',')}`
+    : ''
 
   useEffect(() => {
     if (defaultNotebookId !== undefined && defaultNotebookId !== null) {
@@ -62,6 +79,7 @@ export const ReviewModeSelectModal: React.FC<ReviewModeSelectModalProps> = ({
   useEffect(() => {
     if (open) {
       setStep('select-mode')
+      setItemTypes([])
     }
   }, [open])
 
@@ -79,10 +97,10 @@ export const ReviewModeSelectModal: React.FC<ReviewModeSelectModalProps> = ({
       navigate(
         `/notebooks/${targetId}/review?mode=quiz&srs=${localSrs}&types=${encodeURIComponent(
           typesParam
-        )}&audio=${quizAudioEnabled}`
+        )}&audio=${quizAudioEnabled}${itemsQuery}`
       )
     } else {
-      navigate(`/notebooks/${targetId}/review?mode=${mode}&srs=${localSrs}`)
+      navigate(`/notebooks/${targetId}/review?mode=${mode}&srs=${localSrs}${itemsQuery}`)
     }
   }
 
@@ -130,16 +148,41 @@ export const ReviewModeSelectModal: React.FC<ReviewModeSelectModalProps> = ({
                 options={[
                   {
                     value: 0,
-                    label: `🌟 Tất cả sổ tay (${totalWords} từ)`,
+                    label: `🌟 Tất cả sổ tay (${totalWords} mục)`,
                   },
                   ...notebooks.map((nb) => ({
                     value: nb.id,
-                    label: `${nb.name} (${nb.wordCount || 0} từ)`,
+                    label: `${nb.name} (${formatNotebookCounts(nb)})`,
                   })),
                 ]}
               />
             </div>
           )}
+
+          {/* Chọn loại kiến thức cần ôn */}
+          <div className="space-y-1.5">
+            <div className="text-xs font-semibold text-gray-600">Ôn loại kiến thức (bỏ chọn hết = tất cả):</div>
+            <div className="flex flex-wrap gap-2">
+              {NOTEBOOK_ITEM_TYPES.map((t) => {
+                const count = typeCount(t)
+                const active = itemTypes.includes(t)
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    disabled={count === 0}
+                    onClick={() => toggleItemType(t)}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                      active ? NOTEBOOK_ITEM_TYPE_META[t].chipClass : 'border-gray-200 bg-surface text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {active && <CheckOutlined className="mr-1 text-[10px]" />}
+                    {NOTEBOOK_ITEM_TYPE_META[t].label} ({count})
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
           {/* Hàng Switch Học lặp lại ngắt quãng */}
           <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -174,7 +217,7 @@ export const ReviewModeSelectModal: React.FC<ReviewModeSelectModalProps> = ({
                   FlashCard
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5 truncate">
-                  Ôn tập từ vựng bằng thẻ lật
+                  Ôn tập bằng thẻ lật (từ vựng, chữ Hán, ngữ pháp)
                 </div>
               </div>
             </div>

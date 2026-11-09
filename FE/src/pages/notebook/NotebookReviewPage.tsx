@@ -32,9 +32,11 @@ import {
   useSubmitReviewMutation,
 } from '@/hooks/useNotebooks'
 import { HanziWriterPractice } from '@/components/dictionary/HanziWriterPractice'
-import { DictionaryWordDetailModal } from '@/components/dictionary'
+import { DictionaryWordDetailModal, KanjiPracticeModal } from '@/components/dictionary'
+import { useKanjiDetail } from '@/hooks'
+import { NOTEBOOK_ITEM_TYPES, NOTEBOOK_ITEM_TYPE_META, itemTypeOf } from '@/components/notebook/itemTypeMeta'
 import { useSidebarStore } from '@/stores'
-import type { NotebookReviewItem, SrsRating } from '@/types'
+import type { NotebookItemType, NotebookReviewItem, SrsRating } from '@/types'
 
 type ReviewMode = 'flashcard' | 'quiz' | 'speaking' | 'writing'
 
@@ -84,6 +86,38 @@ const formatReading = (reading?: string | null): string => {
   return parts[0] || ''
 }
 
+/** Nút mở modal luyện viết & chấm nét cho thẻ Chữ Hán (nạp nét chuẩn từ từ điển khi cần). */
+const KanjiPracticeLauncher: React.FC<{ item: NotebookReviewItem }> = ({ item }) => {
+  const [open, setOpen] = useState(false)
+  const { data: kanjiDetail, isLoading } = useKanjiDetail(open ? item.word : undefined)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen(true)
+        }}
+        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+      >
+        <EditOutlined /> Luyện viết
+      </button>
+      {open && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <KanjiPracticeModal
+            isOpen={open && !isLoading}
+            onClose={() => setOpen(false)}
+            character={item.word}
+            meaningVi={item.meaning ?? undefined}
+            hanViet={item.sinoVietnamese ?? undefined}
+            strokes={kanjiDetail?.strokes ?? []}
+          />
+        </div>
+      )}
+    </>
+  )
+}
+
 export const NotebookReviewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const sidebarCollapsed = useSidebarStore((s) => s.collapsed)
@@ -113,6 +147,15 @@ export const NotebookReviewPage: React.FC = () => {
 
   // Tùy chọn Quizz từ URL params
   const typesParam = searchParams.get('types')
+  // Loại kiến thức cần ôn (VOCAB,KANJI,GRAMMAR) — bỏ trống = tất cả
+  const itemsParam = searchParams.get('items')
+  const activeItemTypes = useMemo<NotebookItemType[] | undefined>(() => {
+    if (!itemsParam) return undefined
+    const list = itemsParam
+      .split(',')
+      .filter((t): t is NotebookItemType => (NOTEBOOK_ITEM_TYPES as string[]).includes(t))
+    return list.length > 0 ? list : undefined
+  }, [itemsParam])
   const audioParam = searchParams.get('audio')
   const srsParam = searchParams.get('srs')
   const isAudioParamEnabled = audioParam !== 'false'
@@ -153,7 +196,7 @@ export const NotebookReviewPage: React.FC = () => {
     data: rawItems = [],
     isLoading,
     refetch,
-  } = useNotebookReviewItems(notebookId, 25)
+  } = useNotebookReviewItems(notebookId, 25, activeItemTypes)
   const submitReview = useSubmitReviewMutation(notebookId)
 
   // State danh sách từ có thể xáo trộn (shuffle)
@@ -177,8 +220,13 @@ export const NotebookReviewPage: React.FC = () => {
   // Dạng câu hỏi của từ hiện tại: xoay vòng giữa các dạng bài từ vựng được chọn
   const currentQuizType = useMemo(() => {
     if (activeQuizTypes.length === 0) return 'multiple_choice'
-    return activeQuizTypes[currentIndex % activeQuizTypes.length]
-  }, [activeQuizTypes, currentIndex])
+    const type = activeQuizTypes[currentIndex % activeQuizTypes.length]
+    // Thẻ Ngữ pháp: nghe / gõ lại tên mẫu câu không có ý nghĩa → chuyển sang trắc nghiệm
+    if (currentItem && itemTypeOf(currentItem) === 'GRAMMAR' && (type === 'listening' || type === 'writing')) {
+      return 'multiple_choice'
+    }
+    return type
+  }, [activeQuizTypes, currentIndex, currentItem])
 
   // Reset khi chuyển câu
   useEffect(() => {
@@ -196,7 +244,9 @@ export const NotebookReviewPage: React.FC = () => {
 
     // Tự động phân bổ ngẫu nhiên dạng bài Luyện nói hoặc Luyện viết cho từng từ
     if (mode === 'speaking' || mode === 'writing') {
-      const chars = (currentItem.word || '').match(/[\u4e00-\u9faf]/g) || []
+      // Ngữ pháp không luyện viết nét → chỉ luyện phát âm
+      const chars =
+        itemTypeOf(currentItem) === 'GRAMMAR' ? [] : (currentItem.word || '').match(/[\u4e00-\u9faf]/g) || []
       if (chars.length === 0) {
         // Từ thuần Kana không chứa chữ Hán -> chỉ Luyện phát âm
         setSubPracticeTab('speaking')
@@ -783,28 +833,66 @@ export const NotebookReviewPage: React.FC = () => {
               <div className="absolute top-5 left-7 text-xs text-gray-400 font-semibold">
                 {currentIndex + 1} / {items.length}
               </div>
+              <Tag
+                color={NOTEBOOK_ITEM_TYPE_META[itemTypeOf(currentItem)].tagColor}
+                className="!absolute top-4 right-6 !m-0 font-semibold"
+              >
+                {NOTEBOOK_ITEM_TYPE_META[itemTypeOf(currentItem)].label}
+              </Tag>
 
               {/* Nội dung trung tâm thẻ */}
               <div className="my-auto space-y-4 w-full">
                 {!isFlipped ? (
                   <>
-                    {/* Từ tiếng Nhật (chữ to màu xanh đậm) */}
-                    <div className="text-5xl md:text-6xl font-black text-blue-600 tracking-wide break-words">
-                      {currentItem.word}
-                    </div>
+                    {/* Mặt trước theo loại thẻ: Từ vựng (từ + cách đọc), Chữ Hán (chữ + On/Kun), Ngữ pháp (mẫu + cấu trúc) */}
+                    {itemTypeOf(currentItem) === 'GRAMMAR' ? (
+                      <>
+                        <div className="text-3xl md:text-4xl font-black text-rose-600 break-words">
+                          {currentItem.word}
+                        </div>
+                        {(currentItem.reading || currentItem.grammarStructure) && (
+                          <div className="inline-block bg-rose-50 border border-rose-200 rounded-xl px-4 py-2 text-sm md:text-base font-bold text-gray-800 font-mono break-words">
+                            {currentItem.reading || currentItem.grammarStructure}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          className={`font-black tracking-wide break-words ${
+                            itemTypeOf(currentItem) === 'KANJI'
+                              ? 'text-7xl md:text-8xl font-serif text-amber-600'
+                              : 'text-5xl md:text-6xl text-blue-600'
+                          }`}
+                        >
+                          {currentItem.word}
+                        </div>
 
-                    {/* Hán Việt */}
-                    {(currentItem.sinoVietnamese || currentItem.hanViet) && (
-                      <div className="text-xs md:text-sm font-bold text-gray-400 tracking-wider">
-                        「 {currentItem.sinoVietnamese || currentItem.hanViet} 」
-                      </div>
-                    )}
+                        {/* Hán Việt */}
+                        {(currentItem.sinoVietnamese || currentItem.hanViet) && (
+                          <div className="text-xs md:text-sm font-bold text-gray-400 tracking-wider">
+                            「 {currentItem.sinoVietnamese || currentItem.hanViet} 」
+                          </div>
+                        )}
 
-                    {/* Hiragana reading */}
-                    {formatReading(currentItem.reading) && (
-                      <div className="text-base md:text-lg font-semibold text-gray-600">
-                        「 {formatReading(currentItem.reading)} 」
-                      </div>
+                        {itemTypeOf(currentItem) === 'KANJI' &&
+                        (currentItem.onyomi?.length || currentItem.kunyomi?.length) ? (
+                          <div className="text-sm md:text-base font-semibold text-gray-600 space-y-0.5">
+                            {currentItem.onyomi && currentItem.onyomi.length > 0 && (
+                              <div>On: {currentItem.onyomi.join('、')}</div>
+                            )}
+                            {currentItem.kunyomi && currentItem.kunyomi.length > 0 && (
+                              <div>Kun: {currentItem.kunyomi.join('、')}</div>
+                            )}
+                          </div>
+                        ) : (
+                          formatReading(currentItem.reading) && (
+                            <div className="text-base md:text-lg font-semibold text-gray-600">
+                              「 {formatReading(currentItem.reading)} 」
+                            </div>
+                          )
+                        )}
+                      </>
                     )}
 
                     {/* Loa phát âm */}
@@ -832,9 +920,23 @@ export const NotebookReviewPage: React.FC = () => {
                       {currentItem.meaning}
                     </div>
 
-                    {currentItem.partOfSpeech && (
+                    {currentItem.partOfSpeech && itemTypeOf(currentItem) === 'VOCAB' && (
                       <div className="text-xs text-gray-400 font-medium italic">
                         {currentItem.partOfSpeech}
+                      </div>
+                    )}
+
+                    {itemTypeOf(currentItem) === 'GRAMMAR' && currentItem.usageNotes && (
+                      <div className="text-xs md:text-sm text-gray-600 max-w-md mx-auto text-left whitespace-pre-line">
+                        <span className="font-semibold text-gray-800">Cách dùng: </span>
+                        {currentItem.usageNotes}
+                      </div>
+                    )}
+
+                    {itemTypeOf(currentItem) === 'KANJI' && (
+                      <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                        {currentItem.strokeCount != null && <span>{currentItem.strokeCount} nét</span>}
+                        <KanjiPracticeLauncher item={currentItem} />
                       </div>
                     )}
 

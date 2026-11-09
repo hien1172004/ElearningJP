@@ -154,7 +154,8 @@ export const SpeakingFreeTalkPage: React.FC = () => {
       {/* ==================================================================== */}
       {/* 1. Header Mazii: < Quay lại | Trò chuyện tự do | ⚙️ 📋 */}
       {/* ==================================================================== */}
-      <div className="sticky top-0 z-30">
+      {/* Header dính ngay dưới TopBar (không trượt xuống dưới header), nền cùng màu trang che nội dung cuộn */}
+      <div className="sticky-below-topbar z-20 bg-kinari pt-2">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between bg-surface rounded-xl border border-slate-200/90 shadow-xs">
           <div className="flex items-center gap-4">
             <BackButton to="/speaking" />

@@ -1,3 +1,4 @@
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import React, { useState, useEffect } from 'react'
@@ -133,6 +134,8 @@ export const AdminExamPreviewPage: React.FC = () => {
   // Snapshot / Khôi phục bản lưu trước đó
   const [snapshotTimestamp, setSnapshotTimestamp] = useState<string | null>(null)
   const [isRollbackModalOpen, setIsRollbackModalOpen] = useState<boolean>(false)
+  // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
+  useBodyScrollLock(isAddModalOpen || isAiSectionModalOpen || !!zoomImageUrl || isRollbackModalOpen)
   const [isRollingBack, setIsRollingBack] = useState<boolean>(false)
   const [isTakingSnapshot, setIsTakingSnapshot] = useState<boolean>(false)
 
@@ -1037,7 +1040,7 @@ export const AdminExamPreviewPage: React.FC = () => {
   return (
     <div className="pb-20">
       {/* Header Bar */}
-      <div className="sticky top-14 z-40 bg-surface/95 backdrop-blur-md border border-suna rounded-xl shadow-xs px-4 py-2.5">
+      <div className="sticky-below-topbar z-20 bg-surface/95 backdrop-blur-md border border-suna rounded-xl shadow-xs px-4 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <BackButton to="/admin/exams" className="ml-0" />
@@ -1916,8 +1919,8 @@ export const AdminExamPreviewPage: React.FC = () => {
       {/* MODAL THÊM CÂU HỎI MỚI (PHÂN HÓA HOÀN TOÀN THEO TỪNG MONDAI) */}
       {/* ========================================================= */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-surface rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto overscroll-contain">
+          <div className="bg-surface rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[92vh] overflow-y-auto overscroll-contain">
             {/* Header Modal */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 text-indigo-700">
@@ -2123,8 +2126,8 @@ export const AdminExamPreviewPage: React.FC = () => {
       {/* MODAL TRÍCH XUẤT AI DÀNH RIÊNG CHO PHẦN THI NÀY */}
       {/* ========================================================= */}
       {isAiSectionModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-surface rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto overscroll-contain">
+          <div className="bg-surface rounded-xl max-w-2xl w-full p-6 shadow-2xl space-y-4 my-8 border border-slate-200 max-h-[90vh] overflow-y-auto overscroll-contain">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2 text-indigo-700">
                 <Sparkles className="w-5 h-5 text-amber-500" />
@@ -2217,7 +2220,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                         </label>
 
                         {aiPdfFiles.length > 0 && (
-                          <div className="mt-2 space-y-1 max-h-20 overflow-y-auto">
+                          <div className="mt-2 space-y-1 max-h-20 overflow-y-auto overscroll-contain">
                             {aiPdfFiles.map((file, idx) => (
                               <div
                                 key={idx}
@@ -2276,7 +2279,7 @@ export const AdminExamPreviewPage: React.FC = () => {
 
                     {/* Danh sách các file PDF đã chọn */}
                     {aiPdfFiles.length > 0 && (
-                      <div className="mt-3 space-y-1.5 max-h-36 overflow-y-auto">
+                      <div className="mt-3 space-y-1.5 max-h-36 overflow-y-auto overscroll-contain">
                         {aiPdfFiles.map((file, idx) => (
                           <div
                             key={idx}
@@ -2386,7 +2389,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   <span className="font-bold text-slate-800">
                     Kết quả AI trích xuất: {aiExtractedQuestions.length} câu hỏi
                   </span>
-                  <div className="max-h-40 overflow-y-auto space-y-1.5 text-[11px]">
+                  <div className="max-h-40 overflow-y-auto overscroll-contain space-y-1.5 text-[11px]">
                     {aiExtractedQuestions.map((q, idx) => (
                       <div key={idx} className="p-2 bg-surface rounded-lg border border-slate-200">
                         {isCurrentSectionListening ? (
@@ -2502,7 +2505,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       {/* MODAL PHÓNG TO ẢNH TỜ RƠI / BẢNG BIỂU */}
       {zoomImageUrl && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in cursor-zoom-out"
+          className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in cursor-zoom-out"
           onClick={() => setZoomImageUrl(null)}
         >
           <div
@@ -2527,7 +2530,7 @@ export const AdminExamPreviewPage: React.FC = () => {
 
       {/* MODAL XÁC NHẬN HOÀN TÁC (ROLLBACK TO SNAPSHOT) */}
       {isRollbackModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">

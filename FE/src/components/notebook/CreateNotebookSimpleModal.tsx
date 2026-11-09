@@ -7,6 +7,8 @@ interface CreateNotebookSimpleModalProps {
   loading?: boolean
   onClose: () => void
   onSubmit: (name: string) => Promise<void>
+  /** Tên gợi ý điền sẵn khi mở (vd tên bài học) */
+  defaultName?: string
 }
 
 export const CreateNotebookSimpleModal: React.FC<CreateNotebookSimpleModalProps> = ({
@@ -14,14 +16,15 @@ export const CreateNotebookSimpleModal: React.FC<CreateNotebookSimpleModalProps>
   loading = false,
   onClose,
   onSubmit,
+  defaultName,
 }) => {
   const [name, setName] = useState('')
 
   useEffect(() => {
     if (open) {
-      setName('')
+      setName(defaultName ?? '')
     }
-  }, [open])
+  }, [open, defaultName])
 
   const handleSubmit = async () => {
     if (!name.trim()) return
