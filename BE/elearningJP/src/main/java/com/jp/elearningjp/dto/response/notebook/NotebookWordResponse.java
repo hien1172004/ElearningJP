@@ -1,6 +1,7 @@
 package com.jp.elearningjp.dto.response.notebook;
 
 import com.jp.elearningjp.shared.enums.MemoryLevel;
+import com.jp.elearningjp.shared.enums.NotebookItemType;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,7 @@ import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @Setter
@@ -22,6 +24,11 @@ public class NotebookWordResponse {
     Long id;
     Long notebookId;
     Long vocabularyId;
+    NotebookItemType itemType;
+    Long characterId;
+    Long grammarId;
+    Long sourceLessonId;
+    String sourceLessonTitle;
     String word;
     String reading;
     String meaning;
@@ -33,6 +40,15 @@ public class NotebookWordResponse {
     String audioUrl;
     String jlptLevel;
     Integer displayOrder;
+
+    // Thông tin riêng theo loại — đọc trực tiếp từ bản ghi gốc trong từ điển
+    /** KANJI: âm On / Kun / số nét. */
+    List<String> onyomi;
+    List<String> kunyomi;
+    Integer strokeCount;
+    /** GRAMMAR: cấu trúc đầy đủ + cách dùng. */
+    String grammarStructure;
+    String usageNotes;
 
     // SRS
     MemoryLevel memoryLevel;

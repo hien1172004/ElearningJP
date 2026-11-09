@@ -4,6 +4,7 @@ import { playSmartAudio } from '@/utils'
 import { useVocabItemDetail } from '@/hooks'
 import type { LessonVocabularyItem } from '@/types'
 import { PaginationFooter } from './KanjiStudyView'
+import { SaveItemToNotebookButton } from '@/components/course/save-to-notebook'
 
 interface VocabStudyViewProps {
   /** Danh sách vocab items đã load sẵn từ lesson.sections[].vocabularyItems[]. */
@@ -12,6 +13,8 @@ interface VocabStudyViewProps {
   onSectionDone?: () => void
   /** Mở sẵn tại item này (dùng cho popup xem trước của giáo viên). */
   initialItemId?: number
+  /** Bài học đang học — có thì hiện nút "Lưu sổ tay" (bỏ trống ở popup xem trước). */
+  lessonId?: number
 }
 
 /**
@@ -23,7 +26,7 @@ interface VocabStudyViewProps {
  * - Cuối: ví dụ minh họa.
  * - Có nút Next/Prev và phân trang "1/N" ở dưới.
  */
-export const VocabStudyView: React.FC<VocabStudyViewProps> = ({ items, onSectionDone, initialItemId }) => {
+export const VocabStudyView: React.FC<VocabStudyViewProps> = ({ items, onSectionDone, initialItemId, lessonId }) => {
   // Sắp xếp theo orderIndex
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
@@ -63,7 +66,7 @@ export const VocabStudyView: React.FC<VocabStudyViewProps> = ({ items, onSection
 
   return (
     <div className="space-y-6">
-      <VocabStudyCard item={currentItem} />
+      <VocabStudyCard item={currentItem} lessonId={lessonId} />
 
       {/* Phân trang */}
       <PaginationFooter
@@ -78,9 +81,10 @@ export const VocabStudyView: React.FC<VocabStudyViewProps> = ({ items, onSection
 
 interface VocabStudyCardProps {
   item: LessonVocabularyItem
+  lessonId?: number
 }
 
-const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
+const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item, lessonId }) => {
   // Nếu item chưa có examples (BE chưa truyền bundle vào mapper / DB rỗng) →
   // tự gọi endpoint riêng /lesson-vocabulary-items/vocabulary-items/{id} để lấy.
   const needFetch = !item.examples || item.examples.length === 0
@@ -122,17 +126,28 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item }) => {
             {/* {item.partOfSpeech && (
               <p className="text-xs text-gray-500">Loại từ: {item.partOfSpeech}</p>
             )} */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
             {displayWord && (
               <button
                 type="button"
                 onClick={() => playSmartAudio({ text: displayWord, audioUrl: item.displayAudioUrl })}
-                className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-200 text-emerald-800 hover:bg-emerald-300 transition text-sm font-semibold"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-200 text-emerald-800 hover:bg-emerald-300 transition text-sm font-semibold"
                 title="Nghe phát âm"
               >
                 <Volume2 className="w-4 h-4" />
                 Phát âm
               </button>
             )}
+            {lessonId != null && (
+              <SaveItemToNotebookButton
+                lessonId={lessonId}
+                type="VOCABULARY"
+                itemId={item.id}
+                sourceId={item.vocabId}
+                label={displayWord}
+              />
+            )}
+            </div>
           </div>
         </div>
       </div>

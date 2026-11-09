@@ -13,6 +13,9 @@ import type {
   UpdateNotebookWordRequest,
   PageResponse,
   NotebookStatsResponse,
+  NotebookItemType,
+  NotebookSavedIds,
+  SaveLessonItemsRequest,
 } from '@/types'
 
 export const NOTEBOOK_QUERY_KEYS = {
@@ -25,12 +28,17 @@ export const NOTEBOOK_QUERY_KEYS = {
   groups: ['notebook-groups'] as const,
   groupList: () => [...NOTEBOOK_QUERY_KEYS.groups, 'list'] as const,
   groupsWithNotebooks: () => [...NOTEBOOK_QUERY_KEYS.groups, 'with-notebooks'] as const,
-  words: (notebookId: number, params?: { keyword?: string; page?: number; size?: number; sort?: string }) =>
+  words: (
+    notebookId: number,
+    params?: { keyword?: string; page?: number; size?: number; sort?: string; itemType?: NotebookItemType }
+  ) =>
     params !== undefined
       ? ([...NOTEBOOK_QUERY_KEYS.all, 'words', notebookId, params] as const)
       : ([...NOTEBOOK_QUERY_KEYS.all, 'words', notebookId] as const),
   shuffledWords: (notebookId: number) => [...NOTEBOOK_QUERY_KEYS.all, 'shuffled-words', notebookId] as const,
   statsOverview: () => [...NOTEBOOK_QUERY_KEYS.all, 'stats-overview'] as const,
+  /** Id từ vựng / chữ Hán / ngữ pháp đã có trong sổ tay của tôi */
+  savedIds: () => [...NOTEBOOK_QUERY_KEYS.all, 'saved-ids'] as const,
 }
 
 // Hook lấy danh sách nhóm phẳng
@@ -104,7 +112,7 @@ export function useNotebookDetail(id?: number) {
 // Hook lấy danh sách từ vựng trong sổ tay có phân trang & tìm kiếm
 export function useNotebookWords(
   notebookId?: number,
-  params?: { keyword?: string; page?: number; size?: number; sort?: string }
+  params?: { keyword?: string; page?: number; size?: number; sort?: string; itemType?: NotebookItemType }
 ) {
   return useQuery<PageResponse<NotebookWord>>({
     queryKey: NOTEBOOK_QUERY_KEYS.words(notebookId ?? 0, params),
@@ -211,6 +219,7 @@ export function useNotebookWordMutations(notebookId: number) {
     queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.detail(notebookId) })
     queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.statsOverview() })
     queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.myList() })
+    queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.savedIds() })
   }
 
   const addWord = useMutation({
@@ -249,12 +258,12 @@ export function useNotebookWordMutations(notebookId: number) {
 }
 
 // Hook lấy danh sách từ cần ôn tập SRS
-export function useNotebookReviewItems(notebookId?: number, limit?: number) {
+export function useNotebookReviewItems(notebookId?: number, limit?: number, itemTypes?: NotebookItemType[]) {
   return useQuery<import('@/types').NotebookReviewItem[]>({
-    queryKey: ['notebook-review-items', notebookId ?? 0, limit],
+    queryKey: ['notebook-review-items', notebookId ?? 0, limit, itemTypes?.join(',') ?? ''],
     queryFn: async () => {
       if (notebookId === undefined || notebookId === null || notebookId < 0) return []
-      const res = await notebookService.getReviewItems(notebookId, limit)
+      const res = await notebookService.getReviewItems(notebookId, limit, itemTypes)
       return res.data ?? []
     },
     enabled: notebookId !== undefined && notebookId !== null && notebookId >= 0,
@@ -354,4 +363,33 @@ export function useCommunityNotebookMutations() {
     cloneNotebook,
     toggleSharing,
   }
+}
+
+// ===== Lưu kiến thức bài học vào sổ tay (V54) =====
+
+/** Id bản ghi từ điển đã nằm trong sổ tay của tôi → hiện trạng thái "đã lưu". */
+export function useNotebookSavedIds(enabled: boolean = true) {
+  return useQuery<NotebookSavedIds>({
+    queryKey: NOTEBOOK_QUERY_KEYS.savedIds(),
+    queryFn: async () => {
+      const res = await notebookService.getSavedIds()
+      return res.data ?? { vocabularyIds: [], characterIds: [], grammarIds: [] }
+    },
+    enabled,
+    staleTime: 60_000,
+  })
+}
+
+/** Lưu Chữ Hán / Từ vựng / Ngữ pháp của bài học vào sổ tay (sổ có sẵn hoặc tạo mới). */
+export function useSaveLessonItemsToNotebook() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: SaveLessonItemsRequest) => notebookService.saveLessonItems(data),
+    onSuccess: () => {
+      // Đổi số thẻ / danh sách sổ / trạng thái đã lưu → làm mới mọi key sổ tay & nhóm
+      queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.all })
+      queryClient.invalidateQueries({ queryKey: NOTEBOOK_QUERY_KEYS.groups })
+      queryClient.invalidateQueries({ queryKey: ['notebook-review-items'] })
+    },
+  })
 }

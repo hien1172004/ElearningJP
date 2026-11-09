@@ -4,6 +4,7 @@ import { playSmartAudio, speakJapanese } from '@/utils'
 import { useKanjiItemDetail, useKanjiDetail } from '@/hooks'
 import { useHandwritingSummary } from '@/hooks/useHandwritingPractice'
 import { KanjiPracticeModal } from '@/components/dictionary'
+import { SaveItemToNotebookButton } from '@/components/course/save-to-notebook'
 import type { LessonKanjiItem } from '@/types'
 
 interface KanjiStudyViewProps {
@@ -179,6 +180,17 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item, lessonId }) => {
                   <Hand className="w-4 h-4" />
                   Luyện bằng tay
                 </button>
+
+                {/* Lưu chữ Hán vào sổ tay (chỉ khi đang học trong bài, không hiện ở popup xem trước) */}
+                {lessonId != null && (
+                  <SaveItemToNotebookButton
+                    lessonId={lessonId}
+                    type="KANJI"
+                    itemId={item.id}
+                    sourceId={item.characterId}
+                    label={item.character ?? ''}
+                  />
+                )}
 
                 {(bestMouse != null || bestAir != null) && (
                   <span className="text-xs text-gray-600 font-medium">

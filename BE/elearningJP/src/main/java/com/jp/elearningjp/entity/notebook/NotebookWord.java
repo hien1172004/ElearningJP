@@ -1,7 +1,11 @@
 package com.jp.elearningjp.entity.notebook;
 
+import com.jp.elearningjp.entity.content.GrammarPoint;
 import com.jp.elearningjp.entity.content.Vocabulary;
+import com.jp.elearningjp.entity.content.WritingCharacter;
+import com.jp.elearningjp.entity.curriculum.Lesson;
 import com.jp.elearningjp.shared.enums.MemoryLevel;
+import com.jp.elearningjp.shared.enums.NotebookItemType;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,9 +46,31 @@ public class NotebookWord extends SoftDeletableEntity {
     @JoinColumn(name = "notebook_id", nullable = false)
     private Notebook notebook;
 
+    /** Loại kiến thức của thẻ (Từ vựng / Chữ Hán / Ngữ pháp) — V59. */
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "item_type", nullable = false, length = 10)
+    private NotebookItemType itemType = NotebookItemType.VOCAB;
+
+    /** Từ vựng gốc trong từ điển (chỉ với itemType = VOCAB). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vocabulary_id")
     private Vocabulary vocabulary;
+
+    /** Chữ Hán gốc (chỉ với itemType = KANJI). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "character_id")
+    private WritingCharacter character;
+
+    /** Mẫu ngữ pháp gốc (chỉ với itemType = GRAMMAR). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grammar_id")
+    private GrammarPoint grammar;
+
+    /** Bài học mà thẻ được lưu từ đó (null nếu thêm từ Từ điển / nhập tay). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_lesson_id")
+    private Lesson sourceLesson;
 
     @Column(name = "word", nullable = false, length = 100)
     private String word;

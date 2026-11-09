@@ -40,6 +40,9 @@ public interface NotebookMapper {
     @Mapping(target = "viewCount", ignore = true)
     @Mapping(target = "downloadCount", ignore = true)
     @Mapping(target = "srEnabled", ignore = true)
+    @Mapping(target = "vocabCount", ignore = true)
+    @Mapping(target = "kanjiCount", ignore = true)
+    @Mapping(target = "grammarCount", ignore = true)
     Notebook toNotebook(CreateNotebookRequest request);
 
     @Mapping(target = "userId", source = "user.id")
@@ -63,6 +66,9 @@ public interface NotebookMapper {
     @Mapping(target = "likeCount", ignore = true)
     @Mapping(target = "viewCount", ignore = true)
     @Mapping(target = "downloadCount", ignore = true)
+    @Mapping(target = "vocabCount", ignore = true)
+    @Mapping(target = "kanjiCount", ignore = true)
+    @Mapping(target = "grammarCount", ignore = true)
     void updateNotebookFromRequest(UpdateNotebookRequest request, @MappingTarget Notebook notebook);
 
     @Mapping(target = "notebook", ignore = true)
@@ -76,10 +82,23 @@ public interface NotebookMapper {
     @Mapping(target = "nextReviewAt", ignore = true)
     @Mapping(target = "lastReviewedAt", ignore = true)
     @Mapping(target = "audioUrl", ignore = true)
+    @Mapping(target = "itemType", ignore = true)
+    @Mapping(target = "character", ignore = true)
+    @Mapping(target = "grammar", ignore = true)
+    @Mapping(target = "sourceLesson", ignore = true)
     com.jp.elearningjp.entity.notebook.NotebookWord toNotebookWord(com.jp.elearningjp.dto.request.notebook.CreateNotebookWordRequest request);
 
     @Mapping(target = "notebookId", source = "notebook.id")
     @Mapping(target = "vocabularyId", source = "vocabulary.id")
+    @Mapping(target = "characterId", source = "character.id")
+    @Mapping(target = "grammarId", source = "grammar.id")
+    @Mapping(target = "sourceLessonId", source = "sourceLesson.id")
+    @Mapping(target = "sourceLessonTitle", source = "sourceLesson.title")
+    @Mapping(target = "onyomi", expression = "java(word.getCharacter() != null && word.getCharacter().getOnyomi() != null ? new java.util.ArrayList<>(word.getCharacter().getOnyomi()) : null)")
+    @Mapping(target = "kunyomi", expression = "java(word.getCharacter() != null && word.getCharacter().getKunyomi() != null ? new java.util.ArrayList<>(word.getCharacter().getKunyomi()) : null)")
+    @Mapping(target = "strokeCount", source = "character.strokeCount")
+    @Mapping(target = "grammarStructure", source = "grammar.structure")
+    @Mapping(target = "usageNotes", source = "grammar.usageNotes")
     @Mapping(target = "memoryLevelTitle", expression = "java(word.getMemoryLevel() != null ? word.getMemoryLevel().getTitle() : null)")
     @Mapping(target = "memoryLevelColor", expression = "java(word.getMemoryLevel() != null ? word.getMemoryLevel().getColorHex() : null)")
     com.jp.elearningjp.dto.response.notebook.NotebookWordResponse toNotebookWordResponse(com.jp.elearningjp.entity.notebook.NotebookWord word);
@@ -95,6 +114,10 @@ public interface NotebookMapper {
     @Mapping(target = "nextReviewAt", ignore = true)
     @Mapping(target = "lastReviewedAt", ignore = true)
     @Mapping(target = "audioUrl", ignore = true)
+    @Mapping(target = "itemType", ignore = true)
+    @Mapping(target = "character", ignore = true)
+    @Mapping(target = "grammar", ignore = true)
+    @Mapping(target = "sourceLesson", ignore = true)
     void updateNotebookWordFromRequest(com.jp.elearningjp.dto.request.notebook.UpdateNotebookWordRequest request, @MappingTarget com.jp.elearningjp.entity.notebook.NotebookWord word);
 }
 

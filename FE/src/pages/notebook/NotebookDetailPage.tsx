@@ -8,6 +8,7 @@ import {
   Popconfirm,
   message,
   Spin,
+  Segmented,
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
@@ -40,12 +41,14 @@ import { KanjiPdfPreviewModal } from '@/components/notebook/KanjiPdfPreviewModal
 import { ShareNotebookModal } from '@/components/notebook/ShareNotebookModal'
 import { NotebookFormModal } from '@/components/notebook/NotebookFormModal'
 import { ReviewModeSelectModal } from '@/components/notebook/ReviewModeSelectModal'
+import { NOTEBOOK_ITEM_TYPES, NOTEBOOK_ITEM_TYPE_META } from '@/components/notebook/itemTypeMeta'
 import { notebookService } from '@/services/notebook.service'
 import type {
   NotebookWord,
   CreateNotebookWordRequest,
   UpdateNotebookWordRequest,
   UpdateNotebookRequest,
+  NotebookItemType,
 } from '@/types'
 import { BackButton } from '@/components/common'
 
@@ -60,6 +63,8 @@ export const NotebookDetailPage: React.FC = () => {
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const [selectedWordIds, setSelectedWordIds] = useState<number[]>([])
+  // Lọc theo loại thẻ: ALL = cả 3 loại
+  const [typeFilter, setTypeFilter] = useState<NotebookItemType | 'ALL'>('ALL')
 
   // Modal states
   const [wordModalOpen, setWordModalOpen] = useState(false)
@@ -77,6 +82,7 @@ export const NotebookDetailPage: React.FC = () => {
     page,
     size: pageSize,
     sort: 'id,desc',
+    itemType: typeFilter === 'ALL' ? undefined : typeFilter,
   })
   const { data: shuffledWords, refetch: refetchShuffled } = useNotebookShuffledWords(notebookId)
 
@@ -279,6 +285,21 @@ export const NotebookDetailPage: React.FC = () => {
   const words = wordsData?.items ?? []
   const totalWords = wordsData?.totalElements ?? 0
 
+  // Số thẻ theo loại (sổ cũ chưa có bộ đếm theo loại → coi toàn bộ là từ vựng)
+  const typeCounts: Record<NotebookItemType, number> = {
+    VOCAB: notebook.vocabCount ?? notebook.wordCount ?? 0,
+    KANJI: notebook.kanjiCount ?? 0,
+    GRAMMAR: notebook.grammarCount ?? 0,
+  }
+  const typeOptions = [
+    { value: 'ALL', label: `Tất cả (${notebook.wordCount ?? 0})` },
+    ...NOTEBOOK_ITEM_TYPES.map((t) => ({
+      value: t,
+      label: `${NOTEBOOK_ITEM_TYPE_META[t].label} (${typeCounts[t]})`,
+      disabled: typeCounts[t] === 0 && typeFilter !== t,
+    })),
+  ]
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* Thanh tiêu đề & Công cụ chuẩn Mazii */}
@@ -309,7 +330,7 @@ export const NotebookDetailPage: React.FC = () => {
         {/* Thanh công cụ tìm kiếm, nút +, nút ⋮, và Ôn tập sổ tay nằm trên cùng 1 hàng */}
         <div className="flex items-center gap-2 shrink-0">
           <Input
-            placeholder="Tìm kiếm từ vựng..."
+            placeholder="Tìm trong sổ tay..."
             prefix={<SearchOutlined className="text-gray-400 text-xs" />}
             value={keyword}
             onChange={(e) => {
@@ -349,7 +370,7 @@ export const NotebookDetailPage: React.FC = () => {
               if (notebook && (notebook.wordCount || 0) > 0) {
                 setReviewSelectOpen(true)
               } else {
-                message.info('Sổ tay này chưa có từ vựng để ôn tập!')
+                message.info('Sổ tay này chưa có mục nào để ôn tập!')
               }
             }}
             className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
@@ -369,11 +390,19 @@ export const NotebookDetailPage: React.FC = () => {
       {/* Danh sách từ vựng */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-gray-800">Danh sách từ</h2>
-            <span className="text-xs text-gray-400 font-medium">
-              ({totalWords} từ)
-            </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-bold text-gray-800">Danh sách</h2>
+            <Segmented
+              size="small"
+              value={typeFilter}
+              options={typeOptions}
+              onChange={(v) => {
+                setTypeFilter(v as NotebookItemType | 'ALL')
+                setPage(0)
+                setSelectedWordIds([])
+              }}
+            />
+            <span className="text-xs text-gray-400 font-medium">({totalWords} mục)</span>
           </div>
 
           {selectedWordIds.length > 0 && (
@@ -386,7 +415,7 @@ export const NotebookDetailPage: React.FC = () => {
               onConfirm={handleBatchDelete}
             >
               <Button danger size="small" icon={<DeleteOutlined />}>
-                Xóa {selectedWordIds.length} từ đã chọn
+                Xóa {selectedWordIds.length} mục đã chọn
               </Button>
             </Popconfirm>
           )}

@@ -1,6 +1,11 @@
 package com.jp.elearningjp.controller.notebook;
 
 import com.jp.elearningjp.dto.request.notebook.CreateNotebookWordRequest;
+import com.jp.elearningjp.dto.request.notebook.SaveLessonItemsRequest;
+import com.jp.elearningjp.dto.response.notebook.NotebookSavedIdsResponse;
+import com.jp.elearningjp.dto.response.notebook.SaveLessonItemsResponse;
+import com.jp.elearningjp.service.notebook.NotebookLessonItemService;
+import com.jp.elearningjp.shared.enums.NotebookItemType;
 import com.jp.elearningjp.dto.request.notebook.UpdateNotebookWordRequest;
 import com.jp.elearningjp.dto.response.notebook.ExcelImportResultResponse;
 import com.jp.elearningjp.dto.response.notebook.KanjiPdfMetaResponse;
@@ -52,6 +57,7 @@ public class NotebookWordController {
 
     NotebookWordService notebookWordService;
     NotebookExportService notebookExportService;
+    NotebookLessonItemService notebookLessonItemService;
 
     @Operation(summary = "Thêm từ vựng vào sổ tay")
     @PostMapping(ApiPaths.Notebook.WORDS)
@@ -75,6 +81,7 @@ public class NotebookWordController {
     public ApiResponse<PageResponse<NotebookWordResponse>> getWords(
             @PathVariable Long id,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) NotebookItemType itemType,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "id,desc") String sort
@@ -89,7 +96,7 @@ public class NotebookWordController {
                 : Sort.Direction.DESC;
 
         PageRequest pageRequest = PageRequest.of(Math.max(0, page), Math.min(Math.max(size, 1), 100), Sort.by(direction, sortField));
-        Page<NotebookWordResponse> pageResult = notebookWordService.searchWords(id, keyword, pageRequest);
+        Page<NotebookWordResponse> pageResult = notebookWordService.searchWords(id, keyword, itemType, pageRequest);
 
         PageResponse<NotebookWordResponse> pageResponse = PageResponse.<NotebookWordResponse>builder()
                 .items(pageResult.getContent())
@@ -224,11 +231,12 @@ public class NotebookWordController {
     @GetMapping(ApiPaths.Notebook.REVIEW_ITEMS)
     public ApiResponse<List<com.jp.elearningjp.dto.response.notebook.NotebookReviewItemResponse>> getReviewItems(
             @PathVariable Long id,
-            @RequestParam(required = false, defaultValue = "20") Integer limit
+            @RequestParam(required = false, defaultValue = "20") Integer limit,
+            @RequestParam(required = false) java.util.Set<NotebookItemType> types
     ) {
         return ApiResponse.<List<com.jp.elearningjp.dto.response.notebook.NotebookReviewItemResponse>>builder()
                 .success(true)
-                .data(notebookWordService.getReviewItems(id, limit))
+                .data(notebookWordService.getReviewItems(id, limit, types))
                 .build();
     }
 
@@ -243,5 +251,22 @@ public class NotebookWordController {
                 .data(notebookWordService.submitReview(id, request))
                 .build();
     }
-}
 
+    @Operation(summary = "Lưu Chữ Hán / Từ vựng / Ngữ pháp của bài học vào sổ tay (sổ đã có hoặc tạo mới)")
+    @PostMapping(ApiPaths.Notebook.LESSON_ITEMS)
+    public ApiResponse<SaveLessonItemsResponse> saveLessonItems(@Valid @RequestBody SaveLessonItemsRequest request) {
+        return ApiResponse.<SaveLessonItemsResponse>builder()
+                .success(true)
+                .data(notebookLessonItemService.saveLessonItems(request))
+                .build();
+    }
+
+    @Operation(summary = "Id từ vựng / chữ Hán / ngữ pháp đã có trong sổ tay của tôi (hiển thị trạng thái đã lưu)")
+    @GetMapping(ApiPaths.Notebook.SAVED_IDS)
+    public ApiResponse<NotebookSavedIdsResponse> getSavedIds() {
+        return ApiResponse.<NotebookSavedIdsResponse>builder()
+                .success(true)
+                .data(notebookLessonItemService.getSavedIds())
+                .build();
+    }
+}

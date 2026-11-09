@@ -4,6 +4,7 @@ import { playSmartAudio } from '@/utils'
 import { useGrammarItemDetail } from '@/hooks'
 import type { LessonGrammarItem } from '@/types'
 import { PaginationFooter } from './KanjiStudyView'
+import { SaveItemToNotebookButton } from '@/components/course/save-to-notebook'
 
 interface GrammarStudyViewProps {
   /** Danh sách grammar items đã load sẵn từ lesson.sections[].grammarItems[]. */
@@ -12,6 +13,8 @@ interface GrammarStudyViewProps {
   onSectionDone?: () => void
   /** Mở sẵn tại item này (dùng cho popup xem trước của giáo viên). */
   initialItemId?: number
+  /** Bài học đang học — có thì hiện nút "Lưu sổ tay" (bỏ trống ở popup xem trước). */
+  lessonId?: number
 }
 
 /**
@@ -22,7 +25,7 @@ interface GrammarStudyViewProps {
  * - Dưới: ví dụ minh họa.
  * - Có nút Next/Prev và phân trang "1/N" ở dưới.
  */
-export const GrammarStudyView: React.FC<GrammarStudyViewProps> = ({ items, onSectionDone, initialItemId }) => {
+export const GrammarStudyView: React.FC<GrammarStudyViewProps> = ({ items, onSectionDone, initialItemId, lessonId }) => {
   // Sắp xếp theo orderIndex
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
@@ -62,7 +65,7 @@ export const GrammarStudyView: React.FC<GrammarStudyViewProps> = ({ items, onSec
 
   return (
     <div className="space-y-6">
-      <GrammarStudyCard item={currentItem} />
+      <GrammarStudyCard item={currentItem} lessonId={lessonId} />
 
       {/* Phân trang */}
       <PaginationFooter
@@ -77,9 +80,10 @@ export const GrammarStudyView: React.FC<GrammarStudyViewProps> = ({ items, onSec
 
 interface GrammarStudyCardProps {
   item: LessonGrammarItem
+  lessonId?: number
 }
 
-const GrammarStudyCard: React.FC<GrammarStudyCardProps> = ({ item }) => {
+const GrammarStudyCard: React.FC<GrammarStudyCardProps> = ({ item, lessonId }) => {
   // Nếu item chưa có examples (BE chưa truyền bundle vào mapper / DB rỗng) →
   // tự gọi endpoint riêng /lesson-grammar-items/grammar-items/{id} để lấy.
   const needFetch = !item.examples || item.examples.length === 0
@@ -112,6 +116,17 @@ const GrammarStudyCard: React.FC<GrammarStudyCardProps> = ({ item }) => {
             <p className="text-base md:text-lg text-gray-700 font-medium mx-auto">
               {displayMeaning}
             </p>
+          )}
+          {lessonId != null && (
+            <div className="flex justify-center">
+              <SaveItemToNotebookButton
+                lessonId={lessonId}
+                type="GRAMMAR"
+                itemId={item.id}
+                sourceId={item.grammarId}
+                label={item.title ?? ''}
+              />
+            </div>
           )}
         </div>
       </div>

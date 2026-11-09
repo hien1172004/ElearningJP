@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { formatNotebookCounts } from './itemTypeMeta'
 import { Modal, Input, Button, message, Alert } from 'antd'
 import { DownloadOutlined, KeyOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { notebookService } from '@/services/notebook.service'
@@ -121,7 +122,7 @@ export const ImportShareCodeModal: React.FC<ImportShareCodeModalProps> = ({
                 {previewNotebook.name}
               </div>
               <div className="text-xs text-gray-500">
-                Tác giả: <span className="font-medium text-gray-700">{previewNotebook.authorName || 'Ẩn danh'}</span> • {previewNotebook.wordCount} từ vựng
+                Tác giả: <span className="font-medium text-gray-700">{previewNotebook.authorName || 'Ẩn danh'}</span> • {formatNotebookCounts(previewNotebook)}
               </div>
               {previewNotebook.description && (
                 <div className="text-xs text-gray-600 italic">

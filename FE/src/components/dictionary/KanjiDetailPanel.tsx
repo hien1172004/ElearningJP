@@ -98,6 +98,8 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
     sinoVietnamese: detail.hanViet?.split(',')?.[0]?.trim()?.toUpperCase() || '',
     meaning: detail.meaningVi || '',
     partOfSpeech: 'Chữ Hán',
+    itemType: 'KANJI',
+    characterId: detail.id,
   }
 
   return (

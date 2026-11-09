@@ -1,5 +1,6 @@
 package com.jp.elearningjp.dto.request.notebook;
 
+import com.jp.elearningjp.shared.enums.NotebookItemType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -45,5 +46,14 @@ public class CreateNotebookWordRequest {
     String jlptLevel;
 
     Long vocabularyId;
+
+    /** Loại thẻ — bỏ trống = VOCAB (tương thích client cũ). */
+    NotebookItemType itemType;
+
+    /** Chữ Hán gốc (itemType = KANJI). Bỏ trống → tra theo {@code word}. */
+    Long characterId;
+
+    /** Mẫu ngữ pháp gốc (itemType = GRAMMAR). Bỏ trống → tra theo {@code word} (tên mẫu). */
+    Long grammarId;
 }
 

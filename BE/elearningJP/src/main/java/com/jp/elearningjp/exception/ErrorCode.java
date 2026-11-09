@@ -180,6 +180,11 @@ public enum ErrorCode {
     NOTEBOOK_EXCEL_INVALID_FORMAT(7008, "File Excel không đúng định dạng", HttpStatus.BAD_REQUEST),
     NOTEBOOK_ALREADY_EXISTS(7009, "Sổ tay này đã có trong kho của bạn rồi", HttpStatus.BAD_REQUEST),
     NOTEBOOK_CANNOT_CLONE_OWN(7010, "Bạn là tác giả của sổ tay này và đã có trong kho cá nhân", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_ITEM_ALREADY_EXISTS(7011, "Mục này đã có trong sổ tay", HttpStatus.CONFLICT),
+    NOTEBOOK_ITEM_SOURCE_NOT_FOUND(7012, "Không tìm thấy chữ Hán / ngữ pháp này trong từ điển", HttpStatus.NOT_FOUND),
+    NOTEBOOK_LESSON_ITEMS_EMPTY(7013, "Không có mục nào để lưu vào sổ tay", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_LESSON_ITEMS_LIMIT_EXCEEDED(7014, "Mỗi lần chỉ lưu được tối đa 500 mục", HttpStatus.BAD_REQUEST),
+    NOTEBOOK_TARGET_REQUIRED(7015, "Hãy chọn sổ tay hoặc nhập tên sổ tay mới", HttpStatus.BAD_REQUEST),
 ;
 
 

@@ -16,6 +16,10 @@ import type {
   ExcelImportResultResponse,
   NotebookStatsResponse,
   KanjiPdfMetaResponse,
+  NotebookItemType,
+  SaveLessonItemsRequest,
+  SaveLessonItemsResponse,
+  NotebookSavedIds,
 } from '@/types'
 
 export const notebookService = {
@@ -86,7 +90,7 @@ export const notebookService = {
   // Từ vựng trong sổ tay (Words)
   getWords: async (
     notebookId: number,
-    params?: { keyword?: string; page?: number; size?: number; sort?: string }
+    params?: { keyword?: string; page?: number; size?: number; sort?: string; itemType?: NotebookItemType }
   ): Promise<ApiResponse<PageResponse<NotebookWord>>> => {
     return axiosClient.get(`/notebooks/${notebookId}/words`, { params })
   },
@@ -179,9 +183,22 @@ export const notebookService = {
 
   getReviewItems: async (
     notebookId: number,
-    limit?: number
+    limit?: number,
+    types?: NotebookItemType[]
   ): Promise<ApiResponse<import('@/types').NotebookReviewItem[]>> => {
-    return axiosClient.get(`/notebooks/${notebookId}/review`, { params: { limit } })
+    // Spring nhận Set<Enum> dạng "types=VOCAB,KANJI"
+    return axiosClient.get(`/notebooks/${notebookId}/review`, {
+      params: { limit, types: types && types.length > 0 ? types.join(',') : undefined },
+    })
+  },
+
+  // Lưu kiến thức bài học vào sổ tay & trạng thái "đã lưu"
+  saveLessonItems: async (data: SaveLessonItemsRequest): Promise<ApiResponse<SaveLessonItemsResponse>> => {
+    return axiosClient.post('/notebooks/lesson-items', data)
+  },
+
+  getSavedIds: async (): Promise<ApiResponse<NotebookSavedIds>> => {
+    return axiosClient.get('/notebooks/saved-ids')
   },
 
   submitReview: async (

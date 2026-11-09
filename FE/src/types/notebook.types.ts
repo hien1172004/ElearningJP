@@ -1,4 +1,7 @@
 import type { SrsRating } from './srs.types'
+
+/** Loại kiến thức của thẻ trong sổ tay (V54): Từ vựng / Chữ Hán / Ngữ pháp */
+export type NotebookItemType = 'VOCAB' | 'KANJI' | 'GRAMMAR'
 export interface NotebookGroup {
   id: number
   userId: number
@@ -34,7 +37,11 @@ export interface Notebook {
   sharingEnabled: boolean
   shareCode?: string | null
   jlptLevel?: 'N1' | 'N2' | 'N3' | 'N4' | 'N5' | null
+  /** Tổng số thẻ (mọi loại) */
   wordCount: number
+  vocabCount?: number
+  kanjiCount?: number
+  grammarCount?: number
   likeCount: number
   viewCount: number
   downloadCount: number
@@ -91,7 +98,19 @@ export type MemoryLevel = 'NOT_LEARNED' | 'BARELY' | 'MODERATE' | 'MASTERED'
 export interface NotebookWord {
   id: number
   notebookId: number
+  itemType?: NotebookItemType
   vocabularyId?: number | null
+  characterId?: number | null
+  grammarId?: number | null
+  sourceLessonId?: number | null
+  sourceLessonTitle?: string | null
+  /** KANJI: âm On / Kun / số nét (lấy từ từ điển) */
+  onyomi?: string[] | null
+  kunyomi?: string[] | null
+  strokeCount?: number | null
+  /** GRAMMAR: cấu trúc đầy đủ + cách dùng (lấy từ từ điển) */
+  grammarStructure?: string | null
+  usageNotes?: string | null
   word: string
   reading?: string | null
   sinoVietnamese?: string | null
@@ -127,6 +146,10 @@ export interface CreateNotebookWordRequest {
   jlptLevel?: string
   vocabularyId?: number
   userNote?: string
+  /** Bỏ trống = VOCAB */
+  itemType?: NotebookItemType
+  characterId?: number
+  grammarId?: number
 }
 
 export interface UpdateNotebookWordRequest {
@@ -174,7 +197,15 @@ export interface NotebookStatsResponse {
 export interface NotebookReviewItem {
   id: number
   notebookId: number
+  itemType?: NotebookItemType
   vocabularyId?: number | null
+  characterId?: number | null
+  grammarId?: number | null
+  onyomi?: string[] | null
+  kunyomi?: string[] | null
+  strokeCount?: number | null
+  grammarStructure?: string | null
+  usageNotes?: string | null
   word: string
   reading?: string | null
   sinoVietnamese?: string | null
@@ -218,3 +249,38 @@ export interface KanjiPdfPreviewResult {
   totalPages: number
 }
 
+
+// ===== Lưu kiến thức từ bài học vào sổ tay (V54) =====
+
+export interface SaveLessonItemRef {
+  type: 'KANJI' | 'VOCABULARY' | 'GRAMMAR'
+  itemId: number
+}
+
+export interface SaveLessonItemsRequest {
+  lessonId: number
+  /** Sổ đã có — hoặc truyền newNotebookName để tạo sổ mới */
+  notebookId?: number
+  newNotebookName?: string
+  groupId?: number | null
+  /** Ưu tiên: items → sectionIds → cả bài */
+  sectionIds?: number[]
+  items?: SaveLessonItemRef[]
+}
+
+export interface SaveLessonItemsResponse {
+  notebookId: number
+  notebookName: string
+  createdNotebook: boolean
+  addedCount: number
+  skippedCount: number
+  addedVocab: number
+  addedKanji: number
+  addedGrammar: number
+}
+
+export interface NotebookSavedIds {
+  vocabularyIds: number[]
+  characterIds: number[]
+  grammarIds: number[]
+}

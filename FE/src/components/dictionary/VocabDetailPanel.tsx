@@ -80,6 +80,8 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
     meaning: detail.meaningVi || '',
     partOfSpeech: detail.partOfSpeech || 'Từ vựng',
     audioUrl: detail.audioUrl,
+    itemType: 'VOCAB',
+    vocabularyId: detail.id,
   }
 
   return (
