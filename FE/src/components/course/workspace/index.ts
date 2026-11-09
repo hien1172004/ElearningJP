@@ -1,4 +1,5 @@
 export * from './workspaceSelection'
 export * from './CourseOutlineSidebar'
 export * from './CourseStudentsPanel'
+export * from './CourseTeachersPanel'
 export * from './CourseLessonList'

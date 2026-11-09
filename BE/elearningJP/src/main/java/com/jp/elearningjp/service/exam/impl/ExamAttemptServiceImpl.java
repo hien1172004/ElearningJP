@@ -16,6 +16,9 @@ import com.jp.elearningjp.shared.enums.AttemptStatus;
 import com.jp.elearningjp.shared.enums.AttemptType;
 import com.jp.elearningjp.shared.enums.ScoreGroupCode;
 import com.jp.elearningjp.shared.enums.SkillType;
+import com.jp.elearningjp.service.exam.snapshot.ExamSnapshot;
+import com.jp.elearningjp.service.exam.snapshot.ExamSnapshotService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -45,6 +48,9 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
     private final AttemptGroupScoreRepository attemptGroupScoreRepository;
     private final UserRepository userRepository;
     private final ExamMapper examMapper;
+    private final ExamViewBuilder examViewBuilder;
+    private final ExamSnapshotService examSnapshotService;
+    private final EntityManager entityManager;
 
     @Override
     public ExamTakingResponse startExam(Long examId, Long userId, StartExamRequest request) {
@@ -56,6 +62,11 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
         if (!exam.isPublished()) {
             throw new AppException(ErrorCode.EXAM_NOT_PUBLISHED);
+        }
+
+        // Học viên làm đề gắn khóa theo bản đã duyệt
+        if (examSnapshotService.usesSnapshot(exam)) {
+            return startFromSnapshot(user, exam, request);
         }
 
         ExamSection targetSection = null;
@@ -103,7 +114,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                             .findBySectionIdWithQuestionDetails(s.getId());
 
                     var questionResponses = sectionQuestions.stream()
-                            .map(sq -> toTakingQuestionResponse(sq.getQuestion(), sq.getQuestionNumber()))
+                            .map(sq -> examViewBuilder.toTakingQuestionResponse(sq.getQuestion(), sq.getQuestionNumber()))
                             .collect(Collectors.toList());
 
                     return TakingSectionResponse.builder()
@@ -131,6 +142,11 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
             throw new AppException(ErrorCode.EXAM_ATTEMPT_ALREADY_SUBMITTED);
         }
 
+        if (attempt.getPublishedVersionId() != null) {
+            saveSnapshotAnswer(attempt, attemptQuestions(attempt, requireSnapshot(attempt)), request);
+            return;
+        }
+
         Question question = questionRepository.findByIdWithOptionsAndPassage(request.getQuestionId())
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_QUESTION_NOT_FOUND));
 
@@ -142,8 +158,32 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                     .orElseThrow(() -> new AppException(ErrorCode.EXAM_OPTION_NOT_FOUND));
         }
 
+        upsertAnswer(attempt, question, selectedOption, request);
+    }
+
+    /** Lượt thi theo snapshot: câu hỏi / lựa chọn phải thuộc đề học viên đang làm. */
+    private void saveSnapshotAnswer(ExamAttempt attempt, List<ExamSnapshot.SectionQuestion> questions,
+                                    SaveAnswerRequest request) {
+        ExamSnapshot.SectionQuestion sq = questions.stream()
+                .filter(q -> q.getQuestionId().equals(request.getQuestionId()))
+                .findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_QUESTION_NOT_FOUND));
+
+        QuestionOption selectedOption = null;
+        if (request.getSelectedOptionId() != null) {
+            if (!sq.getOptionIds().contains(request.getSelectedOptionId())) {
+                throw new AppException(ErrorCode.EXAM_OPTION_NOT_FOUND);
+            }
+            // Lựa chọn / câu hỏi chỉ xóa mềm nên id trong snapshot luôn còn trong DB
+            selectedOption = entityManager.getReference(QuestionOption.class, request.getSelectedOptionId());
+        }
+        upsertAnswer(attempt, questionRepository.getReferenceById(sq.getQuestionId()), selectedOption, request);
+    }
+
+    private void upsertAnswer(ExamAttempt attempt, Question question, QuestionOption selectedOption,
+                              SaveAnswerRequest request) {
         StudentAnswer answer = studentAnswerRepository
-                .findByAttemptIdAndQuestionIdAndDeletedFalse(attemptId, request.getQuestionId())
+                .findByAttemptIdAndQuestionIdAndDeletedFalse(attempt.getId(), request.getQuestionId())
                 .orElseGet(() -> StudentAnswer.builder()
                         .attempt(attempt)
                         .exam(attempt.getExam())
@@ -169,9 +209,17 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
             throw new AppException(ErrorCode.EXAM_ATTEMPT_ALREADY_SUBMITTED);
         }
 
+        // Lượt thi theo snapshot: đọc đề 1 lần cho cả lưu đáp án và chấm điểm
+        ExamSnapshot snapshot = attempt.getPublishedVersionId() != null ? requireSnapshot(attempt) : null;
+        List<ExamSnapshot.SectionQuestion> snapshotQuestions = snapshot != null ? attemptQuestions(attempt, snapshot) : null;
+
         if (request != null && request.getAnswers() != null) {
             for (SaveAnswerRequest ansReq : request.getAnswers()) {
-                saveAnswer(attemptId, userId, ansReq);
+                if (snapshot != null) {
+                    saveSnapshotAnswer(attempt, snapshotQuestions, ansReq);
+                } else {
+                    saveAnswer(attemptId, userId, ansReq);
+                }
             }
         }
 
@@ -180,14 +228,9 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
         int timeSpentSeconds = (int) Duration.between(attempt.getStartedAt(), Instant.now()).getSeconds();
 
-        List<ExamSectionQuestion> allSectionQuestions;
-        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION && attempt.getSection() != null) {
-            allSectionQuestions = examSectionQuestionRepository
-                    .findBySectionIdWithQuestionDetails(attempt.getSection().getId());
-        } else {
-            allSectionQuestions = examSectionQuestionRepository
-                    .findByExamIdWithQuestionDetails(exam.getId());
-        }
+        List<GradeItem> gradeItems = snapshot != null
+                ? snapshotGradeItems(attempt, exam, snapshot)
+                : liveGradeItems(attempt, exam);
 
         ExamScoreGroup knowledgeGroup = exam.getScoreGroups().stream()
                 .filter(g -> ScoreGroupCode.LANGUAGE_KNOWLEDGE.equals(g.getGroupCode()))
@@ -203,23 +246,22 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                 .findFirst().orElse(null);
 
         Map<Long, ExamScoreGroup> questionToScoreGroupMap = new HashMap<>();
-        for (ExamSectionQuestion sq : allSectionQuestions) {
-            Question q = sq.getQuestion();
-            SkillType skill = q.getSkillType();
+        for (GradeItem item : gradeItems) {
+            SkillType skill = item.skill();
             ExamScoreGroup sg = null;
 
             if (skill == SkillType.LISTENING) {
-                sg = listeningGroup != null ? listeningGroup : sq.getSection().getScoreGroup();
+                sg = listeningGroup != null ? listeningGroup : item.sectionGroup();
             } else if (skill == SkillType.READING) {
-                sg = readingGroup != null ? readingGroup : (combinedKnowledgeReadingGroup != null ? combinedKnowledgeReadingGroup : sq.getSection().getScoreGroup());
+                sg = readingGroup != null ? readingGroup : (combinedKnowledgeReadingGroup != null ? combinedKnowledgeReadingGroup : item.sectionGroup());
             } else if (skill == SkillType.VOCABULARY || skill == SkillType.GRAMMAR) {
-                sg = knowledgeGroup != null ? knowledgeGroup : (combinedKnowledgeReadingGroup != null ? combinedKnowledgeReadingGroup : sq.getSection().getScoreGroup());
+                sg = knowledgeGroup != null ? knowledgeGroup : (combinedKnowledgeReadingGroup != null ? combinedKnowledgeReadingGroup : item.sectionGroup());
             } else {
-                sg = sq.getSection().getScoreGroup();
+                sg = item.sectionGroup();
             }
 
             if (sg != null) {
-                questionToScoreGroupMap.put(q.getId(), sg);
+                questionToScoreGroupMap.put(item.questionId(), sg);
             }
         }
 
@@ -231,8 +273,8 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         Map<Long, Integer> groupRawCorrectMap = new HashMap<>();
         Map<Long, Integer> groupRawTotalMap = new HashMap<>();
 
-        for (ExamSectionQuestion sq : allSectionQuestions) {
-            Long qId = sq.getQuestion().getId();
+        for (GradeItem item : gradeItems) {
+            Long qId = item.questionId();
             ExamScoreGroup sg = questionToScoreGroupMap.get(qId);
             Long sgId = sg != null ? sg.getId() : -1L;
 
@@ -240,9 +282,11 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
             StudentAnswer ans = answerMap.get(qId);
             if (ans != null && ans.getSelectedOption() != null) {
-                boolean isCorrect = ans.getSelectedOption().isCorrect();
+                boolean isCorrect = item.correctOptionIds() == null
+                        ? ans.getSelectedOption().isCorrect()
+                        : item.correctOptionIds().contains(ans.getSelectedOption().getId());
                 ans.setCorrect(isCorrect);
-                BigDecimal points = isCorrect ? sq.getPoints() : BigDecimal.ZERO;
+                BigDecimal points = isCorrect ? item.points() : BigDecimal.ZERO;
                 ans.setPointsEarned(points);
                 totalRawScore = totalRawScore.add(points);
 
@@ -267,8 +311,8 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         if (isPracticeSection && practiceSection != null) {
             // Lấy tất cả nhóm điểm thực tế xuất hiện trong ca thi này
             Set<ExamScoreGroup> groupsInSection = new LinkedHashSet<>();
-            for (ExamSectionQuestion sq : allSectionQuestions) {
-                ExamScoreGroup g = questionToScoreGroupMap.get(sq.getQuestion().getId());
+            for (GradeItem item : gradeItems) {
+                ExamScoreGroup g = questionToScoreGroupMap.get(item.questionId());
                 if (g != null) {
                     groupsInSection.add(g);
                 }
@@ -420,34 +464,9 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                 .findByAttemptIdWithDetails(attemptId).stream()
                 .collect(Collectors.toMap(a -> a.getQuestion().getId(), Function.identity(), (e1, e2) -> e1));
 
-        List<ExamSection> sections;
-        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION && attempt.getSection() != null) {
-            sections = List.of(attempt.getSection());
-        } else {
-            sections = examSectionRepository.findByExamIdAndDeletedFalseOrderByOrderIndexAsc(exam.getId());
-        }
-
-        List<ReviewSectionResponse> reviewSections = sections.stream()
-                .map(s -> {
-                    var sectionQuestions = examSectionQuestionRepository
-                            .findBySectionIdWithQuestionDetails(s.getId());
-
-                    var reviewQuestions = sectionQuestions.stream()
-                            .map(sq -> toReviewQuestionResponse(sq.getQuestion(), sq.getQuestionNumber(),
-                                    studentAnswerMap.get(sq.getQuestion().getId())))
-                            .collect(Collectors.toList());
-
-                    return ReviewSectionResponse.builder()
-                            .id(s.getId())
-                            .sessionType(s.getSessionType())
-                            .sectionTitle(s.getSectionTitle())
-                            .audioUrl(s.getAudioUrl())
-                            .orderIndex(s.getOrderIndex())
-                            .durationMinutes(s.getDurationMinutes())
-                            .questions(reviewQuestions)
-                            .build();
-                })
-                .collect(Collectors.toList());
+        List<ReviewSectionResponse> reviewSections = attempt.getPublishedVersionId() != null
+                ? snapshotReviewSections(attempt, studentAnswerMap)
+                : liveReviewSections(attempt, exam, studentAnswerMap);
 
         ExamReviewResponse review = examMapper.toReviewResponse(attempt);
         if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION) {
@@ -493,99 +512,164 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         return attempt;
     }
 
-    private TakingQuestionResponse toTakingQuestionResponse(Question q, Integer questionNumber) {
-        var options = q.getOptions().stream()
-                .filter(o -> !o.isDeleted())
-                .sorted(Comparator.comparing(QuestionOption::getOptionKey))
-                .map(examMapper::toTakingOptionResponse)
-                .collect(Collectors.toList());
+    // ============================================================
+    // SNAPSHOT (đề gắn khóa đã duyệt)
+    // ============================================================
 
-        TakingPassageResponse passage = (q.getPassage() != null && !q.getPassage().isDeleted())
-                ? examMapper.toTakingPassageResponse(q.getPassage()) : null;
-
-        TakingQuestionResponse resp = examMapper.toTakingQuestionResponse(q);
-        resp.setQuestionNumber(questionNumber);
-        resp.setOptions(options);
-        resp.setPassage(passage);
-
-        String mCode = q.getMondaiType() != null ? q.getMondaiType().getCode() : "";
-        boolean isKeyPointOrQuick = "KEY_POINT".equals(mCode) || "QUICK_RESPONSE".equals(mCode);
-        boolean isTextOnly = false;
-        if (!"UTTERANCE_EXPRESSIONS".equals(mCode) && (q.getImageUrl() == null || q.getImageUrl().isBlank()) && options != null) {
-            long meaningful = options.stream()
-                    .filter(o -> {
-                        String t = o.getOptionText() != null ? o.getOptionText().trim() : "";
-                        if (t.length() <= 1) return false;
-                        if (t.startsWith("Lựa chọn") || t.startsWith("Đáp án") ||
-                            t.startsWith("Option") || t.startsWith("Phương án")) return false;
-                        if (t.matches("^[ア-ンA-Za-z0-9\\s・、,/\\-()（）①-④]+$")) return false;
-                        return true;
-                    })
-                    .count();
-            if (meaningful >= 2) isTextOnly = true;
-        }
-        if (isKeyPointOrQuick || isTextOnly) {
-            resp.setImageUrl(null);
-            resp.setHasVisualOptions(false);
-            if (options != null) {
-                for (var opt : options) opt.setOptionImageUrl(null);
-            }
-        }
-        return resp;
+    /** 1 câu cần chấm: id câu, kỹ năng, nhóm điểm của ca, điểm; correctOptionIds null = chấm theo entity. */
+    private record GradeItem(Long questionId, SkillType skill, ExamScoreGroup sectionGroup,
+                             BigDecimal points, Set<Long> correctOptionIds) {
     }
 
-    private ReviewQuestionResponse toReviewQuestionResponse(Question q, Integer questionNumber, StudentAnswer ans) {
-        var options = q.getOptions().stream()
-                .filter(o -> !o.isDeleted())
-                .sorted(Comparator.comparing(QuestionOption::getOptionKey))
-                .map(examMapper::toReviewOptionResponse)
-                .collect(Collectors.toList());
-
-        TakingPassageResponse passage = (q.getPassage() != null && !q.getPassage().isDeleted())
-                ? examMapper.toTakingPassageResponse(q.getPassage()) : null;
-
-        ReviewStudentAnswerResponse studentAnsResp = null;
-        if (ans != null) {
-            studentAnsResp = ReviewStudentAnswerResponse.builder()
-                    .selectedOptionId(ans.getSelectedOption() != null ? ans.getSelectedOption().getId() : null)
-                    .orderedOptionIds(ans.getOrderedOptionIds())
-                    .correct(ans.isCorrect())
-                    .pointsEarned(ans.getPointsEarned())
-                    .audioPlayCount(ans.getAudioPlayCount())
-                    .build();
+    private List<GradeItem> liveGradeItems(ExamAttempt attempt, Exam exam) {
+        List<ExamSectionQuestion> allSectionQuestions;
+        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION && attempt.getSection() != null) {
+            allSectionQuestions = examSectionQuestionRepository
+                    .findBySectionIdWithQuestionDetails(attempt.getSection().getId());
+        } else {
+            allSectionQuestions = examSectionQuestionRepository
+                    .findByExamIdWithQuestionDetails(exam.getId());
         }
+        return allSectionQuestions.stream()
+                .map(sq -> new GradeItem(sq.getQuestion().getId(), sq.getQuestion().getSkillType(),
+                        sq.getSection().getScoreGroup(), sq.getPoints(), null))
+                .toList();
+    }
 
-        ReviewQuestionResponse resp = examMapper.toReviewQuestionResponse(q);
-        resp.setQuestionNumber(questionNumber);
-        resp.setOptions(options);
-        resp.setPassage(passage);
-        resp.setStudentAnswer(studentAnsResp);
-
-        String mCode = q.getMondaiType() != null ? q.getMondaiType().getCode() : "";
-        boolean isKeyPointOrQuick = "KEY_POINT".equals(mCode) || "QUICK_RESPONSE".equals(mCode);
-        boolean hasAnyOptionImage = options != null && options.stream().anyMatch(o -> o.getOptionImageUrl() != null && !o.getOptionImageUrl().isBlank());
-        boolean isTextOnly = false;
-        if (!q.isHasVisualOptions() && !hasAnyOptionImage && !"UTTERANCE_EXPRESSIONS".equals(mCode) && (q.getImageUrl() == null || q.getImageUrl().isBlank()) && options != null) {
-            long meaningful = options.stream()
-                    .filter(o -> {
-                        String t = o.getOptionText() != null ? o.getOptionText().trim() : "";
-                        if (t.length() <= 1) return false;
-                        if (t.startsWith("Lựa chọn") || t.startsWith("Đáp án") ||
-                            t.startsWith("Option") || t.startsWith("Phương án") ||
-                            t.startsWith("選択肢")) return false;
-                        if (t.matches("^[ア-ンA-Za-z0-9\\s・、,/\\-()（）①-④]+$")) return false;
-                        return true;
-                    })
-                    .count();
-            if (meaningful >= 2) isTextOnly = true;
-        }
-        if (isKeyPointOrQuick || isTextOnly) {
-            resp.setImageUrl(null);
-            resp.setHasVisualOptions(false);
-            if (options != null) {
-                for (var opt : options) opt.setOptionImageUrl(null);
+    private List<GradeItem> snapshotGradeItems(ExamAttempt attempt, Exam exam, ExamSnapshot snapshot) {
+        Map<Long, ExamScoreGroup> groupsById = exam.getScoreGroups().stream()
+                .collect(Collectors.toMap(ExamScoreGroup::getId, Function.identity(), (a, b) -> a));
+        List<GradeItem> items = new ArrayList<>();
+        for (ExamSnapshot.Section s : attemptSections(attempt, snapshot)) {
+            ExamScoreGroup sectionGroup = s.getScoreGroupId() != null ? groupsById.get(s.getScoreGroupId()) : null;
+            for (ExamSnapshot.SectionQuestion q : s.getQuestions()) {
+                items.add(new GradeItem(q.getQuestionId(), q.getSkillType(), sectionGroup,
+                        q.getPoints() != null ? q.getPoints() : BigDecimal.ONE, q.getCorrectOptionIds()));
             }
         }
-        return resp;
+        return items;
+    }
+
+    private ExamSnapshot requireSnapshot(ExamAttempt attempt) {
+        return examSnapshotService.find(attempt.getPublishedVersionId())
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+    }
+
+    /** Ca thi của lượt thi: luyện 1 ca → ca đó, thi cả đề → mọi ca. */
+    private List<ExamSnapshot.Section> attemptSections(ExamAttempt attempt, ExamSnapshot snapshot) {
+        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION && attempt.getSection() != null) {
+            Long sectionId = attempt.getSection().getId();
+            return snapshot.getSections().stream().filter(s -> sectionId.equals(s.getId())).toList();
+        }
+        return snapshot.getSections();
+    }
+
+    private List<ExamSnapshot.SectionQuestion> attemptQuestions(ExamAttempt attempt, ExamSnapshot snapshot) {
+        return attemptSections(attempt, snapshot).stream().flatMap(s -> s.getQuestions().stream()).toList();
+    }
+
+    private ExamTakingResponse startFromSnapshot(User user, Exam exam, StartExamRequest request) {
+        ExamSnapshot snapshot = examSnapshotService.find(exam.getPublishedVersionId())
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+
+        List<ExamSnapshot.Section> sections = snapshot.getSections();
+        ExamSection targetSection = null;
+        Integer snapshotDuration = snapshot.getSummary() != null ? snapshot.getSummary().getTotalDurationMinutes() : null;
+        int targetDurationMinutes = snapshotDuration != null ? snapshotDuration : exam.getTotalDurationMinutes();
+
+        if (request.getAttemptType() == AttemptType.PRACTICE_SECTION) {
+            if (request.getSectionId() == null) {
+                throw new AppException(ErrorCode.EXAM_SECTION_NOT_FOUND);
+            }
+            ExamSnapshot.Section section = sections.stream()
+                    .filter(s -> request.getSectionId().equals(s.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new AppException(ErrorCode.EXAM_SECTION_NOT_FOUND));
+            targetSection = examSectionRepository.getReferenceById(section.getId());
+            targetDurationMinutes = section.getDurationMinutes() != null ? section.getDurationMinutes() : 30;
+            sections = List.of(section);
+        }
+
+        ExamAttempt attempt = examAttemptRepository.save(ExamAttempt.builder()
+                .user(user)
+                .exam(exam)
+                .attemptType(request.getAttemptType())
+                .section(targetSection)
+                .targetDurationMinutes(targetDurationMinutes)
+                .startedAt(Instant.now())
+                .status(AttemptStatus.IN_PROGRESS)
+                .publishedVersionId(exam.getPublishedVersionId())
+                .build());
+
+        List<TakingSectionResponse> sectionResponses = sections.stream()
+                .map(s -> TakingSectionResponse.builder()
+                        .id(s.getId())
+                        .sessionType(s.getSessionType())
+                        .sectionTitle(s.getSectionTitle())
+                        .audioUrl(s.getAudioUrl())
+                        .orderIndex(s.getOrderIndex())
+                        .durationMinutes(s.getDurationMinutes())
+                        .questions(s.getQuestions().stream().map(ExamSnapshot.SectionQuestion::getTaking)
+                                .collect(Collectors.toList()))
+                        .build())
+                .collect(Collectors.toList());
+
+        ExamTakingResponse takingResp = examMapper.toTakingResponse(attempt);
+        takingResp.setSections(sectionResponses);
+        return takingResp;
+    }
+
+    private List<ReviewSectionResponse> snapshotReviewSections(ExamAttempt attempt,
+                                                               Map<Long, StudentAnswer> studentAnswerMap) {
+        return attemptSections(attempt, requireSnapshot(attempt)).stream()
+                .map(s -> ReviewSectionResponse.builder()
+                        .id(s.getId())
+                        .sessionType(s.getSessionType())
+                        .sectionTitle(s.getSectionTitle())
+                        .audioUrl(s.getAudioUrl())
+                        .orderIndex(s.getOrderIndex())
+                        .durationMinutes(s.getDurationMinutes())
+                        .questions(s.getQuestions().stream()
+                                .map(q -> {
+                                    ReviewQuestionResponse review = q.getReview();
+                                    review.setStudentAnswer(examViewBuilder.toStudentAnswerResponse(
+                                            studentAnswerMap.get(q.getQuestionId())));
+                                    return review;
+                                })
+                                .collect(Collectors.toList()))
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    private List<ReviewSectionResponse> liveReviewSections(ExamAttempt attempt, Exam exam,
+                                                           Map<Long, StudentAnswer> studentAnswerMap) {
+        List<ExamSection> sections;
+        if (attempt.getAttemptType() == AttemptType.PRACTICE_SECTION && attempt.getSection() != null) {
+            sections = List.of(attempt.getSection());
+        } else {
+            sections = examSectionRepository.findByExamIdAndDeletedFalseOrderByOrderIndexAsc(exam.getId());
+        }
+
+        return sections.stream()
+                .map(s -> {
+                    var sectionQuestions = examSectionQuestionRepository
+                            .findBySectionIdWithQuestionDetails(s.getId());
+
+                    var reviewQuestions = sectionQuestions.stream()
+                            .map(sq -> examViewBuilder.toReviewQuestionResponse(sq.getQuestion(), sq.getQuestionNumber(),
+                                    studentAnswerMap.get(sq.getQuestion().getId())))
+                            .collect(Collectors.toList());
+
+                    return ReviewSectionResponse.builder()
+                            .id(s.getId())
+                            .sessionType(s.getSessionType())
+                            .sectionTitle(s.getSectionTitle())
+                            .audioUrl(s.getAudioUrl())
+                            .orderIndex(s.getOrderIndex())
+                            .durationMinutes(s.getDurationMinutes())
+                            .questions(reviewQuestions)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 }

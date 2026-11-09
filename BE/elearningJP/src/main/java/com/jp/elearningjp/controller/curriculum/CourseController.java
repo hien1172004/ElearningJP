@@ -65,23 +65,26 @@ public class CourseController {
     // ADMIN ENDPOINTS
     // =========================================================
 
-    @Operation(summary = "[Admin/Teacher] Danh sách khóa học để quản lý", description = "Kể cả khóa chưa xuất bản. Quản trị viên thấy toàn bộ khóa học; giáo viên chỉ thấy khóa học do mình tạo")
+    @Operation(summary = "[Admin/Teacher] Danh sách khóa học để quản lý",
+            description = "Kể cả khóa chưa xuất bản. Quản trị viên thấy toàn bộ khóa học; giáo viên chỉ thấy khóa học được giao cho mình. "
+                    + "pendingChanges=true: chỉ khóa có thay đổi chưa duyệt")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @GetMapping("/admin")
     public ApiResponse<PageResponse<CourseResponse>> getAllCoursesForAdmin(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "false") boolean pendingChanges
     ) {
         return ApiResponse.<PageResponse<CourseResponse>>builder()
                 .success(true)
-                .data(courseService.getAllCoursesForAdmin(page, size))
+                .data(courseService.getAllCoursesForAdmin(page, size, pendingChanges))
                 .build();
     }
 
-    @Operation(summary = "[Admin] Tạo khóa học mới", description = "Tạo khóa học mới, tự động sinh slug từ tiêu đề")
+    @Operation(summary = "[Admin] Tạo khóa học mới", description = "Chỉ quản trị viên tạo khóa học, tự động sinh slug từ tiêu đề. Giáo viên được giao sau khi tạo")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ApiResponse<CourseResponse> createCourse(@Valid @RequestBody CourseCreateRequest request) {
         return ApiResponse.<CourseResponse>builder()
@@ -91,9 +94,9 @@ public class CourseController {
                 .build();
     }
 
-    @Operation(summary = "[Admin/Teacher] Cập nhật thông tin khóa học", description = "Chỉnh sửa thông tin khóa học theo ID (Teacher chỉ sửa được course do mình tạo)")
+    @Operation(summary = "[Admin] Cập nhật thông tin khóa học", description = "Chỉnh sửa tiêu đề, mô tả, ảnh bìa, cấp JLPT của khóa học. Chỉ quản trị viên, có hiệu lực ngay")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping(ApiPaths.Course.BY_ID)
     public ApiResponse<CourseResponse> updateCourse(
             @PathVariable Long id,
@@ -106,9 +109,9 @@ public class CourseController {
                 .build();
     }
 
-    @Operation(summary = "[Admin/Teacher] Xóa mềm khóa học", description = "Ẩn khóa học khỏi hệ thống mà không làm mất dữ liệu liên quan (Teacher chỉ xoá được course do mình tạo)")
+    @Operation(summary = "[Admin] Xóa mềm khóa học", description = "Ẩn khóa học khỏi hệ thống mà không làm mất dữ liệu liên quan. Chỉ quản trị viên")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping(ApiPaths.Course.BY_ID)
     public ApiResponse<Void> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
@@ -118,9 +121,11 @@ public class CourseController {
                 .build();
     }
 
-    @Operation(summary = "[Admin/Teacher] Bật/tắt xuất bản khóa học", description = "Chuyển đổi trạng thái hiển thị công khai của khóa học (Teacher chỉ publish được course do mình tạo)")
+    @Operation(summary = "[Admin] Chuyển nháp / mở lại khóa học",
+            description = "publish=false: ẩn khóa với học viên. publish=true: mở lại với đúng bản đã duyệt gần nhất "
+                    + "(khóa chưa từng được duyệt → lỗi 1115). Nội dung mới chỉ tới học viên qua duyệt yêu cầu của giáo viên")
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping(ApiPaths.Course.PUBLISH)
     public ApiResponse<CourseResponse> publishCourse(
             @PathVariable Long id,
@@ -128,7 +133,7 @@ public class CourseController {
     ) {
         return ApiResponse.<CourseResponse>builder()
                 .success(true)
-                .message(publish ? "Đã xuất bản khóa học công khai" : "Đã chuyển khóa học về trạng thái nháp")
+                .message(publish ? "Đã mở lại khóa học với bản đã duyệt" : "Đã chuyển khóa học về trạng thái nháp")
                 .data(courseService.publishCourse(id, publish))
                 .build();
     }

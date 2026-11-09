@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.shared.util.VersionCheck;
 import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemUpdateRequest;
@@ -23,6 +24,7 @@ import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.service.dictionary.DictionaryService;
 import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.VocabularySource;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
 import com.jp.elearningjp.shared.util.OrderIndexResolver;
@@ -77,6 +79,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     private final DictionaryService dictionaryService;
     private final CurrentUserService currentUserService;
     private final CourseAccessGuard courseAccessGuard;
+    private final PublishedLessonResolver publishedLessonResolver;
 
     public KanjiSectionItemService(
             LessonSectionRepository lessonSectionRepository,
@@ -88,7 +91,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
             LessonSectionMapper lessonSectionMapper,
             DictionaryService dictionaryService,
             CurrentUserService currentUserService,
-            CourseAccessGuard courseAccessGuard
+            CourseAccessGuard courseAccessGuard,
+            PublishedLessonResolver publishedLessonResolver
     ) {
         super(lessonSectionRepository);
         this.kanjiItemRepository = kanjiItemRepository;
@@ -100,6 +104,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         this.dictionaryService = dictionaryService;
         this.currentUserService = currentUserService;
         this.courseAccessGuard = courseAccessGuard;
+        this.publishedLessonResolver = publishedLessonResolver;
     }
 
     // ============================================================
@@ -113,6 +118,17 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     public LessonKanjiItemResponse getKanjiItem(Long itemId) {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
+        // Học viên của khóa đã xuất bản: item theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published =
+                publishedLessonResolver.forReading(item.getSection().getLesson().getId());
+        if (published.isPresent()) {
+            return published.get().snapshot().getSections().stream()
+                    .filter(s -> s.getKanjiItems() != null)
+                    .flatMap(s -> s.getKanjiItems().stream())
+                    .filter(i -> itemId.equals(i.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
+        }
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND);
         }
@@ -135,8 +151,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     @Transactional
     public LessonKanjiItemResponse addKanjiItem(Long sectionId, LessonKanjiItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.KANJI);
-        // Chỉ chủ khóa học hoặc ADMIN được sửa nội dung section
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Chỉ giáo viên được giao hoặc ADMIN được sửa nội dung section
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         // Validate chữ Hán tồn tại trong từ điển qua DictionaryService
         String character = request.getCharacter();
@@ -209,7 +225,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     public LessonKanjiItemResponse updateKanjiItem(Long itemId, LessonKanjiItemUpdateRequest request) {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        VersionCheck.requireVersion(item, request.getVersion());
+        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND);
         }
@@ -246,7 +263,9 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
             item.setNote(request.getNote().isEmpty() ? null : request.getNote());
         }
 
+        // flush để response mang version mới
         LessonKanjiItem saved = kanjiItemRepository.save(item);
+        kanjiItemRepository.flush();
 
         // V25+: sync related vocab nếu client có gửi (kể cả list rỗng = xoá hết)
         if (request.getRelatedVocabulary() != null) {
@@ -263,7 +282,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     public void deleteKanjiItem(Long itemId) {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
         if (item.isDeleted()) return;
 
         // V25+: cascade soft-delete tất cả related vocab thuộc kanji item này.
@@ -289,12 +308,12 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
      * <p>Quy tắc: list {@code itemIds} phải chứa <b>đúng tất cả</b> kanji item active
      * của section hiện tại (không thiếu, không thừa, không trùng).</p>
      *
-     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course được giao).</p>
      */
     @Transactional
     public List<LessonKanjiItemResponse> reorderKanjiItems(Long sectionId, ItemBulkReorderRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.KANJI);
-        courseAccessGuard.requireOwnerOrAdmin(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
@@ -312,6 +331,7 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         if (!requestedIds.equals(currentIds)) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
+        VersionCheck.requireVersions(currentItems, request.getVersions());
 
         currentItems = OrderIndexResolver.bulkReorder(
                 currentItems,

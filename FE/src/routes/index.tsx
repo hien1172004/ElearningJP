@@ -29,6 +29,7 @@ import {
   AdminScenarioEditorPage,
   AdminModerationPage,
   AdminBroadcastsPage,
+  AdminCourseReviewsPage,
   TeacherStudentsPage,
   SpeakingLobbyPage,
   SpeakingPracticePage,
@@ -167,6 +168,15 @@ export const router = createBrowserRouter([
       { path: 'comments', element: <AdminModerationPage /> },
       // Gửi thông báo hàng loạt: ADMIN (mọi đối tượng) & TEACHER (học viên khóa của mình)
       { path: 'broadcasts', element: <AdminBroadcastsPage /> },
+      // Hàng chờ duyệt khóa học: chỉ ADMIN quyết định xuất bản
+      {
+        path: 'course-reviews',
+        element: (
+          <ProtectedRoute roles={['ADMIN']}>
+            <AdminCourseReviewsPage />
+          </ProtectedRoute>
+        ),
+      },
       // Thống kê tổng quan: chỉ ADMIN
       {
         path: 'stats',

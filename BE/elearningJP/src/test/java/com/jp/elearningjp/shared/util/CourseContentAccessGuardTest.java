@@ -7,6 +7,7 @@ import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.repository.curriculum.CourseEnrollmentRepository;
+import com.jp.elearningjp.repository.curriculum.CourseTeacherRepository;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** Quy tắc bản quyền: chỉ admin, chủ khóa học và người đã đăng ký được xem nội dung. */
+/** Quy tắc bản quyền: chỉ admin, giáo viên được giao và người đã đăng ký được xem nội dung. */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CourseContentAccessGuardTest {
@@ -33,6 +34,7 @@ class CourseContentAccessGuardTest {
 
     @Mock CurrentUserService currentUserService;
     @Mock CourseEnrollmentRepository enrollmentRepository;
+    @Mock CourseTeacherRepository courseTeacherRepository;
     @InjectMocks CourseAccessGuard guard;
 
     private Course course;
@@ -46,6 +48,8 @@ class CourseContentAccessGuardTest {
         course = mock(Course.class);
         when(course.getId()).thenReturn(COURSE_ID);
         when(course.getCreatedBy()).thenReturn(owner);
+        // OWNER_ID là giáo viên được giao khóa
+        when(courseTeacherRepository.existsByCourseIdAndTeacherId(COURSE_ID, OWNER_ID)).thenReturn(true);
         lesson = mock(Lesson.class);
         when(lesson.getCourse()).thenReturn(course);
         section = mock(LessonSection.class);

@@ -11,6 +11,8 @@ import java.util.List;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateQuestionInlineRequest {
+    /** Version câu hỏi client đã đọc (optimistic locking). Lệch → 409; không gửi → bỏ qua. */
+    Long version;
     String questionText;
     String imageUrl;
     String audioUrl;

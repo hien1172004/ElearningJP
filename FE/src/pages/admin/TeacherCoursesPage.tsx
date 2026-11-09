@@ -1,21 +1,24 @@
 ﻿import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
-import { Table, Tag, Button as AntdButton, Tooltip } from 'antd'
+import { Table, Tag, Button as AntdButton, Tooltip, Tabs } from 'antd'
+import { WHITE_TAB_BAR_CLASS, WHITE_TAB_BAR_STYLE } from '@/lib/antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PageHeader, LoadingState, EmptyState } from '@/components/common'
-import { CourseFormModal } from '@/components/course'
+import { CourseFormModal, CourseReviewBadge } from '@/components/course'
 import { ConfirmModal } from '@/components/common'
 import { useCourses, useDeleteCourse } from '@/hooks'
 import { courseService } from '@/services'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { CourseSummary } from '@/types'
+import { useAuthStore } from '@/stores'
+import { isAdmin } from '@/utils/roles'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 
-function statusBadge(published: boolean, archivedAt?: string | null) {
-  if (archivedAt) return <Tag className="rounded-md" color="red">Đã lưu trữ</Tag>
-  if (published) return <Tag className="rounded-md" color="green">Đã xuất bản</Tag>
-  return <Tag className="rounded-md" color="default">Bản nháp</Tag>
+function statusBadge(course: CourseSummary) {
+  if (course.archivedAt) return <Tag className="rounded-md" color="red">Đã lưu trữ</Tag>
+  return <CourseReviewBadge course={course} />
 }
 
 /** Ảnh bìa khóa học; chưa có ảnh hoặc ảnh lỗi → ô chữ cái đầu của tiêu đề. */
@@ -42,20 +45,25 @@ const CourseThumb: React.FC<{ src?: string; title?: string }> = ({ src, title })
 export const TeacherCoursesPage: React.FC = () => {
   const navigate = useNavigate()
   const qc = useQueryClient()
+  // Chỉ ADMIN tạo / sửa / xuất bản / xóa khóa; giáo viên chỉ thấy khóa được giao và vào soạn bài
+  const admin = isAdmin(useAuthStore((s) => s.user))
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCourse, setEditingCourse] = useState<CourseSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null)
   const [publishingId, setPublishingId] = useState<number | null>(null)
 
-  const { data, isLoading } = useCourses({ admin: true })
+  // Bộ lọc của ADMIN: chỉ khóa có thay đổi chưa duyệt (giáo viên đã sửa nhưng chưa được duyệt)
+  const [pendingOnly, setPendingOnly] = useState(false)
+  const { data, isLoading } = useCourses({ admin: true, pendingChanges: admin && pendingOnly })
   const deleteCourse = useDeleteCourse()
 
   const handlePublish = async (course: CourseSummary, publish: boolean) => {
     setPublishingId(course.id)
     try {
       await courseService.publishCourse(course.id, publish)
-      toast.success(publish ? 'Đã xuất bản khóa học' : 'Đã chuyển về bản nháp')
+      toast.success(publish ? 'Đã mở lại khóa học với bản đã duyệt' : 'Đã chuyển về bản nháp')
       qc.invalidateQueries({ queryKey: ['courses'] })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.courseReview.all })
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Không thể thay đổi trạng thái.'
       toast.error('Cập nhật trạng thái thất bại', { description: msg })
@@ -72,7 +80,7 @@ export const TeacherCoursesPage: React.FC = () => {
 
   const courses = data?.items ?? []
 
-  const columns: ColumnsType<CourseSummary> = [
+  const allColumns: ColumnsType<CourseSummary> = [
     {
       title: 'Tiêu đề',
       key: 'title',
@@ -102,8 +110,8 @@ export const TeacherCoursesPage: React.FC = () => {
       title: 'Trạng thái',
       dataIndex: 'published',
       key: 'status',
-      width: 130,
-      render: (pub, record) => statusBadge(pub, record.archivedAt),
+      width: 200,
+      render: (_, record) => statusBadge(record),
     },
     {
       title: 'Hành động',
@@ -123,10 +131,19 @@ export const TeacherCoursesPage: React.FC = () => {
               }}
             />
           </Tooltip>
-          <Tooltip title={record.published ? 'Gỡ xuất bản' : 'Xuất bản'}>
+          <Tooltip
+            title={
+              record.published
+                ? 'Chuyển nháp'
+                : record.publishedVersionId
+                  ? 'Mở lại khóa (bản đã duyệt)'
+                  : 'Chưa có bản được duyệt — giáo viên cần gửi duyệt'
+            }
+          >
             <AntdButton
               size="small"
               loading={publishingId === record.id}
+              disabled={!record.published && !record.publishedVersionId}
               icon={record.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               onClick={() => handlePublish(record, !record.published)}
             />
@@ -152,6 +169,7 @@ export const TeacherCoursesPage: React.FC = () => {
       ),
     },
   ]
+  const columns = admin ? allColumns : allColumns.filter((c) => c.key !== 'actions')
 
   return (
     <div className="space-y-6 pb-12">
@@ -159,29 +177,56 @@ export const TeacherCoursesPage: React.FC = () => {
         // Cùng khung với nội dung bên dưới để nút thao tác thẳng mép phải bảng
         className="max-w-7xl mx-auto px-3 sm:px-4"
         actions={
-          <AntdButton
-            type="primary"
-            size="large"
-            icon={<Plus className="w-5 h-5" />}
-            onClick={() => {
-              setEditingCourse(null)
-              setIsModalOpen(true)
-            }}
-            className="!rounded-md !font-bold"
-          >
-            Tạo khóa học mới
-          </AntdButton>
+          admin ? (
+            <AntdButton
+              type="primary"
+              size="large"
+              icon={<Plus className="w-5 h-5" />}
+              onClick={() => {
+                setEditingCourse(null)
+                setIsModalOpen(true)
+              }}
+              className="!rounded-md !font-bold"
+            >
+              Tạo khóa học mới
+            </AntdButton>
+          ) : undefined
         }
       />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 space-y-4">
+        {admin && (
+          <Tabs
+            activeKey={pendingOnly ? 'pending' : 'all'}
+            onChange={(key) => setPendingOnly(key === 'pending')}
+            tabBarStyle={WHITE_TAB_BAR_STYLE}
+            className={WHITE_TAB_BAR_CLASS}
+            items={[
+              { key: 'all', label: 'Tất cả' },
+              { key: 'pending', label: 'Có thay đổi chưa duyệt' },
+            ]}
+          />
+        )}
+
         {isLoading && <LoadingState message="Đang tải danh sách khóa học..." />}
 
-        {!isLoading && courses.length === 0 && (
+        {!isLoading && courses.length === 0 && pendingOnly && admin && (
           <EmptyState
-            title="Chưa có khóa học nào"
-            description="Tạo khóa học đầu tiên để bắt đầu giảng dạy."
+            title="Không có khóa nào có thay đổi chưa duyệt"
+            description="Nội dung giáo viên đang soạn ở mọi khóa đều đã được duyệt."
+          />
+        )}
+
+        {!isLoading && courses.length === 0 && !(pendingOnly && admin) && (
+          <EmptyState
+            title={admin ? 'Chưa có khóa học nào' : 'Bạn chưa được giao khóa học nào'}
+            description={
+              admin
+                ? 'Tạo khóa học đầu tiên rồi giao cho giáo viên soạn bài.'
+                : 'Quản trị viên sẽ giao khóa học cho bạn. Bạn sẽ nhận được thông báo khi được giao.'
+            }
             action={
+              admin && (
               <AntdButton
                 type="primary"
                 size="large"
@@ -194,6 +239,7 @@ export const TeacherCoursesPage: React.FC = () => {
               >
                 Tạo khóa học đầu tiên
               </AntdButton>
+              )
             }
           />
         )}

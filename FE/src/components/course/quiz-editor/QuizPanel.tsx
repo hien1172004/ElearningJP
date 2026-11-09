@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { Pencil, Trash2, Plus, BookOpen, X as XIcon, Check, Eye } from 'lucide-react'
 import { Modal, App, Button, Input, InputNumber } from 'antd'
 import { toast } from 'sonner'
@@ -24,6 +25,8 @@ interface QuizPanelProps {
 }
 
 export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _lessonTitle, inline = false }) => {
+  // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
+  const locked = useCourseEditLocked()
   const { message } = App.useApp()
   // Trang này dành cho Admin/Teacher → dùng endpoint /quiz/manage
   // (trả kèm đáp án đúng, explanation). Học viên dùng /quiz (ẩn đáp án).
@@ -118,6 +121,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
           type="primary"
           size="small"
           icon={<Plus className="w-3 h-3" />}
+          disabled={locked}
           onClick={() => {
             setEditingQuestion(null)
             setQuestionFormOpen(true)
@@ -171,6 +175,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
               >
                 <button
                   type="button"
+                  disabled={locked}
                   onClick={() => {
                     setEditingQuestion(q as unknown as LessonQuizItem)
                     setQuestionFormOpen(true)
@@ -182,6 +187,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                 </button>
                 <button
                   type="button"
+                  disabled={locked}
                   onClick={() => {
                     Modal.confirm({
                       title: 'Xoá câu hỏi?',
@@ -268,6 +274,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
             {quiz && total > 0 && (
               <button
                 type="button"
+                disabled={locked}
                 onClick={handleDeleteAll}
                 className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-rose-50 hover:text-rose-600"
                 title="Xoá toàn bộ câu hỏi"
@@ -312,6 +319,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
               {quiz && (
                 <button
                   type="button"
+                  disabled={locked}
                   onClick={(e) => {
                     e.stopPropagation()
                     openRename()
@@ -339,6 +347,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
           {isNotFound ? (
             <button
               type="button"
+              disabled={locked}
               onClick={openCreate}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-cyan-600 text-white text-xs font-bold hover:bg-cyan-700 transition"
             >
@@ -349,6 +358,7 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
               {quiz && total > 0 && (
                 <button
                   type="button"
+                  disabled={locked}
                   onClick={handleDeleteAll}
                   className="p-1.5 text-gray-400 hover:text-rose-600 rounded shrink-0"
                   title="Xoá toàn bộ câu hỏi"
@@ -866,6 +876,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
       if (editing) {
         await updateQuizItem.mutateAsync({
           id: editing.id,
+          version: editing.version,
           payload,
         })
       } else {

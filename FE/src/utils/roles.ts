@@ -67,11 +67,9 @@ export const isTeacherOrAdmin = (user?: User | null): boolean =>
   hasRole(user, [ROLE_ADMIN, ROLE_TEACHER])
 
 /**
- * Được xem nội dung khóa học mà không cần đăng ký: admin (mọi khóa) hoặc giáo viên chủ khóa.
+ * Được xem nội dung khóa học mà không cần đăng ký: admin (mọi khóa) hoặc giáo viên được giao khóa
+ * (`canManage` do BE tính trong chi tiết khóa học).
  * Khớp quy tắc BE `CourseAccessGuard.requireContentAccess`.
  */
-export const canPreviewCourse = (
-  user: User | null | undefined,
-  createdByUserId?: number | null,
-): boolean =>
-  isAdmin(user) || (isTeacher(user) && createdByUserId != null && createdByUserId === user?.id)
+export const canPreviewCourse = (user: User | null | undefined, canManage?: boolean | null): boolean =>
+  isAdmin(user) || (isTeacher(user) && canManage === true)

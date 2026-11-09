@@ -12,6 +12,8 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ReviewQuestionResponse {
     Long id;
+    /** Version để gửi lại khi sửa inline (optimistic locking). */
+    Long version;
     Integer questionNumber;
     String mondaiCode;
     String mondaiNameVi;

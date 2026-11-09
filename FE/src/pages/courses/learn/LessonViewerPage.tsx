@@ -137,7 +137,7 @@ export const LessonViewerPage: React.FC = () => {
   const isEnrolled = course?.isEnrolled ?? false
   // Admin (mọi khóa) / giáo viên chủ khóa chưa đăng ký → chế độ xem trước:
   // mở mọi phần, không ghi tiến độ, không nộp quiz
-  const isPreview = !isEnrolled && canPreviewCourse(user, course?.createdByUserId)
+  const isPreview = !isEnrolled && canPreviewCourse(user, course?.canManage)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (lId && isAuthenticated && isEnrolled && !isError) {

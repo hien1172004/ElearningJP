@@ -39,10 +39,34 @@ public final class ApiPaths {
         public static final String LESSONS = "/{courseId}/lessons";
         public static final String LESSON_BY_ID = "/{courseId}/lessons/{lessonId}";
         public static final String LESSON_REORDER = "/{courseId}/lessons/reorder";
+        /** Giáo viên được giao khóa học (ADMIN giao/gỡ). */
+        public static final String TEACHERS = "/{courseId}/teachers";
+        public static final String TEACHER_BY_ID = "/{courseId}/teachers/{teacherId}";
+        /** Luồng duyệt: lịch sử (GET) / gửi duyệt (POST) và rút yêu cầu đang chờ. */
+        public static final String REVIEW_REQUESTS = "/{courseId}/review-requests";
+        public static final String REVIEW_WITHDRAW = "/{courseId}/review-requests/withdraw";
+        /** Nhận xét của lượt duyệt gần nhất. */
+        public static final String REVIEW_COMMENTS = "/{courseId}/review-comments";
+        /** Thay đổi của bản đang soạn so với bản học viên đang học. */
+        public static final String PENDING_CHANGES = "/{courseId}/pending-changes";
 
         // Relative paths cho LessonController (khi đã map tới LESSONS)
         public static final String LESSON_BY_ID_RELATIVE = "/{lessonId}";
         public static final String LESSON_REORDER_RELATIVE = "/reorder";
+    }
+
+    /** Hàng chờ duyệt khóa học của ADMIN. */
+    public static final class CourseReview {
+        public static final String BASE = "/course-review-requests";
+        public static final String APPROVE = "/{requestId}/approve";
+        public static final String REJECT = "/{requestId}/reject";
+        public static final String COMMENTS = "/{requestId}/comments";
+    }
+
+    public static final class CourseReviewComment {
+        public static final String BASE = "/course-review-comments";
+        public static final String BY_ID = "/{commentId}";
+        public static final String RESOLVE = "/{commentId}/resolve";
     }
 
     public static final class Lesson {
@@ -226,7 +250,7 @@ public final class ApiPaths {
         public static final String REPORT = "/comment-replies/{id}/report";
     }
 
-    /** Kiểm duyệt bình luận: ADMIN (mọi bình luận), TEACHER (bình luận trong bài học thuộc khóa của mình). */
+    /** Kiểm duyệt bình luận: ADMIN (mọi bình luận), TEACHER (bình luận trong bài học thuộc khóa được giao). */
     public static final class AdminModeration {
         public static final String BASE = "/admin/moderation";
         public static final String REPORTS = "/reports";
@@ -281,7 +305,7 @@ public final class ApiPaths {
         public static final String RECIPIENT_COUNT = "/recipient-count";
     }
 
-    /** Theo dõi học viên: ADMIN mọi khóa, TEACHER khóa do mình tạo. */
+    /** Theo dõi học viên: ADMIN mọi khóa, TEACHER khóa được giao. */
     public static final class TeacherStudents {
         public static final String BASE = "/teacher/courses/{courseId}/students";
         public static final String BY_USER = "/{userId}";
@@ -309,6 +333,8 @@ public final class ApiPaths {
         public static final String DELETE_QUESTION = "/{id}/questions/{questionId}";
         public static final String BY_COURSE = "/by-course/{courseId}";
         public static final String PUBLISH = "/{id}/publish";
+        /** Hủy yêu cầu gỡ đề gắn khóa (trước khi duyệt). */
+        public static final String CANCEL_REMOVAL = "/{id}/cancel-removal";
     }
 
     public static final class AiSpeaking {

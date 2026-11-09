@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.shared.util.VersionCheck;
 import java.util.Optional;
 import com.jp.elearningjp.entity.curriculum.Quiz;
 import com.jp.elearningjp.dto.request.curriculum.LessonCreateRequest;
@@ -24,6 +25,9 @@ import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
+import com.jp.elearningjp.service.curriculum.snapshot.LessonSnapshot;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
+import com.jp.elearningjp.service.curriculum.snapshot.QuizSnapshot;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.shared.util.CurrentUserService;
@@ -66,6 +70,7 @@ public class LessonService {
     CourseAccessGuard courseAccessGuard;
     LessonProgressRecorder lessonProgressRecorder;
     LessonSpeakingService lessonSpeakingService;
+    PublishedLessonResolver publishedLessonResolver;
 
     /**
      * Xem nội dung chi tiết bài học (kèm sections + items).
@@ -74,12 +79,18 @@ public class LessonService {
      */
     @Transactional
     public LessonDetailResponse getLessonDetail(Long lessonId) {
+        // Học viên của khóa đã xuất bản: nội dung theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forReading(lessonId);
+        if (published.isPresent()) {
+            return buildPublishedLessonDetail(published.get());
+        }
+
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Long courseId = lesson.getCourse().getId();
 
-        // 1. Kiểm tra quyền truy cập (admin, chủ khóa học hoặc học viên đã đăng ký)
+        // 1. Kiểm tra quyền truy cập (admin, giáo viên được giao hoặc học viên đã đăng ký)
         courseAccessGuard.requireLessonContentAccess(lesson);
         User currentUser = currentUserService.getCurrentUser();
 
@@ -115,8 +126,39 @@ public class LessonService {
         return response;
     }
 
+    /** Chi tiết bài từ snapshot + ghép tiến độ / phiên luyện nói của học viên (giống luồng bản đang soạn). */
+    private LessonDetailResponse buildPublishedLessonDetail(PublishedLessonResolver.PublishedLesson published) {
+        Lesson lesson = published.lesson();
+        LessonSnapshot snapshot = published.snapshot();
+        User currentUser = currentUserService.getCurrentUser();
+
+        UserLessonProgress progress =
+                enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), lesson.getCourse().getId())
+                        ? recordLessonAccess(currentUser, lesson)
+                        : null;
+
+        LessonDetailResponse response = snapshot.getDetail();
+        response.setCourseTitle(lesson.getCourse().getTitle());
+        response.setHasQuiz(snapshot.getQuiz() != null);
+
+        List<LessonSpeakingResponse> speakingList =
+                lessonSpeakingService.withUserProgress(snapshot.getSpeaking(), currentUser.getId());
+        response.setHasSpeaking(!speakingList.isEmpty());
+        response.setSpeakingScenarios(speakingList);
+        response.setSpeakingScenario(!speakingList.isEmpty() ? speakingList.get(0) : null);
+        if (progress != null) {
+            response.setStatus(progress.getStatus());
+            response.setBestScore(progress.getBestScore());
+            response.setLastAccessedAt(progress.getLastAccessedAt());
+            response.setCompletedAt(progress.getCompletedAt());
+        } else {
+            response.setStatus(ProgressStatus.NOT_STARTED);
+        }
+        return response;
+    }
+
     /**
-     * Admin hoặc Teacher (chỉ trong course do mình tạo) thêm bài học mới.
+     * Admin hoặc Teacher (chỉ trong course được giao) thêm bài học mới.
      *
      * <p>Sau V19: orderIndex được xử lý an toàn theo 2 mode:</p>
      * <ul>
@@ -179,7 +221,7 @@ public class LessonService {
     }
 
     /**
-     * Admin hoặc Teacher (chỉ trong course do mình tạo) cập nhật bài học.
+     * Admin hoặc Teacher (chỉ trong course được giao) cập nhật bài học.
      *
      * <p>Sau V19: nếu client đổi orderIndex sang giá trị khác:</p>
      * <ul>
@@ -194,6 +236,7 @@ public class LessonService {
     public LessonDetailResponse updateLesson(Long lessonId, LessonUpdateRequest request) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        VersionCheck.requireVersion(lesson, request.getVersion());
         ensureCourseOwnerOrAdmin(lesson.getCourse());
 
         Integer newOrderIndex = request.getOrderIndex();
@@ -225,7 +268,9 @@ public class LessonService {
         }
 
         lessonMapper.updateLessonFromRequest(request, lesson);
+        // flush để response mang version mới (dùng cho lần lưu kế tiếp)
         Lesson updated = lessonRepository.save(lesson);
+        lessonRepository.flush();
         log.info("[LESSON] Updated lesson id={}, orderIndex={}", updated.getId(), updated.getOrderIndex());
 
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(updated);
@@ -243,7 +288,7 @@ public class LessonService {
     }
 
     /**
-     * Admin hoặc Teacher (chỉ trong course do mình tạo) xóa mềm bài học.
+     * Admin hoặc Teacher (chỉ trong course được giao) xóa mềm bài học.
      */
     @Transactional
     public void deleteLesson(Long lessonId) {
@@ -254,7 +299,12 @@ public class LessonService {
         lesson.softDelete();
         lessonRepository.save(lesson);
         // Progress của bài đã xoá không được tính vào số bài hoàn thành của khóa.
-        progressRepository.softDeleteByLessonId(lessonId, Instant.now());
+        // Bài còn trong bản xuất bản: học viên vẫn đang học → giữ tiến độ (lần duyệt sau bài mới rời khỏi khóa).
+        boolean stillPublished = lesson.getCourse().getPublishedVersionId() != null
+                && Boolean.TRUE.equals(lesson.getInPublishedVersion());
+        if (!stillPublished) {
+            progressRepository.softDeleteByLessonId(lessonId, Instant.now());
+        }
         log.info("[LESSON] Soft-deleted lesson id={}", lessonId);
     }
 
@@ -275,7 +325,7 @@ public class LessonService {
      *   <li>Dùng <b>marker tạm âm</b> (-index) để tránh UNIQUE conflict khi swap chỉ số.</li>
      * </ul>
      *
-     * <p>Quyền: Admin hoặc Teacher (chỉ reorder lesson trong course do mình tạo).</p>
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder lesson trong course được giao).</p>
      *
      * @param courseId khóa học cần reorder
      * @param request  danh sách lesson ID theo thứ tự MỚI (index 0 = orderIndex 1)
@@ -308,6 +358,8 @@ public class LessonService {
                     diff(currentIds, requestedIds), diff(requestedIds, currentIds));
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
+        // Người khác vừa sắp xếp lại / sửa bài → danh sách client đang xem đã cũ
+        VersionCheck.requireVersions(currentLessons, request.getVersions());
 
         // 3) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
         currentLessons = OrderIndexResolver.bulkReorder(
@@ -346,20 +398,34 @@ public class LessonService {
      */
     @Transactional
     public CourseProgressResponse completeLesson(Long lessonId) {
-        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        // Học viên của khóa đã xuất bản: bài và quiz theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forLearning(lessonId);
+        Lesson lesson;
+        if (published.isPresent()) {
+            lesson = published.get().lesson();
+        } else {
+            lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                    .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+            courseAccessGuard.requireEnrolledInLesson(lesson);
+        }
 
         Long courseId = lesson.getCourse().getId();
-        courseAccessGuard.requireEnrolledInLesson(lesson);
         User currentUser = currentUserService.getCurrentUser();
 
         // Khoá dòng progress (tạo nếu chưa có): bấm hoàn thành 2 lần đồng thời không còn 500.
         UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lessonId);
 
-        Optional<Quiz> lessonQuiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId);
-        lessonQuiz.ifPresent(quiz -> {
+        Optional<Integer> passingScore;
+        if (published.isPresent()) {
+            QuizSnapshot quiz = published.get().snapshot().getQuiz();
+            passingScore = Optional.ofNullable(quiz).map(QuizSnapshot::getPassingScorePercent);
+        } else {
+            passingScore = quizRepository.findByLessonIdAndDeletedFalse(lessonId).map(Quiz::getPassingScorePercent);
+        }
+        boolean hasQuiz = passingScore.isPresent();
+        passingScore.ifPresent(passing -> {
             BigDecimal bestScore = progress.getBestScore();
-            if (bestScore == null || bestScore.compareTo(BigDecimal.valueOf(quiz.getPassingScorePercent())) < 0) {
+            if (bestScore == null || bestScore.compareTo(BigDecimal.valueOf(passing)) < 0) {
                 throw new AppException(ErrorCode.CANNOT_COMPLETE_LESSON);
             }
         });
@@ -379,11 +445,11 @@ public class LessonService {
         // Chỉ lần đầu hoàn thành mới phát event (XP, tự hoàn thành khóa) — bấm lại không cộng XP lần nữa.
         if (newlyCompleted) {
             lessonProgressRecorder.onLessonCompleted(
-                    currentUser.getId(), lesson, progress.getBestScore(), lessonQuiz.isPresent());
+                    currentUser.getId(), lesson, progress.getBestScore(), hasQuiz);
         }
 
-        // Tính toán lại % tiến độ khóa học
-        int totalLessons = (int) lessonRepository.countByCourseIdAndDeletedFalse(courseId);
+        // Tính toán lại % tiến độ khóa học (theo các bài học viên đang học)
+        int totalLessons = (int) lessonRepository.countLearnerLessons(courseId);
         int completedCount = (int) progressRepository.countCompletedLessonsByCourse(
                 currentUser.getId(), courseId, ProgressStatus.COMPLETED);
 
@@ -425,11 +491,11 @@ public class LessonService {
     /**
      * Kiểm tra quyền sửa/xoá lesson:
      *  - ADMIN: luôn pass
-     *  - TEACHER: chỉ pass nếu lesson.course.createdBy == currentUser
+     *  - TEACHER: chỉ pass nếu được giao lesson.course (course_teachers)
      *  - Các role khác: 403
      */
     private void ensureCourseOwnerOrAdmin(Course course) {
         // Giữ ErrorCode FORBIDDEN_LESSON_ACCESS (1501) để không phá contract với FE.
-        courseAccessGuard.requireOwnerOrAdmin(course, ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(course, ErrorCode.FORBIDDEN_LESSON_ACCESS);
     }
 }

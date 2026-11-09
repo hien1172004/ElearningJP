@@ -24,6 +24,8 @@ import java.util.List;
 public class LessonDetailResponse {
 
     Long id;
+    /** Version để gửi lại khi cập nhật (optimistic locking). */
+    Long version;
     Long courseId;
     String courseTitle;
     String title;

@@ -27,6 +27,8 @@ import java.util.List;
 public class LessonSectionResponse {
 
     Long id;
+    /** Version để gửi lại khi cập nhật (optimistic locking). */
+    Long version;
     LessonSectionType sectionType;
     String title;
     Integer orderIndex;

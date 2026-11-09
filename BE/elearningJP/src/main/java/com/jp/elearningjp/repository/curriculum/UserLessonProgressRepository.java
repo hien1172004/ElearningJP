@@ -20,6 +20,15 @@ import java.util.Optional;
 @Repository
 public interface UserLessonProgressRepository extends JpaRepository<UserLessonProgress, Long> {
 
+    /**
+     * Bài tính vào tiến độ học viên: khóa đã có bản xuất bản → các bài trong bản đó
+     * (kể cả bài vừa bị xóa ở bản đang soạn); chưa có → các bài chưa xóa như cũ.
+     */
+    String LEARNER_LESSON_L = "((l.course.publishedVersionId IS NULL AND l.deleted = false) "
+            + "OR (l.course.publishedVersionId IS NOT NULL AND l.inPublishedVersion = true))";
+    String LEARNER_LESSON_ULP = "((ulp.lesson.course.publishedVersionId IS NULL AND ulp.lesson.deleted = false) "
+            + "OR (ulp.lesson.course.publishedVersionId IS NOT NULL AND ulp.lesson.inPublishedVersion = true))";
+
     Optional<UserLessonProgress> findByUserIdAndLessonIdAndDeletedFalse(Long userId, Long lessonId);
 
     Optional<UserLessonProgress> findByUser_IdAndLesson_IdAndDeletedFalse(Long userId, Long lessonId);
@@ -28,7 +37,7 @@ public interface UserLessonProgressRepository extends JpaRepository<UserLessonPr
            "WHERE ulp.user.id = :userId " +
            "AND ulp.lesson.course.id = :courseId " +
            "AND ulp.status = :status " +
-           "AND ulp.lesson.deleted = false " +
+           "AND " + LEARNER_LESSON_ULP + " " +
            "AND ulp.deleted = false")
     long countCompletedLessonsByCourse(@Param("userId") Long userId,
                                       @Param("courseId") Long courseId,
@@ -49,14 +58,14 @@ public interface UserLessonProgressRepository extends JpaRepository<UserLessonPr
            "JOIN FETCH ulp.lesson l " +
            "WHERE ulp.user.id = :userId " +
            "AND l.course.id = :courseId " +
-           "AND l.deleted = false " +
+           "AND " + LEARNER_LESSON_L + " " +
            "AND ulp.deleted = false")
     List<UserLessonProgress> findByUserAndCourseWithLesson(@Param("userId") Long userId,
                                                            @Param("courseId") Long courseId);
 
     /**
      * Tính % tiến độ hoàn thành khóa học của user.
-     * = (số lesson COMPLETED / tổng số lesson active trong course) * 100
+     * = (số lesson COMPLETED / tổng số lesson học viên đang học trong course) * 100
      * Trả về 0 nếu course chưa có lesson nào.
      */
     @Query(value = """
@@ -65,12 +74,14 @@ public interface UserLessonProgressRepository extends JpaRepository<UserLessonPr
                      ELSE (COUNT(CASE WHEN ulp.status = 'COMPLETED' THEN 1 END) * 100.0 / COUNT(l.id))
                 END AS INTEGER)
             FROM lessons l
+            JOIN courses c ON c.id = l.course_id
             LEFT JOIN user_lesson_progress ulp
                 ON ulp.lesson_id = l.id
                 AND ulp.user_id = :userId
                 AND ulp.deleted = false
             WHERE l.course_id = :courseId
-              AND l.deleted = false
+              AND ((c.published_version_id IS NULL AND l.deleted = false)
+                   OR (c.published_version_id IS NOT NULL AND l.in_published_version = true))
             """, nativeQuery = true)
     Integer calculateCourseProgressPercent(@Param("userId") Long userId,
                                            @Param("courseId") Long courseId);
@@ -85,7 +96,8 @@ public interface UserLessonProgressRepository extends JpaRepository<UserLessonPr
                 AND ulp.status = :status
                 AND ulp.deleted = false
             WHERE l.course.id IN :courseIds
-              AND l.deleted = false
+              AND ((l.course.publishedVersionId IS NULL AND l.deleted = false)
+                   OR (l.course.publishedVersionId IS NOT NULL AND l.inPublishedVersion = true))
             GROUP BY l.course.id
             """)
     List<CourseProgressCount> countCourseProgress(@Param("userId") Long userId,

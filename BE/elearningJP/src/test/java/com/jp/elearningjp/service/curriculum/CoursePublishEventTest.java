@@ -1,5 +1,7 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.exception.AppException;
+import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.dto.response.curriculum.CourseResponse;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.mapper.CourseMapper;
@@ -27,6 +29,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -47,6 +50,7 @@ class CoursePublishEventTest {
     @Mock LessonMapper lessonMapper;
     @Mock CurrentUserService currentUserService;
     @Mock CourseAccessGuard courseAccessGuard;
+    @Mock CourseReviewService courseReviewService;
     @Mock ApplicationEventPublisher eventPublisher;
 
     @InjectMocks CourseService courseService;
@@ -67,6 +71,7 @@ class CoursePublishEventTest {
     @Test
     void draftToPublished_publishesEvent() {
         course.setPublished(false);
+        course.setPublishedVersionId(5L); // đã từng được duyệt → mở lại được
 
         courseService.publishCourse(10L, true);
 
@@ -92,8 +97,21 @@ class CoursePublishEventTest {
     }
 
     @Test
+    void reopen_neverApproved_rejected_noEvent() {
+        course.setPublished(false);
+
+        assertThatThrownBy(() -> courseService.publishCourse(10L, true))
+                .isInstanceOf(AppException.class)
+                .extracting(e -> ((AppException) e).getErrorCode())
+                .isEqualTo(ErrorCode.COURSE_NOT_YET_APPROVED);
+        assertThat(course.getPublished()).isFalse();
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
     void sameStatus_doesNotPublishEvent() {
         course.setPublished(true);
+        course.setPublishedVersionId(5L);
 
         courseService.publishCourse(10L, true);
 

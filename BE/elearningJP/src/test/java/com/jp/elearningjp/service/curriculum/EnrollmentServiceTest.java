@@ -105,7 +105,7 @@ class EnrollmentServiceTest {
     @Test
     void enroll_draftCourse_ownerGetsRealReason() {
         Course draft = draftCourse();
-        when(courseAccessGuard.isOwner(draft, USER_ID)).thenReturn(true);
+        when(courseAccessGuard.isAssignedTeacher(draft, USER_ID)).thenReturn(true);
         assertRejected(() -> service.enrollInCourse(COURSE_ID), ErrorCode.COURSE_NOT_PUBLISHED);
     }
 

@@ -86,7 +86,7 @@ class BroadcastServiceTest {
     void teacher_notOwnerOfCourse_forbiddenByGuard() {
         when(currentUserService.isAdmin()).thenReturn(false);
         doThrow(new AppException(ErrorCode.BROADCAST_FORBIDDEN))
-                .when(courseAccessGuard).requireOwnerOrAdmin(course, ErrorCode.BROADCAST_FORBIDDEN);
+                .when(courseAccessGuard).requireAssignedOrAdmin(course, ErrorCode.BROADCAST_FORBIDDEN);
 
         assertRejected(() -> service.send(request(BroadcastAudience.COURSE_STUDENTS, null, 10L, null)),
                 ErrorCode.BROADCAST_FORBIDDEN);

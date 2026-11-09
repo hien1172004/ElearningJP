@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Request body chung để bulk reorder các item trong 1 section
@@ -29,4 +30,7 @@ public class ItemBulkReorderRequest {
     @NotEmpty(message = "Danh sách item cần reorder không được rỗng")
     @NotNull(message = "Danh sách item cần reorder là bắt buộc")
     List<Long> itemIds;
+
+    /** Version client đang thấy của từng phần tử (id → version) — lệch thì 409 (optimistic locking). Không bắt buộc. */
+    Map<Long, Long> versions;
 }

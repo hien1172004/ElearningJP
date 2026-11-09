@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import static org.mockito.ArgumentMatchers.eq;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.Lesson;
@@ -60,6 +61,7 @@ class LessonCompletionQuizGuardTest {
     @Mock LessonProgressRecorder progressRecorder;
     @Mock LessonSpeakingService lessonSpeakingService;
 
+    @Mock PublishedLessonResolver publishedLessonResolver;
     @InjectMocks ProgressService progressService;
     @InjectMocks LessonService lessonService;
 

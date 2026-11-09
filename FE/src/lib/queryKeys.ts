@@ -86,6 +86,16 @@ export const QUERY_KEYS = {
     recipientCount: (params: Record<string, unknown>) => ['admin-broadcasts', 'recipient-count', params] as const,
     recipientCountDisabled: ['admin-broadcasts', 'recipient-count', 'disabled'] as const,
   },
+  courseReview: {
+    all: ['course-review'] as const,
+    history: (courseId: number) => ['course-review', 'history', courseId] as const,
+    queue: (params: Record<string, unknown>) => ['course-review', 'queue', params] as const,
+    changes: (courseId: number) => ['course-review', 'changes', courseId] as const,
+    comments: (courseId: number) => ['course-review', 'comments', courseId] as const,
+  },
+  courseTeachers: {
+    list: (courseId: number) => ['course-teachers', courseId] as const,
+  },
   courseStudents: {
     list: (courseId: number, params: Record<string, unknown>) =>
       ['course-students', courseId, 'list', params] as const,

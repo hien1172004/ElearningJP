@@ -1,5 +1,6 @@
 package com.jp.elearningjp.dto.response.curriculum;
 
+import com.jp.elearningjp.shared.enums.CourseReviewStatus;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -16,12 +17,23 @@ import java.util.List;
 public class CourseDetailResponse {
 
     Long id;
+    /** Version để gửi lại khi cập nhật (optimistic locking). */
+    Long version;
     String title;
     String slug;
     JlptLevel jlptLevel;
     String description;
     String thumbnailUrl;
     Boolean published;
+    /** Trạng thái bản đang soạn: EDITING | PENDING_REVIEW. */
+    CourseReviewStatus reviewStatus;
+    /** Bản đang soạn có thay đổi chưa được duyệt / xuất bản. */
+    Boolean hasUnpublishedChanges;
+    /** Phiên bản đã duyệt gần nhất (null = chưa từng được duyệt → ADMIN chưa mở được khóa). */
+    Long publishedVersionId;
+    /** Phiên bản học viên đang học (chỉ trả cho ADMIN / giáo viên được giao; null = chưa có). */
+    Integer publishedVersionNo;
+    Instant publishedVersionAt;
     Instant createdAt;
 
     // Thông tin người tạo
@@ -30,6 +42,7 @@ public class CourseDetailResponse {
 
     // Phân quyền & tiến độ
     boolean isEnrolled;              // User hiện tại đã đăng ký chưa
+    boolean canManage;               // User hiện tại là ADMIN hoặc giáo viên được giao (xem trước không cần đăng ký)
     BigDecimal progressPercent;      // % hoàn thành khóa học (nếu đã đăng ký)
     Integer completedLessonsCount;   // Số bài học đã hoàn thành
     Integer totalLessons;            // Tổng số bài học

@@ -37,6 +37,12 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class QuizQuestionUpdateRequest {
 
+    /**
+     * Version bản ghi client đã đọc (optimistic locking). Lệch → 409 CONCURRENT_MODIFICATION.
+     * Không gửi → bỏ qua kiểm tra.
+     */
+    Long version;
+
     @Size(min = 1, max = 5000, message = "Nội dung câu hỏi phải từ 1-5000 ký tự")
     String questionText;
 

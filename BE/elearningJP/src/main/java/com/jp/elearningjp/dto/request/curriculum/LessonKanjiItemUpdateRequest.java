@@ -37,6 +37,12 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class LessonKanjiItemUpdateRequest {
 
+    /**
+     * Version bản ghi client đã đọc (optimistic locking). Lệch → 409 CONCURRENT_MODIFICATION.
+     * Không gửi → bỏ qua kiểm tra.
+     */
+    Long version;
+
     @Positive(message = "orderIndex phải > 0")
     @Schema(description = "Thứ tự mới trong section (bỏ qua nếu không đổi)", example = "2")
     Integer orderIndex;

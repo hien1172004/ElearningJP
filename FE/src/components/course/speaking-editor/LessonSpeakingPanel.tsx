@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus,
@@ -34,6 +35,8 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
   courseId,
   courseLevel,
 }) => {
+  // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
+  const locked = useCourseEditLocked()
   const navigate = useNavigate()
   const [speakingList, setSpeakingList] = useState<LessonSpeakingScenario[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -189,6 +192,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
                 type="primary"
                 icon={<Sparkles className="w-4 h-4" />}
                 loading={isGenerating}
+                disabled={locked}
                 onClick={handleAiGenerate}
                 className="!rounded-md !font-semibold"
               >
@@ -197,7 +201,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
               <AntdButton
                 icon={<BookOpen className="w-4 h-4" />}
                 onClick={openAssignModal}
-                disabled={isGenerating}
+                disabled={locked || isGenerating}
                 className="!rounded-md !font-semibold"
               >
                 Chọn từ ngân hàng
@@ -205,7 +209,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
               <AntdButton
                 icon={<Plus className="w-4 h-4" />}
                 onClick={handleGoToCreateCustomScenario}
-                disabled={isGenerating}
+                disabled={locked || isGenerating}
                 className="!rounded-md !font-semibold"
               >
                 Tự soạn kịch bản mới
@@ -233,13 +237,14 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
               <AntdButton
                 icon={<Sparkles className="w-3.5 h-3.5 text-indigo-600" />}
                 loading={isGenerating}
+                disabled={locked}
                 onClick={handleAiGenerate}
               >
                 Tạo từ bài học
               </AntdButton>
               <AntdButton
                 icon={<BookOpen className="w-3.5 h-3.5 text-slate-600" />}
-                disabled={isGenerating}
+                disabled={locked || isGenerating}
                 onClick={openAssignModal}
               >
                 Chọn từ ngân hàng
@@ -247,7 +252,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
               <AntdButton
                 type="primary"
                 icon={<Plus className="w-3.5 h-3.5" />}
-                disabled={isGenerating}
+                disabled={locked || isGenerating}
                 onClick={handleGoToCreateCustomScenario}
                 className="!font-semibold"
               >
@@ -303,7 +308,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
                       size="small"
                       danger
                       icon={<Trash2 className="w-3.5 h-3.5" />}
-                      disabled={isGenerating}
+                      disabled={locked || isGenerating}
                       onClick={() => handleRemove(speaking.scenarioId)}
                     >
                       Gỡ khỏi bài
@@ -382,6 +387,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
                   </label>
                   <button
                     type="button"
+                    disabled={locked}
                     onClick={handleGoToCreateCustomScenario}
                     className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
                   >

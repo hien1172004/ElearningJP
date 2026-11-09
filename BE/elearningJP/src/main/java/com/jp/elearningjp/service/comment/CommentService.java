@@ -665,7 +665,7 @@ public class CommentService {
 
     /**
      * Người xem có quyền kiểm duyệt bình luận của target này không — cùng điều kiện với
-     * {@code CommentModerationService.ensureCanModerate}: admin, hoặc giáo viên tạo khóa học
+     * {@code CommentModerationService.ensureCanModerate}: admin, hoặc giáo viên được giao khóa học
      * chứa bài học. Người kiểm duyệt tự xử lý vi phạm nên FE không hiện nút báo cáo cho họ.
      */
     private boolean isModerator(CommentTargetType targetType, Long targetId, Long currentUserId) {
@@ -674,8 +674,7 @@ public class CommentService {
         if (targetType != CommentTargetType.LESSON) return false;
         return lessonRepository.findByIdAndDeletedFalse(targetId)
                 .map(Lesson::getCourse)
-                .map(Course::getCreatedBy)
-                .map(owner -> currentUserId.equals(owner.getId()))
+                .map(course -> courseAccessGuard.isAssignedTeacher(course, currentUserId))
                 .orElse(false);
     }
 
@@ -685,7 +684,7 @@ public class CommentService {
 
     /**
      * Target phải còn tồn tại và người xem được phép thấy nó. Bài học: chưa xoá, khóa chưa xoá,
-     * và khóa đã publish — khóa nháp chỉ admin, chủ khóa và người đã đăng ký mới thấy bình luận.
+     * và khóa đã publish — khóa nháp chỉ admin, giáo viên được giao và người đã đăng ký mới thấy bình luận.
      */
     private void ensureTargetExists(CommentTargetType type, Long targetId) {
         if (targetId == null || targetId <= 0) {

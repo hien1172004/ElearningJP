@@ -34,7 +34,7 @@ const toErrorMessage = (error: AxiosError<ApiResponse<unknown>>, fallback: strin
 }
 
 /** Danh sách người dùng cho trang quản trị (giữ dữ liệu trang cũ khi đổi trang/bộ lọc). */
-export function useAdminUsers(params: AdminUserListParams) {
+export function useAdminUsers(params: AdminUserListParams, options?: { enabled?: boolean }) {
   return useQuery<PageResponse<AdminUser>>({
     queryKey: QUERY_KEYS.adminUser.list({ ...params }),
     queryFn: async () => {
@@ -42,6 +42,7 @@ export function useAdminUsers(params: AdminUserListParams) {
       return res.data ?? EMPTY_PAGE
     },
     placeholderData: keepPreviousData,
+    enabled: options?.enabled ?? true,
   })
 }
 

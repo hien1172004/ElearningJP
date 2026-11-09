@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.dto.request.curriculum.QuizAnswerItem;
 import com.jp.elearningjp.dto.request.curriculum.QuizSubmitRequest;
 import com.jp.elearningjp.dto.response.curriculum.LessonQuizResponse;
@@ -79,6 +80,7 @@ class QuizServiceTest {
     @Mock SrsReviewLogRepository srsReviewLogRepository;
     @Mock LessonProgressRecorder lessonProgressRecorder;
 
+    @Mock PublishedLessonResolver publishedLessonResolver;
     @InjectMocks QuizService service;
 
     private Course course;
@@ -993,6 +995,9 @@ class QuizServiceTest {
                     .thenReturn(List.of(q1a));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(2L))
                     .thenReturn(List.of(q2a));
+            // Câu điền từ không có lựa chọn (chấm qua dạng trung lập vẫn nạp options của mọi câu)
+            when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(3L))
+                    .thenReturn(List.of());
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(4L))
                     .thenReturn(List.of(q4o1));
             when(lessonProgressRecorder.lockOrCreate(7L, 10L))

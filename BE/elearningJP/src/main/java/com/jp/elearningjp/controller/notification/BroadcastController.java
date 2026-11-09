@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping(ApiPaths.API_V1 + ApiPaths.AdminBroadcast.BASE)
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Tag(name = "Admin Broadcast", description = "Gửi thông báo hàng loạt (Quản trị viên: mọi đối tượng; Giáo viên: học viên khóa của mình)")
+@Tag(name = "Admin Broadcast", description = "Gửi thông báo hàng loạt (Quản trị viên: mọi đối tượng; Giáo viên: học viên khóa được giao)")
 @SecurityRequirement(name = "bearerAuth")
 @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
 public class BroadcastController {
@@ -46,7 +46,7 @@ public class BroadcastController {
     @PostMapping
     @Operation(summary = "[Admin/Teacher] Gửi thông báo hàng loạt",
             description = "Tạo thông báo cho mọi tài khoản đang hoạt động thuộc đối tượng đã chọn (không gồm người gửi) và đẩy realtime. "
-                    + "Giáo viên chỉ được gửi cho học viên khóa học do mình tạo.")
+                    + "Giáo viên chỉ được gửi cho học viên khóa học được giao.")
     public ApiResponse<BroadcastResponse> send(@Valid @RequestBody BroadcastRequest request) {
         BroadcastResponse result = broadcastService.send(request);
         return ApiResponse.<BroadcastResponse>builder()

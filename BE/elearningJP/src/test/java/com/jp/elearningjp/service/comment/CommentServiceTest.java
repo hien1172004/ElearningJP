@@ -323,8 +323,8 @@ class CommentServiceTest {
     }
 
     @Test
-    void moderatorFlag_teacherOwningCourse_true() {
-        course.setCreatedBy(viewer);
+    void moderatorFlag_teacherAssignedToCourse_true() {
+        when(courseAccessGuard.isAssignedTeacher(course, VIEWER_ID)).thenReturn(true);
         stubSingleCommentPageWithReply();
 
         assertThat(service.getCommentsByTarget(CommentTargetType.LESSON, LESSON_ID, 1, 5).getItems())
@@ -336,7 +336,6 @@ class CommentServiceTest {
     @Test
     void moderatorFlag_admin_true() {
         when(currentUserService.isAdmin()).thenReturn(true);
-        course.setCreatedBy(author);
         stubSingleCommentPageWithReply();
 
         assertThat(service.getCommentDetail(COMMENT_ID).getComment().getModerator()).isTrue();
@@ -345,8 +344,8 @@ class CommentServiceTest {
     }
 
     @Test
-    void moderatorFlag_otherUserNotOwningCourse_false() {
-        course.setCreatedBy(author);
+    void moderatorFlag_teacherNotAssignedToCourse_false() {
+        when(courseAccessGuard.isAssignedTeacher(course, VIEWER_ID)).thenReturn(false);
         stubSingleCommentPageWithReply();
 
         assertThat(service.getCommentsByTarget(CommentTargetType.LESSON, LESSON_ID, 1, 5).getItems())

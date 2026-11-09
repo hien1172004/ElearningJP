@@ -49,6 +49,7 @@ public class LessonSectionMapper {
 
         LessonSectionResponse.LessonSectionResponseBuilder builder = LessonSectionResponse.builder()
                 .id(section.getId())
+                .version(section.getVersion())
                 .sectionType(section.getSectionType())
                 .title(section.getTitle())
                 .orderIndex(section.getOrderIndex());
@@ -129,6 +130,7 @@ public class LessonSectionMapper {
 
         LessonKanjiItemResponse.LessonKanjiItemResponseBuilder builder = LessonKanjiItemResponse.builder()
                 .id(item.getId())
+                .version(item.getVersion())
                 .orderIndex(item.getOrderIndex())
                 .note(item.getNote())
                 .characterId(c.getId())
@@ -260,6 +262,7 @@ public class LessonSectionMapper {
 
         LessonVocabularyItemResponse.LessonVocabularyItemResponseBuilder builder = LessonVocabularyItemResponse.builder()
                 .id(item.getId())
+                .version(item.getVersion())
                 .orderIndex(item.getOrderIndex())
                 .note(item.getNote())
                 .vocabId(v.getId())
@@ -328,6 +331,7 @@ public class LessonSectionMapper {
 
         LessonGrammarItemResponse.LessonGrammarItemResponseBuilder builder = LessonGrammarItemResponse.builder()
                 .id(item.getId())
+                .version(item.getVersion())
                 .orderIndex(item.getOrderIndex())
                 .note(item.getNote())
                 .grammarId(g.getId())

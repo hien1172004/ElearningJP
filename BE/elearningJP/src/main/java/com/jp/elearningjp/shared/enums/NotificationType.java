@@ -14,5 +14,9 @@ public enum NotificationType {
     /** Thông báo hàng loạt do ADMIN / TEACHER gửi (notification_broadcasts). */
     ANNOUNCEMENT,
     /** Khóa học đã đăng ký được chuyển giữa bản nháp và xuất bản. */
-    COURSE_STATUS_CHANGED
+    COURSE_STATUS_CHANGED,
+    /** Giáo viên được ADMIN giao hoặc gỡ khỏi một khóa học. */
+    COURSE_TEACHER_ASSIGNMENT,
+    /** Luồng duyệt khóa học: gửi / rút / duyệt / từ chối / xuất bản / chuyển nháp (data_json.action). */
+    COURSE_REVIEW
 }

@@ -20,4 +20,8 @@ public class ExamSummaryResponse {
     Integer overallPassingScore;
     Integer totalQuestions;
     boolean published;
+    /** Đề gắn khóa: phiên bản đã duyệt (null = chưa được duyệt lần nào, chưa hiện được cho học viên). */
+    Long publishedVersionId;
+    /** Đề gắn khóa đang chờ gỡ (bị xóa thật khi khóa được duyệt lần tới). */
+    boolean pendingRemoval;
 }

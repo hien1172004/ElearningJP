@@ -25,6 +25,10 @@ export type NotificationType =
   | 'ANNOUNCEMENT'
   /** Khóa học đã đăng ký được chuyển giữa bản nháp và xuất bản */
   | 'COURSE_STATUS_CHANGED'
+  /** Giáo viên được ADMIN giao hoặc gỡ khỏi một khóa học */
+  | 'COURSE_TEACHER_ASSIGNMENT'
+  /** Luồng duyệt khóa học: gửi / rút / duyệt / từ chối / xuất bản / chuyển nháp (dataJson.action) */
+  | 'COURSE_REVIEW'
 
 /** Dữ liệu đính kèm — dùng để điều hướng khi click (vd reply bình luận). */
 export interface NotificationData {

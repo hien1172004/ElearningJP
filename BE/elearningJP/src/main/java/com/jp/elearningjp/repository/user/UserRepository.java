@@ -4,6 +4,7 @@ import com.jp.elearningjp.entity.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -26,6 +27,14 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     List<Long> findIdsNotEligibleForNotifications();
 
     /** Batch lấy (userId, roleName) cho một trang user — tránh N+1 khi map danh sách admin. */
+    /** ID người dùng đang hoạt động có role {@code roleName} (vd: gửi thông báo cho mọi ADMIN). */
+    @Query("""
+            SELECT DISTINCT u.id FROM User u JOIN u.roles r
+            WHERE r.name = :roleName AND u.deleted = false
+              AND u.status = com.jp.elearningjp.shared.enums.UserStatus.ACTIVE
+            """)
+    List<Long> findActiveUserIdsByRole(@Param("roleName") String roleName);
+
     @Query("SELECT u.id, r.name FROM User u JOIN u.roles r WHERE u.id IN :ids")
     List<Object[]> findRoleNamesByUserIds(Collection<Long> ids);
 

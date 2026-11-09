@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.shared.util.VersionCheck;
 import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.QuizAnswerItem;
 import com.jp.elearningjp.dto.request.curriculum.QuizSubmitRequest;
@@ -27,6 +28,8 @@ import com.jp.elearningjp.dto.request.curriculum.QuizOptionRequest;
 import com.jp.elearningjp.dto.request.curriculum.QuizQuestionCreateRequest;
 import com.jp.elearningjp.entity.srs.SrsItem;
 import com.jp.elearningjp.entity.srs.SrsReviewLog;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
+import com.jp.elearningjp.service.curriculum.snapshot.QuizSnapshot;
 import jakarta.persistence.EntityManager;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -77,6 +80,7 @@ public class QuizService {
     SrsReviewLogRepository srsReviewLogRepository;
     LessonProgressRecorder lessonProgressRecorder;
     EntityManager entityManager;
+    PublishedLessonResolver publishedLessonResolver;
 
     // =========================================================
     // READ
@@ -85,11 +89,21 @@ public class QuizService {
     /**
      * Lấy đề thi trắc nghiệm của bài học.
      * BẢO MẬT: cùng quyền xem nội dung bài học (học viên đã đăng ký, admin, hoặc giáo viên
-     * chủ khóa xem trước bài của mình), và ẨN HOÀN TOÀN isCorrect.
+     * giáo viên được giao xem trước bài của mình), và ẨN HOÀN TOÀN isCorrect.
      * Nộp bài vẫn bắt buộc đã đăng ký (xem {@link #submitQuiz}).
      */
     @Transactional(readOnly = true)
     public LessonQuizResponse getLessonQuiz(Long lessonId) {
+        // Học viên của khóa đã xuất bản: đề theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forReading(lessonId);
+        if (published.isPresent()) {
+            QuizSnapshot snapshot = published.get().snapshot().getQuiz();
+            if (snapshot == null) {
+                throw new AppException(ErrorCode.QUIZ_NOT_FOUND);
+            }
+            return toStudentQuizResponse(snapshot, lessonId);
+        }
+
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         courseAccessGuard.requireLessonContentAccess(lesson);
@@ -133,7 +147,7 @@ public class QuizService {
      *   <li>Explanation của mỗi câu hỏi (để teacher review).</li>
      * </ul>
      *
-     * <p><b>Quyền:</b> Admin hoặc Teacher (chỉ trong course do mình tạo).
+     * <p><b>Quyền:</b> Admin hoặc Teacher (chỉ trong course được giao).
      * Nếu teacher khác cố truy cập → 403 {@code FORBIDDEN_LESSON_ACCESS}.</p>
      */
     @Transactional(readOnly = true)
@@ -141,7 +155,7 @@ public class QuizService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         // Check quyền teacher-owner hoặc admin
-        courseAccessGuard.requireOwnerOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireAssignedOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
@@ -159,6 +173,16 @@ public class QuizService {
      */
     @Transactional
     public QuizSubmitResponse submitQuiz(Long lessonId, QuizSubmitRequest request) {
+        // Học viên của khóa đã xuất bản: chấm theo đáp án của bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forLearning(lessonId);
+        if (published.isPresent()) {
+            QuizSnapshot snapshot = published.get().snapshot().getQuiz();
+            if (snapshot == null) {
+                throw new AppException(ErrorCode.QUIZ_NOT_FOUND);
+            }
+            return gradeQuiz(currentUserService.getCurrentUser(), published.get().lesson(), snapshot, Map.of(), request);
+        }
+
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         courseAccessGuard.requireEnrolledInLesson(lesson);
@@ -167,7 +191,85 @@ public class QuizService {
         Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
-        return gradeQuiz(currentUser, lesson, quiz, request);
+        List<QuizQuestion> questions = questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId());
+        Map<Long, QuizQuestion> liveQuestions = questions.stream()
+                .collect(Collectors.toMap(QuizQuestion::getId, q -> q, (a, b) -> a));
+        return gradeQuiz(currentUser, lesson, toSnapshot(quiz, questions), liveQuestions, request);
+    }
+
+    // =========================================================
+    // SNAPSHOT
+    // =========================================================
+
+    /** Quiz (kèm đáp án) ở dạng trung lập để lưu vào bản xuất bản. Không kiểm tra quyền. */
+    public QuizSnapshot toSnapshot(Quiz quiz) {
+        return toSnapshot(quiz, questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId()));
+    }
+
+    private QuizSnapshot toSnapshot(Quiz quiz, List<QuizQuestion> questions) {
+        List<QuizSnapshot.Question> snapshotQuestions = questions.stream()
+                .filter(q -> !q.isDeleted())
+                .map(q -> QuizSnapshot.Question.builder()
+                        .id(q.getId())
+                        .version(q.getVersion())
+                        .questionText(q.getQuestionText())
+                        .orderIndex(q.getOrderIndex())
+                        .questionType(q.getQuestionType())
+                        .explanation(q.getExplanation())
+                        .matchingData(q.getMatchingData())
+                        .correctTextAnswer(q.getCorrectTextAnswer())
+                        .vocabId(q.getVocab() != null ? q.getVocab().getId() : null)
+                        .characterId(q.getCharacter() != null ? q.getCharacter().getId() : null)
+                        .options(new ArrayList<>(optionRepository
+                                .findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(q.getId()).stream()
+                                .filter(o -> !o.isDeleted())
+                                .map(o -> QuizSnapshot.Option.builder()
+                                        .id(o.getId())
+                                        .optionKey(o.getOptionKey())
+                                        .optionText(o.getOptionText())
+                                        .correct(o.isCorrect())
+                                        .matchKey(o.getMatchKey())
+                                        .build())
+                                .toList()))
+                        .build())
+                .toList();
+        return QuizSnapshot.builder()
+                .quizId(quiz.getId())
+                .title(quiz.getTitle())
+                .description(quiz.getDescription())
+                .passingScorePercent(quiz.getPassingScorePercent())
+                .questions(new ArrayList<>(snapshotQuestions))
+                .build();
+    }
+
+    /** Đề cho học viên từ snapshot — ẨN HOÀN TOÀN đáp án (cùng dạng {@link #buildLessonQuizResponse}). */
+    private LessonQuizResponse toStudentQuizResponse(QuizSnapshot quiz, Long lessonId) {
+        List<QuizQuestionResponse> questions = quiz.getQuestions().stream()
+                .map(q -> QuizQuestionResponse.builder()
+                        .id(q.getId())
+                        .version(q.getVersion())
+                        .questionText(q.getQuestionText())
+                        .orderIndex(q.getOrderIndex())
+                        .questionType(q.getQuestionType())
+                        .matchingData(q.getMatchingData())
+                        .options(q.getOptions().stream()
+                                .map(o -> QuizOptionResponse.builder()
+                                        .id(o.getId())
+                                        .optionKey(o.getOptionKey())
+                                        .optionText(o.getOptionText())
+                                        .build())
+                                .toList())
+                        .build())
+                .toList();
+        return LessonQuizResponse.builder()
+                .quizId(quiz.getQuizId())
+                .lessonId(lessonId)
+                .title(quiz.getTitle())
+                .description(quiz.getDescription())
+                .passingScorePercent(quiz.getPassingScorePercent())
+                .totalQuestions(questions.size())
+                .questions(questions)
+                .build();
     }
 
     // =========================================================
@@ -175,7 +277,7 @@ public class QuizService {
     // =========================================================
 
     /**
-     * Admin hoặc Teacher (chỉ trong course do mình tạo) thêm 1 câu hỏi vào quiz
+     * Admin hoặc Teacher (chỉ trong course được giao) thêm 1 câu hỏi vào quiz
      * của lesson. Nếu lesson chưa có quiz thì tự tạo mới với title mặc định và
      * passingScorePercent = 80%.
      */
@@ -183,7 +285,7 @@ public class QuizService {
     public QuizQuestionResponse addQuestionToLesson(Long lessonId, QuizQuestionCreateRequest request) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-        courseAccessGuard.requireOwnerOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireContentEditable(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
                 .orElseGet(() -> {
@@ -268,6 +370,7 @@ public class QuizService {
 
         return QuizQuestionResponse.builder()
                 .id(savedQuestion.getId())
+                .version(savedQuestion.getVersion())
                 .questionText(savedQuestion.getQuestionText())
                 .orderIndex(savedQuestion.getOrderIndex())
                 .questionType(savedQuestion.getQuestionType())
@@ -294,14 +397,15 @@ public class QuizService {
      *       để xoá liên kết SRS; truyền số để đổi sang vocab/kanji khác.</li>
      * </ul>
      *
-     * <p>Quyền: Admin hoặc Teacher (chỉ trong course do mình tạo).</p>
+     * <p>Quyền: Admin hoặc Teacher (chỉ trong course được giao).</p>
      */
     @Transactional
     public QuizQuestionResponse updateQuestion(Long questionId, QuizQuestionUpdateRequest request) {
         QuizQuestion question = questionRepository.findByIdWithOptions(questionId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
-        // Check quyền: admin pass, teacher chỉ update được câu hỏi thuộc course do mình tạo
-        courseAccessGuard.requireOwnerOrAdmin(
+        VersionCheck.requireVersion(question, request.getVersion());
+        // Check quyền: admin pass, teacher chỉ update được câu hỏi thuộc course được giao
+        courseAccessGuard.requireContentEditable(
                 question.getQuiz().getLesson().getCourse(),
                 ErrorCode.FORBIDDEN_LESSON_ACCESS
         );
@@ -406,7 +510,9 @@ public class QuizService {
             }
         }
 
+        // flush để response mang version mới
         QuizQuestion saved = questionRepository.save(question);
+        questionRepository.flush();
 
         log.info("[QUIZ] Updated question id={} (quiz id={}, lesson id={})",
                 questionId, quizId, question.getQuiz().getLesson().getId());
@@ -423,6 +529,7 @@ public class QuizService {
 
         return QuizQuestionResponse.builder()
                 .id(saved.getId())
+                .version(saved.getVersion())
                 .questionText(saved.getQuestionText())
                 .orderIndex(saved.getOrderIndex())
                 .questionType(saved.getQuestionType())
@@ -436,15 +543,15 @@ public class QuizService {
     // =========================================================
 
     /**
-     * Admin hoặc Teacher (chỉ trong course do mình tạo) xoá mềm 1 câu hỏi.
+     * Admin hoặc Teacher (chỉ trong course được giao) xoá mềm 1 câu hỏi.
      * Idempotent — gọi lại với câu đã xoá sẽ ném {@code QUESTION_NOT_FOUND}.
      */
     @Transactional
     public void deleteQuestion(Long questionId) {
         QuizQuestion question = questionRepository.findByIdAndDeletedFalse(questionId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
-        // Check quyền: admin pass, teacher chỉ xoá được câu hỏi thuộc course do mình tạo
-        courseAccessGuard.requireOwnerOrAdmin(
+        // Check quyền: admin pass, teacher chỉ xoá được câu hỏi thuộc course được giao
+        courseAccessGuard.requireContentEditable(
                 question.getQuiz().getLesson().getCourse(),
                 ErrorCode.FORBIDDEN_LESSON_ACCESS
         );
@@ -477,7 +584,7 @@ public class QuizService {
      * <p>Quy tắc: list {@code questionIds} phải chứa <b>đúng tất cả</b> câu hỏi active
      * của quiz hiện tại (không thiếu, không thừa, không trùng).</p>
      *
-     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course do mình tạo).</p>
+     * <p>Quyền: Admin hoặc Teacher (chỉ reorder trong course được giao).</p>
      *
      * @param lessonId lesson cần reorder câu hỏi
      * @param request  danh sách question ID theo thứ tự MỚI
@@ -488,8 +595,8 @@ public class QuizService {
         Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
-        // Check quyền: admin pass, teacher chỉ reorder câu hỏi trong course do mình tạo
-        courseAccessGuard.requireOwnerOrAdmin(
+        // Check quyền: admin pass, teacher chỉ reorder câu hỏi trong course được giao
+        courseAccessGuard.requireContentEditable(
                 quiz.getLesson().getCourse(),
                 ErrorCode.FORBIDDEN_LESSON_ACCESS
         );
@@ -510,6 +617,7 @@ public class QuizService {
         if (!requestedIds.equals(currentIds)) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_MISMATCH);
         }
+        VersionCheck.requireVersions(currentQuestions, request.getVersions());
 
         // 1) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
         currentQuestions = OrderIndexResolver.bulkReorder(
@@ -531,6 +639,7 @@ public class QuizService {
         return currentQuestions.stream()
                 .map(q -> QuizQuestionResponse.builder()
                         .id(q.getId())
+                        .version(q.getVersion())
                         .questionText(q.getQuestionText())
                         .orderIndex(q.getOrderIndex())
                         .questionType(q.getQuestionType())
@@ -696,6 +805,7 @@ public class QuizService {
                             .toList();
                     return QuizQuestionResponse.builder()
                             .id(q.getId())
+                            .version(q.getVersion())
                             .questionText(q.getQuestionText())
                             .orderIndex(q.getOrderIndex())
                             .questionType(q.getQuestionType())
@@ -820,8 +930,15 @@ public class QuizService {
     /**
      * Chấm điểm 1 quiz (tách ra để dùng chung cho cả luồng theo lesson / theo section).
      */
-    private QuizSubmitResponse gradeQuiz(User currentUser, Lesson lesson, Quiz quiz, QuizSubmitRequest request) {
-        List<QuizQuestion> questions = questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId());
+    /**
+     * Chấm điểm trên quiz dạng trung lập — bản đang soạn hoặc bản xuất bản.
+     *
+     * @param liveQuestions entity câu hỏi theo id khi chấm bản đang soạn (để lấy liên kết SRS);
+     *                      rỗng khi chấm theo snapshot (liên kết SRS lấy theo id trong snapshot).
+     */
+    private QuizSubmitResponse gradeQuiz(User currentUser, Lesson lesson, QuizSnapshot quiz,
+                                         Map<Long, QuizQuestion> liveQuestions, QuizSubmitRequest request) {
+        List<QuizSnapshot.Question> questions = quiz.getQuestions();
         int totalQuestions = questions.size();
         if (totalQuestions == 0) {
             throw new AppException(ErrorCode.QUIZ_NOT_FOUND);
@@ -836,7 +953,7 @@ public class QuizService {
         int correctCount = 0;
         List<QuizDetailItemResponse> details = new ArrayList<>();
 
-        for (QuizQuestion question : questions) {
+        for (QuizSnapshot.Question question : questions) {
             QuizAnswerItem answerItem = userAnswers.get(question.getId());
             Integer responseTimeMs = answerItem != null ? answerItem.getResponseTimeMs() : null;
             boolean isCorrect = false;
@@ -859,7 +976,7 @@ public class QuizService {
                         .isCorrect(isCorrect);
 
             } else if (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING) {
-                List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(question.getId());
+                List<QuizSnapshot.Option> options = question.getOptions();
                 Map<String, String> userPairs = (answerItem != null && answerItem.getMatchingAnswers() != null)
                         ? answerItem.getMatchingAnswers()
                         : Collections.emptyMap();
@@ -872,7 +989,7 @@ public class QuizService {
                 Map<String, String> correctPairs = new TreeMap<>(MATCHING_KEY_ORDER);
                 int validOptionsCount = 0;
                 int matchedCorrectCount = 0;
-                for (QuizOption opt : options) {
+                for (QuizSnapshot.Option opt : options) {
                     if (opt.getMatchKey() != null && !opt.getMatchKey().isBlank()) {
                         validOptionsCount++;
                         correctPairs.put(opt.getMatchKey(), opt.getOptionText());
@@ -910,14 +1027,14 @@ public class QuizService {
 
             } else {
                 // MULTIPLE_CHOICE
-                List<QuizOption> options = optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(question.getId());
-                QuizOption correctOption = options.stream()
-                        .filter(QuizOption::isCorrect)
+                List<QuizSnapshot.Option> options = question.getOptions();
+                QuizSnapshot.Option correctOption = options.stream()
+                        .filter(QuizSnapshot.Option::isCorrect)
                         .findFirst()
                         .orElse(null);
 
                 Long selectedOptionId = answerItem != null ? answerItem.getSelectedOptionId() : null;
-                QuizOption selectedOption = options.stream()
+                QuizSnapshot.Option selectedOption = options.stream()
                         .filter(opt -> opt.getId().equals(selectedOptionId))
                         .findFirst()
                         .orElse(null);
@@ -942,7 +1059,14 @@ public class QuizService {
             Double accuracyForSrs = (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING)
                     ? detailBuilder.build().getAccuracyPercent()
                     : (isCorrect ? 100.0 : 0.0);
-            syncQuestionResultToSrs(currentUser, question, isCorrect, accuracyForSrs, responseTimeMs);
+            QuizQuestion live = liveQuestions.get(question.getId());
+            Vocabulary vocab = live != null ? live.getVocab()
+                    : question.getVocabId() != null ? entityManager.getReference(Vocabulary.class, question.getVocabId()) : null;
+            WritingCharacter character = live != null ? live.getCharacter()
+                    : question.getCharacterId() != null
+                    ? entityManager.getReference(WritingCharacter.class, question.getCharacterId()) : null;
+            syncQuestionResultToSrs(currentUser, question.getQuestionType(), vocab, character,
+                    isCorrect, accuracyForSrs, responseTimeMs);
 
             details.add(detailBuilder.build());
         }
@@ -996,25 +1120,26 @@ public class QuizService {
     // SRS INTEGRATION
     // =========================================================
 
-    private void syncQuestionResultToSrs(User user, QuizQuestion question, boolean isCorrect,
+    private void syncQuestionResultToSrs(User user, QuizQuestionType questionType, Vocabulary vocab,
+                                         WritingCharacter character, boolean isCorrect,
                                          Double accuracyPercent, Integer responseTimeMs) {
-        if (question.getVocab() == null && question.getCharacter() == null) {
+        if (vocab == null && character == null) {
             return;
         }
 
         SrsRating rating;
-        if (question.getQuestionType() == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING) {
+        if (questionType == com.jp.elearningjp.shared.enums.QuizQuestionType.MATCHING) {
             rating = determineMatchingRating(accuracyPercent != null ? accuracyPercent : (isCorrect ? 100.0 : 0.0), responseTimeMs);
         } else {
             rating = determineRating(isCorrect, responseTimeMs);
         }
 
         SrsItem srsItem = null;
-        if (question.getVocab() != null) {
-            srsItem = srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(user.getId(), question.getVocab().getId())
+        if (vocab != null) {
+            srsItem = srsItemRepository.findByUserIdAndVocabIdAndDeletedFalse(user.getId(), vocab.getId())
                     .orElseGet(() -> SrsItem.builder()
                             .user(user)
-                            .vocab(question.getVocab())
+                            .vocab(vocab)
                             .cardType(SrsCardType.STANDARD)
                             .easeFactor(new BigDecimal("2.50"))
                             .intervalDays(0)
@@ -1023,11 +1148,11 @@ public class QuizService {
                             .status(SrsStatus.NEW)
                             .nextReviewAt(Instant.now())
                             .build());
-        } else if (question.getCharacter() != null) {
-            srsItem = srsItemRepository.findByUserIdAndCharacterIdAndDeletedFalse(user.getId(), question.getCharacter().getId())
+        } else if (character != null) {
+            srsItem = srsItemRepository.findByUserIdAndCharacterIdAndDeletedFalse(user.getId(), character.getId())
                     .orElseGet(() -> SrsItem.builder()
                             .user(user)
-                            .character(question.getCharacter())
+                            .character(character)
                             .cardType(SrsCardType.STANDARD)
                             .easeFactor(new BigDecimal("2.50"))
                             .intervalDays(0)

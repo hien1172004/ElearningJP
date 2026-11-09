@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
+import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { ItemPreviewModal } from './ItemPreviewModal'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -200,6 +201,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
   sectionId,
   items,
 }) => {
+  // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
+  const locked = useCourseEditLocked()
   const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [isOpen, setIsOpen] = useState(false)
@@ -515,7 +518,8 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
           relatedVocabulary:
             relatedDirty || hasNewVocab ? relatedPayload : undefined,
         }
-        await updateKanjiItem.mutateAsync({ id: editing.id, payload })
+        // version đã đọc: người khác vừa sửa mục này → BE trả 409 thay vì ghi đè
+        await updateKanjiItem.mutateAsync({ id: editing.id, payload: { ...payload, version: editing.version } })
       } else {
         const payload: LessonKanjiItemCreateRequest = {
           // Nhánh tạo mới đã kiểm tra bằng `schema` (bắt buộc character)
@@ -556,6 +560,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         </h4>
         <button
           type="button"
+          disabled={locked}
           onClick={openCreate}
           className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition"
         >
@@ -616,6 +621,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
               </button> */}
               <button
                 type="button"
+                disabled={locked}
                 onClick={() => openEdit(item)}
                 className="p-1 text-gray-400 hover:text-indigo-600 rounded transition"
                 title="Sửa"
@@ -624,6 +630,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
               </button>
               <button
                 type="button"
+                disabled={locked}
                 onClick={() => deleteKanjiItem.mutate(item.id)}
                 className="p-1 text-gray-400 hover:text-rose-600 rounded transition"
                 title="Xoá"

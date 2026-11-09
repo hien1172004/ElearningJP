@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum.section;
 
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import com.jp.elearningjp.shared.util.CourseAccessGuard;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemCreateRequest;
 import com.jp.elearningjp.dto.request.curriculum.LessonKanjiItemUpdateRequest;
@@ -65,6 +66,7 @@ class KanjiSectionItemServiceTest {
     @Mock DictionaryService dictionaryService;
     @Mock CurrentUserService currentUserService;
 
+    @Mock PublishedLessonResolver publishedLessonResolver;
     @InjectMocks KanjiSectionItemService service;
 
     private LessonSection section;

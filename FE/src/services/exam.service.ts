@@ -218,8 +218,14 @@ export const examService = {
     await axiosClient.delete(`/admin/exams/${examId}/passages/${passageId}`)
   },
 
-  deleteExam: async (id: number): Promise<void> => {
-    await axiosClient.delete(`/admin/exams/${id}`)
+  /** Đề gắn khóa đã duyệt chỉ được đánh dấu chờ gỡ — message của BE cho biết kết quả. */
+  deleteExam: async (id: number): Promise<ApiResponse<void>> => {
+    return axiosClient.delete(`/admin/exams/${id}`)
+  },
+
+  /** Hủy yêu cầu gỡ đề gắn khóa (trước khi khóa được duyệt). */
+  cancelExamRemoval: async (id: number): Promise<ApiResponse<void>> => {
+    return axiosClient.post(`/admin/exams/${id}/cancel-removal`)
   },
 
   getAllAdminExams: async (params?: {

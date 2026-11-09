@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { Button, Tooltip } from 'antd'
 import { Download, FileSpreadsheet } from 'lucide-react'
 import type { LessonSection } from '@/types'
@@ -32,6 +33,8 @@ const itemCount = (section: LessonSection): number | undefined =>
 
 /** Nút "Import Excel" (modal import đúng mẫu của loại section) + "Xuất Excel" (cùng định dạng mẫu). */
 export const SectionImportButton: React.FC<SectionImportButtonProps> = ({ lessonId, section }) => {
+  // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
+  const locked = useCourseEditLocked()
   const [open, setOpen] = useState(false)
   const modalProps = { open, onClose: () => setOpen(false), lessonId, sectionId: section.id }
   const exportConfig = EXPORT_CONFIG[section.sectionType]
@@ -48,6 +51,7 @@ export const SectionImportButton: React.FC<SectionImportButtonProps> = ({ lesson
       <Button
         size="small"
         icon={<FileSpreadsheet className="h-4 w-4 text-emerald-600" />}
+        disabled={locked}
         onClick={() => setOpen(true)}
       >
         Import Excel

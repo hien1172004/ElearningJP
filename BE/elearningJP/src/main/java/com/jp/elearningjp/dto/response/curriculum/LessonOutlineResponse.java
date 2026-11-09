@@ -19,6 +19,8 @@ import java.math.BigDecimal;
 public class LessonOutlineResponse {
 
     Long id;
+    /** Version để gửi lại khi sửa bài (optimistic locking). */
+    Long version;
     String title;
     Integer orderIndex;
     boolean hasQuiz;

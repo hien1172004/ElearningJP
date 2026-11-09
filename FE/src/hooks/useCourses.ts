@@ -9,6 +9,8 @@ interface UseCoursesParams {
   size?: number
   /** Nếu true -> lấy tất cả cho admin/teacher. */
   admin?: boolean
+  /** (admin) Chỉ khóa có thay đổi chưa duyệt. */
+  pendingChanges?: boolean
   [key: string]: unknown
 }
 
@@ -22,6 +24,7 @@ export function useCourses(params: UseCoursesParams = {}) {
         ? await courseService.getAllCoursesAdmin({
             page: params.page ?? 1,
             size: params.size ?? 10,
+            pendingChanges: params.pendingChanges || undefined,
           })
         : await courseService.getCourses({
             jlptLevel: params.jlptLevel,

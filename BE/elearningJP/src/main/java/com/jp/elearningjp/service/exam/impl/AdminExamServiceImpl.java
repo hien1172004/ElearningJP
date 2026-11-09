@@ -16,7 +16,10 @@ import com.jp.elearningjp.repository.exam.*;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.exam.AdminExamService;
 import com.jp.elearningjp.shared.enums.*;
+import com.jp.elearningjp.shared.util.CourseAccessGuard;
+import com.jp.elearningjp.shared.util.CurrentUserService;
 import com.jp.elearningjp.shared.util.HtmlSanitizerUtil;
+import com.jp.elearningjp.shared.util.VersionCheck;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,44 @@ public class AdminExamServiceImpl implements AdminExamService {
     private final ExamAttemptRepository examAttemptRepository;
     private final StudentAnswerRepository studentAnswerRepository;
     private final ExamMapper examMapper;
+    private final CourseAccessGuard courseAccessGuard;
+    private final CurrentUserService currentUserService;
+
+    /**
+     * Quyền quản lý đề thi: đề gắn với khóa học chỉ ADMIN hoặc giáo viên được giao khóa đó;
+     * đề độc lập (không gắn khóa) giữ nguyên quyền ADMIN/TEACHER như trước.
+     */
+    private void requireManageAccess(Long examId) {
+        Exam exam = examRepository.findByIdAndDeletedFalse(examId)
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+        if (exam.getCourse() != null) {
+            courseAccessGuard.requireAssignedOrAdmin(exam.getCourse());
+        }
+    }
+
+    /**
+     * Quyền SỬA đề: như {@link #requireManageAccess} và với đề gắn khóa thì khóa đang chờ duyệt
+     * sẽ khóa sửa với giáo viên (đề thuộc nội dung khóa, theo cùng luồng duyệt).
+     */
+    private void requireEditAccess(Long examId) {
+        Exam exam = examRepository.findByIdAndDeletedFalse(examId)
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+        if (exam.getCourse() != null) {
+            courseAccessGuard.requireContentEditable(exam.getCourse());
+        }
+    }
+
+    /**
+     * Xuất bản / thu hồi: đề gắn với khóa học chỉ ADMIN quyết định (giống khóa học);
+     * đề độc lập giữ nguyên quyền ADMIN/TEACHER.
+     */
+    private void requirePublishAccess(Long examId) {
+        Exam exam = examRepository.findByIdAndDeletedFalse(examId)
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+        if (exam.getCourse() != null && !currentUserService.isAdmin()) {
+            throw new AppException(ErrorCode.FORBIDDEN_COURSE_ACCESS);
+        }
+    }
 
     @Override
     public Long importExam(ImportExamRequest request, Long currentUserId) {
@@ -63,7 +104,10 @@ public class AdminExamServiceImpl implements AdminExamService {
 
         Course course = null;
         if (request.getCourseId() != null) {
-            course = courseRepository.findById(request.getCourseId()).orElse(null);
+            course = courseRepository.findByIdAndDeletedFalse(request.getCourseId())
+                    .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+            // Đề gắn với khóa: chỉ ADMIN hoặc giáo viên được giao khóa đó mới tạo được (khóa khi chờ duyệt)
+            courseAccessGuard.requireContentEditable(course);
         }
 
         Exam exam = Exam.builder()
@@ -276,6 +320,7 @@ public class AdminExamServiceImpl implements AdminExamService {
     @Override
     @Transactional
     public AdminExamPreviewResponse getExamPreview(Long examId) {
+        requireManageAccess(examId);
         Exam exam = examRepository.findByIdWithSectionsAndScoreGroups(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 
@@ -357,8 +402,10 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public void updateQuestionInline(Long examId, Long questionId, UpdateQuestionInlineRequest request) {
+        requireEditAccess(examId);
         Question question = questionRepository.findByIdWithOptionsAndPassage(questionId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_QUESTION_NOT_FOUND));
+        VersionCheck.requireVersion(question, request.getVersion());
 
         if (request.getQuestionText() != null) {
             question.setQuestionText(HtmlSanitizerUtil.sanitize(request.getQuestionText()));
@@ -464,6 +511,7 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public Long addQuestion(Long examId, Long sectionId, CreateQuestionRequest request, Long currentUserId) {
+        requireEditAccess(examId);
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 
@@ -611,6 +659,7 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public void deleteQuestion(Long examId, Long questionId) {
+        requireEditAccess(examId);
         validateNoInProgressAttempts(examId, "xóa câu hỏi (Question ID: " + questionId + ")");
 
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
@@ -639,6 +688,7 @@ public class AdminExamServiceImpl implements AdminExamService {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void clearSectionQuestions(Long examId, Long sectionId) {
+        requireEditAccess(examId);
         validateNoInProgressAttempts(examId, "xóa toàn bộ câu hỏi Section (Section ID: " + sectionId + ")");
 
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
@@ -669,6 +719,7 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public void updatePassage(Long examId, Long passageId, com.jp.elearningjp.dto.request.exam.UpdatePassageRequest request) {
+        requireEditAccess(examId);
         ReadingPassage passage = readingPassageRepository.findById(passageId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_QUESTION_NOT_FOUND));
 
@@ -683,6 +734,7 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public void deletePassage(Long examId, Long passageId) {
+        requireEditAccess(examId);
         validateNoInProgressAttempts(examId, "xóa bài đọc (Passage ID: " + passageId + ")");
 
         ReadingPassage passage = readingPassageRepository.findById(passageId)
@@ -724,15 +776,21 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public void publishExam(Long examId) {
+        requirePublishAccess(examId);
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 
+        // Đề gắn khóa: nội dung chỉ lên qua lần duyệt khóa; ADMIN chỉ hiện lại bản đã duyệt
+        if (exam.getCourse() != null && exam.getPublishedVersionId() == null) {
+            throw new AppException(ErrorCode.EXAM_NOT_YET_APPROVED);
+        }
         exam.setPublished(true);
         examRepository.save(exam);
     }
 
     @Override
     public void unpublishExam(Long examId) {
+        requirePublishAccess(examId);
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 
@@ -762,18 +820,37 @@ public class AdminExamServiceImpl implements AdminExamService {
     }
 
     @Override
-    public void deleteExam(Long examId) {
-        validateNoInProgressAttempts(examId, "xóa đề thi");
-
+    public boolean deleteExam(Long examId) {
+        requireEditAccess(examId);
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 
+        // Đề gắn khóa đã duyệt: học viên đang thi theo bản đã duyệt → chỉ đánh dấu chờ gỡ,
+        // đề bị xóa thật khi ADMIN duyệt lần tới (ExamSnapshotService.publishCourseExams)
+        if (exam.getCourse() != null && exam.getPublishedVersionId() != null) {
+            exam.setPendingRemoval(true);
+            examRepository.save(exam);
+            return false;
+        }
+
+        validateNoInProgressAttempts(examId, "xóa đề thi");
         exam.softDelete();
+        examRepository.save(exam);
+        return true;
+    }
+
+    @Override
+    public void cancelExamRemoval(Long examId) {
+        requireEditAccess(examId);
+        Exam exam = examRepository.findByIdAndDeletedFalse(examId)
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+        exam.setPendingRemoval(false);
         examRepository.save(exam);
     }
 
     @Override
     public void updateSectionAudio(Long examId, Long sectionId, String audioUrl) {
+        requireEditAccess(examId);
         ExamSection section = examSectionRepository.findById(sectionId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
         section.setAudioUrl(audioUrl);
@@ -793,6 +870,7 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public void saveSnapshot(Long examId, AdminExamPreviewResponse snapshot) {
+        requireEditAccess(examId);
         if (snapshot == null) {
             snapshot = getExamPreview(examId);
         }
@@ -803,6 +881,7 @@ public class AdminExamServiceImpl implements AdminExamService {
     @Override
     @Transactional(readOnly = true)
     public AdminExamPreviewResponse getSnapshot(Long examId) {
+        requireManageAccess(examId);
         AdminExamPreviewResponse snapshot = memorySnapshots.get(examId);
         if (snapshot == null) {
             snapshot = getExamPreview(examId);
@@ -814,6 +893,7 @@ public class AdminExamServiceImpl implements AdminExamService {
     @Override
     @Transactional
     public AdminExamPreviewResponse rollbackExam(Long examId, AdminExamPreviewResponse snapshot) {
+        requireEditAccess(examId);
         if (snapshot == null) {
             snapshot = memorySnapshots.get(examId);
         }
@@ -1006,6 +1086,7 @@ public class AdminExamServiceImpl implements AdminExamService {
     @Override
     @Transactional
     public AdminExamPreviewResponse reorderExamQuestions(Long examId) {
+        requireEditAccess(examId);
         Exam exam = examRepository.findByIdWithSectionsAndScoreGroups(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 
@@ -1103,6 +1184,7 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public Long cloneExam(Long examId, Long currentUserId) {
+        requireEditAccess(examId);
         Exam source = examRepository.findByIdWithSectionsAndScoreGroups(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 
@@ -1205,6 +1287,7 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public int regradeExam(Long examId) {
+        requireManageAccess(examId);
         Exam exam = examRepository.findByIdWithSectionsAndScoreGroups(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
 

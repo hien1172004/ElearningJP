@@ -197,7 +197,7 @@ export const AdminUsersPage: React.FC = () => {
             setStatus(v)
             setPage(1)
           }}
-          options={(['ACTIVE', 'INACTIVE', 'BANNED'] as const).map((s) => ({
+          options={(['ACTIVE', 'BANNED'] as const).map((s) => ({
             value: s,
             label: STATUS_META[s].label,
           }))}

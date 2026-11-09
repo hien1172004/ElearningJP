@@ -6,6 +6,6 @@ public enum BroadcastAudience {
     ALL_USERS,
     /** Tài khoản có role chỉ định (chỉ ADMIN). */
     ROLE,
-    /** Học viên đã đăng ký một khóa học (ADMIN: mọi khóa; TEACHER: khóa của mình). */
+    /** Học viên đã đăng ký một khóa học (ADMIN: mọi khóa; TEACHER: khóa được giao). */
     COURSE_STUDENTS
 }

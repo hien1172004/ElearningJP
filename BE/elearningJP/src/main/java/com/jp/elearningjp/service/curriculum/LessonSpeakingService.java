@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
 import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ public class LessonSpeakingService {
     private final AiMessageRepository messageRepository;
     private final CourseAccessGuard courseAccessGuard;
     private final ObjectMapper objectMapper;
+    private final PublishedLessonResolver publishedLessonResolver;
 
     @Value("${gemini.api-key:}")
     private String geminiApiKey = "";
@@ -73,6 +75,12 @@ public class LessonSpeakingService {
      */
     @Transactional(readOnly = true)
     public List<LessonSpeakingResponse> getSpeakingListForLesson(Long lessonId, Long currentUserId) {
+        // Học viên của khóa đã xuất bản: danh sách theo bản đã duyệt
+        Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forPublicRead(lessonId);
+        if (published.isPresent()) {
+            return withUserProgress(published.get().snapshot().getSpeaking(), currentUserId);
+        }
+
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
@@ -100,7 +108,7 @@ public class LessonSpeakingService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Course course = lesson.getCourse();
-        courseAccessGuard.requireOwnerOrAdmin(course);
+        courseAccessGuard.requireContentEditable(course);
 
         AiScenario scenario = scenarioRepository.findById(request.getScenarioId())
                 .orElseThrow(() -> new AppException(ErrorCode.AI_SCENARIO_NOT_FOUND));
@@ -136,7 +144,7 @@ public class LessonSpeakingService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
-        courseAccessGuard.requireOwnerOrAdmin(lesson.getCourse());
+        courseAccessGuard.requireContentEditable(lesson.getCourse());
 
         if (scenarioId != null) {
             lessonSpeakingRepo.deleteByLessonIdAndScenarioId(lessonId, scenarioId);
@@ -156,7 +164,7 @@ public class LessonSpeakingService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Course course = lesson.getCourse();
-        courseAccessGuard.requireOwnerOrAdmin(course);
+        courseAccessGuard.requireContentEditable(course);
 
         // 1. Trích xuất từ vựng và ngữ pháp bài học
         List<String> vocabList = new ArrayList<>();
@@ -422,35 +430,14 @@ public class LessonSpeakingService {
      * Build DTO phản hồi, bao gồm thông tin session tích cực của user (nếu có).
      */
     public LessonSpeakingResponse buildResponse(LessonSpeakingScenario lss, Long currentUserId) {
+        LessonSpeakingResponse response = buildContent(lss);
+        applyUserProgress(response, currentUserId);
+        return response;
+    }
+
+    /** Nội dung kịch bản (không có dữ liệu theo người dùng) — dùng cho snapshot. */
+    public LessonSpeakingResponse buildContent(LessonSpeakingScenario lss) {
         AiScenario sc = lss.getScenario();
-        Long activeSessionId = null;
-        int userTurnsCount = 0;
-        boolean completed = false;
-
-        if (currentUserId != null) {
-            Optional<AiSession> sessionOpt = sessionRepository
-                    .findFirstByLesson_IdAndScenario_IdAndUser_IdAndDeletedFalseOrderByCreatedAtDesc(
-                            lss.getLesson().getId(), sc.getId(), currentUserId);
-
-            if (sessionOpt.isPresent()) {
-                AiSession session = sessionOpt.get();
-                activeSessionId = session.getId();
-                List<AiMessage> messages = messageRepository.findBySessionIdOrderByCreatedAtAsc(session.getId());
-                long count = messages.stream().filter(m -> m.getRole() == AiMessageRole.USER).count();
-                userTurnsCount = (int) count;
-
-                int totalTasks = (sc.getTasks() != null && sc.getTasks().isArray()) ? sc.getTasks().size() : 0;
-                if (totalTasks > 0) {
-                    int completedCount = (session.getCompletedTasks() != null && session.getCompletedTasks().isArray())
-                            ? session.getCompletedTasks().size()
-                            : 0;
-                    completed = completedCount >= totalTasks;
-                } else {
-                    completed = userTurnsCount >= (lss.getMinTurns() != null ? lss.getMinTurns() : 3);
-                }
-            }
-        }
-
         return LessonSpeakingResponse.builder()
                 .id(lss.getId())
                 .lessonId(lss.getLesson().getId())
@@ -468,9 +455,50 @@ public class LessonSpeakingService {
                 .vocabulary(sc.getVocabulary())
                 .grammar(sc.getGrammar())
                 .tips(sc.getTips())
-                .activeSessionId(activeSessionId)
-                .userTurnsCount(userTurnsCount)
-                .completed(completed)
                 .build();
+    }
+
+    /** Ghép tiến độ luyện nói của người dùng vào danh sách lấy từ snapshot. */
+    public List<LessonSpeakingResponse> withUserProgress(List<LessonSpeakingResponse> items, Long currentUserId) {
+        if (items == null) {
+            return List.of();
+        }
+        items.forEach(item -> applyUserProgress(item, currentUserId));
+        return items;
+    }
+
+    /** Phiên luyện nói gần nhất của người dùng: số lượt nói và đã hoàn thành chưa. */
+    private void applyUserProgress(LessonSpeakingResponse response, Long currentUserId) {
+        Long activeSessionId = null;
+        int userTurnsCount = 0;
+        boolean completed = false;
+
+        if (currentUserId != null) {
+            Optional<AiSession> sessionOpt = sessionRepository
+                    .findFirstByLesson_IdAndScenario_IdAndUser_IdAndDeletedFalseOrderByCreatedAtDesc(
+                            response.getLessonId(), response.getScenarioId(), currentUserId);
+
+            if (sessionOpt.isPresent()) {
+                AiSession session = sessionOpt.get();
+                activeSessionId = session.getId();
+                List<AiMessage> messages = messageRepository.findBySessionIdOrderByCreatedAtAsc(session.getId());
+                long count = messages.stream().filter(m -> m.getRole() == AiMessageRole.USER).count();
+                userTurnsCount = (int) count;
+
+                JsonNode tasks = response.getTasks();
+                int totalTasks = (tasks != null && tasks.isArray()) ? tasks.size() : 0;
+                if (totalTasks > 0) {
+                    int completedCount = (session.getCompletedTasks() != null && session.getCompletedTasks().isArray())
+                            ? session.getCompletedTasks().size()
+                            : 0;
+                    completed = completedCount >= totalTasks;
+                } else {
+                    completed = userTurnsCount >= (response.getMinTurns() != null ? response.getMinTurns() : 3);
+                }
+            }
+        }
+        response.setActiveSessionId(activeSessionId);
+        response.setUserTurnsCount(userTurnsCount);
+        response.setCompleted(completed);
     }
 }

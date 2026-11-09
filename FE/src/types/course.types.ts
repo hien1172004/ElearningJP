@@ -1,4 +1,5 @@
 import type { JlptLevel } from './dictionary.types'
+import type { CourseReviewStatus } from './courseReview.types'
 
 // ============================================================================
 // ENUMS
@@ -12,12 +13,20 @@ export type LessonSectionType = 'KANJI' | 'VOCABULARY' | 'GRAMMAR'
 // ============================================================================
 export interface CourseSummary {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   title: string
   slug: string
   jlptLevel: JlptLevel
   description?: string
   thumbnailUrl?: string
   published: boolean
+  /** Bản đang soạn: EDITING | PENDING_REVIEW (chờ ADMIN duyệt, giáo viên tạm khóa sửa). */
+  reviewStatus?: CourseReviewStatus
+  /** Bản đang soạn có thay đổi chưa được duyệt / xuất bản. */
+  hasUnpublishedChanges?: boolean
+  /** Phiên bản đã duyệt gần nhất; null = chưa từng được duyệt (ADMIN chưa mở được khóa). */
+  publishedVersionId?: number | null
   createdByUserId?: number
   createdByName?: string
   totalLessons?: number
@@ -29,6 +38,11 @@ export interface CourseSummary {
 
 export interface CourseDetail extends CourseSummary {
   isEnrolled?: boolean | null
+  /** Người xem là ADMIN hoặc giáo viên được giao khóa (xem trước không cần đăng ký). */
+  canManage?: boolean
+  /** Phiên bản xuất bản học viên đang học (chỉ có khi người xem quản lý khóa). */
+  publishedVersionNo?: number | null
+  publishedVersionAt?: string | null
   progressPercent?: number
   completedLessonsCount?: number
   totalEnrollments?: number
@@ -44,6 +58,8 @@ export interface CourseCreateRequest {
 }
 
 export interface CourseUpdateRequest {
+  /** Version bản ghi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
   title?: string
   jlptLevel?: JlptLevel
   description?: string
@@ -83,6 +99,8 @@ export interface LessonSummary {
 
 export interface LessonOutline {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   title: string
   orderIndex: number
   hasQuiz: boolean
@@ -93,6 +111,8 @@ export interface LessonOutline {
 
 export interface LessonDetail {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   courseId: number
   courseTitle?: string
   title: string
@@ -136,12 +156,16 @@ export interface LessonCreateRequest {
 }
 
 export interface LessonUpdateRequest {
+  /** Version bản ghi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
   title?: string
   orderIndex?: number
 }
 
 export interface LessonReorderRequest {
   lessonIds: number[]
+  /** id → version đang thấy (optimistic locking); lệch → BE trả 409. */
+  versions?: Record<number, number>
 }
 
 // ============================================================================
@@ -149,6 +173,8 @@ export interface LessonReorderRequest {
 // ============================================================================
 export interface LessonSection {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   sectionType: LessonSectionType
   title: string
   orderIndex: number
@@ -164,6 +190,8 @@ export interface LessonSectionCreateRequest {
 }
 
 export interface LessonSectionUpdateRequest {
+  /** Version bản ghi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
   title?: string
   orderIndex?: number
 }
@@ -174,6 +202,8 @@ export interface LessonSectionUpdateRequest {
  */
 export interface LessonSectionReorderRequest {
   itemIds: number[]
+  /** id → version đang thấy (optimistic locking); lệch → BE trả 409. */
+  versions?: Record<number, number>
 }
 
 // ============================================================================
@@ -184,6 +214,8 @@ export interface LessonSectionReorderRequest {
 // → Không cần gọi thêm API GET /lesson-kanji-items/{id} khi đã có lesson detail.
 export interface LessonKanjiItem {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   orderIndex?: number
   note?: string
   characterId?: number
@@ -222,6 +254,8 @@ export interface LessonKanjiItemCreateRequest {
 }
 
 export interface LessonKanjiItemUpdateRequest {
+  /** Version bản ghi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
   note?: string
   orderIndex?: number
   /**
@@ -264,6 +298,8 @@ export interface LessonKanjiRelatedVocabRequest {
 // → Không cần gọi thêm API khi đã có lesson detail.
 export interface LessonVocabularyItem {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   orderIndex?: number
   note?: string
   vocabId?: number
@@ -317,6 +353,8 @@ export interface LessonVocabularyItemCreateRequest {
 }
 
 export interface LessonVocabularyItemUpdateRequest {
+  /** Version bản ghi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
   orderIndex?: number
   /** Override fields — 3-state semantics: null = giữ, "" = xoá override, value = update */
   customHiragana?: string | null
@@ -362,6 +400,8 @@ export interface LessonVocabularyExampleUpsertRequest {
 // → Không cần gọi thêm API khi đã có lesson detail.
 export interface LessonGrammarItem {
   id: number
+  /** Version để gửi lại khi cập nhật (optimistic locking). */
+  version?: number
   orderIndex?: number
   note?: string
   grammarId?: number
@@ -402,6 +442,8 @@ export interface LessonGrammarItemCreateRequest {
 }
 
 export interface LessonGrammarItemUpdateRequest {
+  /** Version bản ghi đã đọc — lệch với BE → 409 (người khác vừa sửa). */
+  version?: number
   orderIndex?: number
   /** 3-state: null = giữ, "" = xoá override, value = update */
   customMeaning?: string | null

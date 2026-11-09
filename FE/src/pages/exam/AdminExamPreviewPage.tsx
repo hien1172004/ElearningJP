@@ -3,6 +3,7 @@ import { confirmDialog } from '@/components/common/ConfirmModal'
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { examService } from '@/services/exam.service'
+import { isConcurrentModification } from '@/lib/queryClient'
 import type {
   AdminExamPreview,
   AdminTakingSection,
@@ -233,6 +234,7 @@ export const AdminExamPreviewPage: React.FC = () => {
       : (correctOpts[0]?.optionKey || 1)
 
     setEditForm({
+      version: q.version,
       mondaiCode: q.mondaiCode || '',
       questionText: q.questionText,
       imageUrl: q.imageUrl || '',
@@ -276,6 +278,17 @@ export const AdminExamPreviewPage: React.FC = () => {
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Lỗi lưu thay đổi câu hỏi')
+      // Người khác vừa sửa câu này: tải lại đề để thấy bản mới (form vẫn mở, giữ phần vừa nhập)
+      if (isConcurrentModification(err)) {
+        const refreshed = await examService.getAdminExamPreview(Number(examId)).catch(() => null)
+        if (refreshed) {
+          setPreviewData(refreshed)
+          const latest = refreshed.sections
+            ?.flatMap((s) => s.questions ?? [])
+            .find((x) => x.id === qId)
+          if (latest) setEditForm((f) => ({ ...f, version: latest.version }))
+        }
+      }
     } finally {
       setSavingQuestion(false)
     }
