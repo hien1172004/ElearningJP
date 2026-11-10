@@ -1,5 +1,6 @@
 package com.jp.elearningjp.dto.response.curriculum;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jp.elearningjp.shared.enums.CourseReviewStatus;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import lombok.*;
@@ -41,6 +42,8 @@ public class CourseDetailResponse {
     String createdByName;
 
     // Phân quyền & tiến độ
+    // Lombok sinh getter isEnrolled() → Jackson mặc định đặt tên "enrolled"; FE đọc "isEnrolled"
+    @JsonProperty("isEnrolled")
     boolean isEnrolled;              // User hiện tại đã đăng ký chưa
     boolean canManage;               // User hiện tại là ADMIN hoặc giáo viên được giao (xem trước không cần đăng ký)
     BigDecimal progressPercent;      // % hoàn thành khóa học (nếu đã đăng ký)
