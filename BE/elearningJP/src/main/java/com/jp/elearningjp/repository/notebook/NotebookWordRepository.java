@@ -39,10 +39,14 @@ public interface NotebookWordRepository extends JpaRepository<NotebookWord, Long
     @Query(value = "SELECT * FROM notebook_words WHERE notebook_id = :notebookId AND deleted = false ORDER BY RANDOM()", nativeQuery = true)
     List<NotebookWord> findShuffledWordsByNotebookId(@Param("notebookId") Long notebookId);
 
+    /** Thẻ đến hạn ôn — nạp sẵn chữ Hán / ngữ pháp (LEFT JOIN) để màn ôn tập không bị N+1. */
+    @EntityGraph(attributePaths = {"character", "grammar"})
     @Query("SELECT w FROM NotebookWord w WHERE w.notebook.id = :notebookId AND w.deleted = false AND w.itemType IN :types AND (w.nextReviewAt IS NULL OR w.nextReviewAt <= :now) ORDER BY w.nextReviewAt ASC NULLS FIRST")
     List<NotebookWord> findDueWordsByNotebookId(@Param("notebookId") Long notebookId, @Param("types") Collection<NotebookItemType> types,
                                                 @Param("now") java.time.Instant now, Pageable pageable);
 
+    /** Thẻ đến hạn ôn của mọi sổ tay của user — nạp sẵn chữ Hán / ngữ pháp (LEFT JOIN) để tránh N+1. */
+    @EntityGraph(attributePaths = {"character", "grammar"})
     @Query("SELECT w FROM NotebookWord w WHERE w.notebook.user.id = :userId AND w.deleted = false AND w.itemType IN :types AND (w.nextReviewAt IS NULL OR w.nextReviewAt <= :now) ORDER BY w.nextReviewAt ASC NULLS FIRST")
     List<NotebookWord> findDueWordsByUserId(@Param("userId") Long userId, @Param("types") Collection<NotebookItemType> types,
                                             @Param("now") java.time.Instant now, Pageable pageable);
