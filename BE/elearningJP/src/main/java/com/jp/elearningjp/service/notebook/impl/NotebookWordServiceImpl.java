@@ -141,7 +141,17 @@ public class NotebookWordServiceImpl implements NotebookWordService {
                 .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_WORD_NOT_FOUND));
 
         notebookMapper.updateNotebookWordFromRequest(request, word);
-        // Chỉ thẻ Từ vựng mới tự liên kết lại từ điển khi đổi mặt chữ; Chữ Hán / Ngữ pháp giữ liên kết gốc
+        // Chữ Hán / Ngữ pháp: đổi mặt chữ khác bản ghi đang liên kết → bỏ liên kết cũ rồi tra lại theo chữ mới
+        if (word.getItemType() == NotebookItemType.KANJI && request.getWord() != null
+                && word.getCharacter() != null && !word.getWord().trim().equals(word.getCharacter().getCharacter())) {
+            word.setCharacter(null);
+            applyKanjiSource(word, null);
+        }
+        if (word.getItemType() == NotebookItemType.GRAMMAR && request.getWord() != null
+                && word.getGrammar() != null && !word.getWord().trim().equals(word.getGrammar().getTitle())) {
+            word.setGrammar(null);
+            applyGrammarSource(word, null);
+        }
         if (word.getItemType() == NotebookItemType.VOCAB) {
             if (request.getWord() != null) {
                 // Đổi mặt chữ khác từ đang liên kết → bỏ liên kết cũ rồi tra lại theo chữ mới
@@ -320,6 +330,7 @@ public class NotebookWordServiceImpl implements NotebookWordService {
             int commentCol = 3;
             int partOfSpeechCol = -1;
             int hanVietCol = -1;
+            int itemTypeCol = -1;
 
             if (headerRow != null) {
                 int lastCellNum = headerRow.getLastCellNum();
@@ -339,6 +350,9 @@ public class NotebookWordServiceImpl implements NotebookWordService {
                         partOfSpeechCol = c;
                     } else if (lower.equals("han_viet") || lower.contains("hán việt") || lower.contains("han viet") || lower.equals("sino_vietnamese")) {
                         hanVietCol = c;
+                    } else if (lower.equals("loại") || lower.equals("loai") || lower.equals("item_type")) {
+                        // Cột "Loại" do chức năng xuất Excel ghi ra (so khớp chính xác, tránh nhầm "Từ loại")
+                        itemTypeCol = c;
                     }
                 }
             }
@@ -358,6 +372,7 @@ public class NotebookWordServiceImpl implements NotebookWordService {
                 String userNote = commentCol >= 0 ? getCellStringValue(row.getCell(commentCol)) : null;
                 String partOfSpeech = partOfSpeechCol >= 0 ? getCellStringValue(row.getCell(partOfSpeechCol)) : null;
                 String hanViet = hanVietCol >= 0 ? getCellStringValue(row.getCell(hanVietCol)) : null;
+                NotebookItemType itemType = parseItemType(itemTypeCol >= 0 ? getCellStringValue(row.getCell(itemTypeCol)) : null);
 
                 if (wordText == null || wordText.trim().isEmpty()) {
                     errorCount++;
@@ -392,9 +407,15 @@ public class NotebookWordServiceImpl implements NotebookWordService {
                         .easeFactor(new BigDecimal("2.50"))
                         .nextReviewAt(Instant.now())
                         .displayOrder(existingCount + newWords.size())
+                        .itemType(itemType)
                         .build();
 
-                linkVocabularyIfAvailable(word);
+                // Chữ Hán / Ngữ pháp liên kết đúng bảng nguồn; không auto-link nhầm sang từ vựng cùng mặt chữ
+                switch (itemType) {
+                    case KANJI -> applyKanjiSource(word, null);
+                    case GRAMMAR -> applyGrammarSource(word, null);
+                    default -> linkVocabularyIfAvailable(word);
+                }
                 newWords.add(word);
                 successCount++;
             }
@@ -576,6 +597,16 @@ public class NotebookWordServiceImpl implements NotebookWordService {
             }
         }
         return null;
+    }
+
+    /** Giá trị cột "Loại" trong file Excel (nhãn "Chữ Hán" hoặc tên enum "KANJI") → loại thẻ; trống / lạ = VOCAB. */
+    static NotebookItemType parseItemType(String value) {
+        if (isBlank(value)) return NotebookItemType.VOCAB;
+        String v = value.trim();
+        for (NotebookItemType t : NotebookItemType.values()) {
+            if (t.name().equalsIgnoreCase(v) || t.getLabel().equalsIgnoreCase(v)) return t;
+        }
+        return NotebookItemType.VOCAB;
     }
 
     private static boolean isBlank(String s) {

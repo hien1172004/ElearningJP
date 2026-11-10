@@ -143,8 +143,9 @@ export const NotebookDetailPage: React.FC = () => {
       setWordModalOpen(false)
       refetchWords()
       refetchShuffled()
-    } catch {
-      message.error('Có lỗi xảy ra khi lưu từ vựng!')
+    } catch (err: any) {
+      // Ưu tiên thông báo cụ thể từ server (vd: "Mục này đã có trong sổ tay")
+      message.error(err?.response?.data?.message || 'Có lỗi xảy ra khi lưu từ vựng!')
     }
   }
 
@@ -154,8 +155,8 @@ export const NotebookDetailPage: React.FC = () => {
       message.success('Đã xóa từ vựng khỏi sổ tay!')
       refetchWords()
       refetchShuffled()
-    } catch {
-      message.error('Không thể xóa từ vựng!')
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || 'Không thể xóa từ vựng!')
     }
   }
 
@@ -167,8 +168,8 @@ export const NotebookDetailPage: React.FC = () => {
       message.success(`Đã xóa ${selectedWordIds.length} từ vựng đã chọn!`)
       refetchWords()
       refetchShuffled()
-    } catch {
-      message.error('Không thể xóa hàng loạt từ vựng!')
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || 'Không thể xóa hàng loạt từ vựng!')
     }
   }
 
@@ -179,8 +180,8 @@ export const NotebookDetailPage: React.FC = () => {
         data: { userNote: note },
       })
       message.success('Đã lưu ghi chú')
-    } catch {
-      message.error('Không thể cập nhật ghi chú')
+    } catch (err: any) {
+      message.error(err?.response?.data?.message || 'Không thể cập nhật ghi chú')
     }
   }
 
