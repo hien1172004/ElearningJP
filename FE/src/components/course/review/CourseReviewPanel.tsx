@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
-import { Button as AntdButton, Tooltip } from 'antd'
+import React, { useMemo, useState } from 'react'
+import { Button as AntdButton, Pagination, Select, Tooltip } from 'antd'
 import { CheckCircle2, Lock, Send, Undo2, XCircle } from 'lucide-react'
-import { EmptyState, LoadingState } from '@/components/common'
+import { EmptyState, LoadingState, SearchInput, FilterBar } from '@/components/common'
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import {
   useApproveCourseReview,
@@ -30,6 +30,8 @@ const STATUS_LABEL: Record<ReviewRequestStatus, { text: string; tone: string }> 
   REJECTED: { text: 'Bị từ chối', tone: 'bg-rose-50 text-rose-700 border-rose-200' },
   WITHDRAWN: { text: 'Đã rút', tone: 'bg-gray-100 text-gray-600 border-gray-200' },
 }
+
+const HISTORY_PAGE_SIZE = 5
 
 const formatTime = (iso?: string | null) => (iso ? new Date(iso).toLocaleString('vi-VN') : '')
 
@@ -175,11 +177,7 @@ export const CourseReviewPanel: React.FC<CourseReviewPanelProps> = ({ course, ad
         ) : history.length === 0 ? (
           <EmptyState title="Chưa có lượt gửi duyệt nào" />
         ) : (
-          <ul className="space-y-3">
-            {history.map((r) => (
-              <ReviewHistoryItem key={r.id} request={r} />
-            ))}
-          </ul>
+          <ReviewHistoryList history={history} />
         )}
       </div>
 
@@ -221,6 +219,88 @@ export const CourseReviewPanel: React.FC<CourseReviewPanelProps> = ({ course, ad
           reject.mutate({ requestId: pendingRequest.id, courseId, reason }, { onSuccess: () => setModal(null) })
         }
       />
+    </div>
+  )
+}
+
+/**
+ * Lịch sử các lượt gửi duyệt của 1 khóa: lọc trạng thái + tìm theo người gửi / người xử lý / ghi chú,
+ * phân trang phía client (BE trả đủ lịch sử của khóa).
+ */
+const ReviewHistoryList: React.FC<{ history: CourseReviewRequest[] }> = ({ history }) => {
+  const [status, setStatus] = useState<ReviewRequestStatus | undefined>(undefined)
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(1)
+
+  const filtered = useMemo(() => {
+    const q = keyword.toLowerCase()
+    return history.filter(
+      (r) =>
+        (!status || r.status === status) &&
+        (!q ||
+          [r.submittedByName, r.reviewedByName, r.note, r.reviewNote].some((v) => v?.toLowerCase().includes(q))),
+    )
+  }, [history, status, keyword])
+
+  // Lịch sử thay đổi làm trang đang chọn vượt quá số trang → hiển thị trang cuối hợp lệ
+  const lastPage = Math.max(1, Math.ceil(filtered.length / HISTORY_PAGE_SIZE))
+  const currentPage = Math.min(page, lastPage)
+  const pageItems = filtered.slice((currentPage - 1) * HISTORY_PAGE_SIZE, currentPage * HISTORY_PAGE_SIZE)
+
+  return (
+    <div className="space-y-3">
+      <FilterBar>
+        <SearchInput
+          placeholder="Tìm theo người gửi, người xử lý, ghi chú"
+          value={keywordInput}
+          onChange={setKeywordInput}
+          onSearch={(v) => {
+            setKeyword(v)
+            setPage(1)
+          }}
+          className="md:flex-1 md:min-w-60"
+        />
+        <Select<ReviewRequestStatus>
+          allowClear
+          value={status}
+          onChange={(v) => {
+            setStatus(v)
+            setPage(1)
+          }}
+          placeholder="Mọi trạng thái"
+          options={(Object.keys(STATUS_LABEL) as ReviewRequestStatus[]).map((s) => ({
+            value: s,
+            label: STATUS_LABEL[s].text,
+          }))}
+          className="sm:w-44"
+          aria-label="Lọc theo trạng thái"
+        />
+      </FilterBar>
+
+      {filtered.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-400">Không có lượt gửi duyệt phù hợp.</p>
+      ) : (
+        <ul className="space-y-3">
+          {pageItems.map((r) => (
+            <ReviewHistoryItem key={r.id} request={r} />
+          ))}
+        </ul>
+      )}
+
+      {filtered.length > HISTORY_PAGE_SIZE && (
+        <div className="flex justify-end">
+          <Pagination
+            size="small"
+            current={currentPage}
+            pageSize={HISTORY_PAGE_SIZE}
+            total={filtered.length}
+            onChange={setPage}
+            showSizeChanger={false}
+            showTotal={(total, [from, to]) => `${from}–${to} / ${total} lượt`}
+          />
+        </div>
+      )}
     </div>
   )
 }

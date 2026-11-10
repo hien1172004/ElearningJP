@@ -2,6 +2,7 @@ import { axiosClient } from './api/axiosClient'
 import type {
   ApiResponse,
   Broadcast,
+  BroadcastHistoryParams,
   BroadcastPayload,
   PageResponse,
   RecipientCountParams,
@@ -20,7 +21,7 @@ export const adminBroadcastService = {
     return axiosClient.post('/admin/broadcasts', payload)
   },
 
-  getHistory: async (params: { page?: number; size?: number }): Promise<ApiResponse<PageResponse<Broadcast>>> => {
+  getHistory: async (params: BroadcastHistoryParams): Promise<ApiResponse<PageResponse<Broadcast>>> => {
     return axiosClient.get('/admin/broadcasts', { params })
   },
 }

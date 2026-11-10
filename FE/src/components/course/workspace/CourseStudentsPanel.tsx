@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { GraduationCap } from 'lucide-react'
 import { Avatar, Button as AntdButton, Drawer, Progress, Select, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EmptyState, LoadingState, SearchInput } from '@/components/common'
+import { EmptyState, LoadingState, SearchInput, FilterBar } from '@/components/common'
 import { StatTile } from '@/components/admin'
 import { useCourseStudents, useStudentCourseDetail } from '@/hooks'
 import { formatDate, formatRelativeTime } from '@/utils/format'
@@ -126,7 +126,7 @@ export const CourseStudentsPanel: React.FC<CourseStudentsPanelProps> = ({ course
       )}
 
       {/* Tìm kiếm + sắp xếp: nằm ngay trên bảng học viên */}
-      <div className="flex flex-col md:flex-row gap-3">
+      <FilterBar>
         <SearchInput
           placeholder="Tìm theo tên hoặc email"
           value={keywordInput}
@@ -135,7 +135,7 @@ export const CourseStudentsPanel: React.FC<CourseStudentsPanelProps> = ({ course
             setKeyword(v)
             setPage(1)
           }}
-          className="md:max-w-xs"
+          className="md:flex-1 md:min-w-60"
         />
         <Select
           value={sort}
@@ -147,7 +147,7 @@ export const CourseStudentsPanel: React.FC<CourseStudentsPanelProps> = ({ course
           className="md:w-48"
           aria-label="Sắp xếp"
         />
-      </div>
+      </FilterBar>
 
       {isError ? (
         <EmptyState

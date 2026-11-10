@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button as AntdButton, Segmented, Table, Tag } from 'antd'
+import { Button as AntdButton, Select, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { CheckCircle2, ExternalLink, XCircle } from 'lucide-react'
-import { EmptyState, PageHeader } from '@/components/common'
+import { EmptyState, SearchInput, FilterBar } from '@/components/common'
 import { ReviewNoteModal } from '@/components/course'
 import { useApproveCourseReview, useCourseReviewQueue, useRejectCourseReview } from '@/hooks'
 import { formatRelativeTime } from '@/utils/format'
@@ -30,9 +30,11 @@ export const AdminCourseReviewsPage: React.FC = () => {
   const navigate = useNavigate()
   const [status, setStatus] = useState<ReviewRequestStatus>('PENDING')
   const [page, setPage] = useState(1)
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [target, setTarget] = useState<{ request: CourseReviewRequest; action: 'approve' | 'reject' } | null>(null)
 
-  const { data, isLoading, isError } = useCourseReviewQueue({ status, page, size: PAGE_SIZE })
+  const { data, isLoading, isFetching, isError } = useCourseReviewQueue({ status, keyword: keyword || undefined, page, size: PAGE_SIZE })
   const approve = useApproveCourseReview()
   const reject = useRejectCourseReview()
   const items = data?.items ?? []
@@ -115,32 +117,54 @@ export const AdminCourseReviewsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      <PageHeader
-        className="max-w-7xl mx-auto px-3 sm:px-4"
-        title="Hàng chờ duyệt"
-        subtitle="Giáo viên gửi khóa học lên duyệt; chỉ quản trị viên quyết định xuất bản hoặc chuyển nháp."
-      />
       <div className="max-w-7xl mx-auto px-3 sm:px-4 space-y-4">
-        <Segmented<ReviewRequestStatus>
-          options={STATUS_OPTIONS}
-          value={status}
-          onChange={(v) => {
-            setStatus(v)
-            setPage(1)
-          }}
-        />
+        <FilterBar>
+          <SearchInput
+            placeholder="Tìm theo tên khóa học hoặc người gửi"
+            value={keywordInput}
+            onChange={setKeywordInput}
+            onSearch={(v) => {
+              setKeyword(v)
+              setPage(1)
+            }}
+            className="md:flex-1 md:min-w-60"
+          />
+          {/* Luôn lọc theo 1 trạng thái (BE mặc định PENDING) → không cho xóa chọn */}
+          <Select<ReviewRequestStatus>
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(1)
+            }}
+            options={STATUS_OPTIONS}
+            className="md:w-44"
+            aria-label="Lọc theo trạng thái"
+          />
+        </FilterBar>
         {isError ? (
           <EmptyState card title="Không tải được hàng chờ duyệt" description="Vui lòng thử lại sau." />
         ) : !isLoading && items.length === 0 ? (
           <EmptyState
             card
-            title={status === 'PENDING' ? 'Không có khóa học nào chờ duyệt' : 'Chưa có yêu cầu nào'}
-            description={status === 'PENDING' ? 'Bạn sẽ nhận thông báo khi giáo viên gửi duyệt.' : undefined}
+            title={
+              keyword
+                ? 'Không có yêu cầu phù hợp'
+                : status === 'PENDING'
+                  ? 'Không có khóa học nào chờ duyệt'
+                  : 'Chưa có yêu cầu nào'
+            }
+            description={
+              keyword
+                ? 'Thử đổi từ khóa tìm kiếm.'
+                : status === 'PENDING'
+                  ? 'Bạn sẽ nhận thông báo khi giáo viên gửi duyệt.'
+                  : undefined
+            }
           />
         ) : (
           <Table<CourseReviewRequest>
             rowKey="id"
-            loading={isLoading}
+            loading={isLoading || isFetching}
             dataSource={items}
             columns={columns}
             pagination={{
@@ -148,6 +172,7 @@ export const AdminCourseReviewsPage: React.FC = () => {
               pageSize: PAGE_SIZE,
               total: data?.totalElements ?? 0,
               showSizeChanger: false,
+              showTotal: (total) => `${total} yêu cầu`,
               onChange: setPage,
             }}
           />

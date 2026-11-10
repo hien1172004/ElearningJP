@@ -70,17 +70,19 @@ public class CourseReviewController {
     }
 
     @Operation(summary = "[Admin] Hàng chờ duyệt khóa học",
-            description = "Mặc định các yêu cầu đang chờ (PENDING), cũ nhất trước. page bắt đầu từ 1")
+            description = "Mặc định các yêu cầu đang chờ (PENDING), cũ nhất trước. page bắt đầu từ 1. "
+                    + "keyword: tìm theo tên khóa học hoặc tên người gửi")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping(ApiPaths.CourseReview.BASE)
     public ApiResponse<PageResponse<CourseReviewRequestResponse>> getQueue(
             @RequestParam(required = false) ReviewRequestStatus status,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         return ApiResponse.<PageResponse<CourseReviewRequestResponse>>builder()
                 .success(true)
-                .data(courseReviewService.getQueue(status, page, size))
+                .data(courseReviewService.getQueue(status, keyword, page, size))
                 .build();
     }
 

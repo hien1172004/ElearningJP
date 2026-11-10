@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -190,8 +191,18 @@ public class CourseReviewService {
     /** Hàng chờ duyệt của ADMIN (cũ nhất trước). {@code page} bắt đầu từ 1. */
     @Transactional(readOnly = true)
     public PageResponse<CourseReviewRequestResponse> getQueue(ReviewRequestStatus status, int page, int size) {
-        Page<CourseReviewRequest> result = reviewRequestRepository.findByStatusAndCourseDeletedFalseOrderByCreatedAtAsc(
-                status != null ? status : ReviewRequestStatus.PENDING, PageRequest.of(Math.max(0, page - 1), size));
+        return getQueue(status, null, page, size);
+    }
+
+    /** @param keyword tìm theo tên khóa học hoặc tên người gửi (null/rỗng = không lọc) */
+    @Transactional(readOnly = true)
+    public PageResponse<CourseReviewRequestResponse> getQueue(ReviewRequestStatus status, String keyword, int page, int size) {
+        ReviewRequestStatus effective = status != null ? status : ReviewRequestStatus.PENDING;
+        PageRequest pageable = PageRequest.of(Math.max(0, page - 1), size);
+        Page<CourseReviewRequest> result = keyword == null || keyword.isBlank()
+                ? reviewRequestRepository.findByStatusAndCourseDeletedFalseOrderByCreatedAtAsc(effective, pageable)
+                : reviewRequestRepository.searchQueue(
+                        effective, "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%", pageable);
         return PageResponse.<CourseReviewRequestResponse>builder()
                 .items(result.getContent().stream().map(CourseReviewService::toResponse).toList())
                 .page(page)

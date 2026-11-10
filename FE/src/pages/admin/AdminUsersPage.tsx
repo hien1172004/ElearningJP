@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Lock, Unlock, UserPlus, Users } from 'lucide-react'
 import { Avatar, Button as AntdButton, Select, Table, Tag, Tooltip } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
-import { EmptyState, SearchInput, confirmDialog } from '@/components/common'
+import { EmptyState, SearchInput, confirmDialog, FilterBar } from '@/components/common'
 import { CreateAccountModal } from '@/components/admin'
 import { useAdminUsers, useUpdateUserStatus } from '@/hooks'
 import { useAuthStore } from '@/stores'
@@ -164,7 +164,7 @@ export const AdminUsersPage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
 
-      <div className="flex flex-col md:flex-row gap-3">
+      <FilterBar>
         <SearchInput
           placeholder="Tìm theo email hoặc họ tên"
           value={keywordInput}
@@ -173,7 +173,7 @@ export const AdminUsersPage: React.FC = () => {
             setKeyword(v)
             setPage(1)
           }}
-          className="md:max-w-sm"
+          className="md:flex-1 md:min-w-60"
         />
         <Select
           allowClear
@@ -211,7 +211,7 @@ export const AdminUsersPage: React.FC = () => {
         >
           Tạo tài khoản
         </AntdButton>
-      </div>
+      </FilterBar>
 
       {isError ? (
         <EmptyState

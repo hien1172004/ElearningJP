@@ -17,6 +17,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import com.jp.elearningjp.shared.enums.JlptLevel;
 
 import java.util.List;
 
@@ -129,5 +131,34 @@ class CourseAdminListTest {
         assertThat(res.getItems()).extracting(CourseResponse::getTotalEnrollments).containsExactly(3L, 0L);
         verify(enrollmentRepository).countActiveByCourseIds(List.of(1L, 2L));
         verify(enrollmentRepository, never()).countActiveByCourseId(anyLong());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void filters_useSpecificationQuery_andKeepTeacherScope() {
+        when(currentUserService.isAdmin()).thenReturn(false);
+        when(currentUserService.getCurrentUserId()).thenReturn(TEACHER_ID);
+        when(courseRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(course(7)), inv.getArgument(1), 1));
+        when(courseMapper.toCourseResponse(any(Course.class))).thenAnswer(inv -> new CourseResponse());
+
+        PageResponse<CourseResponse> res = courseService.getAllCoursesForAdmin(1, 10, false, " n5 ", JlptLevel.N5, true);
+
+        assertThat(res.getItems()).hasSize(1);
+        verify(courseRepository).findAll(any(Specification.class), any(Pageable.class));
+        verify(courseRepository, never()).findAssignedToTeacher(anyLong(), any(Pageable.class));
+        verify(courseRepository, never()).findByDeletedFalse(any(Pageable.class));
+    }
+
+    @Test
+    void blankKeyword_withoutOtherFilters_keepsLegacyQuery() {
+        when(currentUserService.isAdmin()).thenReturn(true);
+        when(courseRepository.findByDeletedFalse(any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<>(List.of(course(1)), inv.getArgument(0), 1));
+        when(courseMapper.toCourseResponse(any(Course.class))).thenAnswer(inv -> new CourseResponse());
+
+        courseService.getAllCoursesForAdmin(1, 10, false, "   ", null, null);
+
+        verify(courseRepository).findByDeletedFalse(any(Pageable.class));
     }
 }

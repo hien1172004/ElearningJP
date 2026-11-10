@@ -68,6 +68,11 @@ export const courseService = {
     size?: number
     /** Chỉ khóa có thay đổi chưa duyệt. */
     pendingChanges?: boolean
+    /** Tìm theo tên khóa học. */
+    keyword?: string
+    jlptLevel?: JlptLevel
+    /** true = đã xuất bản, false = bản nháp; bỏ trống = tất cả. */
+    published?: boolean
   }): Promise<ApiResponse<PageResponse<CourseSummary>>> {
     return axiosClient.get('/courses/admin', { params })
   },

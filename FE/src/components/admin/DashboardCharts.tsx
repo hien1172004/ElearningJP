@@ -28,6 +28,9 @@ interface StatTileProps {
   current?: number
   previous?: number
   hint?: React.ReactNode
+  /** Bấm vào ô (render thành button). */
+  onClick?: () => void
+  title?: string
 }
 
 /** % thay đổi so với kỳ trước; kỳ trước = 0 thì không tính được tỉ lệ. */
@@ -52,16 +55,34 @@ function DeltaBadge({ current, previous }: { current: number; previous: number }
   )
 }
 
-export const StatTile: React.FC<StatTileProps> = ({ label, value, current, previous, hint }) => (
-  <div className="bg-surface rounded-xl border border-slate-200 p-4 flex flex-col gap-1 min-w-0">
-    <span className="text-sm text-slate-500 truncate">{label}</span>
-    <span className="text-2xl font-semibold text-slate-900 tabular-nums">{value}</span>
-    {current !== undefined && previous !== undefined && (
-      <DeltaBadge current={current} previous={previous} />
-    )}
-    {hint && <span className="text-xs text-slate-500">{hint}</span>}
-  </div>
-)
+export const StatTile: React.FC<StatTileProps> = ({ label, value, current, previous, hint, onClick, title }) => {
+  const body = (
+    <>
+      <span className="text-sm text-slate-500 truncate">{label}</span>
+      <span className="text-2xl font-semibold text-slate-900 tabular-nums truncate">{value}</span>
+      {current !== undefined && previous !== undefined && (
+        <DeltaBadge current={current} previous={previous} />
+      )}
+      {hint && <span className="text-xs text-slate-500">{hint}</span>}
+    </>
+  )
+  const base = 'bg-surface rounded-xl border border-slate-200 p-4 flex flex-col gap-1 min-w-0'
+  // Có onClick → ô bấm được (vd: cuộn tới danh sách / mở mục tương ứng)
+  return onClick ? (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={cn(base, 'text-left cursor-pointer transition hover:border-indigo-300 hover:shadow-sm')}
+    >
+      {body}
+    </button>
+  ) : (
+    <div className={base} title={title}>
+      {body}
+    </div>
+  )
+}
 
 // ============================================================================
 // Khung biểu đồ

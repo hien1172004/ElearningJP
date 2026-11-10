@@ -320,4 +320,17 @@ class CourseReviewServiceTest {
         assertThat(service.getHistory(COURSE_ID)).isEmpty();
         verify(courseAccessGuard).requireAssignedOrAdmin(course);
     }
+
+    @Test
+    void queue_withKeyword_searchesLowercasePattern() {
+        when(reviewRequestRepository.searchQueue(any(), any(), any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of()));
+
+        service.getQueue(null, "  Khóa N5 ", 1, 10);
+
+        verify(reviewRequestRepository).searchQueue(
+                org.mockito.ArgumentMatchers.eq(ReviewRequestStatus.PENDING),
+                org.mockito.ArgumentMatchers.eq("%khóa n5%"), any());
+        verify(reviewRequestRepository, never()).findByStatusAndCourseDeletedFalseOrderByCreatedAtAsc(any(), any());
+    }
 }

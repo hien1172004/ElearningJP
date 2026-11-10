@@ -2,6 +2,8 @@ package com.jp.elearningjp.repository.curriculum;
 
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.repository.comment.CommentReportRepository;
+import com.jp.elearningjp.service.curriculum.CourseService;
+import com.jp.elearningjp.shared.enums.JlptLevel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,6 +106,27 @@ class CourseTeacherQueriesIT {
                 .getTotalElements()).isZero();
         assertThat(courseRepository.findAssignedToTeacherWithPendingChanges(teacherB, PageRequest.of(0, 10)).getContent())
                 .extracting(Course::getId).containsExactly(otherCourse);
+    }
+
+    @Test
+    void adminListSpec_filtersByKeywordLevelPublished_withinTeacherScope() {
+        jdbc.update("UPDATE courses SET title = 'Khóa Ngữ pháp N5', is_published = true WHERE id = ?", assignedCourse);
+        jdbc.update("UPDATE courses SET title = 'Kanji N4', jlpt_level = 'N4', is_published = false WHERE id = ?", otherCourse);
+        PageRequest page = PageRequest.of(0, 10);
+
+        // TEACHER B được giao cả 2 khóa: lọc theo từ khóa (không phân biệt hoa thường)
+        assertThat(courseRepository.findAll(CourseService.adminListSpec(teacherB, false, "ngữ PHÁP", null, null), page)
+                .getContent()).extracting(Course::getId).containsExactly(assignedCourse);
+        // Lọc cấp độ + trạng thái xuất bản
+        assertThat(courseRepository.findAll(CourseService.adminListSpec(teacherB, false, null, JlptLevel.N4, false), page)
+                .getContent()).extracting(Course::getId).containsExactly(otherCourse);
+        // TEACHER A không thấy khóa không được giao dù khớp từ khóa
+        assertThat(courseRepository.findAll(CourseService.adminListSpec(teacherA, false, "kanji", null, null), page)
+                .getTotalElements()).isZero();
+        // ADMIN (teacherId = null): không lấy khóa đã xóa
+        assertThat(courseRepository.findAll(CourseService.adminListSpec(null, false, null, JlptLevel.N5, null), page)
+                .getContent()).extracting(Course::getId).contains(assignedCourse).doesNotContain(otherCourse)
+                .allMatch(id -> !jdbc.queryForObject("SELECT deleted FROM courses WHERE id = ?", Boolean.class, id));
     }
 
     @Test

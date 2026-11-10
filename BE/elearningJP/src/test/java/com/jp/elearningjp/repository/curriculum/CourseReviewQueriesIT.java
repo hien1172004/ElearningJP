@@ -123,6 +123,24 @@ class CourseReviewQueriesIT {
     }
 
     @Test
+    void searchQueue_matchesCourseTitleOrSubmitterName_caseInsensitive() {
+        jdbc.update("UPDATE courses SET title = 'Khóa Kanji N3' WHERE id = ?", courseId);
+        jdbc.update("UPDATE users SET full_name = 'Nguyễn Văn Giáo' WHERE id = ?", teacherId);
+        long otherCourse = insertCourse(false);
+        insertRequest(courseId, "PENDING");
+        insertRequest(otherCourse, "PENDING");
+        PageRequest page = PageRequest.of(0, 50);
+
+        assertThat(reviewRequestRepository.searchQueue(ReviewRequestStatus.PENDING, "%kanji%", page).getContent())
+                .extracting(r -> r.getCourse().getId()).containsExactly(courseId);
+        // Theo tên người gửi: cả 2 yêu cầu đều do giáo viên này gửi
+        assertThat(reviewRequestRepository.searchQueue(ReviewRequestStatus.PENDING, "%văn giáo%", page).getTotalElements())
+                .isGreaterThanOrEqualTo(2);
+        assertThat(reviewRequestRepository.searchQueue(ReviewRequestStatus.APPROVED, "%kanji%", page).getTotalElements())
+                .isZero();
+    }
+
+    @Test
     void comments_ofLatestRequest_inOrder_withAuthor_andCount() {
         insertRequestReturningId(courseId, "REJECTED", "2026-01-01T00:00:00Z");
         long latest = insertRequestReturningId(courseId, "PENDING", "2026-02-01T00:00:00Z");
