@@ -156,7 +156,7 @@ export const TeacherLessonEditorPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
-  const tab: LessonEditorTab = isTab(rawTab) ? rawTab : 'vocab'
+  const tab: LessonEditorTab = isTab(rawTab) ? rawTab : 'kanji'
   const [editOpen, setEditOpen] = useState(false)
 
   const { data: course } = useCourseDetail(courseId)
@@ -238,9 +238,9 @@ export const TeacherLessonEditorPage: React.FC = () => {
           onChange={(key) => setSearchParams({ tab: key }, { replace: true })}
           destroyOnHidden
           items={[
+            typeTab('kanji', <Type className="w-4 h-4" />),
             typeTab('vocab', <BookOpen className="w-4 h-4" />),
             typeTab('grammar', <Languages className="w-4 h-4" />),
-            typeTab('kanji', <Type className="w-4 h-4" />),
             {
               key: 'speaking',
               label: tabLabel(<Mic className="w-4 h-4" />, 'Hội thoại'),

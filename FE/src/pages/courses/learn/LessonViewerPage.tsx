@@ -151,7 +151,8 @@ export const LessonViewerPage: React.FC = () => {
     if (!lesson) return []
     const sections = (lesson.sections ?? [])
       .slice()
-      .sort((a, b) => a.orderIndex - b.orderIndex)
+      // Thứ tự cố định Chữ Hán → Từ vựng → Ngữ pháp; cùng loại thì theo orderIndex
+      .sort((a, b) => (SECTION_ORDER[a.sectionType] ?? 9) - (SECTION_ORDER[b.sectionType] ?? 9) || a.orderIndex - b.orderIndex)
     const items: NavItem[] = []
     for (const sec of sections) {
       const pageKind = mapSectionTypeToPageKind(sec.sectionType)
@@ -162,7 +163,7 @@ export const LessonViewerPage: React.FC = () => {
         items.push({
           kind: 'KANJI',
           sectionId: sec.id,
-          label: sec.title || defaultTitleForPage('KANJI'),
+          label: defaultTitleForPage('KANJI'),
           icon: <BookOutlined className="text-base" />,
           kanjiItems: list,
         })
@@ -172,7 +173,7 @@ export const LessonViewerPage: React.FC = () => {
         items.push({
           kind: 'VOCAB',
           sectionId: sec.id,
-          label: sec.title || defaultTitleForPage('VOCAB'),
+          label: defaultTitleForPage('VOCAB'),
           icon: <ReadOutlined className="text-base" />,
           vocabItems: list,
         })
@@ -181,7 +182,7 @@ export const LessonViewerPage: React.FC = () => {
         if (list.length === 0) continue
         items.push({
           kind: 'GRAMMAR',
-          label: sec.title || defaultTitleForPage('GRAMMAR'),
+          label: defaultTitleForPage('GRAMMAR'),
           icon: <EditOutlined className="text-base" />,
           grammarItems: list,
         })
@@ -738,6 +739,8 @@ function mapSectionTypeToPageKind(t: LessonSectionType | string): PageKind | nul
   if (t === 'GRAMMAR') return 'GRAMMAR'
   return null
 }
+
+const SECTION_ORDER: Record<string, number> = { KANJI: 0, VOCABULARY: 1, GRAMMAR: 2 }
 
 function defaultTitleForPage(kind: PageKind): string {
   switch (kind) {
