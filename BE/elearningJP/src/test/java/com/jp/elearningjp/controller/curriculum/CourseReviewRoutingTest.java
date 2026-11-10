@@ -56,10 +56,13 @@ class CourseReviewRoutingTest {
     @Test
     void queue_defaultsToPendingQueryParamOptional() throws Exception {
         mockMvc.perform(get("/api/v1/course-review-requests")).andExpect(status().isOk());
-        verify(service).getQueue(isNull(), any(Integer.class), any(Integer.class));
+        verify(service).getQueue(isNull(), isNull(), any(Integer.class), any(Integer.class));
 
         mockMvc.perform(get("/api/v1/course-review-requests").param("status", "APPROVED")).andExpect(status().isOk());
-        verify(service).getQueue(ReviewRequestStatus.APPROVED, 1, 10);
+        verify(service).getQueue(ReviewRequestStatus.APPROVED, null, 1, 10);
+
+        mockMvc.perform(get("/api/v1/course-review-requests").param("keyword", "N5")).andExpect(status().isOk());
+        verify(service).getQueue(null, "N5", 1, 10);
     }
 
     @Test

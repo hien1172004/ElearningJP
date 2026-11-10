@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
-import { Button as AntdButton, Input, Modal, Pagination, Segmented, Select, Tabs } from 'antd'
+import { Button as AntdButton, Input, Modal, Pagination, Select } from 'antd'
 import { toast } from 'sonner'
-import { LoadingState, EmptyState, SearchInput, confirmDialog } from '@/components/common'
-import { WHITE_TAB_BAR_CLASS, WHITE_TAB_BAR_STYLE } from '@/lib/antd'
+import { LoadingState, EmptyState, SearchInput, confirmDialog, FilterBar } from '@/components/common'
 import { ModerationItemCard, TARGET_TYPE_LABELS } from '@/components/admin'
 import {
   useModerationAction,
@@ -178,124 +177,121 @@ export const AdminModerationPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
 
-      <Tabs
-        activeKey={tab}
-        onChange={(k) => setTab(k as TabKey)}
-        tabBarStyle={WHITE_TAB_BAR_STYLE}
-        className={WHITE_TAB_BAR_CLASS}
-        items={[
-          {
-            key: 'open',
-            label: `Chờ xử lý${openCount > 0 ? ` (${openCount})` : ''}`,
-            children: (
-              <ItemList
-                {...listProps}
-                data={openQueue.data}
-                isLoading={openQueue.isLoading}
-                isError={openQueue.isError}
-                onRetry={() => void openQueue.refetch()}
-                page={openPage}
-                onPageChange={setOpenPage}
-                showDismiss
-                emptyTitle="Không có báo cáo nào đang chờ"
-                emptyDescription="Khi người dùng báo cáo bình luận vi phạm, chúng sẽ xuất hiện ở đây."
+      {/* Thanh bộ lọc: chế độ xem (trước đây là thẻ tab) + bộ lọc riêng của từng chế độ */}
+      <FilterBar>
+        <Select<TabKey>
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'open', label: `Chờ xử lý${openCount > 0 ? ` (${openCount})` : ''}` },
+            { value: 'handled', label: 'Đã xử lý' },
+            { value: 'browse', label: 'Tra cứu bình luận' },
+          ]}
+          className="md:w-48"
+          aria-label="Chế độ xem"
+        />
+        {tab === 'handled' && (
+          <Select<Exclude<ModerationReportStatus, 'OPEN'>>
+            value={handledStatus}
+            onChange={(v) => {
+              setHandledStatus(v)
+              setHandledPage(1)
+            }}
+            options={[
+              { label: 'Đã ẩn', value: 'RESOLVED' },
+              { label: 'Không vi phạm', value: 'REJECTED' },
+            ]}
+            className="md:w-44"
+            aria-label="Kết quả xử lý"
+          />
+        )}
+        {tab === 'browse' && (
+          <>
+            <SearchInput
+              placeholder="Nội dung, tên hoặc email người viết"
+              value={keywordInput}
+              onChange={setKeywordInput}
+              onSearch={(v) => {
+                setKeyword(v)
+                setBrowsePage(1)
+              }}
+              className="md:flex-1 md:min-w-60"
+            />
+            <Select
+              allowClear
+              placeholder="Mọi trạng thái"
+              value={browseStatus}
+              onChange={(v?: 'VISIBLE' | 'HIDDEN') => {
+                setBrowseStatus(v)
+                setBrowsePage(1)
+              }}
+              options={[
+                { value: 'VISIBLE', label: 'Đang hiển thị' },
+                { value: 'HIDDEN', label: 'Đã ẩn' },
+              ]}
+              className="md:w-44"
+              aria-label="Lọc theo trạng thái"
+            />
+            {/* Giáo viên chỉ kiểm duyệt bình luận bài học → không cần lọc loại nội dung */}
+            {admin && (
+              <Select
+                allowClear
+                placeholder="Mọi loại nội dung"
+                value={targetType}
+                onChange={(v?: CommentTargetType) => {
+                  setTargetType(v)
+                  setBrowsePage(1)
+                }}
+                options={(Object.keys(TARGET_TYPE_LABELS) as CommentTargetType[]).map((t) => ({
+                  value: t,
+                  label: TARGET_TYPE_LABELS[t],
+                }))}
+                className="md:w-44"
+                aria-label="Lọc theo loại nội dung"
               />
-            ),
-          },
-          {
-            key: 'handled',
-            label: 'Đã xử lý',
-            children: (
-              <div className="space-y-4">
-                <Segmented
-                  value={handledStatus}
-                  onChange={(v) => {
-                    setHandledStatus(v as Exclude<ModerationReportStatus, 'OPEN'>)
-                    setHandledPage(1)
-                  }}
-                  options={[
-                    { label: 'Đã ẩn', value: 'RESOLVED' },
-                    { label: 'Không vi phạm', value: 'REJECTED' },
-                  ]}
-                />
-                <ItemList
-                  {...listProps}
-                  data={handledQueue.data}
-                  isLoading={handledQueue.isLoading}
-                  isError={handledQueue.isError}
-                  onRetry={() => void handledQueue.refetch()}
-                  page={handledPage}
-                  onPageChange={setHandledPage}
-                  emptyTitle="Chưa có báo cáo nào đã xử lý"
-                  emptyDescription="Lịch sử các báo cáo đã xử lý sẽ hiện ở đây."
-                />
-              </div>
-            ),
-          },
-          {
-            key: 'browse',
-            label: 'Tra cứu bình luận',
-            children: (
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:flex-wrap gap-3">
-                  <SearchInput
-                    placeholder="Nội dung, tên hoặc email người viết"
-                    value={keywordInput}
-                    onChange={setKeywordInput}
-                    onSearch={(v) => {
-                      setKeyword(v)
-                      setBrowsePage(1)
-                    }}
-                    className="md:max-w-xs"
-                  />
-                  <Select
-                    allowClear
-                    placeholder="Mọi trạng thái"
-                    value={browseStatus}
-                    onChange={(v?: 'VISIBLE' | 'HIDDEN') => {
-                      setBrowseStatus(v)
-                      setBrowsePage(1)
-                    }}
-                    options={[
-                      { value: 'VISIBLE', label: 'Đang hiển thị' },
-                      { value: 'HIDDEN', label: 'Đã ẩn' },
-                    ]}
-                    className="md:w-44"
-                  />
-                  {/* Giáo viên chỉ kiểm duyệt bình luận bài học → không cần lọc loại nội dung */}
-                  {admin && (
-                    <Select
-                      allowClear
-                      placeholder="Mọi loại nội dung"
-                      value={targetType}
-                      onChange={(v?: CommentTargetType) => {
-                        setTargetType(v)
-                        setBrowsePage(1)
-                      }}
-                      options={(Object.keys(TARGET_TYPE_LABELS) as CommentTargetType[]).map((t) => ({
-                        value: t,
-                        label: TARGET_TYPE_LABELS[t],
-                      }))}
-                      className="md:w-44"
-                    />
-                  )}
-                </div>
-                <ItemList
-                  {...listProps}
-                  data={browse.data}
-                  isLoading={browse.isLoading}
-                  isError={browse.isError}
-                  onRetry={() => void browse.refetch()}
-                  page={browsePage}
-                  onPageChange={setBrowsePage}
-                  emptyTitle="Không có bình luận phù hợp"
-                  emptyDescription="Thử đổi từ khóa hoặc bộ lọc."
-                />
-              </div>
-            ),
-          },
-        ]}
-      />
+            )}
+          </>
+        )}
+      </FilterBar>
+
+      {tab === 'open' ? (
+        <ItemList
+          {...listProps}
+          data={openQueue.data}
+          isLoading={openQueue.isLoading}
+          isError={openQueue.isError}
+          onRetry={() => void openQueue.refetch()}
+          page={openPage}
+          onPageChange={setOpenPage}
+          showDismiss
+          emptyTitle="Không có báo cáo nào đang chờ"
+          emptyDescription="Khi người dùng báo cáo bình luận vi phạm, chúng sẽ xuất hiện ở đây."
+        />
+      ) : tab === 'handled' ? (
+        <ItemList
+          {...listProps}
+          data={handledQueue.data}
+          isLoading={handledQueue.isLoading}
+          isError={handledQueue.isError}
+          onRetry={() => void handledQueue.refetch()}
+          page={handledPage}
+          onPageChange={setHandledPage}
+          emptyTitle="Chưa có báo cáo nào đã xử lý"
+          emptyDescription="Lịch sử các báo cáo đã xử lý sẽ hiện ở đây."
+        />
+      ) : (
+        <ItemList
+          {...listProps}
+          data={browse.data}
+          isLoading={browse.isLoading}
+          isError={browse.isError}
+          onRetry={() => void browse.refetch()}
+          page={browsePage}
+          onPageChange={setBrowsePage}
+          emptyTitle="Không có bình luận phù hợp"
+          emptyDescription="Thử đổi từ khóa hoặc bộ lọc."
+        />
+      )}
 
       <Modal
         open={!!pending}

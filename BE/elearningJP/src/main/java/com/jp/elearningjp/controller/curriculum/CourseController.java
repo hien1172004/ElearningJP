@@ -67,18 +67,22 @@ public class CourseController {
 
     @Operation(summary = "[Admin/Teacher] Danh sách khóa học để quản lý",
             description = "Kể cả khóa chưa xuất bản. Quản trị viên thấy toàn bộ khóa học; giáo viên chỉ thấy khóa học được giao cho mình. "
-                    + "pendingChanges=true: chỉ khóa có thay đổi chưa duyệt")
+                    + "pendingChanges=true: chỉ khóa có thay đổi chưa duyệt. "
+                    + "Lọc thêm: keyword (tên khóa), jlptLevel, published (true = đã xuất bản, false = bản nháp)")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
     @GetMapping("/admin")
     public ApiResponse<PageResponse<CourseResponse>> getAllCoursesForAdmin(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "false") boolean pendingChanges
+            @RequestParam(defaultValue = "false") boolean pendingChanges,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) JlptLevel jlptLevel,
+            @RequestParam(required = false) Boolean published
     ) {
         return ApiResponse.<PageResponse<CourseResponse>>builder()
                 .success(true)
-                .data(courseService.getAllCoursesForAdmin(page, size, pendingChanges))
+                .data(courseService.getAllCoursesForAdmin(page, size, pendingChanges, keyword, jlptLevel, published))
                 .build();
     }
 

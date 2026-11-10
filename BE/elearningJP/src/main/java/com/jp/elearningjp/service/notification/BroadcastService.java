@@ -23,12 +23,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -109,11 +114,29 @@ public class BroadcastService {
     /** Lịch sử gửi: ADMIN thấy mọi lần gửi, TEACHER chỉ lần gửi của mình. */
     @Transactional(readOnly = true)
     public PageResponse<BroadcastResponse> getHistory(int page, int size) {
+        return getHistory(page, size, null, null);
+    }
+
+    /**
+     * Lịch sử gửi kèm bộ lọc: {@code keyword} tìm trong tiêu đề / nội dung, {@code audience} lọc theo đối tượng nhận
+     * (null = không lọc).
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<BroadcastResponse> getHistory(int page, int size, String keyword, BroadcastAudience audience) {
         int safePage = Math.max(page, 1);
         Pageable pageable = PageRequest.of(safePage - 1, Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
-        Page<NotificationBroadcast> result = currentUserService.isAdmin()
-                ? broadcastRepository.findAllByOrderByCreatedAtDesc(pageable)
-                : broadcastRepository.findBySenderIdOrderByCreatedAtDesc(currentUserService.getCurrentUserId(), pageable);
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        Page<NotificationBroadcast> result;
+        if (hasKeyword || audience != null) {
+            Long senderId = currentUserService.isAdmin() ? null : currentUserService.getCurrentUserId();
+            result = broadcastRepository.findAll(historySpec(senderId, hasKeyword ? keyword : null, audience),
+                    PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                            Sort.by(Sort.Direction.DESC, "createdAt")));
+        } else {
+            result = currentUserService.isAdmin()
+                    ? broadcastRepository.findAllByOrderByCreatedAtDesc(pageable)
+                    : broadcastRepository.findBySenderIdOrderByCreatedAtDesc(currentUserService.getCurrentUserId(), pageable);
+        }
         return PageResponse.<BroadcastResponse>builder()
                 .items(result.getContent().stream().map(this::toResponse).toList())
                 .page(safePage)
@@ -126,6 +149,25 @@ public class BroadcastService {
     // =========================================================
     // PRIVATE HELPERS
     // =========================================================
+
+    static Specification<NotificationBroadcast> historySpec(Long senderId, String keyword, BroadcastAudience audience) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (senderId != null) {
+                predicates.add(cb.equal(root.get("sender").get("id"), senderId));
+            }
+            if (keyword != null) {
+                String pattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), pattern),
+                        cb.like(cb.lower(root.get("body")), pattern)));
+            }
+            if (audience != null) {
+                predicates.add(cb.equal(root.get("audience"), audience));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 
     private record Target(BroadcastAudience audience, String role, Course course) {
         Long courseId() {

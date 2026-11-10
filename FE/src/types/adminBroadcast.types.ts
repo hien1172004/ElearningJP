@@ -28,6 +28,15 @@ export interface Broadcast {
   createdAt: string
 }
 
+/** Tham số GET /admin/broadcasts (lịch sử gửi). */
+export interface BroadcastHistoryParams {
+  page: number
+  size?: number
+  /** Tìm trong tiêu đề / nội dung. */
+  keyword?: string
+  audience?: BroadcastAudience
+}
+
 export interface RecipientCountParams {
   audience: BroadcastAudience
   role?: string

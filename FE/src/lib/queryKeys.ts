@@ -82,7 +82,7 @@ export const QUERY_KEYS = {
   adminBroadcast: {
     /** Key gốc — invalidate sau khi gửi. */
     all: ['admin-broadcasts'] as const,
-    history: (page: number, size: number) => ['admin-broadcasts', 'history', page, size] as const,
+    history: (params: Record<string, unknown>) => ['admin-broadcasts', 'history', params] as const,
     recipientCount: (params: Record<string, unknown>) => ['admin-broadcasts', 'recipient-count', params] as const,
     recipientCountDisabled: ['admin-broadcasts', 'recipient-count', 'disabled'] as const,
   },

@@ -59,14 +59,17 @@ public class BroadcastController {
 
     @GetMapping
     @Operation(summary = "[Admin/Teacher] Lịch sử gửi thông báo",
-            description = "Quản trị viên xem mọi lần gửi; giáo viên chỉ xem lần gửi của mình. Trang bắt đầu từ 1.")
+            description = "Quản trị viên xem mọi lần gửi; giáo viên chỉ xem lần gửi của mình. Trang bắt đầu từ 1. "
+                    + "Lọc: keyword (tiêu đề / nội dung), audience (ALL_USERS | ROLE | COURSE_STUDENTS).")
     public ApiResponse<PageResponse<BroadcastResponse>> getHistory(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) BroadcastAudience audience
     ) {
         return ApiResponse.<PageResponse<BroadcastResponse>>builder()
                 .success(true)
-                .data(broadcastService.getHistory(page, size))
+                .data(broadcastService.getHistory(page, size, keyword, audience))
                 .build();
     }
 }

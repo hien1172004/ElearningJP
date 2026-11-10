@@ -25,6 +25,8 @@ export interface CourseReviewRequest {
 
 export interface CourseReviewQueueParams {
   status?: ReviewRequestStatus
+  /** Tìm theo tên khóa học hoặc tên người gửi. */
+  keyword?: string
   page?: number
   size?: number
 }

@@ -1,10 +1,12 @@
 import { confirmDialog } from '@/components/common/ConfirmModal'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams, Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Pencil, Plus, BookOpen, Eye, EyeOff, Trash2, Clock, Edit3, Megaphone } from 'lucide-react'
-import { Button as AntdButton, Modal } from 'antd'
+import { Button as AntdButton, Modal, Pagination, Select } from 'antd'
 import { toast } from 'sonner'
-import { LoadingState, EmptyState, BackButton } from '@/components/common'
+import { LoadingState, EmptyState, BackButton, SearchInput, FilterBar } from '@/components/common'
+import { StatTile } from '@/components/admin'
+import { formatRelativeTime } from '@/utils/format'
 import {
   CourseFormModal,
   LessonFormModal,
@@ -40,6 +42,16 @@ import { useAuthStore } from '@/stores'
 import { isAdmin } from '@/utils/roles'
 
 const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
+const EXAM_PAGE_SIZE = 6
+
+type ExamStatusFilter = 'published' | 'draft' | 'pendingRemoval'
+const EXAM_STATUS_OPTIONS: { value: ExamStatusFilter; label: string }[] = [
+  { value: 'published', label: 'Đã phát hành' },
+  { value: 'draft', label: 'Bản nháp' },
+  { value: 'pendingRemoval', label: 'Chờ gỡ khi duyệt' },
+]
+
+const isExamPublished = (exam: ExamSummary) => !!exam.published || exam.status === 'PUBLISHED'
 
 /**
  * Không gian soạn khóa học (giáo viên): thanh tab ngang dưới thanh chú thích
@@ -89,6 +101,25 @@ export const TeacherCourseEditorPage: React.FC = () => {
   // Đề thi & bài kiểm tra của khóa học
   const [courseExams, setCourseExams] = useState<ExamSummary[]>([])
   const [loadingExams, setLoadingExams] = useState(false)
+  // Tìm kiếm / lọc / phân trang danh sách bài kiểm tra (phía client — BE trả đủ đề của khóa)
+  const [examKeywordInput, setExamKeywordInput] = useState('')
+  const [examKeyword, setExamKeyword] = useState('')
+  const [examStatus, setExamStatus] = useState<ExamStatusFilter | undefined>(undefined)
+  const [examPage, setExamPage] = useState(1)
+  const filteredExams = useMemo(() => {
+    const q = examKeyword.toLowerCase()
+    return courseExams.filter((exam) => {
+      if (q && !exam.title.toLowerCase().includes(q)) return false
+      if (examStatus === 'published') return isExamPublished(exam)
+      if (examStatus === 'draft') return !isExamPublished(exam)
+      if (examStatus === 'pendingRemoval') return !!exam.pendingRemoval
+      return true
+    })
+  }, [courseExams, examKeyword, examStatus])
+  // Xóa đề làm trang đang chọn vượt quá số trang → hiển thị trang cuối hợp lệ
+  const examLastPage = Math.max(1, Math.ceil(filteredExams.length / EXAM_PAGE_SIZE))
+  const examCurrentPage = Math.min(examPage, examLastPage)
+  const pagedExams = filteredExams.slice((examCurrentPage - 1) * EXAM_PAGE_SIZE, examCurrentPage * EXAM_PAGE_SIZE)
 
   const { data: course, isLoading, isFetching: courseFetching } = useCourseDetail(id)
   const deleteCourse = useDeleteCourse()
@@ -228,43 +259,37 @@ export const TeacherCourseEditorPage: React.FC = () => {
   // ======================== Nội dung cột phải ========================
 
   const overviewPanel = (
-    <div className={`${CARD} p-6 space-y-4`}>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+    <div className="space-y-4">
+      {/* Thẻ thông số: cùng kiểu thẻ với trang Học viên (StatTile) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Ô "Bài học": cuộn xuống danh sách bên dưới (chưa có bài → mở form thêm bài) */}
-        <button
-          type="button"
+        <StatTile
+          label="Bài học"
+          value={lessons.length.toLocaleString('vi-VN')}
+          hint={lessons.length ? 'Xem danh sách bên dưới' : 'Thêm bài học đầu tiên'}
           title={lessons.length ? 'Xem danh sách bài học' : 'Thêm bài học đầu tiên'}
           onClick={() => {
             if (!lessons.length) return openCreateLesson()
             lessonListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             setLessonListFlash(true)
           }}
-          className="p-3.5 rounded-xl bg-indigo-50/50 border border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50 transition cursor-pointer"
-        >
-          <p className="text-2xl font-black text-indigo-600">{lessons.length}</p>
-          <p className="text-xs text-gray-500 mt-1">Bài học</p>
-        </button>
+        />
         {/* Ô "Học viên": mở mục Học viên */}
-        <button
-          type="button"
+        <StatTile
+          label="Học viên"
+          value={(course.totalEnrollments ?? 0).toLocaleString('vi-VN')}
+          hint="Xem tiến độ học viên"
           title="Xem học viên của khóa"
           onClick={() => select({ view: 'students' })}
-          className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50 transition cursor-pointer"
-        >
-          <p className="text-2xl font-black text-emerald-600">{course.totalEnrollments ?? 0}</p>
-          <p className="text-xs text-gray-500 mt-1">Học viên</p>
-        </button>
-        <div className="p-3.5 rounded-xl bg-gray-50/50 border border-gray-200">
-          <p className="text-2xl font-black text-gray-600">{course.jlptLevel}</p>
-          <p className="text-xs text-gray-500 mt-1">Cấp độ</p>
-        </div>
-        <div className="p-3.5 rounded-xl bg-gray-50/50 border border-gray-200">
-          <p className="text-xl font-black text-gray-600 truncate">
-            {course.updatedAt ? new Date(course.updatedAt).toLocaleDateString('vi-VN') : '—'}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Cập nhật lần cuối</p>
-        </div>
+        />
+        <StatTile label="Cấp độ" value={`JLPT ${course.jlptLevel}`} />
+        <StatTile
+          label="Cập nhật lần cuối"
+          value={course.updatedAt ? new Date(course.updatedAt).toLocaleDateString('vi-VN') : '—'}
+          hint={course.updatedAt ? formatRelativeTime(course.updatedAt) : undefined}
+        />
       </div>
+    <div className={`${CARD} p-6 space-y-4`}>
       {lessons.length === 0 ? (
         <EmptyState
           title="Chưa có bài học nào"
@@ -302,6 +327,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
         Bấm vào một bài để soạn từ vựng, ngữ pháp, chữ Hán và quiz.
       </p>
     </div>
+    </div>
   )
 
   const examsPanel = (
@@ -325,8 +351,37 @@ export const TeacherCourseEditorPage: React.FC = () => {
         </AntdButton>
       </div>
 
+      {courseExams.length > 0 && (
+        <FilterBar>
+          <SearchInput
+            placeholder="Tìm theo tên bài kiểm tra"
+            value={examKeywordInput}
+            onChange={setExamKeywordInput}
+            onSearch={(v) => {
+              setExamKeyword(v)
+              setExamPage(1)
+            }}
+            className="md:flex-1 md:min-w-60"
+          />
+          <Select<ExamStatusFilter>
+            allowClear
+            value={examStatus}
+            onChange={(v) => {
+              setExamStatus(v)
+              setExamPage(1)
+            }}
+            placeholder="Mọi trạng thái"
+            options={EXAM_STATUS_OPTIONS}
+            className="md:w-48"
+            aria-label="Lọc theo trạng thái"
+          />
+        </FilterBar>
+      )}
+
       {loadingExams ? (
         <div className="p-8 text-center text-xs text-gray-500">Đang tải danh sách bài kiểm tra...</div>
+      ) : courseExams.length > 0 && filteredExams.length === 0 ? (
+        <EmptyState card title="Không có bài kiểm tra phù hợp" description="Thử đổi từ khóa hoặc bộ lọc." />
       ) : courseExams.length === 0 ? (
         <EmptyState
           card
@@ -346,9 +401,10 @@ export const TeacherCourseEditorPage: React.FC = () => {
           }
         />
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {courseExams.map((exam) => {
-            const isPublished = exam.published || exam.status === 'PUBLISHED'
+          {pagedExams.map((exam) => {
+            const isPublished = isExamPublished(exam)
             return (
               <div
                 key={exam.id}
@@ -438,6 +494,20 @@ export const TeacherCourseEditorPage: React.FC = () => {
             )
           })}
         </div>
+        {filteredExams.length > EXAM_PAGE_SIZE && (
+          <div className="flex justify-end">
+            <Pagination
+              size="small"
+              current={examCurrentPage}
+              pageSize={EXAM_PAGE_SIZE}
+              total={filteredExams.length}
+              onChange={setExamPage}
+              showSizeChanger={false}
+              showTotal={(total, [from, to]) => `${from}–${to} / ${total} bài kiểm tra`}
+            />
+          </div>
+        )}
+        </>
       )}
     </div>
   )

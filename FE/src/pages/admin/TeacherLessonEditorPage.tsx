@@ -208,61 +208,61 @@ export const TeacherLessonEditorPage: React.FC = () => {
 
   return (
     <CourseEditLockContext.Provider value={lockReason}>
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 space-y-4 pb-12" data-edit-locked={locked || undefined}>
-      <BackButton onClick={() => navigate(coursePath)} />
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 space-y-4 pb-12" data-edit-locked={locked || undefined}>
+        <BackButton onClick={() => navigate(coursePath)} />
 
-      {/* Header: breadcrumb khóa học → bài học + sửa bài học */}
-      <div className={`${CARD} px-4 py-3 flex flex-wrap items-center justify-between gap-3`}>
-        <div className="flex items-center gap-1.5 min-w-0 text-sm">
-          <Link to={coursePath} className="truncate font-semibold text-slate-500 hover:text-indigo-600">
-            {course?.title ?? lesson.courseTitle ?? 'Khóa học'}
-          </Link>
-          <ChevronRight className="w-4 h-4 shrink-0 text-slate-300" />
-          <h1 className="truncate font-bold text-sumi text-base">
-            {lessonNumber > 0 ? `Bài ${lessonNumber}: ` : ''}
-            {lesson.title}
-          </h1>
+        {/* Header: breadcrumb khóa học → bài học + sửa bài học */}
+        <div className={`${CARD} px-4 py-3 flex flex-wrap items-center justify-between gap-3`}>
+          <div className="flex items-center gap-1.5 min-w-0 text-sm">
+            <Link to={coursePath} className="truncate font-semibold text-slate-500 hover:text-indigo-600">
+              {course?.title ?? lesson.courseTitle ?? 'Khóa học'}
+            </Link>
+            <ChevronRight className="w-4 h-4 shrink-0 text-slate-300" />
+            <h1 className="truncate font-bold text-sumi text-base">
+              {lessonNumber > 0 ? `Bài ${lessonNumber}: ` : ''}
+              {lesson.title}
+            </h1>
+          </div>
+          <AntdButton size="small" icon={<Pencil className="w-3.5 h-3.5" />} disabled={locked} onClick={() => setEditOpen(true)}>
+            Sửa bài học
+          </AntdButton>
         </div>
-        <AntdButton size="small" icon={<Pencil className="w-3.5 h-3.5" />} disabled={locked} onClick={() => setEditOpen(true)}>
-          Sửa bài học
-        </AntdButton>
+
+        <CourseEditLockBanner />
+
+        <LessonReviewComments courseId={courseId} lessonId={lessonId} sections={sections} admin={admin} />
+
+        <div className={`${CARD} px-4 pb-4`}>
+          <Tabs
+            activeKey={tab}
+            onChange={(key) => setSearchParams({ tab: key }, { replace: true })}
+            destroyOnHidden
+            items={[
+              typeTab('kanji', <Type className="w-4 h-4" />),
+              typeTab('vocab', <BookOpen className="w-4 h-4" />),
+              typeTab('grammar', <Languages className="w-4 h-4" />),
+              {
+                key: 'speaking',
+                label: tabLabel(<Mic className="w-4 h-4" />, 'Hội thoại'),
+                children: (
+                  <LessonSpeakingPanel
+                    lessonId={lessonId}
+                    courseId={courseId}
+                    courseLevel={course?.jlptLevel}
+                  />
+                ),
+              },
+              {
+                key: 'quiz',
+                label: tabLabel(<FileCheck className="w-4 h-4" />, 'Quiz'),
+                children: <QuizPanel lessonId={lessonId} lessonTitle={lesson.title} inline />,
+              },
+            ]}
+          />
+        </div>
+
+        <LessonFormModal open={editOpen} courseId={courseId} lesson={lesson} onClose={() => setEditOpen(false)} />
       </div>
-
-      <CourseEditLockBanner />
-
-      <LessonReviewComments courseId={courseId} lessonId={lessonId} sections={sections} admin={admin} />
-
-      <div className={`${CARD} px-4 pb-4`}>
-        <Tabs
-          activeKey={tab}
-          onChange={(key) => setSearchParams({ tab: key }, { replace: true })}
-          destroyOnHidden
-          items={[
-            typeTab('vocab', <BookOpen className="w-4 h-4" />),
-            typeTab('grammar', <Languages className="w-4 h-4" />),
-            typeTab('kanji', <Type className="w-4 h-4" />),
-            {
-              key: 'speaking',
-              label: tabLabel(<Mic className="w-4 h-4" />, 'Hội thoại'),
-              children: (
-                <LessonSpeakingPanel
-                  lessonId={lessonId}
-                  courseId={courseId}
-                  courseLevel={course?.jlptLevel}
-                />
-              ),
-            },
-            {
-              key: 'quiz',
-              label: tabLabel(<FileCheck className="w-4 h-4" />, 'Quiz'),
-              children: <QuizPanel lessonId={lessonId} lessonTitle={lesson.title} inline />,
-            },
-          ]}
-        />
-      </div>
-
-      <LessonFormModal open={editOpen} courseId={courseId} lesson={lesson} onClose={() => setEditOpen(false)} />
-    </div>
     </CourseEditLockContext.Provider>
   )
 }

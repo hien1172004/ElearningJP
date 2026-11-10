@@ -18,7 +18,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -150,5 +155,28 @@ class BroadcastServiceTest {
 
         assertThat(res.getRecipientCount()).isEqualTo(1);
         assertThat(res.getLink()).isEqualTo("/courses");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void history_withFilters_usesSpecificationQuery() {
+        when(currentUserService.isAdmin()).thenReturn(false);
+        when(repository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenAnswer(inv -> new PageImpl<NotificationBroadcast>(List.of(), (Pageable) inv.getArgument(1), 0));
+
+        service.getHistory(1, 10, "lịch thi", BroadcastAudience.COURSE_STUDENTS);
+
+        verify(repository).findAll(any(Specification.class), any(Pageable.class));
+        verify(repository, never()).findBySenderIdOrderByCreatedAtDesc(anyLong(), any());
+    }
+
+    @Test
+    void history_withoutFilters_keepsLegacyQuery() {
+        when(currentUserService.isAdmin()).thenReturn(true);
+        when(repository.findAllByOrderByCreatedAtDesc(any())).thenReturn(new PageImpl<>(List.of()));
+
+        service.getHistory(1, 10, null, null);
+
+        verify(repository).findAllByOrderByCreatedAtDesc(any());
     }
 }

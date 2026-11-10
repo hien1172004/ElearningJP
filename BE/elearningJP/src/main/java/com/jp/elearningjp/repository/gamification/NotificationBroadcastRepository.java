@@ -3,8 +3,10 @@ package com.jp.elearningjp.repository.gamification;
 import com.jp.elearningjp.entity.gamification.NotificationBroadcast;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -12,7 +14,8 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 
 @Repository
-public interface NotificationBroadcastRepository extends JpaRepository<NotificationBroadcast, Long> {
+public interface NotificationBroadcastRepository extends JpaRepository<NotificationBroadcast, Long>,
+        JpaSpecificationExecutor<NotificationBroadcast> {
 
     /**
      * Điều kiện người nhận dùng chung cho đếm & chèn: tài khoản chưa xóa, đang ACTIVE,
@@ -59,4 +62,9 @@ public interface NotificationBroadcastRepository extends JpaRepository<Notificat
 
     @EntityGraph(attributePaths = {"sender", "course"})
     Page<NotificationBroadcast> findBySenderIdOrderByCreatedAtDesc(Long senderId, Pageable pageable);
+
+    /** Lịch sử gửi có bộ lọc (từ khóa / đối tượng / người gửi) — nạp sẵn sender, course để tránh N+1. */
+    @Override
+    @EntityGraph(attributePaths = {"sender", "course"})
+    Page<NotificationBroadcast> findAll(Specification<NotificationBroadcast> spec, Pageable pageable);
 }

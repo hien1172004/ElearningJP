@@ -1,20 +1,35 @@
 ﻿import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
-import { Table, Tag, Button as AntdButton, Tooltip, Tabs } from 'antd'
-import { WHITE_TAB_BAR_CLASS, WHITE_TAB_BAR_STYLE } from '@/lib/antd'
+import { Table, Tag, Button as AntdButton, Tooltip, Select } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { PageHeader, LoadingState, EmptyState } from '@/components/common'
+import { PageHeader, LoadingState, EmptyState, SearchInput, FilterBar } from '@/components/common'
 import { CourseFormModal, CourseReviewBadge } from '@/components/course'
 import { ConfirmModal } from '@/components/common'
 import { useCourses, useDeleteCourse } from '@/hooks'
 import { courseService } from '@/services'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import type { CourseSummary } from '@/types'
+import type { CourseSummary, JlptLevel } from '@/types'
 import { useAuthStore } from '@/stores'
 import { isAdmin } from '@/utils/roles'
 import { QUERY_KEYS } from '@/lib/queryKeys'
+
+const PAGE_SIZE = 10
+
+const LEVEL_OPTIONS = (['N5', 'N4', 'N3', 'N2', 'N1'] as const).map((l) => ({ value: l, label: `JLPT ${l}` }))
+
+type PublishFilter = 'published' | 'draft'
+const PUBLISH_OPTIONS: { value: PublishFilter; label: string }[] = [
+  { value: 'published', label: 'Đã xuất bản' },
+  { value: 'draft', label: 'Bản nháp' },
+]
+
+type ChangesFilter = 'all' | 'pending'
+const CHANGES_OPTIONS: { value: ChangesFilter; label: string }[] = [
+  { value: 'all', label: 'Tất cả bản soạn' },
+  { value: 'pending', label: 'Có thay đổi chưa duyệt' },
+]
 
 function statusBadge(course: CourseSummary) {
   if (course.archivedAt) return <Tag className="rounded-md" color="red">Đã lưu trữ</Tag>
@@ -54,7 +69,22 @@ export const TeacherCoursesPage: React.FC = () => {
 
   // Bộ lọc của ADMIN: chỉ khóa có thay đổi chưa duyệt (giáo viên đã sửa nhưng chưa được duyệt)
   const [pendingOnly, setPendingOnly] = useState(false)
-  const { data, isLoading } = useCourses({ admin: true, pendingChanges: admin && pendingOnly })
+  // Tìm kiếm + lọc + phân trang phía server
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [level, setLevel] = useState<JlptLevel | undefined>(undefined)
+  const [publishFilter, setPublishFilter] = useState<PublishFilter | undefined>(undefined)
+  const [page, setPage] = useState(1)
+  const { data, isLoading, isFetching } = useCourses({
+    admin: true,
+    page,
+    size: PAGE_SIZE,
+    pendingChanges: admin && pendingOnly,
+    keyword: keyword || undefined,
+    jlptLevel: level,
+    published: publishFilter ? publishFilter === 'published' : undefined,
+  })
+  const filtered = !!keyword || !!level || !!publishFilter
   const deleteCourse = useDeleteCourse()
 
   const handlePublish = async (course: CourseSummary, publish: boolean) => {
@@ -75,10 +105,13 @@ export const TeacherCoursesPage: React.FC = () => {
   const handleDelete = async () => {
     if (!deleteTarget) return
     await deleteCourse.mutateAsync(deleteTarget.id)
+    // Xóa khóa cuối cùng của trang (không phải trang 1) → lùi về trang trước còn dữ liệu
+    if (courses.length === 1 && page > 1) setPage(page - 1)
     setDeleteTarget(null)
   }
 
-  const courses = data?.items ?? []
+  const courses = data?.items ?? data?.content ?? []
+  const total = data?.totalElements ?? 0
 
   const allColumns: ColumnsType<CourseSummary> = [
     {
@@ -195,29 +228,73 @@ export const TeacherCoursesPage: React.FC = () => {
       />
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 space-y-4">
-        {admin && (
-          <Tabs
-            activeKey={pendingOnly ? 'pending' : 'all'}
-            onChange={(key) => setPendingOnly(key === 'pending')}
-            tabBarStyle={WHITE_TAB_BAR_STYLE}
-            className={WHITE_TAB_BAR_CLASS}
-            items={[
-              { key: 'all', label: 'Tất cả' },
-              { key: 'pending', label: 'Có thay đổi chưa duyệt' },
-            ]}
+        <FilterBar>
+          <SearchInput
+            placeholder="Tìm theo tên khóa học"
+            value={keywordInput}
+            onChange={setKeywordInput}
+            onSearch={(v) => {
+              setKeyword(v)
+              setPage(1)
+            }}
+            className="md:flex-1 md:min-w-60"
           />
-        )}
+          <Select<JlptLevel>
+            allowClear
+            value={level}
+            onChange={(v) => {
+              setLevel(v)
+              setPage(1)
+            }}
+            placeholder="Tất cả cấp độ"
+            options={LEVEL_OPTIONS}
+            className="md:w-44"
+            aria-label="Lọc theo cấp độ"
+          />
+          <Select<PublishFilter>
+            allowClear
+            value={publishFilter}
+            onChange={(v) => {
+              setPublishFilter(v)
+              setPage(1)
+            }}
+            placeholder="Mọi trạng thái"
+            options={PUBLISH_OPTIONS}
+            className="md:w-44"
+            aria-label="Lọc theo trạng thái xuất bản"
+          />
+          {/* Bộ lọc của ADMIN: khóa có thay đổi chưa duyệt (trước đây là thẻ tab) */}
+          {admin && (
+            <Select<ChangesFilter>
+              value={pendingOnly ? 'pending' : 'all'}
+              onChange={(v) => {
+                setPendingOnly(v === 'pending')
+                setPage(1)
+              }}
+              options={CHANGES_OPTIONS}
+              className="md:w-56"
+              aria-label="Lọc theo thay đổi chưa duyệt"
+            />
+          )}
+        </FilterBar>
 
         {isLoading && <LoadingState message="Đang tải danh sách khóa học..." />}
 
-        {!isLoading && courses.length === 0 && pendingOnly && admin && (
+        {!isLoading && courses.length === 0 && filtered && (
+          <EmptyState
+            title="Không có khóa học phù hợp"
+            description="Thử đổi từ khóa hoặc bộ lọc."
+          />
+        )}
+
+        {!isLoading && courses.length === 0 && !filtered && pendingOnly && admin && (
           <EmptyState
             title="Không có khóa nào có thay đổi chưa duyệt"
             description="Nội dung giáo viên đang soạn ở mọi khóa đều đã được duyệt."
           />
         )}
 
-        {!isLoading && courses.length === 0 && !(pendingOnly && admin) && (
+        {!isLoading && courses.length === 0 && !filtered && !(pendingOnly && admin) && (
           <EmptyState
             title={admin ? 'Chưa có khóa học nào' : 'Bạn chưa được giao khóa học nào'}
             description={
@@ -248,7 +325,15 @@ export const TeacherCoursesPage: React.FC = () => {
           <Table<CourseSummary>
             dataSource={courses}
             rowKey="id"
-            pagination={{ pageSize: 10, showSizeChanger: false }}
+            loading={isFetching}
+            pagination={{
+              current: page,
+              pageSize: PAGE_SIZE,
+              total,
+              showSizeChanger: false,
+              showTotal: (t) => `${t} khóa học`,
+              onChange: setPage,
+            }}
             columns={columns}
             // Bấm vào bất kỳ đâu trên row (trừ cột "Hành động") → mở trang quản lý khóa học.
             // Cột hành động đã stopPropagation nên các nút bấm được vẫn hoạt động bình thường.

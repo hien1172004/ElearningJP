@@ -5,13 +5,14 @@ import { Button as AntdButton, Input, Select, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { BackButton, EmptyState, confirmDialog } from '@/components/common'
+import { BackButton, EmptyState, SearchInput, confirmDialog, FilterBar } from '@/components/common'
 import { useBroadcastHistory, useCourses, useRecipientCount, useSendBroadcast } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { isAdmin } from '@/utils/roles'
 import { formatRelativeTime } from '@/utils/format'
 import type { Broadcast, BroadcastAudience, RecipientCountParams } from '@/types'
 
+const HISTORY_PAGE_SIZE = 10
 const TITLE_MAX = 120
 const BODY_MAX = 1000
 
@@ -55,6 +56,10 @@ export const AdminBroadcastsPage: React.FC = () => {
   const [body, setBody] = useState('')
   const [link, setLink] = useState('')
   const [historyPage, setHistoryPage] = useState(1)
+  // Bộ lọc lịch sử gửi
+  const [historyKeywordInput, setHistoryKeywordInput] = useState('')
+  const [historyKeyword, setHistoryKeyword] = useState('')
+  const [historyAudience, setHistoryAudience] = useState<BroadcastAudience | undefined>(undefined)
 
   // ADMIN: mọi khóa; TEACHER: khóa do mình tạo (BE đã lọc)
   const { data: coursePage, isLoading: coursesLoading } = useCourses({ admin: true, size: 100 })
@@ -68,7 +73,13 @@ export const AdminBroadcastsPage: React.FC = () => {
   const { data: recipientCount, isFetching: counting } = useRecipientCount(countParams)
 
   const send = useSendBroadcast()
-  const history = useBroadcastHistory(historyPage)
+  const history = useBroadcastHistory({
+    page: historyPage,
+    size: HISTORY_PAGE_SIZE,
+    keyword: historyKeyword || undefined,
+    audience: historyAudience,
+  })
+  const historyFiltered = !!historyKeyword || !!historyAudience
 
   const handleSend = async () => {
     const parsed = schema.safeParse({ title, body, link })
@@ -172,7 +183,8 @@ export const AdminBroadcastsPage: React.FC = () => {
       {/* ======================== Soạn thông báo ======================== */}
       <section className="bg-surface rounded-xl border border-slate-200 p-4 space-y-4">
         <div className="grid md:grid-cols-2 gap-3">
-          <label className="space-y-1">
+          {/* Không có ô phụ (vai trò / khóa học) → chiếm trọn chiều ngang khung */}
+          <label className={audience === 'ALL_USERS' ? 'space-y-1 md:col-span-2' : 'space-y-1'}>
             <span className="text-sm font-medium text-slate-700">Gửi tới</span>
             <Select
               value={audience}
@@ -262,6 +274,36 @@ export const AdminBroadcastsPage: React.FC = () => {
       {/* ======================== Lịch sử ======================== */}
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-slate-800">Lịch sử gửi</h2>
+        <FilterBar>
+          <SearchInput
+            placeholder="Tìm theo tiêu đề hoặc nội dung"
+            value={historyKeywordInput}
+            onChange={setHistoryKeywordInput}
+            onSearch={(v) => {
+              setHistoryKeyword(v)
+              setHistoryPage(1)
+            }}
+            className="md:flex-1 md:min-w-60"
+          />
+          {/* Giáo viên chỉ gửi được cho học viên khóa của mình → không cần lọc đối tượng */}
+          {admin && (
+            <Select<BroadcastAudience>
+              allowClear
+              value={historyAudience}
+              onChange={(v) => {
+                setHistoryAudience(v)
+                setHistoryPage(1)
+              }}
+              placeholder="Tất cả đối tượng"
+              options={(['ALL_USERS', 'ROLE', 'COURSE_STUDENTS'] as const).map((a) => ({
+                value: a,
+                label: AUDIENCE_LABELS[a],
+              }))}
+              className="md:w-56"
+              aria-label="Lọc theo đối tượng nhận"
+            />
+          )}
+        </FilterBar>
         {history.isError ? (
           <EmptyState
             icon={<Megaphone className="w-10 h-10 text-rose-400" />}
@@ -279,16 +321,19 @@ export const AdminBroadcastsPage: React.FC = () => {
               onChange={(p) => setHistoryPage(p.current ?? 1)}
               pagination={{
                 current: history.data?.page ?? historyPage,
-                pageSize: 10,
+                pageSize: HISTORY_PAGE_SIZE,
                 total: history.data?.totalElements ?? 0,
                 showSizeChanger: false,
+                showTotal: (total) => `${total} lần gửi`,
               }}
               locale={{
                 emptyText: (
                   <EmptyState
                     icon={<Megaphone className="w-10 h-10 text-slate-300" />}
-                    title="Chưa gửi thông báo nào"
-                    description="Các thông báo đã gửi sẽ hiện ở đây."
+                    title={historyFiltered ? 'Không có thông báo phù hợp' : 'Chưa gửi thông báo nào'}
+                    description={
+                      historyFiltered ? 'Thử đổi từ khóa hoặc bộ lọc.' : 'Các thông báo đã gửi sẽ hiện ở đây.'
+                    }
                   />
                 ),
               }}

@@ -34,6 +34,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import com.jp.elearningjp.entity.curriculum.CourseTeacher;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,9 +98,25 @@ public class CourseService {
      */
     @Transactional(readOnly = true)
     public PageResponse<CourseResponse> getAllCoursesForAdmin(int page, int size, boolean pendingChangesOnly) {
+        return getAllCoursesForAdmin(page, size, pendingChangesOnly, null, null, null);
+    }
+
+    /**
+     * Như trên, kèm bộ lọc của trang quản lý: từ khóa theo tên khóa, cấp JLPT, trạng thái xuất bản
+     * (null = không lọc). Không có bộ lọc nào → đi đường truy vấn cũ.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<CourseResponse> getAllCoursesForAdmin(int page, int size, boolean pendingChangesOnly,
+                                                               String keyword, JlptLevel jlptLevel, Boolean published) {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
         Page<Course> coursePage;
-        if (currentUserService.isAdmin()) {
+        if (hasKeyword || jlptLevel != null || published != null) {
+            Long teacherId = currentUserService.isAdmin() ? null : currentUserService.getCurrentUserId();
+            coursePage = courseRepository.findAll(
+                    adminListSpec(teacherId, pendingChangesOnly, hasKeyword ? keyword : null, jlptLevel, published),
+                    pageable);
+        } else if (currentUserService.isAdmin()) {
             coursePage = pendingChangesOnly
                     ? courseRepository.findByDeletedFalseAndHasUnpublishedChangesTrue(pageable)
                     : courseRepository.findByDeletedFalse(pageable);
@@ -107,6 +128,36 @@ public class CourseService {
         }
 
         return toCoursePageResponse(coursePage, page, size, false);
+    }
+
+    /** Điều kiện lọc danh sách quản lý; {@code teacherId} != null → chỉ khóa được giao cho giáo viên đó. */
+    public static Specification<Course> adminListSpec(Long teacherId, boolean pendingChangesOnly,
+                                               String keyword, JlptLevel jlptLevel, Boolean published) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("deleted"), false));
+            if (teacherId != null) {
+                Subquery<Long> assigned = query.subquery(Long.class);
+                Root<CourseTeacher> ct = assigned.from(CourseTeacher.class);
+                assigned.select(ct.get("id"))
+                        .where(cb.equal(ct.get("course"), root), cb.equal(ct.get("teacher").get("id"), teacherId));
+                predicates.add(cb.exists(assigned));
+            }
+            if (pendingChangesOnly) {
+                predicates.add(cb.equal(root.get("hasUnpublishedChanges"), true));
+            }
+            if (keyword != null) {
+                predicates.add(cb.like(cb.lower(root.get("title")),
+                        "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%"));
+            }
+            if (jlptLevel != null) {
+                predicates.add(cb.equal(root.get("jlptLevel"), jlptLevel));
+            }
+            if (published != null) {
+                predicates.add(cb.equal(root.get("published"), published));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     /**

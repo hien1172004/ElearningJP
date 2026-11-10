@@ -57,20 +57,19 @@ export const CourseLessonList: React.FC<CourseLessonListProps> = ({
           Danh sách bài học <span className="font-normal text-slate-500">({lessons.length})</span>
         </h3>
         <div className="flex items-center gap-2">
-          {lessons.length > PAGE_SIZE && (
-            <Input
-              allowClear
-              size="middle"
-              placeholder="Tìm bài học..."
-              prefix={<Search className="w-4 h-4 text-slate-400" />}
-              value={keyword}
-              onChange={(e) => {
-                setKeyword(e.target.value)
-                setPage(1)
-              }}
-              className="!w-56"
-            />
-          )}
+          <Input
+            allowClear
+            size="middle"
+            placeholder="Tìm bài học..."
+            prefix={<Search className="w-4 h-4 text-slate-400" />}
+            value={keyword}
+            onChange={(e) => {
+              setKeyword(e.target.value)
+              setPage(1)
+            }}
+            className="!w-56"
+            aria-label="Tìm bài học"
+          />
           <AntdButton
             type="primary"
             icon={<Plus className="w-4 h-4" />}

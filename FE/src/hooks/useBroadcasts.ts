@@ -6,6 +6,7 @@ import { QUERY_KEYS } from '@/lib/queryKeys'
 import type {
   ApiResponse,
   Broadcast,
+  BroadcastHistoryParams,
   BroadcastPayload,
   PageResponse,
   RecipientCountParams,
@@ -37,11 +38,17 @@ export function useRecipientCount(params: RecipientCountParams | null) {
   })
 }
 
-export function useBroadcastHistory(page: number, size = 10) {
+export function useBroadcastHistory(params: BroadcastHistoryParams) {
+  const { page, size = 10 } = params
   return useQuery<PageResponse<Broadcast>>({
-    queryKey: QUERY_KEYS.adminBroadcast.history(page, size),
+    queryKey: QUERY_KEYS.adminBroadcast.history({ ...params, size }),
     queryFn: async () => {
-      const res = await adminBroadcastService.getHistory({ page, size })
+      const res = await adminBroadcastService.getHistory({
+        page,
+        size,
+        keyword: params.keyword || undefined,
+        audience: params.audience,
+      })
       return res.data ?? { page: 1, size, totalElements: 0, totalPages: 0, items: [] }
     },
     placeholderData: keepPreviousData,
