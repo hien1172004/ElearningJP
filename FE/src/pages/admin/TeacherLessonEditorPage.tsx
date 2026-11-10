@@ -156,7 +156,7 @@ export const TeacherLessonEditorPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
-  const tab: LessonEditorTab = isTab(rawTab) ? rawTab : 'vocab'
+  const tab: LessonEditorTab = isTab(rawTab) ? rawTab : 'kanji'
   const [editOpen, setEditOpen] = useState(false)
 
   const { data: course } = useCourseDetail(courseId)
