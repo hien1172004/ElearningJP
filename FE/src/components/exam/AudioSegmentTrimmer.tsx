@@ -162,7 +162,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
       initStart: startTime,
       initEnd: endTime,
     }
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+      ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -200,8 +200,8 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
     if (draggingHandle) {
       setDraggingHandle(null)
       try {
-        ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
-      } catch (_) {}
+        ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      } catch (_) { }
     }
   }
 
@@ -293,9 +293,8 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
 
           {/* VÙNG CHỌN NẰM GIỮA 2 ĐẦU MÚT (HIGHLIGHTED RANGE - KÉO ĐƯỢC CẢ KHỐI) */}
           <div
-            className={`absolute top-0 bottom-0 bg-linear-to-r from-indigo-500/35 via-purple-500/35 to-indigo-500/35 border-y border-indigo-400/50 cursor-grab active:cursor-grabbing transition-colors ${
-              draggingHandle === 'WINDOW' ? 'bg-indigo-500/50' : ''
-            }`}
+            className={`absolute top-0 bottom-0 bg-ai/30 border-y border-ai/50 cursor-grab active:cursor-grabbing transition-colors ${draggingHandle === 'WINDOW' ? 'bg-ai/50' : ''
+              }`}
             style={{
               left: `${startPercent}%`,
               width: `${Math.max(0.5, endPercent - startPercent)}%`,
@@ -459,7 +458,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
           <button
             type="button"
             onClick={togglePlaySegment}
-            className="px-3.5 py-1.5 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-98 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer"
+            className="px-3.5 py-1.5 bg-ai hover:bg-[#254b70] active:scale-98 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer"
           >
             {isPlaying && playMode === 'SEGMENT' ? (
               <>

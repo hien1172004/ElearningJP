@@ -1,5 +1,5 @@
-﻿import React from 'react'
-import { Link } from 'react-router-dom'
+import React from 'react'
+import { BrandLogo } from '@/components/common/BrandLogo'
 
 interface AuthHeaderProps {
   title: string
@@ -15,15 +15,9 @@ export const AuthHeader: React.FC<AuthHeaderProps> = ({
   return (
     <div className="px-8 py-8 border-b border-gray-100">
       <div className="max-w-sm mx-auto space-y-4 text-center">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-xl font-bold text-gray-900"
-        >
-          <span className="w-8 h-8 rounded bg-indigo-600 text-white flex items-center justify-center font-serif text-lg">
-            日
-          </span>
-          <span>ElearningJP</span>
-        </Link>
+        <div>
+          <BrandLogo size="lg" />
+        </div>
 
         {badge && (
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">

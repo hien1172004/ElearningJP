@@ -7,7 +7,7 @@ import type { ExamTakingData, TakingQuestion, TakingSection, TakingPassage } fro
 import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatJapanesePassageHtml, cleanPassageTitle, ensurePassageContentWithIntro } from '@/utils/format'
 import { 
   Clock, AlertCircle, Flag, Send, 
-  X, Loader2, Star, ChevronRight, CheckCircle2, Sparkles,
+  X, Loader2, Star, ChevronRight, CheckCircle2, Languages,
   Headphones, BookOpen, Check, ArrowRight
 } from 'lucide-react'
 
@@ -303,18 +303,18 @@ export const ExamRoomPage: React.FC = () => {
         id={`question-${q.id}`}
         className={`transition-all duration-200 rounded-2xl bg-surface border ${
           isActive
-            ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md'
+            ? 'border-ai ring-2 ring-ai/20 shadow-sm'
             : isFlagged
             ? 'border-amber-300 ring-1 ring-amber-300/60 shadow-xs'
             : selectedOptId
-            ? 'border-slate-200 shadow-xs'
-            : 'border-slate-200/90 hover:border-slate-300 shadow-xs'
+            ? 'border-suna shadow-xs'
+            : 'border-suna/90 hover:border-suna shadow-xs'
         } ${isNestedInPassage ? 'p-4 sm:p-5' : 'p-5 sm:p-6'}`}
       >
         {/* Header câu hỏi: Số thứ tự + Cờ đánh dấu + Badge sao */}
         <div className="flex items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xs tracking-tight shadow-2xs shrink-0">
+            <span className="w-8 h-8 rounded-xl bg-sumi text-white flex items-center justify-center font-bold text-xs tracking-tight shadow-2xs shrink-0">
               {q.questionNumber}
             </span>
             {q.starPosition && (
@@ -331,7 +331,7 @@ export const ExamRoomPage: React.FC = () => {
             className={`px-2.5 py-1 rounded-xl transition cursor-pointer flex items-center gap-1.5 text-xs font-bold border ${
               isFlagged
                 ? 'bg-amber-50 border-amber-300 text-amber-800 shadow-2xs hover:bg-amber-100'
-                : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-amber-700 hover:border-amber-300 hover:bg-amber-50/50'
+                : 'bg-surface border-suna text-nibi hover:text-amber-700 hover:border-amber-300 hover:bg-amber-50/50'
             }`}
             title={isFlagged ? 'Bỏ cắm cờ câu này' : 'Cắm cờ để xem lại câu này trước khi nộp bài'}
           >
@@ -365,7 +365,7 @@ export const ExamRoomPage: React.FC = () => {
 
           return (
             <div
-              className="text-base sm:text-[17px] font-medium text-slate-900 mb-4 font-serif leading-relaxed [&_u]:underline [&_u]:underline-offset-8 [&_u]:decoration-2 [&_u]:font-bold [&_u]:text-indigo-950"
+              className="text-base sm:text-[17px] font-medium text-sumi mb-4 font-serif leading-relaxed [&_u]:underline [&_u]:underline-offset-8 [&_u]:decoration-2 [&_u]:font-bold [&_u]:text-ai"
               dangerouslySetInnerHTML={{ __html: cleanedPrompt }}
             />
           )
@@ -386,8 +386,8 @@ export const ExamRoomPage: React.FC = () => {
                     key={pos}
                     className={`px-2.5 py-0.5 rounded-md text-xs font-bold transition ${
                       isTarget
-                        ? 'bg-amber-400 text-slate-900 shadow-2xs ring-1 ring-amber-500'
-                        : 'bg-surface text-slate-500 border border-amber-200'
+                        ? 'bg-amber-400 text-sumi shadow-2xs ring-1 ring-amber-500'
+                        : 'bg-surface text-nibi border border-amber-200'
                     }`}
                   >
                     {isTarget ? '★ (Cần chọn)' : `___`}
@@ -428,28 +428,28 @@ export const ExamRoomPage: React.FC = () => {
                       onClick={() => handleSelectOption(q.id, opt.id)}
                       className={`p-3 rounded-2xl border transition-all text-left cursor-pointer flex flex-col justify-between gap-2.5 ${
                         isSelected
-                          ? 'border-indigo-600 bg-indigo-50/70 ring-2 ring-indigo-500/20 shadow-xs'
-                          : 'border-slate-200 hover:border-slate-300 bg-surface hover:bg-slate-50/60'
+                          ? 'border-ai bg-kamenozoki/60 ring-2 ring-ai/20 shadow-2xs'
+                          : 'border-suna hover:border-ai/40 bg-surface hover:bg-kinari/30'
                       }`}
                     >
                       <div className="flex items-center justify-between font-bold text-xs">
-                        <div className="flex items-center gap-2 text-slate-800">
+                        <div className="flex items-center gap-2 text-sumi">
                           <span
                             className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold transition ${
-                              isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
+                              isSelected ? 'bg-ai text-white' : 'bg-kinari text-nibi border border-suna'
                             }`}
                           >
                             {opt.optionKey}
                           </span>
                           <span>Tranh {opt.optionKey}</span>
                         </div>
-                        {isSelected && <Check className="w-4 h-4 text-indigo-600" />}
+                        {isSelected && <Check className="w-4 h-4 text-ai" />}
                       </div>
                       {opt.optionImageUrl && (
                         <img
                           src={opt.optionImageUrl}
                           alt={`Đáp án ${opt.optionKey}`}
-                          className="w-full h-36 object-contain rounded-xl bg-slate-50 border border-slate-100"
+                          className="w-full h-36 object-contain rounded-xl bg-kinari/40 border border-suna"
                         />
                       )}
                     </button>
@@ -474,30 +474,30 @@ export const ExamRoomPage: React.FC = () => {
                     onClick={() => handleSelectOption(q.id, opt.id)}
                     className={`w-full ${useTwoCols || isThreeOptionsMondai ? 'p-3' : 'p-3.5'} rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
-                        ? 'border-indigo-600 bg-indigo-50/80 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-xs'
-                        : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50/60 bg-surface text-slate-800 font-medium'
+                        ? 'border-ai bg-kamenozoki/70 text-sumi font-bold ring-2 ring-ai/20 shadow-2xs'
+                        : 'border-suna hover:border-ai/40 hover:bg-kinari/30 bg-surface text-sumi font-medium'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition ${
                           isSelected
-                            ? 'bg-indigo-600 text-white shadow-2xs'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            ? 'bg-ai text-white shadow-2xs'
+                            : 'bg-kinari text-nibi border border-suna'
                         }`}
                       >
                         {opt.optionKey}
                       </span>
                       {!isThreeOptionsMondai && opt.optionText && opt.optionText.trim() !== String(opt.optionKey) && !opt.optionText.startsWith('選択肢') && !opt.optionText.startsWith('Lựa chọn') && (
                         <span
-                          className="text-sm md:text-base font-serif truncate sm:whitespace-normal [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold [&_u]:text-indigo-950"
+                          className="text-sm md:text-base font-serif truncate sm:whitespace-normal [&_u]:underline [&_u]:underline-offset-4 [&_u]:decoration-2 [&_u]:font-bold [&_u]:text-ai"
                           dangerouslySetInnerHTML={{ __html: cleanJapaneseText(opt.optionText) }}
                         />
                       )}
                     </div>
 
                     {isSelected && (
-                      <span className="text-xs font-bold text-indigo-600 flex items-center gap-1 shrink-0 ml-2">
+                      <span className="text-xs font-bold text-ai flex items-center gap-1 shrink-0 ml-2">
                         <CheckCircle2 className="w-4 h-4" />
                       </span>
                     )}
@@ -561,19 +561,19 @@ export const ExamRoomPage: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen bg-slate-50/70 pb-20 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 ${showFurigana ? '' : 'hide-furigana'}`}>
+    <div className={`min-h-screen bg-kinari/50 pb-20 font-sans text-sumi selection:bg-kamenozoki selection:text-ai ${showFurigana ? '' : 'hide-furigana'}`}>
       {/* 1. ZEN TOPBAR (Thanh công cụ làm bài tinh tế, cố định trên cùng) */}
-      <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-2.5 shadow-2xs">
+      <header className="sticky top-0 z-40 bg-surface/95 backdrop-blur-md border-b border-suna px-4 sm:px-6 lg:px-8 py-2.5 shadow-2xs">
         <div className="max-w-[1560px] mx-auto flex items-center justify-between gap-4">
           
           {/* Cụm trái: Huy hiệu JLPT & Bộ chuyển phần thi (Section Switcher) */}
           <div className="flex items-center gap-3 min-w-0">
-            <span className="px-3 py-1 rounded-lg bg-slate-900 text-white text-xs font-black tracking-wider shrink-0 shadow-2xs">
+            <span className="px-3 py-1 rounded-lg bg-sumi text-white text-xs font-black tracking-wider shrink-0 shadow-2xs">
               JLPT {takingData.jlptLevel}
             </span>
 
             {/* Các tab ca thi (Pills hiển thị tiến trình ca thi) */}
-            <div className="hidden sm:flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/60">
+            <div className="hidden sm:flex items-center gap-1.5 p-1 bg-kinari/80 rounded-xl border border-suna">
               {takingData.sections.map((sec, idx) => {
                 const isActive = idx === currentSectionIndex
                 const isPast = idx < currentSectionIndex
@@ -584,10 +584,10 @@ export const ExamRoomPage: React.FC = () => {
                     key={sec.id || idx}
                     className={`px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap ${
                       isActive
-                        ? 'bg-surface text-indigo-700 shadow-2xs'
+                        ? 'bg-surface text-ai shadow-2xs border border-suna/60'
                         : isPast
                         ? 'text-emerald-700 hover:text-emerald-800'
-                        : 'text-slate-500'
+                        : 'text-nibi'
                     }`}
                   >
                     {isPast && <Check className="w-3.5 h-3.5 text-emerald-600" />}
@@ -599,7 +599,7 @@ export const ExamRoomPage: React.FC = () => {
             </div>
 
             {/* Tiêu đề ngắn gọn trên mobile */}
-            <span className="sm:hidden text-xs font-bold text-slate-800 truncate">
+            <span className="sm:hidden text-xs font-bold text-sumi truncate">
               Phần {currentSection.orderIndex}: {currentSection.sectionTitle}
             </span>
           </div>
@@ -612,22 +612,22 @@ export const ExamRoomPage: React.FC = () => {
               onClick={() => setShowFurigana(!showFurigana)}
               className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition border cursor-pointer ${
                 showFurigana
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
-                  : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'
+                  ? 'bg-kamenozoki border-ai/30 text-ai hover:bg-ai/10 shadow-2xs'
+                  : 'bg-surface border-suna text-nibi hover:text-sumi hover:bg-slate-50'
               }`}
               title={showFurigana ? 'Đang bật phiên âm Furigana (Bấm để ẩn)' : 'Đang ẩn Furigana (Bấm để hiện)'}
             >
-              <Sparkles className="w-3.5 h-3.5 text-current" />
-              <span>ルビ: {showFurigana ? 'Bật' : 'Tắt'}</span>
+              <Languages className="w-3.5 h-3.5 text-current" />
+              <span>Furigana: {showFurigana ? 'Bật' : 'Tắt'}</span>
             </button>
             {/* Bộ đếm thời gian (Zen Timer Widget) */}
             <div
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-mono text-sm sm:text-base font-black transition-all shadow-2xs ${
                 timeLeft < 180
-                  ? 'bg-rose-50 text-rose-600 border border-rose-300 ring-2 ring-rose-200 animate-pulse'
+                  ? 'bg-rose-50 text-shu border border-rose-300 ring-2 ring-rose-200 animate-pulse'
                   : timeLeft < 600
                   ? 'bg-amber-50 text-amber-700 border border-amber-300'
-                  : 'bg-slate-100 text-slate-800 border border-slate-200'
+                  : 'bg-kinari text-sumi border border-suna'
               }`}
             >
               <Clock className="w-4 h-4 text-current shrink-0" />
@@ -639,7 +639,7 @@ export const ExamRoomPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setNextSectionModalOpen(true)}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-1.5 bg-ai hover:bg-[#254b70] active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-xs transition flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Xong Phần {currentSection.orderIndex}</span>
                 <ChevronRight className="w-4 h-4" />
@@ -666,14 +666,14 @@ export const ExamRoomPage: React.FC = () => {
 
           {/* Thanh Audio toàn bài nghe (nếu là phần Listening) */}
           {currentSection.sessionType === 'LISTENING' && currentSection.audioUrl && (
-            <div className="p-4 bg-indigo-900 text-white rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div className="p-4 bg-sumi text-white rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-3 border border-suna/20">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-ai text-white flex items-center justify-center shrink-0">
                   <Headphones className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-indigo-100">Âm thanh Ca thi Nghe hiểu (Choukai Audio Track)</h3>
-                  <p className="text-[11px] text-indigo-300">File âm thanh phát xuyên suốt ca thi theo chuẩn JLPT</p>
+                  <h3 className="text-xs font-bold text-white">Âm thanh Ca thi Nghe hiểu (Choukai Audio Track)</h3>
+                  <p className="text-[11px] text-suna/80">File âm thanh phát xuyên suốt ca thi theo chuẩn JLPT</p>
                 </div>
               </div>
               <audio
@@ -705,16 +705,16 @@ export const ExamRoomPage: React.FC = () => {
                   {/* MONDAI HEADER (Đề mục phân loại thanh thoát kiểu tạp chí hiện đại) */}
                   {isNewMondai && (
                     <div className="pt-2">
-                      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-100 via-surface to-slate-50 border border-slate-200/90 shadow-2xs">
+                      <div className="p-4 sm:p-5 rounded-2xl bg-surface border border-suna/90 shadow-2xs">
                         <div className="flex items-center gap-2 mb-1.5">
                           {(() => {
                             const mInfo = formatMondaiDisplay(curMondaiCode, curMondaiNameVi)
                             return (
                               <>
-                                <span className="px-2.5 py-1 rounded-md bg-indigo-600 text-white text-xs font-black tracking-wide shrink-0">
+                                <span className="px-2.5 py-1 rounded-md bg-ai text-white text-xs font-black tracking-wide shrink-0">
                                   {mInfo.jp}
                                 </span>
-                                <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                                <h3 className="text-sm sm:text-base font-extrabold text-sumi">
                                   {mInfo.vi}
                                 </h3>
                               </>
@@ -727,7 +727,7 @@ export const ExamRoomPage: React.FC = () => {
                           </p>
                         )}
                         {curInstructionVi && (
-                          <p className="text-xs text-slate-400 mt-0.5">
+                          <p className="text-xs text-nibi mt-0.5">
                             ({curInstructionVi})
                           </p>
                         )}
@@ -758,16 +758,16 @@ export const ExamRoomPage: React.FC = () => {
                     /* KHỐI BÀI ĐỌC DOKKAI (Biên tập thanh thoát, dễ đọc) */
                     <div className="space-y-4">
                       {/* Thẻ bài đọc hiểu ở trên */}
-                      <article className="bg-surface rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+                      <article className="bg-surface rounded-2xl border border-suna/90 shadow-xs overflow-hidden">
                         {/* Header bài đọc */}
-                        <div className="bg-slate-50/80 border-b border-slate-200 px-5 py-3 flex items-center justify-between gap-3">
+                        <div className="bg-kinari/60 border-b border-suna px-5 py-3 flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2.5">
-                            <BookOpen className="w-4 h-4 text-indigo-600" />
-                            <h4 className="text-sm sm:text-base font-bold text-slate-900 font-serif">
+                            <BookOpen className="w-4 h-4 text-ai" />
+                            <h4 className="text-sm sm:text-base font-bold text-sumi font-serif">
                               {cleanPassageTitle(item.passage.title, 'Bài đọc hiểu')}
                             </h4>
                           </div>
-                          <span className="text-xs font-bold px-2.5 py-0.5 bg-surface text-slate-700 border border-slate-200 rounded-lg shadow-2xs">
+                          <span className="text-xs font-bold px-2.5 py-0.5 bg-surface text-sumi border border-suna rounded-lg shadow-2xs">
                             Câu {item.questions[0].questionNumber} ~ {item.questions[item.questions.length - 1].questionNumber} ({item.questions.length} câu)
                           </span>
                         </div>
@@ -777,7 +777,7 @@ export const ExamRoomPage: React.FC = () => {
                           {item.passage.contentJp && (
                             <div
                               onClick={handlePassageBlankClick}
-                              className="text-slate-800 bg-surface select-text font-serif text-[16px] sm:text-[17px] leading-[2.2] tracking-wide"
+                              className="text-sumi bg-surface select-text font-serif text-[16px] sm:text-[17px] leading-[2.2] tracking-wide"
                               title="Bấm vào số chỗ trống 【 21 】 để cuộn nhanh đến câu hỏi tương ứng bên dưới"
                               dangerouslySetInnerHTML={{ __html: formatJapanesePassageHtml(ensurePassageContentWithIntro(item.passage.contentJp, item.passage.title)) }}
                             />
@@ -786,7 +786,7 @@ export const ExamRoomPage: React.FC = () => {
                       </article>
 
                       {/* Các câu hỏi con thuộc bài đọc */}
-                      <div className="space-y-3.5 pl-0 sm:pl-3 border-l-0 sm:border-l-2 sm:border-indigo-100">
+                      <div className="space-y-3.5 pl-0 sm:pl-3 border-l-0 sm:border-l-2 sm:border-ai/20">
                         {item.questions.map((subQ) => renderQuestionCard(subQ, true))}
                       </div>
                     </div>
@@ -797,12 +797,12 @@ export const ExamRoomPage: React.FC = () => {
           </div>
 
           {/* Thanh chuyển ca / nộp bài cuối trang */}
-          <div className="pt-6 border-t border-slate-200 flex justify-end">
+          <div className="pt-6 border-t border-suna flex justify-end">
             {!isLastSection ? (
               <button
                 type="button"
                 onClick={() => setNextSectionModalOpen(true)}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-xs transition flex items-center gap-2 cursor-pointer"
+                className="px-6 py-2.5 bg-ai hover:bg-[#254b70] text-white rounded-xl font-bold text-sm shadow-xs transition flex items-center gap-2 cursor-pointer"
               >
                 <span>Hoàn thành Phần {currentSection.orderIndex} & Tiếp tục</span>
                 <ArrowRight className="w-4 h-4" />
@@ -822,36 +822,36 @@ export const ExamRoomPage: React.FC = () => {
 
         {/* CỘT PHẢI (3/12): QUESTION PALETTE (Bảng điều hướng số câu cố định - không trôi khi cuộn) */}
         <aside className="lg:col-span-3 lg:sticky lg:top-[68px] lg:self-start z-30">
-          <div className="bg-surface rounded-2xl border border-slate-200/90 shadow-xs p-4 sm:p-5 flex flex-col max-h-[calc(100vh-84px)] space-y-3">
+          <div className="bg-surface rounded-2xl border border-suna/90 shadow-xs p-4 sm:p-5 flex flex-col max-h-[calc(100vh-84px)] space-y-3">
             
             {/* Header Palette & Thanh tiến độ */}
             <div className="shrink-0">
               <div className="flex items-center justify-between mb-1.5">
-                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">
+                <h3 className="font-bold text-xs uppercase tracking-wider text-nibi">
                   Phần {currentSection.orderIndex}: Số câu hỏi
                 </h3>
-                <span className="text-xs font-black text-indigo-600">
+                <span className="text-xs font-black text-ai">
                   {currentAnsweredCount}/{currentQuestions.length} ({currentProgressPercent}%)
                 </span>
               </div>
               
               {/* Progress bar mỏng thanh thoát */}
-              <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-kinari rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-indigo-600 h-1.5 rounded-full transition-all duration-300"
+                  className="bg-ai h-1.5 rounded-full transition-all duration-300"
                   style={{ width: `${currentProgressPercent}%` }}
                 />
               </div>
             </div>
 
             {/* Chú thích màu sắc (Legend) */}
-            <div className="shrink-0 flex items-center justify-between text-[11px] font-semibold text-slate-500 border-y border-slate-100 py-2">
+            <div className="shrink-0 flex items-center justify-between text-[11px] font-semibold text-nibi border-y border-suna/60 py-2">
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-ai shrink-0" />
                 <span>Đã làm</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-200 shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-suna shrink-0" />
                 <span>Chưa làm</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -867,11 +867,11 @@ export const ExamRoomPage: React.FC = () => {
               <div className="space-y-3 overflow-y-auto overscroll-contain pr-1 py-1 flex-1 min-h-[160px]">
                 {listeningMondaiGroups.map((group, gIdx) => (
                   <div key={group.mondaiCode || gIdx} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-extrabold">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-nibi px-0.5">
+                      <span className="px-2 py-0.5 rounded bg-kinari text-sumi font-extrabold border border-suna/60">
                         {group.mondaiTitle}
                       </span>
-                      <span className="text-[10px] text-slate-500 font-bold">
+                      <span className="text-[10px] text-nibi font-bold">
                         {group.questions.filter((q) => !!answers[q.id]).length}/{group.questions.length}
                       </span>
                     </div>
@@ -886,13 +886,13 @@ export const ExamRoomPage: React.FC = () => {
                             type="button"
                             onClick={() => scrollToQuestion(q.id)}
                             className={`relative h-8.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
-                              isActive ? 'ring-2 ring-indigo-600 ring-offset-1' : ''
+                              isActive ? 'ring-2 ring-ai ring-offset-1' : ''
                             } ${
                               isAnswered
-                                ? 'bg-indigo-600 text-white shadow-2xs hover:bg-indigo-700'
+                                ? 'bg-ai text-white shadow-2xs hover:bg-[#254b70]'
                                 : isFlagged
                                 ? 'bg-amber-50 text-amber-900 border-2 border-amber-400 font-black'
-                                : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                                : 'bg-kinari/80 text-sumi hover:bg-kinari border border-suna/60'
                             }`}
                             title={`${group.mondaiTitle} - Câu ${q.questionNumber}${isAnswered ? ' • Đã làm' : ' • Chưa làm'}${isFlagged ? ' • Đã cắm cờ' : ''}`}
                           >
@@ -900,7 +900,7 @@ export const ExamRoomPage: React.FC = () => {
                             {isFlagged && (
                               <span
                                 className={`absolute -top-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center shadow-2xs ${
-                                  isAnswered ? 'bg-amber-400 text-slate-900 ring-1 ring-white' : 'bg-amber-500 text-white'
+                                  isAnswered ? 'bg-amber-400 text-sumi ring-1 ring-white' : 'bg-amber-500 text-white'
                                 }`}
                               >
                                 <Flag className="w-1.5 h-1.5 fill-current" />
@@ -926,13 +926,13 @@ export const ExamRoomPage: React.FC = () => {
                       type="button"
                       onClick={() => scrollToQuestion(q.id)}
                       className={`relative h-9 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
-                        isActive ? 'ring-2 ring-indigo-600 ring-offset-1' : ''
+                        isActive ? 'ring-2 ring-ai ring-offset-1' : ''
                       } ${
                         isAnswered
-                          ? 'bg-indigo-600 text-white shadow-2xs hover:bg-indigo-700'
+                          ? 'bg-ai text-white shadow-2xs hover:bg-[#254b70]'
                           : isFlagged
                           ? 'bg-amber-50 text-amber-900 border-2 border-amber-400 font-black'
-                          : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/80 hover:text-slate-900'
+                          : 'bg-kinari/80 text-sumi hover:bg-kinari border border-suna/60'
                       }`}
                       title={`Câu ${q.questionNumber}${isAnswered ? ' • Đã làm' : ' • Chưa làm'}${isFlagged ? ' • Đã cắm cờ' : ''}`}
                     >
@@ -940,7 +940,7 @@ export const ExamRoomPage: React.FC = () => {
                       {isFlagged && (
                         <span
                           className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center shadow-2xs ${
-                            isAnswered ? 'bg-amber-400 text-slate-900 ring-1 ring-white' : 'bg-amber-500 text-white'
+                            isAnswered ? 'bg-amber-400 text-sumi ring-1 ring-white' : 'bg-amber-500 text-white'
                           }`}
                         >
                           <Flag className="w-2 h-2 fill-current" />
@@ -953,7 +953,7 @@ export const ExamRoomPage: React.FC = () => {
             )}
 
             {/* Cụm nút hành động phía dưới Palette luôn cố định */}
-            <div className="shrink-0 space-y-2 pt-1 border-t border-slate-100">
+            <div className="shrink-0 space-y-2 pt-1 border-t border-suna/60">
               {/* Nút nhảy nhanh đến câu cắm cờ kế tiếp */}
               {currentSectionFlaggedCount > 0 && (
                 <button
@@ -979,7 +979,7 @@ export const ExamRoomPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setNextSectionModalOpen(true)}
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full py-2.5 bg-ai hover:bg-[#254b70] active:scale-98 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <span>Xong Phần {currentSection.orderIndex}</span>
                   <ChevronRight className="w-4 h-4" />
@@ -1002,34 +1002,34 @@ export const ExamRoomPage: React.FC = () => {
       {/* Modal Chuyển Ca Thi (Next Section Modal) */}
       {nextSectionModalOpen && takingData && currentSectionIndex < takingData.sections.length - 1 && (
         <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+          <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-suna animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-2xl bg-kamenozoki text-ai flex items-center justify-center mx-auto mb-3 shadow-2xs border border-ai/20">
               <CheckCircle2 className="w-6 h-6" />
             </div>
 
-            <h3 className="text-lg font-black text-slate-900 text-center mb-1">
+            <h3 className="text-lg font-black text-sumi text-center mb-1">
               Hoàn thành Phần {currentSection.orderIndex}!
             </h3>
-            <p className="text-xs text-slate-500 text-center mb-5">
+            <p className="text-xs text-nibi text-center mb-5">
               Bạn đã hoàn thành thời gian làm bài của {currentSection.sectionTitle}.
             </p>
 
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2 mb-6">
-              <div className="font-bold text-slate-700 uppercase tracking-wider text-[11px]">
+            <div className="bg-kinari/60 p-4 rounded-2xl border border-suna text-xs space-y-2 mb-6">
+              <div className="font-bold text-nibi uppercase tracking-wider text-[11px]">
                 Phần thi tiếp theo:
               </div>
-              <div className="text-sm font-black text-indigo-600">
+              <div className="text-sm font-black text-ai">
                 {takingData.sections[currentSectionIndex + 1]?.sectionTitle}
               </div>
-              <div className="flex justify-between text-slate-600 pt-2 border-t border-slate-200">
+              <div className="flex justify-between text-nibi pt-2 border-t border-suna">
                 <span>Thời gian:</span>
-                <span className="font-bold text-slate-900">
+                <span className="font-bold text-sumi">
                   {takingData.sections[currentSectionIndex + 1]?.durationMinutes} phút
                 </span>
               </div>
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-nibi">
                 <span>Số câu hỏi:</span>
-                <span className="font-bold text-slate-900">
+                <span className="font-bold text-sumi">
                   {takingData.sections[currentSectionIndex + 1]?.questions.length} câu
                 </span>
               </div>
@@ -1039,14 +1039,14 @@ export const ExamRoomPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setNextSectionModalOpen(false)}
-                className="py-2.5 rounded-xl font-bold text-xs text-slate-600 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+                className="py-2.5 rounded-xl font-bold text-xs text-sumi bg-kinari hover:bg-kinari/80 border border-suna transition cursor-pointer"
               >
                 Kiểm tra lại
               </button>
               <button
                 type="button"
                 onClick={handleProceedToNextSection}
-                className="py-2.5 rounded-xl font-bold text-xs text-white bg-indigo-600 hover:bg-indigo-700 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                className="py-2.5 rounded-xl font-bold text-xs text-white bg-ai hover:bg-[#254b70] transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <span>Bắt đầu ca tiếp</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1059,34 +1059,34 @@ export const ExamRoomPage: React.FC = () => {
       {/* Modal Xác Nhận Nộp Toàn Bộ Bài */}
       {confirmSubmitOpen && (
         <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+          <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-suna animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-2xs border border-amber-200">
               <AlertCircle className="w-6 h-6" />
             </div>
 
-            <h3 className="text-lg font-black text-slate-900 text-center mb-1">
+            <h3 className="text-lg font-black text-sumi text-center mb-1">
               Bạn có chắc chắn muốn nộp bài?
             </h3>
-            <p className="text-xs text-slate-500 text-center mb-5">
+            <p className="text-xs text-nibi text-center mb-5">
               Sau khi nộp bài, hệ thống sẽ tự động chấm điểm và bạn không thể thay đổi đáp án.
             </p>
 
             {/* Bảng thống kê tóm tắt trước khi nộp */}
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs space-y-2 mb-6">
-              <div className="flex justify-between items-center text-slate-700">
+            <div className="bg-kinari/60 p-4 rounded-2xl border border-suna text-xs space-y-2 mb-6">
+              <div className="flex justify-between items-center text-sumi">
                 <span>Số câu đã làm:</span>
-                <strong className="text-emerald-600 font-bold">
+                <strong className="text-emerald-700 font-bold">
                   {totalAnsweredAllSections} / {totalQuestionsAllSections} câu
                 </strong>
               </div>
-              <div className="flex justify-between items-center text-slate-700">
+              <div className="flex justify-between items-center text-sumi">
                 <span>Số câu chưa làm:</span>
-                <strong className="text-rose-600 font-bold">
+                <strong className="text-shu font-bold">
                   {totalQuestionsAllSections - totalAnsweredAllSections} câu
                 </strong>
               </div>
               {flaggedQuestions.size > 0 && (
-                <div className="flex justify-between items-center text-amber-800 pt-2 border-t border-slate-200">
+                <div className="flex justify-between items-center text-amber-900 pt-2 border-t border-suna">
                   <span className="flex items-center gap-1.5 font-medium">
                     <Flag className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                     <span>Câu đang cắm cờ xem lại:</span>
@@ -1115,7 +1115,7 @@ export const ExamRoomPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setConfirmSubmitOpen(false)}
-                className="py-2.5 rounded-xl font-bold text-xs text-slate-600 bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+                className="py-2.5 rounded-xl font-bold text-xs text-sumi bg-kinari hover:bg-kinari/80 border border-suna transition cursor-pointer"
               >
                 Làm tiếp
               </button>

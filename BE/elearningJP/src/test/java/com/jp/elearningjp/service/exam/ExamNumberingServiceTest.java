@@ -74,6 +74,18 @@ class ExamNumberingServiceTest {
     @Mock
     private CurrentUserService currentUserService;
 
+    @Mock
+    private com.jp.elearningjp.service.exam.snapshot.ExamSnapshotService examSnapshotService;
+
+    @Mock
+    private ExamPublishedVersionRepository examPublishedVersionRepository;
+
+    @Mock
+    private com.jp.elearningjp.service.notification.NotificationService notificationService;
+
+    @Mock
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     @InjectMocks
     private AdminExamServiceImpl adminExamService;
 

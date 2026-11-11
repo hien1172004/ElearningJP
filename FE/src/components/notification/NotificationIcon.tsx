@@ -52,6 +52,7 @@ const ICONS: Record<NotificationType, IconSpec> = {
   SRS_DUE: { Icon: Layers, tone: 'bg-sky-50 text-sky-600' },
   STREAK_WARNING: { Icon: Flame, tone: 'bg-amber-50 text-amber-600' },
   EXAM_RESULT: { Icon: Award, tone: 'bg-emerald-50 text-emerald-600' },
+  EXAM_UPDATED: { Icon: ClipboardCheck, tone: 'bg-teal-50 text-teal-600' },
   BADGE_UNLOCKED: { Icon: Trophy, tone: 'bg-yellow-50 text-yellow-600' },
   TASK_REMINDER: { Icon: CheckSquare, tone: 'bg-slate-100 text-slate-600' },
 }

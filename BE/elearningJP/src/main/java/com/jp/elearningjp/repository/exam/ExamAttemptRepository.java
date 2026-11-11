@@ -99,4 +99,11 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
             GROUP BY e.jlpt_level
             """, nativeQuery = true)
     List<Object[]> aggregateAttemptsByLevel(java.time.Instant from, java.time.Instant to);
+
+    @Query("SELECT DISTINCT a.user.id FROM ExamAttempt a WHERE a.exam.id = :examId AND a.deleted = false")
+    java.util.List<Long> findDistinctUserIdsByExamId(@Param("examId") Long examId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE ExamAttempt a SET a.publishedVersionId = :versionId WHERE a.exam.id = :examId AND a.publishedVersionId IS NULL")
+    int backfillPublishedVersion(@Param("examId") Long examId, @Param("versionId") Long versionId);
 }

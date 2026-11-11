@@ -11,4 +11,8 @@ public interface ExamPublishedVersionRepository extends JpaRepository<ExamPublis
 
     @Query("SELECT COALESCE(MAX(v.versionNo), 0) FROM ExamPublishedVersion v WHERE v.examId = :examId")
     int findMaxVersionNo(@Param("examId") Long examId);
+
+    java.util.Optional<ExamPublishedVersion> findTopByExamIdOrderByVersionNoDesc(Long examId);
+
+    java.util.List<ExamPublishedVersion> findByExamIdOrderByVersionNoDesc(Long examId);
 }

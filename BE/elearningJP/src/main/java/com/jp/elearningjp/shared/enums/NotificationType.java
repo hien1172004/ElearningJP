@@ -18,5 +18,7 @@ public enum NotificationType {
     /** Giáo viên được ADMIN giao hoặc gỡ khỏi một khóa học. */
     COURSE_TEACHER_ASSIGNMENT,
     /** Luồng duyệt khóa học: gửi / rút / duyệt / từ chối / xuất bản / chuyển nháp (data_json.action). */
-    COURSE_REVIEW
+    COURSE_REVIEW,
+    /** Đề thi được cập nhật phiên bản mới hoặc đính chính nội dung. */
+    EXAM_UPDATED
 }

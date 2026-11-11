@@ -22,6 +22,10 @@ public class ExamSummaryResponse {
     boolean published;
     /** Đề gắn khóa: phiên bản đã duyệt (null = chưa được duyệt lần nào, chưa hiện được cho học viên). */
     Long publishedVersionId;
+    /** Số phiên bản phát hành (V1, V2...). */
+    Integer versionNo;
+    /** Ghi chú tóm tắt của phiên bản (changelog). */
+    String changelog;
     /** Đề gắn khóa đang chờ gỡ (bị xóa thật khi khóa được duyệt lần tới). */
     boolean pendingRemoval;
 }

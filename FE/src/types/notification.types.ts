@@ -29,6 +29,8 @@ export type NotificationType =
   | 'COURSE_TEACHER_ASSIGNMENT'
   /** Luồng duyệt khóa học: gửi / rút / duyệt / từ chối / xuất bản / chuyển nháp (dataJson.action) */
   | 'COURSE_REVIEW'
+  /** Đề thi được cập nhật phiên bản mới hoặc đính chính */
+  | 'EXAM_UPDATED'
 
 /** Dữ liệu đính kèm — dùng để điều hướng khi click (vd reply bình luận). */
 export interface NotificationData {

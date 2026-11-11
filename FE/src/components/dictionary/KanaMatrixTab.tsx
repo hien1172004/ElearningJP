@@ -1,6 +1,6 @@
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useState, useEffect, useRef } from 'react'
-import { Volume2, Sparkles, X } from 'lucide-react'
+import { Volume2, BookOpen, X } from 'lucide-react'
 import type { KanaMatrix, KanaCharacter, CharacterType } from '@/types'
 import { dictionaryService } from '@/services'
 import { playSmartAudio, stopSpeaking } from '@/utils'
@@ -104,16 +104,16 @@ export const KanaMatrixTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Thanh công cụ chọn loại chữ và nhóm âm */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface p-4 rounded-md border border-gray-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface p-3.5 rounded-2xl border border-suna/90 shadow-xs">
         {/* Chuyển đổi Hiragana / Katakana */}
-        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-md">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
           <button
             type="button"
             onClick={() => setCharType('HIRAGANA')}
-            className={`px-4 py-2 rounded text-sm font-bold transition ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               charType === 'HIRAGANA'
-                ? 'bg-surface text-indigo-600 shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-surface text-ai shadow-2xs font-extrabold'
+                : 'text-nibi hover:text-sumi'
             }`}
           >
             🌸 Hiragana (Chữ mềm)
@@ -121,10 +121,10 @@ export const KanaMatrixTab: React.FC = () => {
           <button
             type="button"
             onClick={() => setCharType('KATAKANA')}
-            className={`px-4 py-2 rounded text-sm font-bold transition ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               charType === 'KATAKANA'
-                ? 'bg-surface text-indigo-600 shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-surface text-ai shadow-2xs font-extrabold'
+                : 'text-nibi hover:text-sumi'
             }`}
           >
             ⚡ Katakana (Chữ cứng)
@@ -132,14 +132,14 @@ export const KanaMatrixTab: React.FC = () => {
         </div>
 
         {/* Lọc: Cơ bản / Âm đục / Âm ghép */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
             onClick={() => setSection('seion')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               section === 'seion'
-                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-ai text-white shadow-2xs font-bold'
+                : 'text-nibi hover:text-ai hover:bg-kamenozoki/50'
             }`}
           >
             Âm cơ bản (50 âm)
@@ -147,10 +147,10 @@ export const KanaMatrixTab: React.FC = () => {
           <button
             type="button"
             onClick={() => setSection('dakuon')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               section === 'dakuon'
-                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-ai text-white shadow-2xs font-bold'
+                : 'text-nibi hover:text-ai hover:bg-kamenozoki/50'
             }`}
           >
             Âm đục & Bán đục
@@ -158,10 +158,10 @@ export const KanaMatrixTab: React.FC = () => {
           <button
             type="button"
             onClick={() => setSection('yoon')}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               section === 'yoon'
-                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-ai text-white shadow-2xs font-bold'
+                : 'text-nibi hover:text-ai hover:bg-kamenozoki/50'
             }`}
           >
             Âm ghép (Yōon)
@@ -171,7 +171,7 @@ export const KanaMatrixTab: React.FC = () => {
 
       {/* Lưới Ma trận bảng chữ cái */}
       {isLoading ? (
-        <div className="bg-surface rounded-md p-12 text-center text-gray-500 animate-pulse border border-gray-200">
+        <div className="bg-surface rounded-2xl p-12 text-center text-nibi animate-pulse border border-suna">
           Đang tải ma trận bảng chữ cái...
         </div>
       ) : (
@@ -179,22 +179,22 @@ export const KanaMatrixTab: React.FC = () => {
           {currentRows.map((row, rIdx) => (
             <div
               key={rIdx}
-              className="bg-surface rounded-md p-4 border border-gray-200/80 shadow-xs flex flex-col md:flex-row md:items-center gap-4 hover:border-indigo-200 transition"
+              className="bg-surface rounded-2xl p-5 border border-suna/90 shadow-xs flex flex-col md:flex-row md:items-center gap-4 hover:border-ai/30 transition-all duration-200"
             >
               {/* Tên hàng & Nút đọc cả hàng */}
-              <div className="md:w-52 shrink-0 flex items-center justify-between md:justify-start gap-3 border-b md:border-b-0 pb-2 md:pb-0 border-gray-100">
+              <div className="md:w-52 shrink-0 flex items-center justify-between md:justify-start gap-3 border-b md:border-b-0 pb-3 md:pb-0 border-gray-100">
                 <div>
-                  <h4 className="font-bold text-gray-900 text-sm">{row.rowName}</h4>
-                  <p className="text-xs text-gray-400 font-mono">({row.rowRomaji})</p>
+                  <h4 className="font-bold text-sumi text-sm">{row.rowName}</h4>
+                  <p className="text-xs text-nibi font-mono">({row.rowRomaji})</p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => handleReadRow(row.rowRomaji, row.characters)}
-                  className="px-2.5 py-1.5 rounded-md bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition flex items-center gap-1.5 text-xs font-semibold shrink-0 group"
+                  className="px-2.5 py-1.5 rounded-lg bg-kamenozoki/70 text-ai hover:bg-ai hover:text-white border border-ai/20 transition-all flex items-center gap-1.5 text-xs font-medium shrink-0 group cursor-pointer shadow-2xs"
                   title="Đọc phát âm cả hàng này"
                 >
-                  <Volume2 className="w-4 h-4 group-hover:scale-110 transition" />
+                  <Volume2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                   <span>Đọc hàng</span>
                 </button>
               </div>
@@ -207,22 +207,22 @@ export const KanaMatrixTab: React.FC = () => {
                     <div
                       key={char.id}
                       onClick={() => handleCharClick(char)}
-                      className={`relative aspect-square sm:aspect-4/3 rounded-md border p-2 sm:p-3 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 select-none ${
+                      className={`relative aspect-square sm:aspect-4/3 rounded-xl border p-2 sm:p-3 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 select-none group ${
                         isActive
-                          ? 'bg-indigo-100/90 border-indigo-600 ring-4 ring-indigo-400/40 scale-105 shadow-md'
-                          : 'bg-slate-50/70 border-gray-200/70 hover:bg-surface hover:border-indigo-400 hover:shadow-sm hover:scale-[1.02]'
+                          ? 'bg-kamenozoki border-ai ring-2 ring-ai/30 scale-105 shadow-sm'
+                          : 'bg-kinari/60 border-suna/80 hover:bg-surface hover:border-ai/50 hover:shadow-xs hover:scale-[1.02]'
                       }`}
                     >
-                      <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 font-sans">
+                      <span className="text-2xl sm:text-3xl font-extrabold text-sumi font-sans">
                         {char.character}
                       </span>
-                      <span className="text-xs font-medium text-gray-400 font-mono mt-0.5">
+                      <span className="text-xs font-medium text-nibi font-mono mt-0.5">
                         {char.romaji}
                       </span>
 
                       {/* Icon âm thanh nhỏ khi hover */}
-                      <span className="absolute top-1.5 right-1.5 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-indigo-600">
-                        <Volume2 className="w-3 h-3" />
+                      <span className="absolute top-1.5 right-1.5 text-nibi/40 opacity-0 group-hover:opacity-100 hover:text-ai transition-opacity">
+                        <Volume2 className="w-3.5 h-3.5" />
                       </span>
                     </div>
                   )
@@ -235,26 +235,26 @@ export const KanaMatrixTab: React.FC = () => {
 
       {/* Modal xem chi tiết và thứ tự nét viết khi bấm vào 1 chữ cái */}
       {selectedKana && (
-        <div className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-surface rounded-md shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150 relative">
+        <div className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-surface rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-150 relative border border-suna">
             <button
               type="button"
               onClick={() => setSelectedKana(null)}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition"
+              className="absolute top-4 right-4 p-2 text-nibi hover:text-sumi hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="text-center mb-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold mb-2">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-kamenozoki text-ai text-xs font-semibold mb-2 border border-ai/20">
+                <BookOpen className="w-3.5 h-3.5" />
                 {selectedKana.charType === 'HIRAGANA' ? 'Chữ Hiragana' : 'Chữ Katakana'}
               </div>
-              <h3 className="text-3xl font-extrabold text-gray-900">
+              <h3 className="text-3xl font-extrabold text-sumi">
                 {selectedKana.character}{' '}
-                <span className="text-lg font-mono text-gray-400">({selectedKana.romaji})</span>
+                <span className="text-lg font-mono text-nibi">({selectedKana.romaji})</span>
               </h3>
-              <p className="text-xs text-gray-500 mt-1">{selectedKana.meaningVi}</p>
+              <p className="text-xs text-nibi mt-1">{selectedKana.meaningVi}</p>
             </div>
 
             {/* Trình chiếu nét vẽ SVG */}
@@ -277,9 +277,9 @@ export const KanaMatrixTab: React.FC = () => {
                     audioUrl: selectedKana.audioUrl,
                   })
                 }
-                className="flex-1 py-3 rounded-md bg-indigo-600 text-white font-semibold flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-98 transition shadow-sm"
+                className="flex-1 py-2.5 rounded-lg bg-ai text-white font-medium text-xs flex items-center justify-center gap-2 hover:bg-ai/90 active:scale-98 transition shadow-2xs cursor-pointer"
               >
-                <Volume2 className="w-5 h-5" /> Nghe phát âm
+                <Volume2 className="w-4 h-4" /> Nghe phát âm
               </button>
             </div>
           </div>

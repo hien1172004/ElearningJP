@@ -1,6 +1,8 @@
 package com.jp.elearningjp.service.curriculum.snapshot;
 
+import com.jp.elearningjp.entity.exam.ExamPublishedVersion;
 import com.jp.elearningjp.repository.curriculum.CourseRepository;
+import com.jp.elearningjp.repository.exam.ExamAttemptRepository;
 import com.jp.elearningjp.repository.exam.ExamRepository;
 import com.jp.elearningjp.service.exam.snapshot.ExamSnapshotService;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +16,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.List;
 
 /**
- * Khóa học / đề thi gắn khóa đang xuất bản từ trước V56 chưa có snapshot → tạo lúc khởi động
+ * Khóa học / đề thi đang xuất bản chưa có snapshot → tạo lúc khởi động
  * để học viên chuyển sang học trên bản xuất bản. Mỗi khóa / đề chạy trong giao dịch riêng;
- * lỗi 1 khóa chỉ ghi log (khóa đó tạm đọc bản đang soạn như cũ).
- * Chạy nhiều instance cùng lúc: ràng buộc UNIQUE (course_id, version_no) chặn tạo trùng.
+ * lỗi 1 khóa/đề chỉ ghi log (không làm rollback các khóa/đề khác).
+ * Chạy nhiều instance cùng lúc: ràng buộc UNIQUE (course_id/exam_id, version_no) chặn tạo trùng.
  * Tắt bằng {@code app.snapshot.backfill-enabled=false}.
  */
 @Component
@@ -28,6 +30,7 @@ public class PublishedSnapshotBackfill implements ApplicationRunner {
 
     private final CourseRepository courseRepository;
     private final ExamRepository examRepository;
+    private final ExamAttemptRepository examAttemptRepository;
     private final CourseSnapshotService courseSnapshotService;
     private final ExamSnapshotService examSnapshotService;
     private final TransactionTemplate transactionTemplate;
@@ -45,10 +48,16 @@ public class PublishedSnapshotBackfill implements ApplicationRunner {
             }
         }
 
-        List<Long> examIds = examRepository.findPublishedCourseExamIdsWithoutSnapshot();
+        List<Long> examIds = examRepository.findPublishedExamIdsWithoutSnapshot();
         for (Long examId : examIds) {
             try {
-                transactionTemplate.executeWithoutResult(status -> examSnapshotService.publish(examId, null));
+                transactionTemplate.executeWithoutResult(status -> {
+                    ExamPublishedVersion version = examSnapshotService.publish(
+                            examId, null, "Phiên bản phát hành đầu tiên (V1)");
+                    if (version != null) {
+                        examAttemptRepository.backfillPublishedVersion(examId, version.getId());
+                    }
+                });
             } catch (RuntimeException e) {
                 log.error("[SNAPSHOT-BACKFILL] Exam id={} failed", examId, e);
             }

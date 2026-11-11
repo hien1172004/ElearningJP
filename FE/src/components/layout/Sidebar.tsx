@@ -1,6 +1,6 @@
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useEffect, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   Search as SearchLucide,
   GraduationCap,
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { Tooltip, Dropdown } from 'antd'
 import type { MenuProps } from 'antd'
+import { BrandLogo } from '@/components/common/BrandLogo'
 import { useAuthStore, useSidebarStore } from '@/stores'
 import { hasRole } from '@/utils/roles'
 import { cn } from '@/utils/cn'
@@ -513,16 +514,7 @@ export const Sidebar: React.FC = () => {
         {/* Top của sidebar — chỉ hiện trên mobile (chứa logo + nút đóng) */}
         {isMobile && (
           <div className="relative flex items-center h-14 border-b border-gray-200 shrink-0 px-4">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-lg font-black text-indigo-600"
-              onClick={closeMobile}
-            >
-              <span className="w-8 h-8 rounded-md bg-indigo-600 text-white flex items-center justify-center font-serif text-base font-bold shadow-xs">
-                日
-              </span>
-              <span>ElearningJP</span>
-            </Link>
+            <BrandLogo size="md" onClick={closeMobile} />
             <button
               type="button"
               onClick={closeMobile}

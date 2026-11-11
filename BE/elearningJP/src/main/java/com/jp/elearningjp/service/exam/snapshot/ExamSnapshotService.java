@@ -93,21 +93,27 @@ public class ExamSnapshotService {
     }
 
     /**
-     * Tạo phiên bản mới cho đề gắn khóa từ bản đang soạn. Nội dung không đổi so với
-     * phiên bản hiện tại thì giữ nguyên phiên bản cũ. Đề độc lập → bỏ qua (trả null).
+     * Tạo phiên bản mới cho đề thi (cả gắn khóa lẫn độc lập) từ bản đang soạn.
+     * Nội dung không đổi so với phiên bản hiện tại thì giữ nguyên phiên bản cũ.
      */
     @Transactional
     public ExamPublishedVersion publish(Long examId, User publishedBy) {
+        return publish(examId, publishedBy, null);
+    }
+
+    @Transactional
+    public ExamPublishedVersion publish(Long examId, User publishedBy, String changelog) {
         Exam exam = examRepository.findByIdWithSectionsAndScoreGroups(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
-        if (exam.getCourse() == null) {
-            return null;
-        }
 
         String content = write(build(exam));
         if (exam.getPublishedVersionId() != null) {
             Optional<ExamPublishedVersion> current = versionRepository.findById(exam.getPublishedVersionId());
             if (current.isPresent() && sameJson(current.get().getContent(), content)) {
+                if (changelog != null && !changelog.isBlank() && current.get().getChangelog() == null) {
+                    current.get().setChangelog(changelog);
+                    versionRepository.save(current.get());
+                }
                 return current.get();
             }
         }
@@ -117,6 +123,7 @@ public class ExamSnapshotService {
                 .versionNo(versionRepository.findMaxVersionNo(examId) + 1)
                 .content(content)
                 .publishedBy(publishedBy)
+                .changelog(changelog)
                 .build());
         exam.setPublishedVersionId(version.getId());
         examRepository.save(exam);
@@ -125,15 +132,64 @@ public class ExamSnapshotService {
         return version;
     }
 
-    /** Bản đang soạn của đề gắn khóa có khác bản đã duyệt không (true nếu chưa có bản duyệt). */
+    /** Bản đang soạn của đề có khác bản đã phát hành gần nhất không (true nếu chưa có bản phát hành). */
     @Transactional(readOnly = true)
     public boolean differsFromPublished(Long examId) {
         Exam exam = examRepository.findByIdWithSectionsAndScoreGroups(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
-        Optional<ExamPublishedVersion> current = exam.getPublishedVersionId() == null
-                ? Optional.empty()
-                : versionRepository.findById(exam.getPublishedVersionId());
-        return current.isEmpty() || !sameJson(current.get().getContent(), write(build(exam)));
+        if (exam.getPublishedVersionId() == null) {
+            return true;
+        }
+        Optional<ExamPublishedVersion> current = versionRepository.findById(exam.getPublishedVersionId());
+        if (current.isEmpty()) {
+            return true;
+        }
+        String currentContent = current.get().getContent();
+        String newContent = write(build(exam));
+        boolean same = sameJson(currentContent, newContent);
+        if (!same) {
+            logDiff(examId, currentContent, newContent);
+        }
+        return !same;
+    }
+
+    private void logDiff(Long examId, String a, String b) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode n1 = objectMapper.readTree(a);
+            com.fasterxml.jackson.databind.JsonNode n2 = objectMapper.readTree(b);
+            findAndLogDiff(examId, "", n1, n2);
+        } catch (Exception e) {
+            log.warn("[EXAM-SNAPSHOT] Cannot compare diff for examId={}: {}", examId, e.getMessage());
+        }
+    }
+
+    private void findAndLogDiff(Long examId, String path, com.fasterxml.jackson.databind.JsonNode n1, com.fasterxml.jackson.databind.JsonNode n2) {
+        if (n1.isObject() && n2.isObject()) {
+            java.util.Set<String> allKeys = new java.util.TreeSet<>();
+            n1.fieldNames().forEachRemaining(allKeys::add);
+            n2.fieldNames().forEachRemaining(allKeys::add);
+            for (String key : allKeys) {
+                if (!n1.has(key)) {
+                    log.info("[EXAM-SNAPSHOT-DIFF] examId={} {}.{} only in current snapshot", examId, path, key);
+                } else if (!n2.has(key)) {
+                    log.info("[EXAM-SNAPSHOT-DIFF] examId={} {}.{} only in draft", examId, path, key);
+                } else {
+                    findAndLogDiff(examId, path + "." + key, n1.get(key), n2.get(key));
+                }
+            }
+        } else if (n1.isArray() && n2.isArray()) {
+            if (n1.size() != n2.size()) {
+                log.info("[EXAM-SNAPSHOT-DIFF] examId={} {} array size diff: {} vs {}", examId, path, n1.size(), n2.size());
+            } else {
+                for (int i = 0; i < n1.size(); i++) {
+                    if (!n1.get(i).equals(n2.get(i))) {
+                        findAndLogDiff(examId, path + "[" + i + "]", n1.get(i), n2.get(i));
+                    }
+                }
+            }
+        } else if (!n1.equals(n2)) {
+            log.info("[EXAM-SNAPSHOT-DIFF] examId={} {} differs: current={} vs draft={}", examId, path, n1, n2);
+        }
     }
 
     ExamSnapshot build(Exam exam) {
@@ -186,9 +242,9 @@ public class ExamSnapshotService {
                 .skillType(q.getSkillType())
                 .taking(examViewBuilder.toTakingQuestionResponse(q, sq.getQuestionNumber()))
                 .review(examViewBuilder.toReviewQuestionResponse(q, sq.getQuestionNumber(), null))
-                .optionIds(options.stream().map(QuestionOption::getId).collect(Collectors.toSet()))
+                .optionIds(options.stream().map(QuestionOption::getId).sorted().collect(Collectors.toCollection(java.util.LinkedHashSet::new)))
                 .correctOptionIds(options.stream().filter(QuestionOption::isCorrect)
-                        .map(QuestionOption::getId).collect(Collectors.toSet()))
+                        .map(QuestionOption::getId).sorted().collect(Collectors.toCollection(java.util.LinkedHashSet::new)))
                 .build();
     }
 
@@ -205,12 +261,16 @@ public class ExamSnapshotService {
     }
 
     private boolean usesSnapshot(Exam exam, User user) {
-        if (exam == null || exam.getCourse() == null || exam.getPublishedVersionId() == null) {
+        if (exam == null || exam.getPublishedVersionId() == null) {
             return false;
         }
-        boolean manager = user != null
-                && (currentUserService.isAdmin() || courseAccessGuard.isAssignedTeacher(exam.getCourse(), user.getId()));
-        return !manager;
+        if (exam.getCourse() != null) {
+            boolean manager = user != null
+                    && (currentUserService.isAdmin() || courseAccessGuard.isAssignedTeacher(exam.getCourse(), user.getId()));
+            return !manager;
+        }
+        // Đề độc lập/public đã xuất bản snapshot: tất cả thí sinh làm bài đều chạy trên snapshot bất biến
+        return true;
     }
 
     public Optional<ExamSnapshot> find(Long publishedVersionId) {
@@ -241,13 +301,23 @@ public class ExamSnapshotService {
         java.util.Set<Long> snapshotExamIds = fromSnapshot.stream().map(Exam::getId).collect(Collectors.toSet());
         Map<Long, ExamSummaryResponse> summaries = findSummaries(
                 fromSnapshot.stream().map(Exam::getPublishedVersionId).toList());
+
+        Map<Long, ExamPublishedVersion> versionMap = versionRepository.findAllById(
+                exams.stream().map(Exam::getPublishedVersionId).filter(java.util.Objects::nonNull).toList())
+                .stream().collect(Collectors.toMap(ExamPublishedVersion::getId, Function.identity(), (a, b) -> a));
+
         return exams.stream()
                 .map(e -> {
                     ExamSummaryResponse s = snapshotExamIds.contains(e.getId()) ? summaries.get(e.getPublishedVersionId()) : null;
                     if (s == null) {
-                        return examMapper.toSummaryResponse(e);
+                        s = examMapper.toSummaryResponse(e);
                     }
                     s.setPublished(e.isPublished());
+                    if (e.getPublishedVersionId() != null && versionMap.containsKey(e.getPublishedVersionId())) {
+                        ExamPublishedVersion v = versionMap.get(e.getPublishedVersionId());
+                        s.setVersionNo(v.getVersionNo());
+                        s.setChangelog(v.getChangelog());
+                    }
                     return s;
                 })
                 .collect(Collectors.toList());
@@ -263,10 +333,18 @@ public class ExamSnapshotService {
     }
 
     private boolean sameJson(String a, String b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
         try {
-            return objectMapper.readTree(a).equals(objectMapper.readTree(b));
+            ExamSnapshot s1 = objectMapper.readValue(a, ExamSnapshot.class);
+            ExamSnapshot s2 = objectMapper.readValue(b, ExamSnapshot.class);
+            return java.util.Objects.equals(s1, s2);
         } catch (JsonProcessingException e) {
-            return false;
+            try {
+                return objectMapper.readTree(a).equals(objectMapper.readTree(b));
+            } catch (JsonProcessingException ex) {
+                return false;
+            }
         }
     }
 }

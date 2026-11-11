@@ -95,9 +95,11 @@ public class AdminExamController {
 
     @PostMapping(ApiPaths.AdminExam.PUBLISH)
     @Operation(summary = "Phát hành đề thi chính thức cho học viên thi thử",
-            description = "Đề gắn khóa: chỉ quản trị viên, hiện lại bản đã duyệt (đề chưa duyệt sẽ lên cùng lần duyệt khóa — lỗi 5009)")
-    public ApiResponse<Void> publishExam(@PathVariable Long id) {
-        adminExamService.publishExam(id);
+            description = "Đề gắn khóa: chỉ quản trị viên, hiện lại bản đã duyệt. Đề độc lập: tạo snapshot phiên bản mới và thông báo học viên nếu chọn.")
+    public ApiResponse<Void> publishExam(
+            @PathVariable Long id,
+            @RequestBody(required = false) com.jp.elearningjp.dto.request.exam.PublishExamRequest request) {
+        adminExamService.publishExam(id, request);
         return ApiResponse.<Void>builder()
                 .success(true)
                 .code(HttpStatus.OK.value())

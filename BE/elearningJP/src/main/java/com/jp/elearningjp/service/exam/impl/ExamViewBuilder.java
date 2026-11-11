@@ -2,6 +2,7 @@ package com.jp.elearningjp.service.exam.impl;
 
 import com.jp.elearningjp.dto.response.exam.*;
 import com.jp.elearningjp.entity.exam.Exam;
+import com.jp.elearningjp.entity.exam.ExamScoreGroup;
 import com.jp.elearningjp.entity.exam.ExamSection;
 import com.jp.elearningjp.entity.exam.Question;
 import com.jp.elearningjp.entity.exam.QuestionOption;
@@ -28,6 +29,7 @@ public class ExamViewBuilder {
     /** Chi tiết đề (nhóm điểm + tóm tắt từng ca thi). Exam cần nạp sẵn sections + scoreGroups. */
     public ExamDetailResponse buildExamDetail(Exam exam) {
         var scoreGroupResponses = exam.getScoreGroups().stream()
+                .sorted(Comparator.comparing(ExamScoreGroup::getId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(examMapper::toScoreGroupResponse)
                 .collect(Collectors.toList());
 
@@ -40,6 +42,7 @@ public class ExamViewBuilder {
                         java.util.LinkedHashMap::new
                 ))
                 .values().stream()
+                .sorted(Comparator.comparing(ExamSection::getOrderIndex, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(s -> {
                     int questionCount = examSectionQuestionRepository
                             .findBySectionIdAndDeletedFalseOrderByQuestionNumberAsc(s.getId()).size();

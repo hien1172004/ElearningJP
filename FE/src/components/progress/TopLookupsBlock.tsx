@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from 'antd'
-import { BookOpen, ChevronRight, Flame, Search, Sparkles } from 'lucide-react'
+import { BookOpen, ChevronRight, Flame, Search, Info } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTopLookups } from '@/hooks/useTopLookups'
 import type { TopLookup } from '@/types'
@@ -63,12 +63,12 @@ const LookupChip: React.FC<{
     type="button"
     onClick={() => onOpen(entry)}
     title={`Tra cứu "${entry.label}" trong từ điển`}
-    className="group inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-gray-200 bg-gray-50/70 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-colors max-w-full"
+    className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-suna bg-slate-50/80 hover:border-ai/50 hover:bg-kamenozoki/40 hover:text-ai transition-all cursor-pointer max-w-full"
   >
-    <span className="text-sm font-bold text-gray-900 group-hover:text-indigo-700 transition-colors truncate">
+    <span className="text-sm font-bold text-sumi group-hover:text-ai transition-colors truncate">
       {entry.label}
     </span>
-    <ChevronRight className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 shrink-0 transition-colors" />
+    <ChevronRight className="w-3 h-3 text-nibi/50 group-hover:text-ai shrink-0 transition-colors" />
   </button>
 )
 
@@ -154,22 +154,21 @@ export const TopLookupsBlock: React.FC = () => {
         )}
 
         {/* ---------- Nút hành động ---------- */}
-        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <p className="text-[10px] text-gray-400 flex items-start gap-1">
-            <Sparkles className="w-3 h-3 shrink-0 mt-px" />
+        <div className="mt-3 pt-3 border-t border-suna/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <p className="text-[10px] text-nibi flex items-start gap-1">
+            <Info className="w-3 h-3 shrink-0 mt-px text-ai" />
             <span>
               Bấm vào một từ để mở từ điển tra lại từ đó.
             </span>
           </p>
-          <Button
-            type="primary"
-            size="small"
-            icon={<BookOpen className="w-3.5 h-3.5" />}
+          <button
+            type="button"
             onClick={() => navigate('/dictionary')}
-            className="!rounded-md !font-semibold shrink-0"
+            className="h-8 px-3 rounded-lg bg-ai hover:bg-ai/90 text-white font-medium text-xs inline-flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
-            Tra cứu ngay
-          </Button>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Tra cứu ngay</span>
+          </button>
         </div>
       </div>
     </section>

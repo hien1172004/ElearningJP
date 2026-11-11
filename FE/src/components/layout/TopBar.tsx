@@ -17,6 +17,7 @@ import {
 import { useLogout } from '@/hooks'
 import { NotificationBell } from '@/components/notification'
 import { ThemeToggle } from '@/components/theme'
+import { BrandLogo } from '@/components/common/BrandLogo'
 import { cn } from '@/utils/cn'
 
 /**
@@ -61,15 +62,7 @@ export const TopBar: React.FC = () => {
               Inline marginLeft để icon của button thẳng hàng với icon nav bên dưới. */}
           <TooltipToggle collapsed={collapsed} onToggle={toggle} />
 
-          <Link
-            to="/"
-            className="text-base sm:text-lg md:text-xl font-black text-indigo-600 flex items-center gap-2 shrink-0 ml-1"
-          >
-            <span className="w-8 h-8 rounded-md bg-indigo-600 text-white flex items-center justify-center font-serif text-base font-bold shadow-xs shrink-0">
-              日
-            </span>
-            <span className="hidden sm:inline">ElearningJP</span>
-          </Link>
+          <BrandLogo size="md" hideTextOnMobile className="ml-1" />
         </div>
 
         {/* Phải: tài khoản + đăng xuất (hoặc đăng nhập / đăng ký) */}

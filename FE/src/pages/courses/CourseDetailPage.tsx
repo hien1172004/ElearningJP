@@ -106,24 +106,24 @@ export const CourseDetailPage: React.FC = () => {
 
       <div className="space-y-6">
         {/* Stats + Progress */}
-        <div className="bg-surface rounded-md border border-gray-200/80 shadow-xs p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-surface rounded-2xl border border-suna/90 shadow-2xs p-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="text-center">
-            <p className="text-2xl font-black text-indigo-600">{course.jlptLevel}</p>
-            <p className="text-xs text-gray-500 mt-1">Cấp độ</p>
+            <p className="text-2xl font-black text-ai">{course.jlptLevel}</p>
+            <p className="text-xs text-nibi mt-1">Cấp độ</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-black text-gray-900 flex items-center justify-center gap-1">
-              <BookOpen className="w-5 h-5" />
+            <p className="text-2xl font-black text-sumi flex items-center justify-center gap-1">
+              <BookOpen className="w-5 h-5 text-ai" />
               {course.totalLessons ?? lessons.length}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Bài học</p>
+            <p className="text-xs text-nibi mt-1">Bài học</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-black text-gray-900 flex items-center justify-center gap-1">
-              <Users className="w-5 h-5" />
+            <p className="text-2xl font-black text-sumi flex items-center justify-center gap-1">
+              <Users className="w-5 h-5 text-nibi" />
               {course.totalEnrollments ?? 0}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Học viên</p>
+            <p className="text-xs text-nibi mt-1">Học viên</p>
           </div>
           <div className="text-center">
             {isEnrolled && course.progressPercent != null ? (

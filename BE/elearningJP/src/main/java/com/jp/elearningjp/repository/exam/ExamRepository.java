@@ -49,4 +49,8 @@ public interface ExamRepository extends JpaRepository<Exam, Long> {
     @Query("SELECT e.id FROM Exam e WHERE e.course IS NOT NULL AND e.published = true AND e.deleted = false "
             + "AND e.publishedVersionId IS NULL")
     java.util.List<Long> findPublishedCourseExamIdsWithoutSnapshot();
+
+    /** Id đề đang xuất bản (cả gắn khóa lẫn độc lập) nhưng chưa có snapshot. */
+    @Query("SELECT e.id FROM Exam e WHERE e.published = true AND e.deleted = false AND e.publishedVersionId IS NULL")
+    java.util.List<Long> findPublishedExamIdsWithoutSnapshot();
 }

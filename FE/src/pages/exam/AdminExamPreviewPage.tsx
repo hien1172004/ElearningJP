@@ -60,6 +60,7 @@ import {
   ChevronDown,
   SlidersHorizontal,
   ArrowRight,
+  ShieldCheck,
 } from 'lucide-react'
 import { BackButton } from '@/components/common'
 
@@ -134,8 +135,14 @@ export const AdminExamPreviewPage: React.FC = () => {
   // Snapshot / Khôi phục bản lưu trước đó
   const [snapshotTimestamp, setSnapshotTimestamp] = useState<string | null>(null)
   const [isRollbackModalOpen, setIsRollbackModalOpen] = useState<boolean>(false)
+
+  // Xuất bản phiên bản mới
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState<boolean>(false)
+  const [publishChangelog, setPublishChangelog] = useState<string>('')
+  const [notifyLearners, setNotifyLearners] = useState<boolean>(true)
+
   // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
-  useBodyScrollLock(isAddModalOpen || isAiSectionModalOpen || !!zoomImageUrl || isRollbackModalOpen)
+  useBodyScrollLock(isAddModalOpen || isAiSectionModalOpen || !!zoomImageUrl || isRollbackModalOpen || isPublishModalOpen)
   const [isRollingBack, setIsRollingBack] = useState<boolean>(false)
   const [isTakingSnapshot, setIsTakingSnapshot] = useState<boolean>(false)
 
@@ -301,7 +308,7 @@ export const AdminExamPreviewPage: React.FC = () => {
   const handleDeleteQuestion = async (qId: number) => {
     if (!examId) return
 
-    if (previewData?.inProgressAttempts && previewData.inProgressAttempts > 0) {
+    if (!previewData?.publishedVersionId && previewData?.inProgressAttempts && previewData.inProgressAttempts > 0) {
       toast.error(
         `Không thể xóa câu hỏi! Hiện đang có ${previewData.inProgressAttempts} thí sinh đang trực tiếp làm bài thi này.`,
         { duration: 5000 }
@@ -312,7 +319,11 @@ export const AdminExamPreviewPage: React.FC = () => {
     if (previewData?.totalAttempts && previewData.totalAttempts > 0) {
       const confirmed = await confirmDialog({
         title: 'Cảnh báo: Đề thi đã có bài làm',
-        content: `Đề thi này đã có ${previewData.totalAttempts} lượt nộp bài!\n\nNếu xóa câu hỏi này, thí sinh thi sau sẽ bị lệch số câu so với thí sinh trước. Khuyến nghị: Bạn nên dùng tính năng "Nhân bản đề (Bản mới)" để chỉnh sửa an toàn.\n\nBạn có chắc chắn VẪN MUỐN XÓA câu hỏi này?`,
+        content: `Đề thi này đã có ${previewData.totalAttempts} lượt nộp bài!\n\n${
+          previewData.publishedVersionId
+            ? `Lưu ý: Thay đổi này sẽ lưu vào Bản nháp. Thí sinh thi trước và thí sinh đang làm bài vẫn an toàn theo bản v${previewData.publishedVersionNo || 1}. Thay đổi sẽ chỉ áp dụng khi bạn bấm "Xuất bản phiên bản mới".`
+            : `Nếu xóa câu hỏi này, thí sinh thi sau sẽ bị lệch số câu so với thí sinh trước.`
+        }\n\nBạn có chắc chắn VẪN MUỐN XÓA câu hỏi này?`,
         okText: 'Vẫn xóa',
         cancelText: 'Hủy',
         danger: true,
@@ -774,31 +785,41 @@ export const AdminExamPreviewPage: React.FC = () => {
 
   const [unpublishing, setUnpublishing] = useState<boolean>(false)
 
-  // Phát hành đề thi
-  const handlePublishExam = async () => {
-    if (!examId) return
-    const confirmed = await confirmDialog({
-      title: 'Phát hành đề thi?',
-      content: 'Bạn có chắc chắn muốn phát hành đề thi này cho tất cả học viên không? Đề thi sẽ xuất hiện công khai trên danh sách thi thử.',
-      okText: 'Phát hành ngay',
-      cancelText: 'Hủy',
-    })
-    if (!confirmed) return
+  // Mở modal xác nhận xuất bản phiên bản mới
+  const handleOpenPublishModal = () => {
+    setPublishChangelog('')
+    setNotifyLearners(Boolean((previewData?.totalAttempts ?? 0) > 0))
+    setIsPublishModalOpen(true)
+  }
 
+  // Thực hiện xuất bản phiên bản mới
+  const handleExecutePublish = async () => {
+    if (!examId) return
     try {
       setPublishing(true)
-      await examService.publishExam(Number(examId))
+      await examService.publishExam(Number(examId), {
+        changelog: publishChangelog.trim() || undefined,
+        notifyLearners: notifyLearners && (previewData?.totalAttempts ?? 0) > 0,
+      })
       setPublishSuccess(true)
-      setPreviewData((prev) => (prev ? { ...prev, published: true } : prev))
-      toast.success('Đã phát hành đề thi thành công!')
-      setTimeout(() => {
-        navigate('/admin/exams')
-      }, 1200)
+      setIsPublishModalOpen(false)
+      const refreshed = await examService.getAdminExamPreview(Number(examId))
+      setPreviewData(refreshed)
+      toast.success(
+        `Đã xuất bản thành công phiên bản v${refreshed?.publishedVersionNo || 1}!${
+          notifyLearners && (previewData?.totalAttempts ?? 0) > 0 ? ' Đã gửi thông báo tới học viên.' : ''
+        }`
+      )
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Lỗi khi phát hành đề thi')
+      toast.error(err.response?.data?.message || 'Lỗi khi xuất bản đề thi')
     } finally {
       setPublishing(false)
     }
+  }
+
+  // Phát hành đề thi (mở modal)
+  const handlePublishExam = () => {
+    handleOpenPublishModal()
   }
 
   // Thu hồi đề thi về Bản Nháp
@@ -1040,33 +1061,41 @@ export const AdminExamPreviewPage: React.FC = () => {
   return (
     <div className="pb-20">
       {/* Header Bar */}
-      <div className="sticky-below-topbar z-20 bg-surface/95 backdrop-blur-md border border-suna rounded-xl shadow-xs px-4 py-2.5">
+      <div className="sticky-below-topbar z-20 bg-surface/95 backdrop-blur-md border border-slate-200/80 rounded-xl shadow-2xs px-4 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <BackButton to="/admin/exams" className="ml-0" />
-            <div>
+            <div className="h-5 w-px bg-slate-200 hidden sm:block shrink-0" />
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-lg text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200/60 uppercase">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-slate-900 text-white font-mono">
                   {previewData.jlptLevel}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600">
+                <span className="text-xs text-slate-500 font-medium">
                   {previewData.examType === 'JLPT_OFFICIAL_MOCK'
                     ? 'Đề thi thử JLPT'
                     : 'Bài thi khóa học'}
                 </span>
+                <span className="text-slate-300">•</span>
                 {previewData.published ? (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 flex items-center gap-1.5 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Đã xuất bản
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Live {previewData.publishedVersionNo ? `v${previewData.publishedVersionNo}` : ''}
                   </span>
                 ) : (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 flex items-center gap-1.5 border border-amber-200">
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    Bản nháp
+                  </span>
+                )}
+                {previewData.published && previewData.hasUnpublishedChanges && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200/80">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Bản nháp (Đã lưu tự động)
+                    Bản nháp v{(previewData.publishedVersionNo || 1) + 1}
                   </span>
                 )}
               </div>
-              <h1 className="text-sm sm:text-base font-bold text-sumi line-clamp-1 mt-0.5">
+              <h1 className="text-sm sm:text-base font-semibold text-slate-900 tracking-tight line-clamp-1 mt-0.5" title={previewData.title}>
                 {previewData.title}
               </h1>
             </div>
@@ -1074,14 +1103,14 @@ export const AdminExamPreviewPage: React.FC = () => {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2">
-            {/* Lưu nháp & Thoát */}
+            {/* Lưu & Thoát */}
             <button
               type="button"
               onClick={() => navigate('/admin/exams')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface hover:bg-slate-50 text-slate-700 text-xs font-bold transition border border-slate-200 cursor-pointer shadow-xs"
-              title="Tất cả thay đổi đã được tự động lưu. Bấm để trở về danh sách đề thi."
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs cursor-pointer"
+              title="Tất cả thay đổi đã được tự động lưu vào bản nháp. Bấm để trở về danh sách đề thi."
             >
-              <Save className="w-4 h-4 text-slate-500" />
+              <Save className="w-3.5 h-3.5 text-slate-500" />
               <span className="hidden sm:inline">Lưu & Thoát</span>
             </button>
 
@@ -1090,15 +1119,15 @@ export const AdminExamPreviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface hover:bg-slate-50 text-slate-700 text-xs font-bold transition border border-slate-200 cursor-pointer shadow-xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs cursor-pointer"
               >
-                <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-600" />
                 <span>Công cụ</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isToolsDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isToolsDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-surface rounded-2xl shadow-xl border border-slate-200/80 p-2 z-50 space-y-1 animate-in fade-in-50 zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-64 bg-surface rounded-xl shadow-xl border border-slate-200/80 p-1.5 z-50 space-y-1 animate-in fade-in-50 zoom-in-95 duration-150">
                   <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Bản lưu & Phục hồi
                   </div>
@@ -1109,7 +1138,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                       handleCreateManualSnapshot()
                     }}
                     disabled={isTakingSnapshot}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition text-left cursor-pointer disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 transition text-left cursor-pointer disabled:opacity-50"
                   >
                     <Camera className="w-4 h-4 text-indigo-600" />
                     <span>{isTakingSnapshot ? 'Đang lưu...' : 'Tạo điểm lưu (Snapshot)'}</span>
@@ -1122,7 +1151,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                         setIsToolsDropdownOpen(false)
                         setIsRollbackModalOpen(true)
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-700 hover:bg-amber-50 transition text-left cursor-pointer"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 transition text-left cursor-pointer"
                     >
                       <RotateCcw className="w-4 h-4 text-amber-600" />
                       <span>Hoàn tác ({snapshotTimestamp})</span>
@@ -1141,7 +1170,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                       handleReorderQuestions()
                     }}
                     disabled={isReordering}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition text-left cursor-pointer disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 transition text-left cursor-pointer disabled:opacity-50"
                   >
                     <RefreshCw className={`w-4 h-4 text-violet-600 ${isReordering ? 'animate-spin' : ''}`} />
                     <span>{isReordering ? 'Đang sắp xếp...' : 'Sắp xếp số câu (1➔N)'}</span>
@@ -1154,7 +1183,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                       handleCloneExam()
                     }}
                     disabled={isCloning}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition text-left cursor-pointer disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 transition text-left cursor-pointer disabled:opacity-50"
                   >
                     <Copy className={`w-4 h-4 text-teal-600 ${isCloning ? 'animate-spin' : ''}`} />
                     <span>{isCloning ? 'Đang nhân bản...' : 'Nhân bản đề (Bản mới)'}</span>
@@ -1168,7 +1197,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                         handleRegradeExam()
                       }}
                       disabled={isRegrading}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-orange-700 hover:bg-orange-50 transition text-left cursor-pointer disabled:opacity-50"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-orange-700 hover:bg-orange-50 transition text-left cursor-pointer disabled:opacity-50"
                     >
                       <RefreshCw className={`w-4 h-4 text-orange-600 ${isRegrading ? 'animate-spin' : ''}`} />
                       <span>{isRegrading ? 'Đang chấm lại...' : `Chấm lại (${previewData.totalAttempts} bài)`}</span>
@@ -1183,7 +1212,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                         handleUnpublishExam()
                       }}
                       disabled={unpublishing}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition text-left cursor-pointer disabled:opacity-50"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-600 hover:bg-rose-50 transition text-left cursor-pointer disabled:opacity-50"
                     >
                       <EyeOff className="w-4 h-4 text-rose-600" />
                       <span>{unpublishing ? 'Đang thu hồi...' : 'Thu hồi về Bản Nháp'}</span>
@@ -1193,67 +1222,95 @@ export const AdminExamPreviewPage: React.FC = () => {
               )}
             </div>
 
-            {/* Thêm câu hỏi mới */}
-            <button
-              type="button"
-              onClick={() => handleOpenAddModal()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition shadow-xs cursor-pointer"
-            >
-              <PlusCircle className="w-4 h-4 text-indigo-600" />
-              <span>+ Thêm câu hỏi</span>
-            </button>
-
-            {/* Phát hành đề thi */}
+            {/* Phát hành / Xuất bản phiên bản mới */}
             {!previewData.published ? (
               <button
                 type="button"
                 onClick={handlePublishExam}
                 disabled={publishing || publishSuccess}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white text-xs font-bold transition shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-medium transition shadow-2xs cursor-pointer disabled:opacity-50"
               >
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-3.5 h-3.5" />
                 <span>{publishing ? 'Đang phát hành...' : publishSuccess ? 'Đã phát hành!' : 'Phát hành đề thi'}</span>
               </button>
-            ) : (
+            ) : previewData.hasUnpublishedChanges ? (
               <button
                 type="button"
-                onClick={handleUnpublishExam}
-                disabled={unpublishing}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
-                title="Chuyển đề thi này về bản nháp để chỉnh sửa thêm"
+                onClick={handlePublishExam}
+                disabled={publishing}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-medium transition shadow-2xs cursor-pointer disabled:opacity-50"
               >
-                <EyeOff className="w-4 h-4 text-rose-600" />
-                <span>{unpublishing ? 'Đang thu hồi...' : 'Thu hồi về Bản Nháp'}</span>
+                <span>Xuất bản v{(previewData.publishedVersionNo || 1) + 1}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
+            ) : (
+              <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 text-xs font-medium">
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Đã cập nhật mới nhất</span>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-5 space-y-4">
+        {/* Banner thông báo có thay đổi chưa xuất bản */}
+        {previewData.published && previewData.hasUnpublishedChanges && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-amber-50/70 border border-amber-200/70 text-xs text-amber-950 shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="flex h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+              <p className="leading-relaxed">
+                <strong className="font-semibold text-amber-950">Bản nháp có thay đổi chưa xuất bản:</strong>{' '}
+                <span className="text-amber-900/80">
+                  Thí sinh hiện tại vẫn đang làm bài theo phiên bản <strong>v{previewData.publishedVersionNo || 1}</strong> an toàn.
+                </span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={handlePublishExam}
+                disabled={publishing}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-medium transition cursor-pointer shadow-2xs disabled:opacity-50"
+              >
+                <span>Xuất bản v{(previewData.publishedVersionNo || 1) + 1}</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Banner cảnh báo an toàn phiên làm bài & xung đột trực tiếp */}
         {(previewData.inProgressAttempts ?? 0) > 0 ? (
-          <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border-2 border-rose-300 rounded-xl p-5 shadow-sm backdrop-blur-sm">
+          <div className="rounded-xl border border-rose-200/80 bg-rose-50/40 p-4 shadow-2xs">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="relative mt-0.5">
-                  <span className="flex h-3.5 w-3.5 relative">
+              <div className="flex items-start gap-3">
+                <div className="relative mt-1 shrink-0">
+                  <span className="flex h-2.5 w-2.5 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-600"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-600"></span>
                   </span>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-rose-900 text-sm sm:text-base flex items-center gap-1.5">
-                      <AlertTriangle className="w-4 h-4 text-rose-600" />
-                      Đang có {previewData.inProgressAttempts} thí sinh làm bài thi trực tiếp!
+                    <h3 className="font-semibold text-rose-950 text-xs sm:text-base flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      Đang có {previewData.inProgressAttempts} thí sinh làm bài thi trực tiếp
                     </h3>
-                    <span className="px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-rose-100 text-rose-800 border border-rose-200">
-                      Live Concurrency Mode
+                    <span className="px-2 py-0.5 text-[10px] font-semibold rounded-md bg-rose-100/70 text-rose-800 border border-rose-200">
+                      {previewData.publishedVersionId ? `Snapshot v${previewData.publishedVersionNo || 1}` : 'Live Concurrency'}
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed">
-                    <strong>Khuyến nghị an toàn:</strong> Không nên xóa hay thêm câu hỏi lúc này vì sẽ làm lệch phiên thi của học viên. Nếu cần cập nhật lớn, hãy dùng tính năng <strong>[Nhân bản đề (Bản mới)]</strong> hoặc <strong>[Thu hồi về Bản Nháp]</strong>.
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    {previewData.publishedVersionId ? (
+                      <>
+                        Thí sinh đang thi an toàn theo bản Snapshot <strong>v{previewData.publishedVersionNo || 1}</strong> bất biến. Các thao tác chỉnh sửa ở đây được lưu vào bản nháp và không làm ảnh hưởng bài thi của thí sinh.
+                      </>
+                    ) : (
+                      <>
+                        Đề thi chưa có Snapshot bất biến. Hạn chế thêm hoặc xóa câu hỏi lúc này để không làm lệch phiên thi của học viên.
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1262,7 +1319,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   type="button"
                   onClick={handleCloneExam}
                   disabled={isCloning}
-                  className="px-3 py-1.5 rounded-xl bg-surface hover:bg-rose-50 text-rose-700 text-xs font-bold border border-rose-200 shadow-xs transition"
+                  className="px-3 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-rose-700 text-xs font-medium border border-rose-200 shadow-2xs transition cursor-pointer"
                 >
                   Nhân bản đề mới
                 </button>
@@ -1270,19 +1327,19 @@ export const AdminExamPreviewPage: React.FC = () => {
             </div>
           </div>
         ) : (previewData.totalAttempts ?? 0) > 0 ? (
-          <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-4 shadow-xs">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs sm:text-sm text-blue-900">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 shadow-2xs">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-700">
               <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span>
-                  Đề thi này đã có <strong>{previewData.totalAttempts}</strong> lượt nộp bài. Nếu bạn chỉnh sửa nội dung hoặc đáp án đúng, hãy nhấn <strong>[Chấm lại bài thi]</strong> để cập nhật điểm tự động cho các bài thi cũ.
+                  Đề thi đã có <strong>{previewData.totalAttempts}</strong> lượt nộp bài. Nếu bạn sửa đáp án đúng, hãy bấm <strong>Chấm lại bài thi</strong> để tự động cập nhật kết quả cho các bài thi cũ.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleRegradeExam}
                 disabled={isRegrading}
-                className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition shrink-0 self-end sm:self-center"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition shrink-0 self-end sm:self-center cursor-pointer"
               >
                 Chấm lại {previewData.totalAttempts} bài thi
               </button>
@@ -1291,52 +1348,56 @@ export const AdminExamPreviewPage: React.FC = () => {
         ) : null}
 
         {/* Navigation Tabs cho từng Section trong đề thi */}
-        <div className="bg-slate-200/60 p-1.5 rounded-2xl border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="bg-slate-100/80 p-1 rounded-xl border border-slate-200/70 grid grid-cols-1 sm:grid-cols-3 gap-1.5">
           {previewData.sections.map((sec: AdminTakingSection, idx: number) => {
             const isActive = idx === activeSectionIdx
-            const cleanTitle = sec.sectionTitle.replace(/\s*\(\d+\s*phút\)/i, '').trim()
             const duration = sec.durationMinutes || (sec.sessionType === 'LISTENING' ? 35 : 30)
+
+            // Tách tiêu đề chuẩn JLPT: "Ca 1: Từ vựng (文字・語彙)" => mainTitle: "Ca 1: Từ vựng", jaSub: "文字・語彙"
+            const titleMatch = sec.sectionTitle.match(/^(Ca\s*\d+:\s*[^(\n]+)(?:\(([^)]+)\))?/i)
+            const mainTitle = titleMatch ? titleMatch[1].trim() : sec.sectionTitle.replace(/\s*\(\d+\s*phút\)/i, '').trim()
+            const jaSub = titleMatch && titleMatch[2] ? titleMatch[2].replace(/\s*\d+\s*phút/i, '').trim() : null
 
             return (
               <button
                 key={sec.id}
                 type="button"
                 onClick={() => setActiveSectionIdx(idx)}
-                className={`relative flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-150 cursor-pointer ${
+                className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs sm:text-sm transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-surface text-indigo-700 shadow-sm border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-surface/60'
+                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80 font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 font-medium'
                 }`}
               >
-                <div className="flex items-center gap-3 truncate">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition ${
+                    className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition ${
                       isActive
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-indigo-50 text-indigo-600'
+                        : 'bg-slate-200/60 text-slate-500'
                     }`}
                   >
                     {sec.sessionType === 'LISTENING' ? (
-                      <Headphones className="w-4 h-4" />
+                      <Headphones className="w-3.5 h-3.5" />
                     ) : sec.sessionType === 'GRAMMAR_READING' ? (
-                      <BookOpen className="w-4 h-4" />
+                      <BookOpen className="w-3.5 h-3.5" />
                     ) : (
-                      <FileText className="w-4 h-4" />
+                      <FileText className="w-3.5 h-3.5" />
                     )}
                   </div>
-                  <div className="text-left truncate">
-                    <p className="truncate leading-tight">{cleanTitle}</p>
-                    <p className={`text-[11px] font-normal mt-0.5 ${isActive ? 'text-indigo-500/80' : 'text-slate-400'}`}>
-                      {duration} phút
+                  <div className="text-left min-w-0">
+                    <p className="truncate leading-snug">{mainTitle}</p>
+                    <p className={`text-[11px] font-normal leading-none mt-0.5 ${isActive ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {jaSub ? `${jaSub} · ` : ''}{duration} phút
                     </p>
                   </div>
                 </div>
 
                 <span
-                  className={`text-xs font-mono font-bold px-2.5 py-0.5 rounded-full shrink-0 ml-2 ${
+                  className={`text-[11px] font-mono font-medium px-2 py-0.5 rounded-md shrink-0 ml-2 ${
                     isActive
-                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/50'
-                      : 'bg-slate-100 text-slate-600'
+                      ? 'bg-slate-100 text-slate-800 border border-slate-200/60'
+                      : 'bg-slate-200/50 text-slate-500'
                   }`}
                 >
                   {sec.questions.length} câu
@@ -1347,14 +1408,18 @@ export const AdminExamPreviewPage: React.FC = () => {
         </div>
 
         {/* Thanh công cụ quản lý Section hiện tại */}
-        <div className="bg-surface rounded-2xl p-6 shadow-sm border border-slate-200/80 space-y-5">
+        <div className="bg-surface rounded-xl p-5 shadow-2xs border border-slate-200/80 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                  {activeSection?.sessionType}
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                  {activeSection?.sessionType === 'VOCABULARY'
+                    ? 'Từ vựng'
+                    : activeSection?.sessionType === 'GRAMMAR_READING'
+                    ? 'Ngữ pháp & Đọc hiểu'
+                    : 'Nghe hiểu'}
                 </span>
-                <h2 className="text-base font-black text-slate-900">
+                <h2 className="text-sm sm:text-base font-semibold text-slate-900">
                   {activeSection?.sectionTitle.replace(/\s*\(\d+\s*phút\)/i, '').trim()}
                 </h2>
               </div>
@@ -1366,13 +1431,13 @@ export const AdminExamPreviewPage: React.FC = () => {
             {/* Nút công cụ thêm câu & quét AI cho riêng Section này */}
             <div className="flex items-center gap-2 flex-wrap">
               <label
-                className={`px-3.5 py-2 rounded-xl border border-emerald-300 hover:bg-emerald-50 text-emerald-700 text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
                   isBatchApplyingAnswerKey ? 'opacity-50 pointer-events-none' : ''
                 }`}
                 title="Tải ảnh hoặc PDF bảng đáp án chuẩn (正答表) để tự động khớp đáp án cho các câu hỏi hiện tại"
               >
-                <FileCheck className="w-4 h-4 text-emerald-600" />
-                <span>{isBatchApplyingAnswerKey ? 'Đang khớp đáp án...' : 'Nạp đáp án từ ảnh/PDF 正答表'}</span>
+                <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{isBatchApplyingAnswerKey ? 'Đang khớp đáp án...' : 'Nạp đáp án (正答表)'}</span>
                 <input
                   type="file"
                   accept=".pdf,image/*"
@@ -1389,10 +1454,10 @@ export const AdminExamPreviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleOpenAddModal()}
-                className="px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
-                <PlusCircle className="w-4 h-4 text-indigo-600" />
-                <span>+ Thêm câu hỏi</span>
+                <PlusCircle className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Thêm câu hỏi</span>
               </button>
 
               <button
@@ -1403,10 +1468,10 @@ export const AdminExamPreviewPage: React.FC = () => {
                   setAiSaveMode((activeSection?.questions?.length || 0) > 0 ? 'OVERWRITE' : 'APPEND')
                   setIsAiSectionModalOpen(true)
                 }}
-                className="px-4 py-2 rounded-xl bg-linear-to-r from-amber-500 via-orange-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white text-xs font-bold transition shadow-sm shadow-orange-500/10 flex items-center gap-1.5 cursor-pointer active:scale-95"
+                className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <Sparkles className="w-4 h-4 text-amber-200" />
-                <span>Quét & Thêm phần này bằng AI</span>
+                <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
+                <span>Trợ lý AI quét đề</span>
               </button>
             </div>
           </div>
@@ -1484,18 +1549,18 @@ export const AdminExamPreviewPage: React.FC = () => {
                   setAiSaveMode('OVERWRITE')
                   setIsAiSectionModalOpen(true)
                 }}
-                className="group relative p-6 rounded-2xl border-2 border-indigo-200/80 hover:border-indigo-500 bg-linear-to-b from-indigo-50/50 to-surface text-left transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4"
+                className="group relative p-5 rounded-xl border border-slate-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/20 text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-                    <Sparkles className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                    <Sparkles className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                      <h4 className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition">
                         Quét & Trích xuất bằng AI
                       </h4>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-800">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-indigo-50 text-indigo-700 border border-indigo-100">
                         Khuyên dùng
                       </span>
                     </div>
@@ -1504,7 +1569,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <div className="text-xs font-bold text-indigo-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                <div className="text-xs font-semibold text-indigo-600 flex items-center gap-1 group-hover:gap-2 transition-all">
                   <span>Mở công cụ quét AI</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </div>
@@ -1514,14 +1579,14 @@ export const AdminExamPreviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleOpenAddModal()}
-                className="group p-6 rounded-2xl border border-slate-200 hover:border-slate-400 bg-surface text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4"
+                className="group p-5 rounded-xl border border-slate-200 hover:border-slate-400 bg-white text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
-                    <PlusCircle className="w-5 h-5 text-indigo-600" />
+                  <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+                    <PlusCircle className="w-4 h-4 text-slate-600" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                    <h4 className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition">
                       Soạn câu hỏi thủ công
                     </h4>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
@@ -1529,7 +1594,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <div className="text-xs font-bold text-slate-700 flex items-center gap-1 group-hover:gap-2 transition-all">
+                <div className="text-xs font-semibold text-slate-700 flex items-center gap-1 group-hover:gap-2 transition-all">
                   <span>+ Thêm câu hỏi đầu tiên</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </div>
@@ -1537,22 +1602,22 @@ export const AdminExamPreviewPage: React.FC = () => {
 
               {/* Card 3: Nạp bảng đáp án */}
               <label
-                className="group p-6 rounded-2xl border border-slate-200 hover:border-emerald-500 bg-surface text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between space-y-4"
+                className="group p-5 rounded-xl border border-slate-200 hover:border-emerald-400 bg-white text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                    <FileCheck className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                    <FileCheck className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition">
+                    <h4 className="text-sm font-semibold text-slate-900 group-hover:text-emerald-600 transition">
                       Nạp bảng đáp án 正答表
                     </h4>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      Tải file ảnh hoặc PDF bảng đáp án chính thức để AI tự động khớp đáp án đúng 100% khi có câu hỏi.
+                      Tải file ảnh hoặc PDF bảng đáp án chính thức để hệ thống tự động khớp đáp án đúng 100%.
                     </p>
                   </div>
                 </div>
-                <div className="text-xs font-bold text-emerald-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                <div className="text-xs font-semibold text-emerald-600 flex items-center gap-1 group-hover:gap-2 transition-all">
                   <span>{isBatchApplyingAnswerKey ? 'Đang khớp...' : 'Tải file đáp án lên'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </div>
@@ -1840,7 +1905,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                                           handleSaveQuestion={handleSaveQuestion}
                                           handleDeleteQuestion={handleDeleteQuestion}
                                           handleStartEditPassage={handleStartEditPassage}
-                                          hasInProgress={Boolean((previewData?.inProgressAttempts ?? 0) > 0)}
+                                          hasInProgress={Boolean(!previewData?.publishedVersionId && (previewData?.inProgressAttempts ?? 0) > 0)}
                                           hasSubmissions={Boolean((previewData?.totalAttempts ?? 0) > 0)}
                                           onZoomImage={(url) => setZoomImageUrl(url)}
                                         />
@@ -1866,7 +1931,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                                   handleSaveQuestion={handleSaveQuestion}
                                   handleDeleteQuestion={handleDeleteQuestion}
                                   handleStartEditPassage={handleStartEditPassage}
-                                  hasInProgress={Boolean((previewData?.inProgressAttempts ?? 0) > 0)}
+                                  hasInProgress={Boolean(!previewData?.publishedVersionId && (previewData?.inProgressAttempts ?? 0) > 0)}
                                   hasSubmissions={Boolean((previewData?.totalAttempts ?? 0) > 0)}
                                   onZoomImage={(url) => setZoomImageUrl(url)}
                                 />
@@ -1903,7 +1968,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                       handleSaveQuestion={handleSaveQuestion}
                       handleDeleteQuestion={handleDeleteQuestion}
                       handleStartEditPassage={handleStartEditPassage}
-                      hasInProgress={Boolean((previewData?.inProgressAttempts ?? 0) > 0)}
+                      hasInProgress={Boolean(!previewData?.publishedVersionId && (previewData?.inProgressAttempts ?? 0) > 0)}
                       hasSubmissions={Boolean((previewData?.totalAttempts ?? 0) > 0)}
                       onZoomImage={(url) => setZoomImageUrl(url)}
                     />
@@ -2524,6 +2589,93 @@ export const AdminExamPreviewPage: React.FC = () => {
               alt="Zoomed flyer"
               className="max-h-[85vh] w-auto object-contain rounded-2xl"
             />
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN XUẤT BẢN PHIÊN BẢN MỚI */}
+      {isPublishModalOpen && (
+        <div className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <Share2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">
+                  {previewData?.published
+                    ? `Xuất bản Phiên bản mới (v${(previewData.publishedVersionNo || 1) + 1})`
+                    : 'Phát hành đề thi chính thức'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {previewData?.published
+                    ? `Nâng cấp từ phiên bản v${previewData.publishedVersionNo || 1} lên v${(previewData.publishedVersionNo || 1) + 1}`
+                    : 'Đóng gói Snapshot v1.0 và mở công khai cho học viên'}
+                </p>
+              </div>
+            </div>
+
+            {/* Thông tin an toàn concurrency */}
+            {(previewData?.inProgressAttempts ?? 0) > 0 && (
+              <div className="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 text-xs text-blue-900 leading-relaxed flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Bảo lưu phiên thi:</strong> Đang có <strong>{previewData.inProgressAttempts} thí sinh</strong> đang làm bài. Hệ thống đảm bảo các thí sinh này tiếp tục thi theo bản v{previewData.publishedVersionNo || 1} bình thường không bị gián đoạn.
+                </div>
+              </div>
+            )}
+
+            {/* Nhập ghi chú thay đổi (Changelog) */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Ghi chú phát hành / Lý do cập nhật (Tùy chọn):
+              </label>
+              <textarea
+                value={publishChangelog}
+                onChange={(e) => setPublishChangelog(e.target.value)}
+                placeholder="VD: Đính chính đáp án câu 4, bổ sung giải thích chi tiết và tối ưu audio..."
+                rows={3}
+                className="w-full p-3 border border-slate-300 rounded-xl text-xs bg-slate-50/50 focus:bg-surface focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-hidden transition resize-none"
+              />
+            </div>
+
+            {/* Tùy chọn gửi thông báo cho thí sinh cũ */}
+            {(previewData?.totalAttempts ?? 0) > 0 && (
+              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100/70 transition">
+                <input
+                  type="checkbox"
+                  checked={notifyLearners}
+                  onChange={(e) => setNotifyLearners(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-slate-800">Gửi thông báo cập nhật đề thi tới học viên</span>
+                  <p className="text-slate-500 text-[11px] mt-0.5">
+                    Gửi thông báo in-app tới {previewData.totalAttempts} học viên đã từng nộp bài thi này để họ biết đề đã được cải thiện.
+                  </p>
+                </div>
+              </label>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsPublishModalOpen(false)}
+                disabled={publishing}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleExecutePublish}
+                disabled={publishing}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>{publishing ? 'Đang xuất bản...' : 'Xác nhận Xuất bản'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

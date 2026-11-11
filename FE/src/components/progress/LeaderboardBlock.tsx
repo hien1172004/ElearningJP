@@ -127,10 +127,10 @@ interface RowProps {
 const LeaderboardRow: React.FC<RowProps> = ({ entry, isMe }) => (
   <div
     className={cn(
-      'flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors',
+      'flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors',
       isMe
-        ? 'bg-indigo-50 ring-1 ring-indigo-200 border-l-4 border-indigo-500'
-        : 'hover:bg-gray-50',
+        ? 'bg-kamenozoki/60 ring-1 ring-ai/30 text-sumi'
+        : 'hover:bg-slate-50',
     )}
   >
     {/* Hạng */}
@@ -147,33 +147,28 @@ const LeaderboardRow: React.FC<RowProps> = ({ entry, isMe }) => (
     <Avatar
       size={28}
       src={entry.avatarUrl ?? undefined}
-      className="shrink-0 bg-indigo-100 text-indigo-600 text-xs"
+      className="shrink-0 bg-kamenozoki text-ai text-xs font-bold border border-ai/20"
     >
       {entry.displayName?.charAt(0)?.toUpperCase() ?? '?'}
     </Avatar>
 
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-semibold text-gray-900 truncate">
+      <p className="text-xs font-semibold text-sumi truncate">
         {entry.displayName ?? `User #${entry.userId}`}
         {isMe && (
-          <span className="ml-1.5 text-[9px] font-bold text-indigo-600 bg-indigo-100 px-1 py-0.5 rounded">
+          <span className="ml-1.5 text-[9px] font-bold text-ai bg-kamenozoki px-1.5 py-0.5 rounded border border-ai/25">
             BẠN
           </span>
         )}
       </p>
-      {/* <p className="text-[10px] text-gray-500 tabular-nums">
-        {formatCompactNumber(entry.totalNewWords)} từ mới ·{' '}
-        {formatCompactNumber(entry.totalLookups)} lần tra ·{' '}
-        {formatCompactNumber(entry.totalXp)} XP
-      </p> */}
     </div>
 
     {/* Điểm */}
     <div className="text-right shrink-0">
-      <p className="text-xs font-extrabold text-gray-900 tabular-nums">
+      <p className="text-xs font-extrabold text-sumi tabular-nums">
         {formatCompactNumber(entry.score)}
       </p>
-      <p className="text-[9px] text-gray-400 font-medium uppercase tracking-wide">
+      <p className="text-[9px] text-nibi font-medium uppercase tracking-wide">
         điểm
       </p>
     </div>
@@ -196,21 +191,21 @@ const MyRankCard: React.FC<MyRankCardProps> = ({
   totalPlayers,
   inTop,
 }) => (
-  <div className="flex flex-wrap items-center justify-between gap-2 mt-3 px-3 py-2 rounded-md bg-gradient-to-r from-indigo-50 to-sky-50 border border-indigo-100">
-    <div className="flex items-center gap-2">
-      <span className="w-8 h-8 rounded-md bg-indigo-600 text-white flex items-center justify-center shrink-0">
+  <div className="flex flex-wrap items-center justify-between gap-2 mt-3 px-3.5 py-2.5 rounded-xl bg-kamenozoki/50 border border-ai/20">
+    <div className="flex items-center gap-2.5">
+      <span className="w-8 h-8 rounded-lg bg-ai text-white flex items-center justify-center shrink-0 shadow-2xs">
         <Medal className="w-4 h-4" />
       </span>
       <div>
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">
+        <p className="text-[10px] font-semibold text-nibi uppercase tracking-wide">
           Hạng của tôi
         </p>
-        <p className="text-xs font-bold text-gray-900">
+        <p className="text-xs font-bold text-sumi">
           {rank != null ? (
             <>
               Hạng #{rank}
               {totalPlayers != null && (
-                <span className="font-medium text-gray-500">
+                <span className="font-medium text-nibi">
                   {' '}
                   / {formatCompactNumber(totalPlayers)} người
                 </span>
@@ -224,10 +219,10 @@ const MyRankCard: React.FC<MyRankCardProps> = ({
     </div>
 
     <div className="text-right">
-      <p className="text-base font-extrabold text-indigo-700 tabular-nums">
+      <p className="text-base font-bold text-ai tabular-nums font-mono">
         {formatCompactNumber(score ?? 0)}
       </p>
-      <p className="text-[9px] text-gray-500 font-medium uppercase tracking-wide">
+      <p className="text-[9px] text-nibi font-medium uppercase tracking-wide">
         điểm {inTop && '· trong top 5'}
       </p>
     </div>

@@ -4,7 +4,6 @@ import {
   Button,
   Input,
   Dropdown,
-  Tag,
   Popconfirm,
   message,
   Spin,
@@ -303,68 +302,70 @@ export const NotebookDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      {/* Thanh tiêu đề & Công cụ chuẩn Mazii */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+      {/* Thanh tiêu đề & Công cụ chuẩn Wairo */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-suna/80">
         <div className="flex items-center gap-3 min-w-0">
           <BackButton to="/notebooks" className="shrink-0" />
 
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight truncate">
-            {notebook.name}
-          </h1>
-          {notebook.jlptLevel && (
-            <Tag color="blue" className="rounded-full text-xs font-semibold shrink-0">
-              {notebook.jlptLevel}
-            </Tag>
-          )}
-          {(notebook.sharingEnabled || notebook.isPublic) && (
-            <Tag color="success" className="rounded-full text-xs font-semibold shrink-0">
-              Đã chia sẻ
-            </Tag>
-          )}
-          {notebook.groupName && (
-            <span className="text-xs text-gray-400 flex items-center gap-1 shrink-0">
-              <FolderOutlined /> {notebook.groupName}
-            </span>
-          )}
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-sumi tracking-tight truncate">
+              {notebook.name}
+            </h1>
+            {notebook.jlptLevel && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-kamenozoki text-ai border border-ai/20 shrink-0">
+                {notebook.jlptLevel}
+              </span>
+            )}
+            {(notebook.sharingEnabled || notebook.isPublic) && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                Đã chia sẻ
+              </span>
+            )}
+            {notebook.groupName && (
+              <span className="text-xs text-nibi flex items-center gap-1 shrink-0 bg-slate-50 border border-suna px-2 py-0.5 rounded-md">
+                <FolderOutlined /> {notebook.groupName}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Thanh công cụ tìm kiếm, nút +, nút ⋮, và Ôn tập sổ tay nằm trên cùng 1 hàng */}
         <div className="flex items-center gap-2 shrink-0">
           <Input
             placeholder="Tìm trong sổ tay..."
-            prefix={<SearchOutlined className="text-gray-400 text-xs" />}
+            prefix={<SearchOutlined className="text-nibi text-xs" />}
             value={keyword}
             onChange={(e) => {
               setKeyword(e.target.value)
               setPage(0)
             }}
             allowClear
-            className="w-44 sm:w-56 h-9 rounded-xl border-gray-200 text-xs"
+            className="w-40 sm:w-56 h-9 rounded-lg border-suna text-xs"
           />
 
-          {/* Nút + Thêm từ bo góc chuẩn Mazii */}
+          {/* Nút + Thêm từ */}
           <button
             type="button"
             onClick={handleOpenAddWord}
-            className="h-9 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-1.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer whitespace-nowrap"
-            title="Thêm từ mới"
+            className="h-9 px-3.5 rounded-lg bg-surface hover:bg-slate-50 border border-suna text-sumi hover:text-ai hover:border-ai/50 flex items-center gap-1.5 text-xs font-medium shadow-2xs transition-all cursor-pointer whitespace-nowrap shrink-0 select-none"
+            title="Thêm từ mới vào sổ tay"
           >
-            <PlusOutlined className="text-xs" />
-            <span>Thêm từ</span>
+            <PlusOutlined className="text-xs shrink-0" />
+            <span className="whitespace-nowrap">Thêm từ</span>
           </button>
 
-          {/* Nút ⋮ vuông bo góc chuẩn Mazii */}
+          {/* Nút ⋮ vuông bo góc */}
           <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
             <button
               type="button"
-              className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center text-base shadow-2xs transition-colors cursor-pointer"
+              className="w-9 h-9 rounded-lg bg-surface hover:bg-slate-50 border border-suna text-nibi hover:text-ai flex items-center justify-center text-sm shadow-2xs transition-colors cursor-pointer shrink-0"
               title="Thao tác khác"
             >
               <MoreOutlined />
             </button>
           </Dropdown>
 
-          {/* Nút Ôn tập sổ tay màu xanh bo góc chuẩn Mazii */}
+          {/* Nút Ôn tập sổ tay màu chàm Ai-iro */}
           <button
             type="button"
             onClick={() => {
@@ -374,10 +375,10 @@ export const NotebookDetailPage: React.FC = () => {
                 message.info('Sổ tay này chưa có mục nào để ôn tập!')
               }
             }}
-            className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+            className="h-9 px-4 rounded-lg bg-ai hover:bg-ai/90 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap shrink-0 select-none"
           >
-            <ReadOutlined className="text-sm" />
-            <span>Ôn tập sổ tay</span>
+            <ReadOutlined className="text-sm shrink-0" />
+            <span className="whitespace-nowrap">Ôn tập sổ tay</span>
           </button>
         </div>
       </div>
@@ -388,11 +389,11 @@ export const NotebookDetailPage: React.FC = () => {
         onShuffle={() => refetchShuffled()}
       />
 
-      {/* Danh sách từ vựng */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
+      {/* Khối Danh sách từ vựng */}
+      <div className="bg-surface border border-suna/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-lg font-bold text-gray-800">Danh sách</h2>
+            <h2 className="text-base font-bold text-sumi">Danh sách từ vựng</h2>
             <Segmented
               size="small"
               value={typeFilter}
@@ -403,7 +404,7 @@ export const NotebookDetailPage: React.FC = () => {
                 setSelectedWordIds([])
               }}
             />
-            <span className="text-xs text-gray-400 font-medium">({totalWords} mục)</span>
+            <span className="text-xs text-nibi font-medium">({totalWords} mục)</span>
           </div>
 
           {selectedWordIds.length > 0 && (
@@ -415,7 +416,7 @@ export const NotebookDetailPage: React.FC = () => {
               okButtonProps={{ danger: true }}
               onConfirm={handleBatchDelete}
             >
-              <Button danger size="small" icon={<DeleteOutlined />}>
+              <Button danger size="small" icon={<DeleteOutlined />} className="rounded-lg">
                 Xóa {selectedWordIds.length} mục đã chọn
               </Button>
             </Popconfirm>

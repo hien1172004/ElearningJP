@@ -328,30 +328,30 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
         </div>
 
         {/* Mascot cạnh danh */}
-        <div className="flex flex-col items-center justify-center gap-2 bg-kinari rounded-md p-4">
+        <div className="flex flex-col items-center justify-center gap-2 bg-kinari/80 border border-suna/70 rounded-xl p-4">
           <MascotProgress learned={learnedWords} goal={goalWords} size={128} />
           <div className="w-full max-w-[240px] text-center">
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+            <p className="text-[11px] font-semibold text-nibi uppercase tracking-wide">
               {GOAL_PERIOD_LABEL[goalPeriod]}
             </p>
 
             {/* Số từ MỚI học trong kỳ mục tiêu / mục tiêu */}
-            <p className="text-xl font-extrabold text-gray-900 mt-0.5 tabular-nums">
+            <p className="text-xl font-extrabold text-sumi mt-0.5 tabular-nums">
               {learnedWords}
-              <span className="text-sm font-bold text-gray-400">
+              <span className="text-sm font-bold text-nibi">
                 /{goalWords}
               </span>
             </p>
 
             {/* Thanh tiến độ mục tiêu */}
-            <div className="h-1.5 w-full bg-gray-100 rounded-full mt-2 overflow-hidden">
+            <div className="h-1.5 w-full bg-slate-100 rounded-full mt-2 overflow-hidden">
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-500',
                   goalMet
                     ? 'bg-emerald-500'
                     : learnedWords > 0
-                      ? 'bg-blue-500'
+                      ? 'bg-ai'
                       : 'bg-gray-300',
                 )}
                 style={{
@@ -364,8 +364,8 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
             </div>
 
             <Tooltip title="Từ đã học = số từ MỚI tra lần đầu. Tra lại từ cũ chỉ tăng số lần tra từ.">
-              <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 mt-1.5 cursor-help">
-                <Info className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 text-[10px] text-nibi mt-1.5 cursor-help">
+                <Info className="w-3 h-3 text-ai" />
                 {goalMet
                   ? 'Đã đạt mục tiêu!'
                   : `Cần thêm ${Math.max(goalWords - learnedWords, 0)} từ`}
@@ -374,7 +374,7 @@ export const ProgressSummaryBlock: React.FC<ProgressSummaryBlockProps> = ({
 
             <Link
               to="/progress/goal"
-              className="block text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 mt-1.5"
+              className="block text-[11px] font-semibold text-ai hover:text-ai/80 hover:underline mt-1.5 transition-colors"
             >
               Đổi mục tiêu
             </Link>
