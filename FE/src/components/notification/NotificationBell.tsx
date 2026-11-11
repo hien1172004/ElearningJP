@@ -157,6 +157,13 @@ export const NotificationBell: React.FC = () => {
       return
     }
 
+    // Đề thi cập nhật hoặc đính chính điểm: mở trang sảnh thi hoặc lịch sử kết quả
+    if (notification.type === 'EXAM_UPDATED' || notification.type === 'EXAM_RESULT') {
+      handleOpenChange(false)
+      navigate('/exams')
+      return
+    }
+
     const isCommunity =
       notification.type === 'COMMUNITY_REPLY' ||
       notification.type === 'COMMUNITY_LIKE' ||

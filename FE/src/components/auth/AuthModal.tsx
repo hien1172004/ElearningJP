@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useAuthModalStore, useAuthStore } from '@/stores'
 import { useGoogleLogin, useLogin, useRegister } from '@/hooks'
 import { GoogleButton } from './GoogleButton'
+import { BrandLogo } from '@/components/common/BrandLogo'
 import { AUTH_EXPIRED_EVENT, type AuthExpiredDetail } from '@/utils/authEvents'
 
 // ============================================================================
@@ -200,11 +201,8 @@ export const AuthModal: React.FC = () => {
             HEADER — Logo + Title
            ============================================================ */}
         <div className="px-6 sm:px-8 pt-7 pb-5 text-center border-b border-gray-100">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <span className="w-9 h-9 rounded-md bg-indigo-600 text-white flex items-center justify-center font-serif text-lg font-bold">
-              日
-            </span>
-            <span className="text-lg font-bold text-gray-900">ElearningJP</span>
+          <div className="flex justify-center mb-4">
+            <BrandLogo size="md" withLink={false} />
           </div>
           <h2 className="text-base font-semibold text-gray-900">
             {mode === 'login' ? 'Đăng nhập tài khoản' : 'Tạo tài khoản mới'}

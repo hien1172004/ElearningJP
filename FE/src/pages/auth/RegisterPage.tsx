@@ -1,9 +1,10 @@
-﻿import React from 'react'
+import React from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, User, Phone, BookOpen, Brain, Shield } from 'lucide-react'
 import { App, Button as AntdButton, Form, Input as AntdInput } from 'antd'
 import { z } from 'zod'
 import { AuthFooter } from '@/components/auth'
+import { BrandLogo } from '@/components/common/BrandLogo'
 import { useRegister } from '@/hooks'
 
 // Regex số điện thoại Việt Nam phổ biến (10-11 số, bắt đầu bằng 0)
@@ -79,12 +80,7 @@ export const RegisterPage: React.FC = () => {
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-purple-700 via-indigo-800 to-slate-900 p-12 xl:p-16 flex-col justify-between text-white">
         <div>
           {/* Logo */}
-          <Link to="/" className="inline-flex items-center gap-3">
-            <span className="w-12 h-12 rounded-md bg-surface/10 backdrop-blur flex items-center justify-center font-serif text-2xl font-black">
-              日
-            </span>
-            <span className="text-2xl font-bold">ElearningJP</span>
-          </Link>
+          <BrandLogo size="lg" variant="light" />
 
           {/* Headline */}
           <div className="mt-10">
@@ -125,13 +121,8 @@ export const RegisterPage: React.FC = () => {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-10 bg-gray-50 overflow-y-auto">
         <div className="w-full max-w-md py-8">
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <Link to="/" className="inline-flex items-center gap-2">
-              <span className="w-10 h-10 rounded-md bg-indigo-600 text-white flex items-center justify-center font-serif text-xl font-bold">
-                日
-              </span>
-              <span className="text-2xl font-bold text-gray-900">ElearningJP</span>
-            </Link>
+          <div className="lg:hidden text-center mb-8 flex justify-center">
+            <BrandLogo size="lg" />
           </div>
 
           <div className="bg-surface rounded-md shadow-sm border border-gray-200 p-8">

@@ -56,8 +56,10 @@ export const AdminScenariosPage: React.FC = () => {
       key: 'title',
       render: (_, s) => (
         <div className="min-w-0">
-          <div className="font-medium text-slate-800 truncate max-w-md">{s.title}</div>
-          <div className="text-xs text-slate-500 truncate max-w-md">
+          <div className="font-medium text-slate-800 truncate max-w-sm lg:max-w-md">
+            {s.title}
+          </div>
+          <div className="text-xs text-slate-500 truncate max-w-sm lg:max-w-md">
             {s.userRole} ↔ {s.aiRole}
           </div>
         </div>
@@ -67,15 +69,22 @@ export const AdminScenariosPage: React.FC = () => {
       title: 'Chủ đề',
       dataIndex: 'topicId',
       key: 'topicId',
+      width: 160,
       responsive: ['md'],
-      render: (t: string) => <span className="text-sm text-slate-600">{scenarioTopicName(t)}</span>,
+      render: (t: string) => (
+        <span className="text-sm text-slate-600 whitespace-nowrap">
+          {scenarioTopicName(t)}
+        </span>
+      ),
     },
     {
       title: 'Cấp độ',
       dataIndex: 'jlptLevel',
       key: 'jlptLevel',
+      width: 80,
+      align: 'center',
       render: (l: JlptLevel) => (
-        <Tag color="blue" className="rounded-md">
+        <Tag color="blue" className="rounded-md font-semibold">
           {l}
         </Tag>
       ),
@@ -83,9 +92,10 @@ export const AdminScenariosPage: React.FC = () => {
     {
       title: 'Nội dung',
       key: 'content',
+      width: 220,
       responsive: ['lg'],
       render: (_, s) => (
-        <span className="text-xs text-slate-500 tabular-nums">
+        <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap">
           {s.tasks?.length ?? 0} nhiệm vụ · {s.sampleDialogue?.length ?? 0} câu thoại ·{' '}
           {s.vocabulary?.length ?? 0} từ
         </span>
@@ -97,13 +107,13 @@ export const AdminScenariosPage: React.FC = () => {
         {
           title: 'Người tạo',
           key: 'createdBy',
+          width: 150,
           responsive: ['md'],
-          render: (_: unknown, s: AdminScenario) =>
-            s.createdById ? (
-              <span className="text-sm text-slate-600">{s.createdByName || s.createdByEmail}</span>
-            ) : (
-              <Tag className="rounded-md">Hệ thống / khách</Tag>
-            ),
+          render: (_: unknown, s: AdminScenario) => (
+            <span className="text-sm text-slate-600 whitespace-nowrap">
+              {s.createdById ? (s.createdByName || s.createdByEmail) : 'Hệ thống / khách'}
+            </span>
+          ),
         } satisfies ColumnsType<AdminScenario>[number],
       ]
       : []),
@@ -111,17 +121,21 @@ export const AdminScenariosPage: React.FC = () => {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 105,
       responsive: ['lg'],
       render: (d?: string) => (
-        <span className="text-sm text-slate-600">{d ? formatDate(d) : '—'}</span>
+        <span className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
+          {d ? formatDate(d) : '—'}
+        </span>
       ),
     },
     {
       title: 'Thao tác',
       key: 'actions',
       align: 'right',
+      width: 90,
       render: (_, s) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 whitespace-nowrap">
           <Tooltip title="Sửa kịch bản">
             <AntdButton
               size="small"
@@ -146,10 +160,10 @@ export const AdminScenariosPage: React.FC = () => {
   ]
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
+    <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
       <FilterBar>
         <SearchInput
-          placeholder="Tìm theo tiêu đề hoặc mô tả"
+          placeholder="Tìm theo tiêu đề hoặc mô tả..."
           value={keywordInput}
           onChange={setKeywordInput}
           onSearch={(v) => {
@@ -167,7 +181,7 @@ export const AdminScenariosPage: React.FC = () => {
             setPage(1)
           }}
           options={SCENARIO_TOPICS.map((t) => ({ value: t.id, label: t.name }))}
-          className="md:w-56"
+          className="md:w-52"
         />
         <Select
           allowClear
@@ -178,7 +192,7 @@ export const AdminScenariosPage: React.FC = () => {
             setPage(1)
           }}
           options={LEVELS.map((l) => ({ value: l, label: l }))}
-          className="md:w-40"
+          className="md:w-36"
         />
         <AntdButton
           type="primary"
@@ -198,7 +212,7 @@ export const AdminScenariosPage: React.FC = () => {
           action={<AntdButton onClick={() => refetch()}>Thử lại</AntdButton>}
         />
       ) : (
-        <div className="bg-surface rounded-xl border border-slate-200 overflow-x-auto">
+        <div className="bg-surface rounded-xl border border-slate-200">
           <Table<AdminScenario>
             rowKey="id"
             columns={columns}

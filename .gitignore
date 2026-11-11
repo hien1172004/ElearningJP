@@ -34,6 +34,11 @@ FE/scripts/
 Thumbs.db
 .vscode/
 .idea/
+.codex/
+.impeccable/
+skills-lock.json
+DESIGN.md
+PRODUCT.md
 *.iml
 *.swp
 *.tmp

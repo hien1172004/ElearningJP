@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Filter, X } from 'lucide-react'
 import type { JlptLevel } from '@/types'
 
@@ -25,21 +25,21 @@ export const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
   const hasFilter = !!keyword || !!selectedLevel
 
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-3 rounded-md border border-gray-200 shadow-xs">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-2.5 sm:p-3 rounded-2xl border border-suna/90 shadow-2xs">
       {!hideSearch && (
-        <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-md border border-gray-200/80 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition">
+        <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-kinari/70 rounded-xl border border-suna focus-within:border-ai/50 focus-within:ring-2 focus-within:ring-ai/10 transition">
           <input
             type="text"
             value={keyword}
             onChange={(e) => onKeywordChange(e.target.value)}
             placeholder="Tìm kiếm khóa học theo tiêu đề..."
-            className="flex-1 bg-transparent text-sm outline-hidden text-gray-900 placeholder:text-gray-400"
+            className="flex-1 bg-transparent text-xs sm:text-sm outline-hidden text-sumi placeholder:text-nibi/70"
           />
           {keyword && (
             <button
               type="button"
               onClick={() => onKeywordChange('')}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded transition"
+              className="p-1 text-nibi hover:text-sumi rounded transition cursor-pointer"
               title="Xoá"
             >
               <X className="w-4 h-4" />
@@ -49,16 +49,16 @@ export const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
       )}
 
       <div className="flex items-center gap-1.5 overflow-x-auto">
-        <span className="text-xs text-gray-400 font-semibold flex items-center gap-1 pl-1">
-          <Filter className="w-3.5 h-3.5" /> JLPT:
+        <span className="text-xs text-nibi font-semibold flex items-center gap-1 pl-1">
+          <Filter className="w-3.5 h-3.5 text-ai" /> JLPT:
         </span>
         <button
           type="button"
           onClick={() => onLevelChange(undefined)}
-          className={`px-2.5 py-1.5 rounded text-xs font-bold transition ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
             selectedLevel === undefined
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-ai text-white shadow-2xs'
+              : 'bg-kinari/80 text-sumi hover:bg-kinari border border-suna/60'
           }`}
         >
           Tất cả
@@ -70,10 +70,10 @@ export const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
             onClick={() =>
               onLevelChange(selectedLevel === lvl ? undefined : lvl)
             }
-            className={`px-2.5 py-1.5 rounded text-xs font-bold transition ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
               selectedLevel === lvl
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-ai text-white shadow-2xs'
+                : 'bg-kinari/80 text-sumi hover:bg-kinari border border-suna/60'
             }`}
           >
             {lvl}
@@ -86,7 +86,7 @@ export const CourseFilterBar: React.FC<CourseFilterBarProps> = ({
               onKeywordChange('')
               onLevelChange(undefined)
             }}
-            className="px-2.5 py-1.5 rounded text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
+            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-shu hover:bg-rose-50 transition cursor-pointer"
           >
             Xoá lọc
           </button>

@@ -184,8 +184,11 @@ export const examService = {
     return res.data || []
   },
 
-  publishExam: async (id: number): Promise<ApiResponse<void>> => {
-    return axiosClient.post(`/admin/exams/${id}/publish`)
+  publishExam: async (
+    id: number,
+    payload?: { changelog?: string; notifyLearners?: boolean }
+  ): Promise<ApiResponse<void>> => {
+    return axiosClient.post(`/admin/exams/${id}/publish`, payload || {})
   },
 
   updateSectionAudio: async (

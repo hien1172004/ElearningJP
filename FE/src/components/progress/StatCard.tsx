@@ -39,12 +39,12 @@ const ICON_MAP: Record<StatIcon, React.ReactNode> = {
 }
 
 const TONE_MAP = {
-  indigo: 'bg-indigo-50 text-indigo-600',
-  emerald: 'bg-emerald-50 text-emerald-600',
-  amber: 'bg-amber-50 text-amber-600',
-  rose: 'bg-rose-50 text-rose-600',
-  sky: 'bg-sky-50 text-sky-600',
-  cyan: 'bg-cyan-50 text-cyan-600',
+  indigo: 'bg-kamenozoki text-ai border border-ai/20',
+  emerald: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  amber: 'bg-amber-50 text-amber-700 border border-amber-200',
+  rose: 'bg-rose-50 text-rose-700 border border-rose-200',
+  sky: 'bg-kamenozoki/80 text-ai border border-ai/20',
+  cyan: 'bg-kamenozoki/60 text-ai border border-ai/15',
 } as const
 
 export interface StatCardProps {
@@ -83,8 +83,8 @@ export const StatCard: React.FC<StatCardProps> = ({
         : 'text-gray-500 bg-gray-100'
 
   return (
-    // Bố cục dọc (icon + delta trên, số liệu dưới); không viền — nền giấy nhạt
-    <div className={cn('bg-kinari rounded-md p-3.5 flex flex-col gap-1.5', className)}>
+    // Bố cục dọc (icon + delta trên, số liệu dưới); viền cát nhẹ — nền giấy nhạt
+    <div className={cn('bg-kinari/80 rounded-xl border border-suna/70 p-3.5 flex flex-col gap-1.5', className)}>
       <div className="flex items-start justify-between gap-2">
         <span
           className={cn(

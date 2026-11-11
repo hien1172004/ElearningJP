@@ -86,11 +86,11 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
       <div className="max-w-xl mx-auto">
         <div
           onClick={() => setIsFlipped(!isFlipped)}
-          className="relative min-h-[170px] bg-gradient-to-br from-surface to-blue-50/60 rounded-2xl border border-blue-200/70 p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between select-none"
+          className="relative min-h-[180px] bg-surface rounded-2xl border border-suna/90 p-6 shadow-xs hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between select-none"
         >
           {/* Header thẻ: vị trí hiện tại & nút xáo trộn / autoplay */}
-          <div className="flex items-center justify-between text-xs text-gray-400">
-            <span className="font-medium bg-surface/80 px-2.5 py-0.5 rounded-full border border-gray-100 shadow-2xs">
+          <div className="flex items-center justify-between text-xs text-nibi">
+            <span className="font-medium bg-slate-50 text-nibi px-2.5 py-0.5 rounded-full border border-suna shadow-2xs">
               {currentIndex + 1} / {words.length}
             </span>
 
@@ -102,9 +102,9 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
                   shape="circle"
                   icon={
                     isPlaying ? (
-                      <PauseCircleOutlined className="text-blue-600 text-base" />
+                      <PauseCircleOutlined className="text-ai text-base" />
                     ) : (
-                      <PlayCircleOutlined className="text-gray-500 hover:text-blue-600 text-base" />
+                      <PlayCircleOutlined className="text-nibi hover:text-ai text-base" />
                     )
                   }
                   onClick={() => setIsPlaying(!isPlaying)}
@@ -117,7 +117,7 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
                     type="text"
                     size="small"
                     shape="circle"
-                    icon={<SwapOutlined className="text-gray-500 hover:text-blue-600 text-base" />}
+                    icon={<SwapOutlined className="text-nibi hover:text-ai text-base" />}
                     onClick={onShuffle}
                   />
                 </Tooltip>
@@ -126,27 +126,27 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
           </div>
 
           {/* Nội dung chính thẻ: Mặt trước (Từ + Đọc + Loa) / Mặt sau (Nghĩa + Hán Việt) */}
-          <div className="text-center py-2">
+          <div className="text-center py-3">
             {!isFlipped ? (
-              <div className="space-y-1">
-                <div className="text-3xl font-bold text-gray-900 tracking-wide">
+              <div className="space-y-1.5">
+                <div className="text-3xl sm:text-4xl font-bold text-sumi tracking-wide font-sans">
                   {currentWord.word}
                 </div>
                 {currentWord.reading && (
-                  <div className="text-sm text-gray-500 font-medium">
+                  <div className="text-sm text-nibi font-medium">
                     {currentWord.reading}
                   </div>
                 )}
                 {(currentWord.sinoVietnamese || currentWord.hanViet) && (
-                  <div className="text-xs text-emerald-600 font-medium">
+                  <div className="inline-block text-xs text-ai font-medium bg-kamenozoki/60 px-2.5 py-0.5 rounded-full border border-ai/15">
                     [{currentWord.sinoVietnamese || currentWord.hanViet}]
                   </div>
                 )}
-                <div className="pt-2">
+                <div className="pt-1">
                   <Button
                     type="text"
                     shape="circle"
-                    icon={<SoundOutlined className="text-blue-500 text-lg" />}
+                    icon={<SoundOutlined className="text-ai text-lg" />}
                     onClick={handlePlayAudio}
                     aria-label="Phát âm"
                   />
@@ -154,19 +154,19 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
               </div>
             ) : (
               <div className="space-y-2 py-1">
-                <div className="text-xs font-semibold text-blue-500 uppercase tracking-wider">
+                <div className="text-xs font-semibold text-ai uppercase tracking-wider">
                   Ý nghĩa
                 </div>
-                <div className="text-xl font-bold text-gray-800">
+                <div className="text-xl sm:text-2xl font-bold text-sumi">
                   {currentWord.meaning || 'Chưa cập nhật nghĩa'}
                 </div>
                 {currentWord.partOfSpeech && (
-                  <div className="text-xs text-gray-400 italic">
+                  <div className="text-xs text-nibi italic">
                     Từ loại: {currentWord.partOfSpeech}
                   </div>
                 )}
                 {currentWord.userNote && (
-                  <div className="text-xs text-amber-700 bg-amber-50 px-3 py-1 rounded inline-block">
+                  <div className="text-xs text-sumi bg-kinari/80 border border-suna px-3 py-1 rounded-md inline-block">
                     Ghi chú: {currentWord.userNote}
                   </div>
                 )}
@@ -175,12 +175,12 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
           </div>
 
           {/* Footer thẻ: Hướng dẫn lật & Nút điều hướng */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100/60">
+          <div className="flex items-center justify-between pt-3 border-t border-suna/60">
             <Button
               type="text"
               size="small"
               shape="circle"
-              icon={<LeftOutlined />}
+              icon={<LeftOutlined className="text-nibi hover:text-ai" />}
               onClick={(e) => {
                 e.stopPropagation()
                 handlePrev()
@@ -188,15 +188,15 @@ export const WordCardCarousel: React.FC<WordCardCarouselProps> = ({
               disabled={words.length <= 1}
             />
 
-            <span className="text-[11px] text-gray-400 flex items-center gap-1">
-              <RetweetOutlined /> Nhấp vào thẻ để lật xem {isFlipped ? 'từ vựng' : 'nghĩa'}
+            <span className="text-[11px] text-nibi flex items-center gap-1.5">
+              <RetweetOutlined className="text-ai" /> Nhấp vào thẻ để lật xem {isFlipped ? 'từ vựng' : 'nghĩa'}
             </span>
 
             <Button
               type="text"
               size="small"
               shape="circle"
-              icon={<RightOutlined />}
+              icon={<RightOutlined className="text-nibi hover:text-ai" />}
               onClick={(e) => {
                 e.stopPropagation()
                 handleNext()

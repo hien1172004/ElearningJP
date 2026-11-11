@@ -54,11 +54,11 @@ interface ProgressChartBlockProps {
 // Hằng số hiển thị
 // --------------------------------------------------------------------------
 
-/** Màu cột (số từ học trong bucket). */
-const BAR_COLOR = '#3b82f6'
+/** Màu cột (số từ học trong bucket) — sắc chàm Ai-iro. */
+const BAR_COLOR = '#2e5c8a'
 
-/** Màu đường (số từ tích lũy). */
-const LINE_COLOR = '#f97316'
+/** Màu đường (số từ tích lũy) — sắc son Shu. */
+const LINE_COLOR = '#d9534f'
 
 /** Nhãn legend. */
 const BAR_LABEL = 'Từ mới học'
@@ -204,12 +204,12 @@ const ErrorBlock: React.FC<{ onRetry?: () => void; message?: string }> = ({
 const EmptyBlock: React.FC = () => (
   <div className="bg-surface rounded-xl border border-suna shadow-xs p-6">
     <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
-      <span className="flex items-center justify-center w-[72px] h-[72px] rounded-full bg-gradient-to-br from-indigo-100 to-sky-100 text-indigo-500 shrink-0">
+      <span className="flex items-center justify-center w-[72px] h-[72px] rounded-full bg-kamenozoki text-ai shrink-0">
         <Sparkles className="w-9 h-9" aria-hidden="true" />
       </span>
       <div className="flex-1">
-        <p className="font-bold text-gray-900 text-lg">Chưa có dữ liệu biểu đồ</p>
-        <p className="text-sm text-gray-500 mt-1 max-w-md">
+        <p className="font-bold text-sumi text-lg">Chưa có dữ liệu biểu đồ</p>
+        <p className="text-sm text-nibi mt-1 max-w-md">
           Bạn chưa học từ nào mới trong kỳ này. Mỗi lần tra một từ MỚI trong
           từ điển sẽ được ghi nhận vào biểu đồ.
         </p>
@@ -266,8 +266,8 @@ export const ProgressChartBlock: React.FC<ProgressChartBlockProps> = ({
       {/* ---------- Header ---------- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
         <div>
-          <h2 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-indigo-600" />
+          <h2 className="text-base font-extrabold text-sumi flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-ai" />
             Biểu đồ tiến độ
           </h2>
           {rangeLabel && (

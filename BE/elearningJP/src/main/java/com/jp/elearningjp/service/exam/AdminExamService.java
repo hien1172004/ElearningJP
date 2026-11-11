@@ -17,6 +17,7 @@ public interface AdminExamService {
     void clearSectionQuestions(Long examId, Long sectionId);
     List<ExamSummaryResponse> getCourseExams(Long courseId);
     void publishExam(Long examId);
+    void publishExam(Long examId, com.jp.elearningjp.dto.request.exam.PublishExamRequest request);
     void unpublishExam(Long examId);
     org.springframework.data.domain.Page<ExamSummaryResponse> getAllExams(
             com.jp.elearningjp.shared.enums.JlptLevel level,

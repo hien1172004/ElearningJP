@@ -3,7 +3,6 @@ import {
   Table,
   Button,
   Space,
-  Tag,
   Popconfirm,
   Input,
   Tooltip,
@@ -35,12 +34,12 @@ interface WordTableProps {
 
 const MEMORY_LEVEL_MAP: Record<
   MemoryLevel,
-  { label: string; color: string; bg: string }
+  { label: string; color: string; bg: string; border: string }
 > = {
-  NOT_LEARNED: { label: 'Chưa học', color: '#8c8c8c', bg: '#f5f5f5' },
-  BARELY: { label: 'Mới học', color: '#ff4d4f', bg: '#fff1f0' },
-  MODERATE: { label: 'Nhớ tạm', color: '#faad14', bg: '#fffbe6' },
-  MASTERED: { label: 'Đã thuộc', color: '#52c41a', bg: '#f6ffed' },
+  NOT_LEARNED: { label: 'Chưa học', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+  BARELY: { label: 'Mới học', color: '#c53030', bg: '#fff5f5', border: '#fed7d7' },
+  MODERATE: { label: 'Nhớ tạm', color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+  MASTERED: { label: 'Đã thuộc', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
 }
 
 export const WordTable: React.FC<WordTableProps> = ({
@@ -104,39 +103,39 @@ export const WordTable: React.FC<WordTableProps> = ({
               type="text"
               shape="circle"
               size="small"
-              icon={<SoundOutlined className="text-blue-500" />}
+              icon={<SoundOutlined className="text-ai hover:text-ai/80" />}
               onClick={() => playAudio(record)}
               aria-label="Phát âm"
             />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span
-                  className={`font-bold text-gray-800 leading-tight ${type === 'KANJI' ? 'text-2xl font-serif' : 'text-base'}`}
+                  className={`font-bold text-sumi leading-tight font-sans ${type === 'KANJI' ? 'text-2xl' : 'text-base'}`}
                 >
                   {record.word}
                 </span>
-                <Tag color={meta.tagColor} className="!m-0 !text-[10px] !leading-4 !px-1.5">
+                <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border leading-none ${meta.chipClass}`}>
                   {meta.label}
-                </Tag>
+                </span>
               </div>
               {type === 'KANJI' ? (
-                <div className="text-xs text-gray-500 space-y-0.5">
+                <div className="text-xs text-nibi space-y-0.5">
                   {record.onyomi && record.onyomi.length > 0 && <div>On: {record.onyomi.join('、')}</div>}
                   {record.kunyomi && record.kunyomi.length > 0 && <div>Kun: {record.kunyomi.join('、')}</div>}
                   {!record.onyomi?.length && !record.kunyomi?.length && record.reading && <div>{record.reading}</div>}
-                  {record.strokeCount != null && <div className="text-gray-400">{record.strokeCount} nét</div>}
+                  {record.strokeCount != null && <div className="text-nibi/70">{record.strokeCount} nét</div>}
                 </div>
               ) : type === 'GRAMMAR' ? (
                 (record.reading || record.grammarStructure) && (
-                  <div className="text-xs text-rose-700 font-mono break-words">
+                  <div className="text-xs text-shu font-mono break-words">
                     {record.reading || record.grammarStructure}
                   </div>
                 )
               ) : (
-                record.reading && <div className="text-xs text-gray-500">{record.reading}</div>
+                record.reading && <div className="text-xs text-nibi">{record.reading}</div>
               )}
               {type !== 'GRAMMAR' && (record.sinoVietnamese || record.hanViet) && (
-                <div className="text-[11px] text-emerald-600 font-medium">
+                <div className="text-[11px] text-ai font-medium">
                   [{record.sinoVietnamese || record.hanViet}]
                 </div>
               )}
@@ -152,19 +151,19 @@ export const WordTable: React.FC<WordTableProps> = ({
       ellipsis: true,
       render: (meaning: string, record) => (
         <div>
-          <div className="text-sm font-medium text-gray-700">{meaning || '—'}</div>
+          <div className="text-sm font-medium text-sumi">{meaning || '—'}</div>
           {record.partOfSpeech && itemTypeOf(record) === 'VOCAB' && (
-            <span className="text-[11px] text-gray-400 italic">
+            <span className="text-[11px] text-nibi italic">
               ({record.partOfSpeech})
             </span>
           )}
           {record.exampleSentence && (
-            <div className="text-[11px] text-gray-500 mt-0.5 line-clamp-1" title={record.exampleMeaning ?? undefined}>
+            <div className="text-[11px] text-nibi mt-0.5 line-clamp-1" title={record.exampleMeaning ?? undefined}>
               VD: {record.exampleSentence}
             </div>
           )}
           {record.sourceLessonTitle && (
-            <div className="text-[11px] text-indigo-500 mt-0.5 line-clamp-1">Từ bài: {record.sourceLessonTitle}</div>
+            <div className="text-[11px] text-ai mt-0.5 line-clamp-1">Từ bài: {record.sourceLessonTitle}</div>
           )}
         </div>
       ),
@@ -185,25 +184,31 @@ export const WordTable: React.FC<WordTableProps> = ({
                 onPressEnter={() => handleSaveNote(record.id)}
                 placeholder="Nhập ghi chú..."
                 autoFocus
+                className="rounded-lg border-suna text-xs"
               />
               <Button
                 size="small"
                 type="primary"
                 icon={<CheckOutlined />}
                 onClick={() => handleSaveNote(record.id)}
+                className="rounded-lg bg-ai"
               />
             </div>
           )
         }
         return (
           <div
-            className="group/note flex items-center justify-between text-xs text-gray-500 hover:text-gray-800 cursor-pointer p-1 rounded hover:bg-gray-50"
+            className="group/note flex items-center justify-between text-xs text-nibi hover:text-sumi cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
             onClick={() => handleStartEditNote(record)}
           >
-            <span className="line-clamp-1 italic">
-              {note || '+ Thêm ghi chú của bạn ở đây'}
-            </span>
-            <EditOutlined className="opacity-0 group-hover/note:opacity-100 text-gray-400 ml-1 text-[11px]" />
+            {note ? (
+              <span className="line-clamp-1 text-sumi">{note}</span>
+            ) : (
+              <span className="text-nibi/40 group-hover/note:text-ai italic flex items-center gap-1 text-[11px] transition-colors">
+                <EditOutlined className="text-[10px]" /> Thêm ghi chú
+              </span>
+            )}
+            <EditOutlined className="opacity-0 group-hover/note:opacity-100 text-nibi ml-1 text-[11px] transition-opacity" />
           </div>
         )
       },
@@ -216,13 +221,12 @@ export const WordTable: React.FC<WordTableProps> = ({
       render: (level: MemoryLevel) => {
         const info = MEMORY_LEVEL_MAP[level] || MEMORY_LEVEL_MAP.NOT_LEARNED
         return (
-          <Tag
-            color={info.bg}
-            style={{ color: info.color, borderColor: info.color }}
-            className="rounded-full px-2 py-0.5 text-xs font-medium"
+          <span
+            style={{ color: info.color, backgroundColor: info.bg, borderColor: info.border }}
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border"
           >
             {info.label}
-          </Tag>
+          </span>
         )
       },
     },
@@ -237,7 +241,7 @@ export const WordTable: React.FC<WordTableProps> = ({
             <Button
               type="text"
               size="small"
-              icon={<EditOutlined className="text-gray-500 hover:text-blue-600" />}
+              icon={<EditOutlined className="text-nibi hover:text-ai" />}
               onClick={() => onEditWord(record)}
             />
           </Tooltip>
@@ -271,7 +275,7 @@ export const WordTable: React.FC<WordTableProps> = ({
   }
 
   return (
-    <div className="bg-surface rounded-xl shadow-xs border border-suna overflow-hidden">
+    <div className="rounded-xl overflow-hidden border border-suna/80">
       <Table<NotebookWord>
         rowKey="id"
         rowSelection={rowSelection}
@@ -289,10 +293,10 @@ export const WordTable: React.FC<WordTableProps> = ({
         }}
         locale={{
           emptyText: (
-            <div className="py-12 text-center text-gray-400">
-              <BookOutlined className="text-4xl mb-2 text-gray-300" />
-              <div>Chưa có mục nào ở đây.</div>
-              <div className="text-xs text-gray-400 mt-1">
+            <div className="py-12 text-center text-nibi">
+              <BookOutlined className="text-4xl mb-2 text-nibi/40" />
+              <div className="font-medium text-sumi">Chưa có mục nào trong danh sách</div>
+              <div className="text-xs text-nibi mt-1">
                 Bấm "+ Thêm từ", "Nhập Excel", hoặc lưu từ bài học / từ điển để bắt đầu học nhé!
               </div>
             </div>

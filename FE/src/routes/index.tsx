@@ -47,6 +47,7 @@ import {
 import { AuthGatePage } from '@/pages/auth/AuthGatePage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminHomeRedirect } from './AdminHomeRedirect'
+import { getPageTitle } from '@/utils/pageTitle'
 
 // Wrapper để apply MainLayout cho protected routes
 const WithMainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
@@ -294,3 +295,13 @@ export const router = createBrowserRouter([
 ])
 
 export const AppRouter: React.FC = () => <RouterProvider router={router} />
+
+// Tự động cập nhật tiêu đề tab trình duyệt theo từng trang
+if (typeof document !== 'undefined') {
+  document.title = getPageTitle(window.location.pathname)
+}
+router.subscribe((state) => {
+  if (typeof document !== 'undefined') {
+    document.title = getPageTitle(state.location.pathname)
+  }
+})

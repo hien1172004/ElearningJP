@@ -54,46 +54,46 @@ export const NotebookStatsOverview: React.FC<NotebookStatsOverviewProps> = ({
       {/* 4 Cards: Chưa thuộc / Thuộc lơ mơ / Thuộc kha khá / Thuộc làu làu */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Chưa thuộc */}
-        <div className="bg-surface border border-red-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-1.5 h-10 rounded-full bg-red-500" />
-          <div>
-            <div className="text-xs text-gray-500 font-medium">Chưa thuộc</div>
-            <div className="text-xl font-bold text-gray-800 mt-0.5">
-              {unlearnedCount} <span className="text-xs font-normal text-gray-400">từ</span>
-            </div>
+        <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-rose-300 transition">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs text-gray-500 font-medium">Chưa thuộc</span>
+            <span className="w-2 h-2 rounded-full bg-rose-500" />
+          </div>
+          <div className="text-xl font-bold text-gray-800 mt-1">
+            {unlearnedCount} <span className="text-xs font-normal text-gray-400">từ</span>
           </div>
         </div>
 
         {/* Thuộc lơ mơ */}
-        <div className="bg-surface border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-1.5 h-10 rounded-full bg-amber-500" />
-          <div>
-            <div className="text-xs text-gray-500 font-medium">Thuộc lơ mơ</div>
-            <div className="text-xl font-bold text-gray-800 mt-0.5">
-              {barelyCount} <span className="text-xs font-normal text-gray-400">từ</span>
-            </div>
+        <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-amber-300 transition">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs text-gray-500 font-medium">Thuộc lơ mơ</span>
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+          </div>
+          <div className="text-xl font-bold text-gray-800 mt-1">
+            {barelyCount} <span className="text-xs font-normal text-gray-400">từ</span>
           </div>
         </div>
 
         {/* Thuộc kha khá */}
-        <div className="bg-surface border border-blue-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-1.5 h-10 rounded-full bg-blue-500" />
-          <div>
-            <div className="text-xs text-gray-500 font-medium">Thuộc kha khá</div>
-            <div className="text-xl font-bold text-gray-800 mt-0.5">
-              {moderateCount} <span className="text-xs font-normal text-gray-400">từ</span>
-            </div>
+        <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-blue-300 transition">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs text-gray-500 font-medium">Thuộc kha khá</span>
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+          </div>
+          <div className="text-xl font-bold text-gray-800 mt-1">
+            {moderateCount} <span className="text-xs font-normal text-gray-400">từ</span>
           </div>
         </div>
 
         {/* Thuộc làu làu */}
-        <div className="bg-surface border border-green-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="w-1.5 h-10 rounded-full bg-green-500" />
-          <div>
-            <div className="text-xs text-gray-500 font-medium">Thuộc làu làu</div>
-            <div className="text-xl font-bold text-gray-800 mt-0.5">
-              {masteredCount} <span className="text-xs font-normal text-gray-400">từ</span>
-            </div>
+        <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-emerald-300 transition">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-xs text-gray-500 font-medium">Thuộc làu làu</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          </div>
+          <div className="text-xl font-bold text-gray-800 mt-1">
+            {masteredCount} <span className="text-xs font-normal text-gray-400">từ</span>
           </div>
         </div>
       </div>

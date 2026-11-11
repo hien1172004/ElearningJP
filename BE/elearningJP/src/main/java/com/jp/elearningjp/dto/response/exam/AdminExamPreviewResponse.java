@@ -24,6 +24,11 @@ public class AdminExamPreviewResponse {
     boolean published;
     long totalAttempts;
     long inProgressAttempts;
+    Integer publishedVersionNo;
+    Long publishedVersionId;
+    boolean hasUnpublishedChanges;
+    String lastChangelog;
+    java.time.Instant publishedAt;
     List<ExamScoreGroupResponse> scoreGroups;
     List<ReviewSectionResponse> sections;
 }

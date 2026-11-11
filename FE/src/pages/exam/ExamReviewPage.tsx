@@ -336,12 +336,12 @@ export const ExamReviewPage: React.FC = () => {
               <div key={q.id} className="space-y-4">
                 {/* MONDAI HEADER: Chỉ hiển thị 1 lần duy nhất ở đầu mỗi dạng bài Mondai */}
                 {isNewMondai && (
-                  <div className="bg-surface border-l-4 border-indigo-600 rounded-2xl p-4 md:p-5 border border-slate-200 shadow-xs">
+                  <div className="bg-surface rounded-2xl p-4 md:p-5 border border-suna/90 shadow-2xs">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-black tracking-wide">
+                      <span className="px-3 py-1 rounded-lg bg-ai text-white text-xs font-black tracking-wide">
                         {mondaiInfo.jp}
                       </span>
-                      <h3 className="text-sm md:text-base font-extrabold text-slate-900">
+                      <h3 className="text-sm md:text-base font-extrabold text-sumi">
                         {mondaiInfo.vi}
                       </h3>
                     </div>

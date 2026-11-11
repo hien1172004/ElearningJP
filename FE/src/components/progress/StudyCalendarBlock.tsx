@@ -30,14 +30,14 @@ import { currentMonthInTz, shiftMonth } from '@/utils/week'
 
 /** Màu nền + chữ cho từng trạng thái ngày. */
 const STATE_STYLE: Record<DayState, string> = {
-  // Đạt mục tiêu — xanh dương (nổi bật nhất, giống "perfect day" trong ảnh).
-  goal: 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
-  // Có học nhưng chưa đạt — xanh lá.
-  active: 'bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600',
-  // Không học — không tô màu (nền trắng, viền xám nhạt).
-  empty: 'bg-surface text-gray-500 border-gray-200',
+  // Đạt mục tiêu — sắc chàm Ai-iro (nổi bật nhất, chuẩn Wairo).
+  goal: 'bg-ai text-white border-ai hover:bg-ai/90',
+  // Có học nhưng chưa đạt — xanh lá dịu.
+  active: 'bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700',
+  // Không học — không tô màu (nền trắng, viền cát).
+  empty: 'bg-surface text-nibi border-suna',
   // Ngày chưa tới — làm mờ, không tô màu.
-  future: 'bg-gray-50 text-gray-300 border-gray-100',
+  future: 'bg-slate-50/60 text-nibi/40 border-suna/40',
 }
 
 /** Màu viền riêng cho hôm nay (để nổi lên nền đã tô màu). */
@@ -130,19 +130,10 @@ export const StudyCalendarBlock: React.FC = () => {
       {/* ---------- Header: tiêu đề + điều hướng tháng ---------- */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
         <div>
-          <h2 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-indigo-600" />
+          <h2 className="text-base font-extrabold text-sumi flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-ai" />
             Lịch học &amp; chuỗi ngày
           </h2>
-          {/* <p className="text-xs text-gray-500 mt-0.5">
-            {formatMonthLabel(month)}
-            {data && data.activeDays > 0 && (
-              <span className="text-gray-400">
-                {' '}
-                · {data.activeDays} ngày có học · {formatCompactNumber(data.totalLookups)} từ
-              </span>
-            )}
-          </p> */}
         </div>
 
         <div className="flex items-center gap-2">
@@ -243,12 +234,12 @@ export const StudyCalendarBlock: React.FC = () => {
           </div>
 
           {/* Chú thích màu */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 pt-2.5 border-t border-gray-100">
-            <LegendItem color="bg-blue-600" label="Đạt mục tiêu" />
-            <LegendItem color="bg-emerald-500" label="Có học, chưa đạt" />
-            <LegendItem color="bg-surface border border-gray-300" label="Không học" />
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 pt-2.5 border-t border-suna/70">
+            <LegendItem color="bg-ai" label="Đạt mục tiêu" />
+            <LegendItem color="bg-emerald-600" label="Có học, chưa đạt" />
+            <LegendItem color="bg-surface border border-suna" label="Không học" />
             {data && (
-              <span className="text-[10px] text-gray-400 ml-auto">
+              <span className="text-[10px] text-nibi ml-auto">
                 Mục tiêu {data.goalWords} từ MỚI/ngày
               </span>
             )}

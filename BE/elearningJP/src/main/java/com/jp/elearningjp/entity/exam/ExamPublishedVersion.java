@@ -36,4 +36,8 @@ public class ExamPublishedVersion extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "published_by")
     private User publishedBy;
+
+    /** Ghi chú tóm tắt nội dung thay đổi giữa các phiên bản (V1 -> V2). */
+    @Column(name = "changelog", length = 1000)
+    private String changelog;
 }

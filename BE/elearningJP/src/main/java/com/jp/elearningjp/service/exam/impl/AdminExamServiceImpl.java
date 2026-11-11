@@ -50,6 +50,10 @@ public class AdminExamServiceImpl implements AdminExamService {
     private final ExamMapper examMapper;
     private final CourseAccessGuard courseAccessGuard;
     private final CurrentUserService currentUserService;
+    private final com.jp.elearningjp.service.exam.snapshot.ExamSnapshotService examSnapshotService;
+    private final ExamPublishedVersionRepository examPublishedVersionRepository;
+    private final com.jp.elearningjp.service.notification.NotificationService notificationService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
      * Quyền quản lý đề thi: đề gắn với khóa học chỉ ADMIN hoặc giáo viên được giao khóa đó;
@@ -397,6 +401,17 @@ public class AdminExamServiceImpl implements AdminExamService {
         preview.setTotalAttempts(totalAttempts);
         preview.setInProgressAttempts(inProgressAttempts);
 
+        preview.setPublished(exam.isPublished());
+        preview.setPublishedVersionId(exam.getPublishedVersionId());
+        if (exam.getPublishedVersionId() != null) {
+            examPublishedVersionRepository.findById(exam.getPublishedVersionId()).ifPresent(v -> {
+                preview.setPublishedVersionNo(v.getVersionNo());
+                preview.setLastChangelog(v.getChangelog());
+                preview.setPublishedAt(v.getCreatedAt());
+            });
+        }
+        preview.setHasUnpublishedChanges(examSnapshotService.differsFromPublished(examId));
+
         return preview;
     }
 
@@ -660,10 +675,12 @@ public class AdminExamServiceImpl implements AdminExamService {
     @Override
     public void deleteQuestion(Long examId, Long questionId) {
         requireEditAccess(examId);
-        validateNoInProgressAttempts(examId, "xóa câu hỏi (Question ID: " + questionId + ")");
-
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+
+        if (exam.getPublishedVersionId() == null) {
+            validateNoInProgressAttempts(examId, "xóa câu hỏi (Question ID: " + questionId + ")");
+        }
 
         var esqList = examSectionQuestionRepository.findByExamIdAndQuestionId(examId, questionId);
         for (var esq : esqList) {
@@ -689,10 +706,12 @@ public class AdminExamServiceImpl implements AdminExamService {
     @org.springframework.transaction.annotation.Transactional
     public void clearSectionQuestions(Long examId, Long sectionId) {
         requireEditAccess(examId);
-        validateNoInProgressAttempts(examId, "xóa toàn bộ câu hỏi Section (Section ID: " + sectionId + ")");
-
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+
+        if (exam.getPublishedVersionId() == null) {
+            validateNoInProgressAttempts(examId, "xóa toàn bộ câu hỏi Section (Section ID: " + sectionId + ")");
+        }
 
         List<ExamSectionQuestion> esqList = examSectionQuestionRepository.findBySectionIdAndDeletedFalseOrderByQuestionNumberAsc(sectionId);
         if (esqList.isEmpty()) {
@@ -735,7 +754,12 @@ public class AdminExamServiceImpl implements AdminExamService {
     @Override
     public void deletePassage(Long examId, Long passageId) {
         requireEditAccess(examId);
-        validateNoInProgressAttempts(examId, "xóa bài đọc (Passage ID: " + passageId + ")");
+        Exam exam = examRepository.findByIdAndDeletedFalse(examId)
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+
+        if (exam.getPublishedVersionId() == null) {
+            validateNoInProgressAttempts(examId, "xóa bài đọc (Passage ID: " + passageId + ")");
+        }
 
         ReadingPassage passage = readingPassageRepository.findById(passageId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_QUESTION_NOT_FOUND));
@@ -756,8 +780,7 @@ public class AdminExamServiceImpl implements AdminExamService {
         passage.softDelete();
         readingPassageRepository.save(passage);
 
-        Exam exam = examRepository.findByIdAndDeletedFalse(examId).orElse(null);
-        if (exam != null && deletedCount > 0) {
+        if (deletedCount > 0) {
             exam.setTotalQuestions(Math.max(0, (exam.getTotalQuestions() != null ? exam.getTotalQuestions() : deletedCount) - deletedCount));
             examRepository.save(exam);
             reorderExamQuestions(examId);
@@ -776,6 +799,11 @@ public class AdminExamServiceImpl implements AdminExamService {
 
     @Override
     public void publishExam(Long examId) {
+        publishExam(examId, null);
+    }
+
+    @Override
+    public void publishExam(Long examId, com.jp.elearningjp.dto.request.exam.PublishExamRequest request) {
         requirePublishAccess(examId);
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
@@ -784,8 +812,31 @@ public class AdminExamServiceImpl implements AdminExamService {
         if (exam.getCourse() != null && exam.getPublishedVersionId() == null) {
             throw new AppException(ErrorCode.EXAM_NOT_YET_APPROVED);
         }
+
+        String changelog = request != null ? request.getChangelog() : null;
+        var version = examSnapshotService.publish(examId, currentUserService.getCurrentUserOrNull(), changelog);
         exam.setPublished(true);
         examRepository.save(exam);
+
+        log.info("📢 Đã xuất bản đề thi ID: {} thành công (Version: {})", examId, version != null ? version.getVersionNo() : "N/A");
+
+        if (request != null && Boolean.TRUE.equals(request.getNotifyLearners())) {
+            List<Long> recipientIds = examAttemptRepository.findDistinctUserIdsByExamId(examId);
+            String title = "Cập nhật đề thi: " + exam.getTitle();
+            String vNo = (version != null && version.getVersionNo() != null) ? " v" + version.getVersionNo() : "";
+            String body = "Đề thi đã phát hành phiên bản mới" + vNo + (changelog != null && !changelog.isBlank() ? ": " + changelog : ". Bạn có thể vào luyện tập lại để củng cố kiến thức.");
+            var dataJson = objectMapper.createObjectNode()
+                    .put("examId", exam.getId())
+                    .put("examTitle", exam.getTitle());
+
+            for (Long uid : recipientIds) {
+                try {
+                    notificationService.create(uid, NotificationType.EXAM_UPDATED, title, body, dataJson);
+                } catch (Exception ex) {
+                    log.warn("[EXAM-PUBLISH] Không thể gửi thông báo tới user {}: {}", uid, ex.getMessage());
+                }
+            }
+        }
     }
 
     @Override
@@ -816,7 +867,25 @@ public class AdminExamServiceImpl implements AdminExamService {
                 exams = examRepository.findByDeletedFalse(pageable);
             }
         }
-        return exams.map(examMapper::toSummaryResponse);
+        var page = exams.map(examMapper::toSummaryResponse);
+
+        var versionIds = page.getContent().stream()
+                .map(ExamSummaryResponse::getPublishedVersionId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!versionIds.isEmpty()) {
+            var vMap = examPublishedVersionRepository.findAllById(versionIds).stream()
+                    .collect(Collectors.toMap(ExamPublishedVersion::getId, java.util.function.Function.identity(), (a, b) -> a));
+            for (var item : page.getContent()) {
+                if (item.getPublishedVersionId() != null && vMap.containsKey(item.getPublishedVersionId())) {
+                    var v = vMap.get(item.getPublishedVersionId());
+                    item.setVersionNo(v.getVersionNo());
+                    item.setChangelog(v.getChangelog());
+                }
+            }
+        }
+
+        return page;
     }
 
     @Override
@@ -1319,9 +1388,35 @@ public class AdminExamServiceImpl implements AdminExamService {
                 }
             }
             studentAnswerRepository.saveAll(studentAnswers);
+
+            attempt.setTotalRawScore(totalRawScore);
+            if (exam.getOverallPassingScore() != null) {
+                attempt.setPassed(totalRawScore.compareTo(new BigDecimal(exam.getOverallPassingScore())) >= 0);
+            }
+            examAttemptRepository.save(attempt);
         }
 
         log.info("🎯 Đã chấm lại (re-grade) thành công cho {} lượt thi của đề thi ID: {}", attempts.size(), examId);
+
+        java.util.Set<Long> userIds = attempts.stream()
+                .map(a -> a.getUser() != null ? a.getUser().getId() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        String notifTitle = "Đính chính kết quả: " + exam.getTitle();
+        String notifBody = "Bài thi của bạn vừa được hệ thống chấm lại theo bộ đáp án đính chính mới nhất. Vui lòng kiểm tra lại điểm số trên hệ thống.";
+        var notifData = objectMapper.createObjectNode()
+                .put("examId", exam.getId())
+                .put("examTitle", exam.getTitle());
+
+        for (Long uid : userIds) {
+            try {
+                notificationService.create(uid, NotificationType.EXAM_RESULT, notifTitle, notifBody, notifData);
+            } catch (Exception ex) {
+                log.warn("[REGRADE] Không thể gửi thông báo chấm lại tới user {}: {}", uid, ex.getMessage());
+            }
+        }
+
         return attempts.size();
     }
 }

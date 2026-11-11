@@ -20,6 +20,10 @@ export interface ExamSummary {
   published: boolean
   /** Đề gắn khóa: phiên bản đã duyệt; null = chưa duyệt (lên cùng lần duyệt khóa). */
   publishedVersionId?: number | null
+  /** Số phiên bản phát hành (v1, v2...). */
+  versionNo?: number | null
+  /** Ghi chú thay đổi gần nhất. */
+  changelog?: string | null
   /** Đề gắn khóa đang chờ gỡ: học viên vẫn thi tới khi khóa được duyệt lần tới. */
   pendingRemoval?: boolean
   courseId?: number
@@ -234,6 +238,11 @@ export interface AdminExamPreview {
   published: boolean
   totalAttempts?: number
   inProgressAttempts?: number
+  publishedVersionId?: number | null
+  publishedVersionNo?: number | null
+  hasUnpublishedChanges?: boolean
+  lastChangelog?: string | null
+  publishedAt?: string | null
   sections: AdminTakingSection[]
 }
 

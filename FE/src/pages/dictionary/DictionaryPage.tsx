@@ -1,9 +1,8 @@
-﻿import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Search,
   X,
-  Sparkles,
   Filter,
   ChevronRight,
   BookOpen,
@@ -16,6 +15,7 @@ import {
   Brush,
   BookText,
   PencilLine,
+  Compass,
 } from 'lucide-react'
 import type {
   JlptLevel,
@@ -518,7 +518,7 @@ export const DictionaryPage: React.FC = () => {
         {activeTab !== 'kana' && (
           <div ref={searchContainerRef} className="relative">
             <div className="flex items-center gap-2">
-              <div className="flex-1 min-w-0 flex items-center h-11 bg-surface rounded-lg border border-suna focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-600/15 transition">
+              <div className="flex-1 min-w-0 flex items-center h-11 bg-surface rounded-lg border border-suna focus-within:border-ai focus-within:ring-2 focus-within:ring-ai/15 transition">
                 <Search className="w-[18px] h-[18px] text-nibi ml-3 shrink-0" />
                 <input
                   type="text"
@@ -561,7 +561,7 @@ export const DictionaryPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsHandwritingOpen(true)}
-                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-surface text-nibi hover:text-indigo-600 hover:border-indigo-300 hover:bg-kamenozoki transition flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-surface text-nibi hover:text-ai hover:border-ai/50 hover:bg-kamenozoki/60 transition flex items-center justify-center cursor-pointer"
                     title="Nhận dạng chữ viết tay Kanji (AI)"
                     aria-label="Nhận dạng chữ viết tay Kanji (AI)"
                   >
@@ -570,7 +570,7 @@ export const DictionaryPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsAirWritingOpen(true)}
-                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-surface text-nibi hover:text-indigo-600 hover:border-indigo-300 hover:bg-kamenozoki transition flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-surface text-nibi hover:text-ai hover:border-ai/50 hover:bg-kamenozoki/60 transition flex items-center justify-center cursor-pointer"
                     title="Viết chữ Hán trên không qua Camera & AI"
                     aria-label="Viết chữ Hán trên không qua Camera & AI"
                   >
@@ -579,7 +579,7 @@ export const DictionaryPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsPracticeOpen(true)}
-                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-surface text-nibi hover:text-indigo-600 hover:border-indigo-300 hover:bg-kamenozoki transition flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 shrink-0 rounded-md border border-suna bg-surface text-nibi hover:text-ai hover:border-ai/50 hover:bg-kamenozoki/60 transition flex items-center justify-center cursor-pointer"
                     title="Luyện viết & Chấm điểm nét vẽ AI"
                     aria-label="Luyện viết & Chấm điểm nét vẽ AI"
                   >
@@ -590,7 +590,7 @@ export const DictionaryPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen(false)}
-                className="h-11 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition shrink-0"
+                className="h-11 px-5 rounded-lg bg-ai hover:bg-ai/90 active:scale-[0.98] text-white text-sm font-semibold transition shrink-0 shadow-2xs cursor-pointer"
               >
                 Tìm kiếm
               </button>
@@ -707,8 +707,8 @@ export const DictionaryPage: React.FC = () => {
         )}
 
         {/* Tab điều hướng + Bộ lọc JLPT */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+          <div className="flex items-center gap-1 overflow-x-auto p-0.5 bg-kinari/70 rounded-lg border border-suna/60">
             {(
               [
                 { key: 'vocab', label: 'Từ vựng' },
@@ -721,10 +721,11 @@ export const DictionaryPage: React.FC = () => {
                 key={key}
                 type="button"
                 onClick={() => setActiveTab(key)}
-                className={`px-3 py-1.5 rounded-md text-xs transition flex items-center gap-1.5 whitespace-nowrap ${activeTab === key
-                  ? 'bg-kamenozoki text-indigo-600 font-semibold'
-                  : 'text-nibi font-medium hover:text-sumi hover:bg-gray-50'
-                  }`}
+                className={`px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  activeTab === key
+                    ? 'bg-surface text-ai font-bold shadow-2xs'
+                    : 'text-nibi font-medium hover:text-sumi hover:bg-surface/50'
+                }`}
               >
                 {label}
               </button>
@@ -732,17 +733,18 @@ export const DictionaryPage: React.FC = () => {
           </div>
 
           {activeTab !== 'kana' && (
-            <div className="flex items-center gap-1 overflow-x-auto">
-              <span className="text-xs text-nibi font-semibold flex items-center gap-1 pr-1">
-                <Filter className="w-3.5 h-3.5" /> JLPT
+            <div className="flex items-center gap-1 overflow-x-auto text-xs">
+              <span className="text-[11px] text-nibi font-semibold flex items-center gap-1 pr-1">
+                <Filter className="w-3.5 h-3.5 text-ai" /> Cấp độ:
               </span>
               <button
                 type="button"
                 onClick={() => setSelectedLevel(undefined)}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap ${selectedLevel === undefined
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
-                  }`}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                  selectedLevel === undefined
+                    ? 'bg-slate-900 text-white shadow-2xs'
+                    : 'text-nibi hover:bg-kamenozoki/60 hover:text-sumi'
+                }`}
               >
                 Tất cả
               </button>
@@ -751,10 +753,11 @@ export const DictionaryPage: React.FC = () => {
                   key={lvl}
                   type="button"
                   onClick={() => setSelectedLevel(selectedLevel === lvl ? undefined : lvl)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition ${selectedLevel === lvl
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-nibi hover:bg-kamenozoki hover:text-indigo-600'
-                    }`}
+                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
+                    selectedLevel === lvl
+                      ? 'bg-ai text-white shadow-2xs'
+                      : 'text-nibi hover:bg-kamenozoki/60 hover:text-sumi'
+                  }`}
                 >
                   {lvl}
                 </button>
@@ -1050,7 +1053,7 @@ export const DictionaryPage: React.FC = () => {
                 />
               ) : (
                 <div className="bg-surface rounded-md p-16 border border-gray-200 text-center text-gray-400 space-y-3">
-                  <Sparkles className="w-12 h-12 mx-auto text-gray-300" />
+                  <PenTool className="w-12 h-12 mx-auto text-gray-300" />
                   <p className="font-medium text-base">Chọn một chữ Hán bên trái để xem nét vẽ và từ ghép.</p>
                 </div>
               )
@@ -1106,24 +1109,24 @@ export const DictionaryPage: React.FC = () => {
         /* =========================================================================
             TRƯỜNG HỢP 3: MÀN HÌNH CHÍNH KHI CHƯA TRA CỨU (DISCOVERY HUB) — gộp 1 khối 2 cột
            ========================================================================= */
-        <div className="bg-surface rounded-xl border border-suna shadow-xs grid grid-cols-1 lg:grid-cols-12">
+        <div className="bg-surface rounded-xl border border-suna shadow-xs grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
           {/* ===== CỘT TRÁI: Lịch sử + Gợi ý nhanh + Cấp độ JLPT ===== */}
-          <div className="lg:col-span-8 p-4 sm:p-5 space-y-5 min-w-0">
+          <div className="lg:col-span-8 p-5 sm:p-6 space-y-6 min-w-0">
             {/* 1. Lịch sử tra cứu gần đây */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
-                  <Clock className="w-4 h-4 text-indigo-600" />
-                  Lịch sử tra cứu gần đây
+                  <Clock className="w-4 h-4 text-ai" />
+                  <span>Lịch sử tra cứu gần đây</span>
                   {history.length > 0 && (
-                    <span className="text-xs text-gray-400 font-normal">({history.length})</span>
+                    <span className="text-xs text-nibi font-normal">({history.length})</span>
                   )}
                 </h3>
                 {history.length > 0 && (
                   <button
                     type="button"
                     onClick={clearAllHistory}
-                    className="text-xs text-nibi hover:text-shu font-semibold flex items-center gap-1 transition"
+                    className="text-xs text-nibi hover:text-shu font-semibold flex items-center gap-1 transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     Xoá lịch sử
@@ -1132,35 +1135,46 @@ export const DictionaryPage: React.FC = () => {
               </div>
 
               {history.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                   {history.map((item) => (
                     <div
                       key={item.id}
                       onClick={() => handleSelectHistory(item)}
-                      className="group relative min-w-0 p-2.5 rounded-md border border-suna hover:border-indigo-300 hover:bg-kamenozoki/50 cursor-pointer transition"
+                      className="group relative p-3 rounded-lg border border-suna/80 hover:border-ai/50 bg-kinari/30 hover:bg-kamenozoki/30 cursor-pointer transition shadow-2xs"
                     >
-                      <div className="flex items-start justify-between gap-1">
-                        <span className="font-bold text-sm text-sumi group-hover:text-indigo-600 transition truncate">
+                      <div className="flex items-start justify-between gap-1.5">
+                        <span className="font-bold text-base text-sumi group-hover:text-ai transition truncate">
                           {item.title}
                         </span>
-                        <button
-                          type="button"
-                          onClick={(e) => removeHistoryItem(item.id, e)}
-                          className="opacity-0 group-hover:opacity-100 -mr-1 text-gray-400 hover:text-shu p-0.5 rounded transition shrink-0"
-                          aria-label="Xoá khỏi lịch sử"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span
+                            className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                              item.tab === 'vocab'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                                : item.tab === 'kanji'
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200/60'
+                                : 'bg-purple-50 text-purple-700 border border-purple-200/60'
+                            }`}
+                          >
+                            {item.tab === 'vocab' ? 'Từ vựng' : item.tab === 'kanji' ? 'Hán tự' : 'Ngữ pháp'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => removeHistoryItem(item.id, e)}
+                            className="text-nibi/60 hover:text-shu p-0.5 rounded transition cursor-pointer"
+                            aria-label="Xoá khỏi lịch sử"
+                            title="Xoá mục này"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                       {item.subtitle && (
-                        <p className="text-[11px] text-nibi truncate">【{item.subtitle}】</p>
+                        <p className="text-xs text-nibi font-medium truncate mt-0.5">【{item.subtitle}】</p>
                       )}
                       {item.meaning && (
-                        <p className="text-xs text-gray-600 truncate mt-0.5">{item.meaning}</p>
+                        <p className="text-xs text-slate-600 truncate mt-1">{item.meaning}</p>
                       )}
-                      <p className="mt-1 text-[10px] uppercase font-semibold tracking-wide text-indigo-600">
-                        {item.tab === 'vocab' ? 'Từ vựng' : item.tab === 'kanji' ? 'Hán tự' : 'Ngữ pháp'}
-                      </p>
                     </div>
                   ))}
                 </div>
@@ -1171,37 +1185,43 @@ export const DictionaryPage: React.FC = () => {
               )}
             </section>
 
-            {/* 2. Gợi ý tra nhanh (chuyển từ banner cũ xuống) */}
+            {/* 2. Gợi ý tra nhanh */}
             {tabConfig.suggestions.length > 0 && (
-              <section className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-semibold text-nibi mr-1">Gợi ý tra nhanh:</span>
-                {tabConfig.suggestions.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setKeyword(tag)}
-                    className="px-2.5 py-1 rounded-md border border-suna bg-kinari text-sm font-medium text-sumi hover:border-indigo-300 hover:text-indigo-600 transition"
-                  >
-                    {tag}
-                  </button>
-                ))}
+              <section className="flex items-center gap-2 flex-wrap pt-1">
+                <span className="text-xs font-semibold text-nibi">Gợi ý tra nhanh:</span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {tabConfig.suggestions.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setKeyword(tag)}
+                      className="px-2.5 py-1 rounded-md border border-suna bg-surface text-xs font-medium text-sumi hover:border-ai/50 hover:text-ai hover:bg-kamenozoki/40 transition shadow-2xs cursor-pointer"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
               </section>
             )}
 
             {/* 3. Khám phá từ vựng theo cấp độ JLPT */}
-            <section className="space-y-3 pt-4 border-t border-suna">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
-                <Filter className="w-4 h-4 text-indigo-600" />
-                Khám phá từ vựng theo cấp độ JLPT
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <section className="space-y-3 pt-5 border-t border-suna/80">
+              <div className="flex items-center justify-between">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
+                  <Filter className="w-4 h-4 text-ai" />
+                  <span>Khám phá từ vựng theo cấp độ JLPT</span>
+                </h3>
+                <span className="text-[11px] text-nibi hidden sm:inline">Chọn cấp độ để duyệt nhanh danh sách</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
                 {(
                   [
-                    { level: 'N5', label: 'Căn bản (Sơ cấp 1)' },
-                    { level: 'N4', label: 'Sơ cấp 2' },
-                    { level: 'N3', label: 'Trung cấp' },
-                    { level: 'N2', label: 'Trung cao cấp' },
-                    { level: 'N1', label: 'Cao cấp (Thành thạo)' },
+                    { level: 'N5', title: 'Căn bản', desc: 'Sơ cấp 1 · ~800 từ', badge: 'border-t-2 border-jlpt-n5' },
+                    { level: 'N4', title: 'Sơ cấp', desc: 'Sơ cấp 2 · ~1.500 từ', badge: 'border-t-2 border-jlpt-n4' },
+                    { level: 'N3', title: 'Trung cấp', desc: 'Giao tiếp · ~3.750 từ', badge: 'border-t-2 border-jlpt-n3' },
+                    { level: 'N2', title: 'Trung cao', desc: 'Báo chí · ~6.000 từ', badge: 'border-t-2 border-jlpt-n2' },
+                    { level: 'N1', title: 'Thượng cấp', desc: 'Học thuật · ~10.000 từ', badge: 'border-t-2 border-jlpt-n1' },
                   ] as const
                 ).map((item) => (
                   <button
@@ -1211,24 +1231,34 @@ export const DictionaryPage: React.FC = () => {
                       setActiveTab('vocab')
                       setSelectedLevel(item.level as JlptLevel)
                     }}
-                    className="text-left p-3 rounded-md border border-suna hover:border-indigo-300 hover:bg-kamenozoki/50 transition cursor-pointer"
+                    className={`text-left p-3 rounded-lg border border-suna/80 bg-surface hover:border-ai/40 hover:bg-kamenozoki/20 hover:-translate-y-0.5 transition-all shadow-2xs cursor-pointer group ${item.badge}`}
                   >
-                    <span className={`block font-extrabold text-lg leading-none ${JLPT_LEVEL_TEXT[item.level]}`}>
-                      {item.level}
+                    <div className="flex items-baseline justify-between gap-1">
+                      <span className={`font-black text-lg leading-none ${JLPT_LEVEL_TEXT[item.level]}`}>
+                        {item.level}
+                      </span>
+                      <span className="text-[10px] font-bold text-sumi group-hover:text-ai transition">
+                        {item.title}
+                      </span>
+                    </div>
+                    <span className="block text-[11px] text-nibi mt-1 leading-snug">
+                      {item.desc}
                     </span>
-                    <span className="block text-xs text-nibi mt-1.5">{item.label}</span>
                   </button>
                 ))}
               </div>
             </section>
           </div>
 
-          {/* ===== CỘT PHẢI: Khám phá nổi bật — 3 mục cùng khung, khác độ đậm màu chàm Ai ===== */}
-          <aside className="lg:col-span-4 p-4 sm:p-5 space-y-3 border-t lg:border-t-0 lg:border-l border-suna bg-kinari/50 rounded-b-xl lg:rounded-bl-none lg:rounded-r-xl">
-            <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
-              Khám phá nổi bật
-            </h3>
+          {/* ===== CỘT PHẢI: Khám phá nổi bật ===== */}
+          <aside className="lg:col-span-4 p-5 sm:p-6 space-y-4 border-t lg:border-t-0 lg:border-l border-suna bg-kinari/40">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-bold text-sumi">
+                <Compass className="w-4 h-4 text-ai" />
+                <span>Khám phá nổi bật</span>
+              </h3>
+              <p className="text-xs text-nibi mt-0.5">Gợi ý học liệu tuyển chọn mỗi ngày</p>
+            </div>
 
             {/* Chữ Hán hôm nay */}
             <button
@@ -1237,24 +1267,26 @@ export const DictionaryPage: React.FC = () => {
                 setActiveTab('kanji')
                 setKeyword('日')
               }}
-              className="group w-full text-left flex items-center gap-3 p-3 rounded-md bg-surface border border-suna hover:bg-kamenozoki/40 hover:shadow-xs transition cursor-pointer"
+              className="group w-full text-left p-3.5 rounded-xl bg-surface border border-suna/80 hover:border-ai/50 hover:shadow-xs transition-all cursor-pointer flex items-start gap-3.5"
             >
-              <span className="w-12 h-12 shrink-0 rounded-md bg-kamenozoki text-indigo-800 font-serif text-2xl font-bold flex items-center justify-center">
+              <div className="w-14 h-14 rounded-lg bg-kamenozoki/90 border border-ai/20 text-ai text-2xl font-bold flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                 日
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
-                  <Brush className="w-3.5 h-3.5" /> Chữ Hán hôm nay
-                  <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${JLPT_LEVEL_BADGE.N5}`}>N5</span>
-                </span>
-                <span className="block mt-0.5 font-bold text-sumi truncate">
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
+                    <BookText className="w-3.5 h-3.5 text-ai" /> Chữ Hán hôm nay
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${JLPT_LEVEL_BADGE.N5}`}>N5</span>
+                </div>
+                <div className="mt-1 font-bold text-sumi group-hover:text-ai transition truncate text-sm">
                   NHẬT <span className="font-normal text-xs text-nibi">· Mặt trời, ngày, Nhật Bản</span>
-                </span>
-                <span className="block text-[11px] text-gray-400 truncate">4 nét • On: ニチ, ジツ • Kun: ひ, -び</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-800 group-hover:underline">
+                </div>
+                <p className="text-[11px] text-nibi truncate mt-0.5">4 nét • On: ニチ, ジツ • Kun: ひ, -び</p>
+                <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-ai group-hover:underline">
                   Xem thứ tự nét vẽ & Từ ghép <ArrowRight className="w-3 h-3" />
                 </span>
-              </span>
+              </div>
             </button>
 
             {/* Từ vựng thông dụng */}
@@ -1264,48 +1296,54 @@ export const DictionaryPage: React.FC = () => {
                 setActiveTab('vocab')
                 setKeyword('食べる')
               }}
-              className="group w-full text-left flex items-center gap-3 p-3 rounded-md bg-surface border border-suna hover:bg-kamenozoki/40 hover:shadow-xs transition cursor-pointer"
+              className="group w-full text-left p-3.5 rounded-xl bg-surface border border-suna/80 hover:border-ai/50 hover:shadow-xs transition-all cursor-pointer flex items-start gap-3.5"
             >
-              <span className="w-12 h-12 shrink-0 rounded-md bg-kamenozoki text-indigo-600 font-serif text-2xl font-bold flex items-center justify-center">
+              <div className="w-14 h-14 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-2xl font-bold flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                 食
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
-                  <BookOpen className="w-3.5 h-3.5" /> Từ vựng thông dụng
-                  <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${JLPT_LEVEL_BADGE.N5}`}>N5</span>
-                </span>
-                <span className="block mt-0.5 font-bold text-sumi truncate">
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
+                    <BookOpen className="w-3.5 h-3.5 text-emerald-700" /> Từ vựng thông dụng
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${JLPT_LEVEL_BADGE.N5}`}>N5</span>
+                </div>
+                <div className="mt-1 font-bold text-sumi group-hover:text-ai transition truncate text-sm">
                   食べる <span className="font-normal text-xs text-nibi">【たべる】</span>
+                </div>
+                <p className="text-[11px] text-nibi truncate mt-0.5">THỰC · Ăn (Động từ nhóm 2)</p>
+                <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-ai group-hover:underline">
+                  Xem giải nghĩa & Ví dụ câu <ArrowRight className="w-3 h-3" />
                 </span>
-                <span className="block text-[11px] text-gray-400 truncate">THỰC · Ăn (động từ nhóm 2)</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 group-hover:underline">
-                  Xem chi tiết & Ví dụ câu <ArrowRight className="w-3 h-3" />
-                </span>
-              </span>
+              </div>
             </button>
 
             {/* Bảng chữ cái tương tác */}
             <button
               type="button"
               onClick={() => setActiveTab('kana')}
-              className="group w-full text-left flex items-center gap-3 p-3 rounded-md bg-surface border border-suna hover:bg-kamenozoki/40 hover:shadow-xs transition cursor-pointer"
+              className="group w-full text-left p-3.5 rounded-xl bg-surface border border-suna/80 hover:border-ai/50 hover:shadow-xs transition-all cursor-pointer flex items-start gap-3.5"
             >
-              <span className="w-12 h-12 shrink-0 rounded-md bg-kamenozoki text-indigo-500 font-serif text-2xl font-bold flex items-center justify-center">
+              <div className="w-14 h-14 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-800 text-2xl font-bold flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                 あ
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
-                  <Languages className="w-3.5 h-3.5" /> Bảng chữ cái
-                  <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-surface text-nibi border border-suna">50 âm</span>
-                </span>
-                <span className="block mt-0.5 font-bold text-sumi truncate">Hiragana & Katakana</span>
-                <span className="block text-[11px] text-gray-400 line-clamp-2">
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-nibi">
+                    <Languages className="w-3.5 h-3.5 text-amber-700" /> Bảng chữ cái
+                  </span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-kinari text-nibi border border-suna">50 âm</span>
+                </div>
+                <div className="mt-1 font-bold text-sumi group-hover:text-ai transition truncate text-sm">
+                  Hiragana & Katakana
+                </div>
+                <p className="text-[11px] text-nibi line-clamp-2 mt-0.5">
                   Phát âm chuẩn từng chữ, đọc tuần tự cả hàng và tập viết nét trực quan.
-                </span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-indigo-500 group-hover:underline">
+                </p>
+                <span className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-ai group-hover:underline">
                   Mở bảng chữ cái <ArrowRight className="w-3 h-3" />
                 </span>
-              </span>
+              </div>
             </button>
           </aside>
         </div>

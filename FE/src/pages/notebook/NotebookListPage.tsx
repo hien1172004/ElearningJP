@@ -250,24 +250,27 @@ export const NotebookListPage: React.FC = () => {
     }
   }
 
-  // Dropdown menu cho nút "Thêm mới +" ở danh sách ngoài (Ảnh 1)
+  // Dropdown menu cho nút "Thêm mới" ở danh sách ngoài
   const rootAddMenuItems: MenuProps['items'] = [
     {
       key: 'add-notebook',
-      label: <span className="font-medium text-xs py-1">Thêm mới Sổ tay</span>,
-      icon: <FileTextOutlined className="text-gray-600" />,
+      label: <span className="font-medium text-xs">Tạo sổ tay mới</span>,
+      icon: <FileTextOutlined className="text-ai text-sm" />,
       onClick: () => setCreateNotebookOpen(true),
     },
     {
       key: 'add-group',
-      label: <span className="font-medium text-xs py-1">Thêm mới Nhóm sổ tay</span>,
-      icon: <FolderAddOutlined className="text-gray-600" />,
+      label: <span className="font-medium text-xs">Tạo nhóm sổ tay</span>,
+      icon: <FolderAddOutlined className="text-ai text-sm" />,
       onClick: () => setCreateGroupOpen(true),
     },
     {
+      type: 'divider',
+    },
+    {
       key: 'import-share',
-      label: <span className="font-medium text-xs py-1">Nhập Sổ tay</span>,
-      icon: <PlusCircleOutlined className="text-gray-600" />,
+      label: <span className="font-medium text-xs">Nhập từ mã chia sẻ</span>,
+      icon: <PlusCircleOutlined className="text-nibi text-sm" />,
       onClick: () => setImportShareOpen(true),
     },
   ]
@@ -339,42 +342,53 @@ export const NotebookListPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* 1. Header Tab Navigation: Sổ tay của tôi | Khám phá (Chỉ hiện khi ở ngoài Root) */}
-      {!currentGroup && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="px-5 py-2 rounded-xl bg-blue-600 text-white font-medium text-sm shadow-xs cursor-pointer"
-          >
-            Sổ tay của tôi
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/notebooks/explore')}
-            className="px-5 py-2 rounded-xl bg-surface hover:bg-gray-50 text-gray-600 font-medium text-sm border border-gray-100 transition-colors cursor-pointer"
-          >
-            Khám phá
-          </button>
+      {/* 1. Page Header & Segmented Navigation */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-sumi tracking-tight">
+            Sổ tay từ vựng
+          </h1>
+          <p className="text-xs sm:text-sm text-nibi mt-0.5">
+            Lưu trữ từ vựng, chữ Hán và ôn tập thông minh theo chu kỳ lặp lại ngắt quãng (SRS).
+          </p>
         </div>
-      )}
+
+        {!currentGroup && (
+          <div className="flex items-center p-1 bg-kinari/80 rounded-xl border border-suna/80 self-start sm:self-auto shadow-2xs">
+            <button
+              type="button"
+              className="px-4 py-1.5 rounded-lg bg-surface text-ai font-bold text-xs shadow-2xs cursor-pointer"
+            >
+              Sổ tay của tôi
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/notebooks/explore')}
+              className="px-4 py-1.5 rounded-lg text-nibi hover:text-sumi font-medium text-xs transition-colors cursor-pointer"
+            >
+              Khám phá
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* 2. Khối Tổng quan (SRS Spaced Repetition Overview) - Chỉ hiện khi ở ngoài Root */}
       {!currentGroup && (
-        <div className="bg-surface border border-suna rounded-3xl p-6 shadow-xs space-y-4">
+        <div className="bg-surface border border-suna/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              <h2 className="text-base font-bold text-gray-800">Tổng quan</h2>
-              <div className="h-4 w-px bg-gray-200" />
-              <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                <span>Học lặp lại ngắt quãng</span>
+              <h2 className="text-sm sm:text-base font-bold text-sumi">Tổng quan ghi nhớ</h2>
+              <div className="h-4 w-px bg-suna" />
+              <div className="flex items-center gap-2 text-xs text-nibi">
+                <span>Lặp lại ngắt quãng (SRS)</span>
                 <Tooltip title="Phương pháp Spaced Repetition (SM-2) tự động tối ưu chu kỳ ôn tập giúp ghi nhớ từ vựng sâu vào trí nhớ dài hạn.">
-                  <InfoCircleOutlined className="text-gray-400 cursor-pointer text-xs" />
+                  <InfoCircleOutlined className="text-nibi hover:text-sumi cursor-pointer text-xs" />
                 </Tooltip>
                 <Switch
                   size="small"
                   checked={srsEnabled}
                   onChange={setSrsEnabled}
-                  className={srsEnabled ? 'bg-blue-600' : ''}
+                  className={srsEnabled ? 'bg-ai' : ''}
                 />
               </div>
             </div>
@@ -388,76 +402,75 @@ export const NotebookListPage: React.FC = () => {
                   message.info('Vui lòng tạo hoặc thêm từ vào sổ tay trước khi ôn tập!')
                 }
               }}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-ai hover:bg-ai/90 text-white font-semibold text-xs shadow-2xs transition-all cursor-pointer"
             >
               <ReadOutlined className="text-sm" />
               <span>Ôn tập sổ tay</span>
             </button>
           </div>
 
-          {/* 4 Thẻ mức độ ghi nhớ */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-1">
-            <div className="bg-surface border border-red-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
-              <div className="absolute left-0 top-3 bottom-3 w-1 bg-red-500 rounded-r" />
-              <div className="pl-2">
-                <div className="text-xs text-gray-500 font-medium">Chưa thuộc</div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">
-                  {stats?.notLearnedCount ?? stats?.unlearnedCount ?? 0}{' '}
-                  <span className="text-xs font-normal text-gray-400">từ</span>
-                </div>
+          {/* 4 Thẻ mức độ ghi nhớ (Thanh lịch, không vạch sọc bên) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-1">
+            <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-rose-300 transition">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs text-nibi font-medium">Chưa thuộc</span>
+                <span className="w-2 h-2 rounded-full bg-rose-500" />
+              </div>
+              <div className="text-2xl font-bold text-sumi mt-1.5">
+                {stats?.notLearnedCount ?? stats?.unlearnedCount ?? 0}{' '}
+                <span className="text-xs font-normal text-nibi">từ</span>
               </div>
             </div>
 
-            <div className="bg-surface border border-amber-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
-              <div className="absolute left-0 top-3 bottom-3 w-1 bg-amber-500 rounded-r" />
-              <div className="pl-2">
-                <div className="text-xs text-gray-500 font-medium">Thuộc lơ mơ</div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">
-                  {stats?.barelyCount ?? 0}{' '}
-                  <span className="text-xs font-normal text-gray-400">từ</span>
-                </div>
+            <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-amber-300 transition">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs text-nibi font-medium">Thuộc lơ mơ</span>
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+              </div>
+              <div className="text-2xl font-bold text-sumi mt-1.5">
+                {stats?.barelyCount ?? 0}{' '}
+                <span className="text-xs font-normal text-nibi">từ</span>
               </div>
             </div>
 
-            <div className="bg-surface border border-blue-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
-              <div className="absolute left-0 top-3 bottom-3 w-1 bg-blue-500 rounded-r" />
-              <div className="pl-2">
-                <div className="text-xs text-gray-500 font-medium">Thuộc kha khá</div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">
-                  {stats?.moderateCount ?? 0}{' '}
-                  <span className="text-xs font-normal text-gray-400">từ</span>
-                </div>
+            <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-ai/40 transition">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs text-nibi font-medium">Thuộc kha khá</span>
+                <span className="w-2 h-2 rounded-full bg-ai" />
+              </div>
+              <div className="text-2xl font-bold text-sumi mt-1.5">
+                {stats?.moderateCount ?? 0}{' '}
+                <span className="text-xs font-normal text-nibi">từ</span>
               </div>
             </div>
 
-            <div className="bg-surface border border-emerald-100/80 rounded-2xl p-4 shadow-2xs relative overflow-hidden">
-              <div className="absolute left-0 top-3 bottom-3 w-1 bg-emerald-500 rounded-r" />
-              <div className="pl-2">
-                <div className="text-xs text-gray-500 font-medium">Thuộc làu làu</div>
-                <div className="text-2xl font-bold text-gray-900 mt-1">
-                  {stats?.masteredCount ?? 0}{' '}
-                  <span className="text-xs font-normal text-gray-400">từ</span>
-                </div>
+            <div className="bg-surface border border-suna/80 rounded-xl p-3.5 shadow-2xs hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs text-nibi font-medium">Thuộc làu làu</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <div className="text-2xl font-bold text-sumi mt-1.5">
+                {stats?.masteredCount ?? 0}{' '}
+                <span className="text-xs font-normal text-nibi">từ</span>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 3. Nút QUAY LẠI khi đang ở bên trong nhóm (Đúng như Ảnh 3) */}
+      {/* 3. Nút QUAY LẠI khi đang ở bên trong nhóm */}
       {currentGroup && (
         <div>
           <BackButton onClick={() => setCurrentGroup(null)} />
         </div>
       )}
 
-      {/* 4. Khối Danh sách Sổ tay (Khung lớn bo tròn) */}
-      <div className="bg-surface border border-suna rounded-3xl p-6 shadow-xs space-y-6">
+      {/* 4. Khối Danh sách Sổ tay */}
+      <div className="bg-surface border border-suna/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-6">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            {/* Tiêu đề: Nếu đang ở trong nhóm thì hiện tên nhóm to (Ảnh 3: d1); nếu ở ngoài thì hiện "Danh sách sổ tay" */}
-            <h2 className="text-base font-bold text-gray-800">
+            <h2 className="text-base font-bold text-sumi">
               {currentGroup ? currentGroup.name : 'Danh sách sổ tay'}
             </h2>
 
@@ -466,55 +479,54 @@ export const NotebookListPage: React.FC = () => {
                 type="button"
                 disabled={isSyncing}
                 onClick={() => handleSyncAll(false)}
-                className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 px-3 py-1.5 rounded-xl border border-gray-200/80 transition-all cursor-pointer disabled:opacity-60 shadow-2xs"
+                className="flex items-center gap-1.5 text-xs text-nibi hover:text-ai bg-slate-50 hover:bg-kamenozoki/60 px-3 py-1.5 rounded-lg border border-suna transition-all cursor-pointer disabled:opacity-60 shadow-2xs"
                 title="Đồng bộ danh sách sổ tay, thư mục và thống kê SRS từ máy chủ"
               >
-                <ReloadOutlined className={`text-xs ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
-                <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ sổ tay'}</span>
+                <ReloadOutlined className={`text-xs ${isSyncing ? 'animate-spin text-ai' : ''}`} />
+                <span>{isSyncing ? 'Đang đồng bộ...' : 'Đồng bộ'}</span>
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Ô tìm kiếm */}
             <Input
-              prefix={<SearchOutlined className="text-gray-400 text-sm" />}
-              placeholder="Tìm kiếm..."
+              prefix={<SearchOutlined className="text-nibi text-sm" />}
+              placeholder="Tìm kiếm sổ tay..."
               allowClear
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="w-48 sm:w-56 h-9 rounded-xl border-gray-200 text-xs"
+              className="w-40 sm:w-52 h-9 rounded-lg border-suna text-xs"
             />
 
-            {/* Nút Thêm mới: Nếu đang ở trong nhóm thì bấm thẳng vào tạo sổ tay vào nhóm đó (Ảnh 3: nút +); nếu ở ngoài thì mở dropdown 3 mục (Ảnh 1) */}
+            {/* Nút Thêm mới */}
             {currentGroup ? (
               <button
                 type="button"
                 onClick={() => setCreateNotebookOpen(true)}
-                className="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center text-sm shadow-2xs transition-colors cursor-pointer"
+                className="h-9 px-3.5 rounded-lg bg-ai hover:bg-ai/90 text-white inline-flex items-center justify-center gap-1.5 text-xs font-medium shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0 select-none"
                 title="Thêm sổ tay vào nhóm này"
               >
-                <PlusOutlined />
+                <PlusOutlined className="text-xs shrink-0" />
+                <span className="whitespace-nowrap">Thêm sổ tay</span>
               </button>
             ) : (
               <Dropdown menu={{ items: rootAddMenuItems }} trigger={['click']} placement="bottomRight">
                 <button
                   type="button"
-                  className="h-9 pl-3.5 pr-1 bg-surface hover:bg-gray-50 border border-gray-200 rounded-full flex items-center gap-2 text-xs font-medium text-gray-700 shadow-2xs transition-all cursor-pointer"
+                  className="h-9 px-3.5 bg-ai hover:bg-ai/90 text-white rounded-lg inline-flex items-center justify-center gap-1.5 text-xs font-medium shadow-2xs transition-all cursor-pointer whitespace-nowrap shrink-0 select-none"
                 >
-                  <span>Thêm mới</span>
-                  <span className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs shadow-2xs">
-                    <PlusOutlined />
-                  </span>
+                  <PlusOutlined className="text-xs shrink-0" />
+                  <span className="whitespace-nowrap">Thêm mới</span>
                 </button>
               </Dropdown>
             )}
 
-            {/* Nút Bộ lọc sắp xếp icon tròn (Ảnh 5) */}
+            {/* Nút Bộ lọc sắp xếp */}
             <Dropdown menu={{ items: sortMenuItems }} trigger={['click']} placement="bottomRight">
               <button
                 type="button"
-                className="w-9 h-9 rounded-full bg-surface hover:bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer shadow-2xs"
+                className="w-9 h-9 rounded-lg bg-surface hover:bg-slate-50 border border-suna flex items-center justify-center text-nibi hover:text-ai transition-colors cursor-pointer shadow-2xs shrink-0"
                 title="Sắp xếp danh sách"
               >
                 <FilterOutlined className="text-sm" />
@@ -523,21 +535,21 @@ export const NotebookListPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 5. NỘI DUNG LƯỚI CARD (Grid 3 Cột) */}
+        {/* 5. NỘI DUNG LƯỚI CARD */}
         {isLoading ? (
-          <div className="py-20 text-center text-gray-400 text-xs">
+          <div className="py-20 text-center text-nibi text-xs">
             Đang nạp danh sách...
           </div>
         ) : currentGroup ? (
-          /* TRƯỜNG HỢP 1: Đang xem bên trong nhóm (Ảnh 3) */
+          /* TRƯỜNG HỢP 1: Đang xem bên trong nhóm */
           displayedGroupNotebooks.length === 0 ? (
-            <div className="py-16 text-center text-gray-400 text-xs space-y-3">
+            <div className="py-16 text-center text-nibi text-xs space-y-3">
               <div>Nhóm này chưa có cuốn sổ tay nào.</div>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => setCreateNotebookOpen(true)}
-                className="rounded-xl"
+                className="rounded-lg"
               >
                 Thêm sổ tay đầu tiên vào nhóm
               </Button>
@@ -558,27 +570,27 @@ export const NotebookListPage: React.FC = () => {
             </div>
           )
         ) : (
-          /* TRƯỜNG HỢP 2: Đang ở danh sách ngoài Root (Ảnh 2) */
+          /* TRƯỜNG HỢP 2: Đang ở danh sách ngoài Root */
           displayedGroups.length === 0 && displayedUngroupedNotebooks.length === 0 ? (
-            <div className="py-20 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-3xl bg-gray-50 flex items-center justify-center text-gray-300 mb-4 border border-gray-100">
-                <FolderOpenOutlined className="text-3xl" />
+            <div className="py-16 px-4 flex flex-col items-center justify-center text-center max-w-md mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-kamenozoki/70 border border-ai/20 flex items-center justify-center text-ai mb-3.5 shadow-2xs">
+                <FolderOpenOutlined className="text-2xl" />
               </div>
-              <h3 className="font-semibold text-gray-700 text-sm">Chưa có sổ tay nào</h3>
-              <p className="text-xs text-gray-400 mt-1 max-w-sm">
-                Tạo sổ tay hoặc nhóm sổ tay đầu tiên của bạn để bắt đầu lưu từ vựng và ôn tập.
+              <h3 className="font-bold text-sumi text-base">Chưa có sổ tay nào</h3>
+              <p className="text-xs text-nibi mt-1 leading-relaxed">
+                Tạo sổ tay hoặc nhóm thư mục đầu tiên để lưu từ vựng khi tra cứu hoặc học bài, sẵn sàng ôn tập ngắt quãng (SRS).
               </p>
               <button
                 type="button"
                 onClick={() => setCreateNotebookOpen(true)}
-                className="mt-4 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-xs transition-colors cursor-pointer"
+                className="mt-4 px-5 py-2.5 rounded-lg bg-ai hover:bg-ai/90 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer"
               >
-                Tạo sổ tay ngay
+                + Tạo cuốn sổ tay đầu tiên
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* PHẦN A: Các Card Nhóm sổ tay màu xanh dương 📁 (Ví dụ: d1 - 1 mục như Ảnh 2) */}
+              {/* PHẦN A: Các Card Nhóm sổ tay màu xanh dương 📁 */}
               {displayedGroups.map((g) => (
                 <NotebookGroupCard
                   key={`group-${g.id}`}
@@ -590,7 +602,7 @@ export const NotebookListPage: React.FC = () => {
                 />
               ))}
 
-              {/* PHẦN B: Các Card Sổ tay độc lập màu vàng cam 📒 (Ví dụ: ffgf - 1 từ như Ảnh 2) */}
+              {/* PHẦN B: Các Card Sổ tay độc lập màu vàng cam 📒 */}
               {displayedUngroupedNotebooks.map((nb) => (
                 <NotebookCard
                   key={`nb-${nb.id}`}

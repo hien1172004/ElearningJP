@@ -78,22 +78,22 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
 
   return (
     <div
-      className={`bg-surface rounded-xl border border-suna shadow-xs p-4 space-y-3 ${className}`}
+      className={`bg-surface rounded-2xl border border-suna/90 shadow-xs p-4 sm:p-5 space-y-4 ${className}`}
     >
       {/* 1. HEADER: TIÊU ĐỀ + NHÃN JLPT */}
       <div className="flex items-center justify-between pb-1">
-        <h2 className="text-base font-black text-slate-900 tracking-tight">
+        <h2 className="text-base font-bold text-sumi tracking-tight">
           Bảng xếp hạng
         </h2>
 
         {/* Nhãn JLPT */}
-        <span className="px-3 py-1 bg-slate-100 text-slate-800 text-xs font-bold rounded-xl border border-slate-200">
+        <span className="px-2.5 py-0.5 bg-kamenozoki text-ai text-xs font-semibold rounded-md border border-ai/20">
           JLPT
         </span>
       </div>
 
       {/* 2. DÃY NÚT CHỌN CẤP ĐỘ JLPT (N5 -> N1) VÀ DROPDOWN THỜI GIAN */}
-      <div className="flex items-center justify-between gap-1.5 border-b border-slate-100 pb-3">
+      <div className="flex items-center justify-between gap-1.5 border-b border-suna/70 pb-3">
         {/* Các cấp độ N5, N4, N3, N2, N1 */}
         <div className="flex items-center gap-1 sm:gap-1.5">
           {levels.map((lvl) => {
@@ -103,10 +103,10 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
                 key={lvl}
                 type="button"
                 onClick={() => setSelectedLevel(lvl)}
-                className={`px-2.5 sm:px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-xs font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-ai text-white shadow-2xs font-bold'
+                    : 'text-nibi hover:text-ai hover:bg-kamenozoki/50'
                 }`}
               >
                 {lvl}
@@ -120,13 +120,13 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
           <select
             value={selectedTimeframe}
             onChange={(e: any) => setSelectedTimeframe(e.target.value)}
-            className="appearance-none bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-bold rounded-xl pl-3 pr-7 py-1 border border-slate-200/80 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+            className="appearance-none bg-slate-50 hover:bg-slate-100 text-sumi text-xs font-medium rounded-lg pl-3 pr-7 py-1 border border-suna cursor-pointer focus:outline-none focus:border-ai transition-colors"
           >
             <option value="WEEK">Tuần</option>
             <option value="MONTH">Tháng</option>
             <option value="ALL">Tất cả</option>
           </select>
-          <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2 pointer-events-none" />
+          <ChevronDown className="w-3.5 h-3.5 text-nibi absolute right-2 pointer-events-none" />
         </div>
       </div>
 
@@ -139,52 +139,52 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
 
       {/* 3. KHUNG THÔNG BÁO THỨ HẠNG CỦA HỌC VIÊN */}
       {loading ? (
-        <div className="py-3 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
-          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+        <div className="py-3 flex items-center justify-center gap-2 text-xs font-semibold text-nibi">
+          <Loader2 className="w-4 h-4 text-ai animate-spin" />
           <span>Đang cập nhật thứ hạng...</span>
         </div>
       ) : myRank ? (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/90 rounded-2xl p-3 flex items-center justify-between text-xs">
+        <div className="bg-kamenozoki/50 border border-ai/20 rounded-xl p-3 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+            <div className="w-7 h-7 rounded-full bg-ai text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
               #{myRank.rank}
             </div>
             <div className="truncate">
-              <p className="font-bold text-blue-950 text-xs truncate">
-                Thứ hạng: <span className="text-blue-600 font-black">Top #{myRank.rank}</span>
+              <p className="font-bold text-sumi text-xs truncate">
+                Thứ hạng: <span className="text-ai font-bold">Top #{myRank.rank}</span>
               </p>
-              <p className="text-[10px] text-blue-800/80">
+              <p className="text-[10px] text-nibi">
                 {selectedLevel} • {Math.round((myRank.timeSpentSeconds || 0) / 60)} phút
               </p>
             </div>
           </div>
           <div className="text-right shrink-0 pl-2">
-            <span className="text-base font-black text-blue-950 font-mono">
+            <span className="text-base font-bold text-sumi font-mono">
               {myRank.score}
             </span>
-            <span className="text-[11px] text-blue-700 font-semibold">/{myRank.maxScore || 180}</span>
+            <span className="text-[11px] text-nibi font-semibold">/{myRank.maxScore || 180}</span>
           </div>
         </div>
       ) : (
-        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex items-center gap-2 text-xs text-slate-600 leading-tight">
-          <Info className="w-4 h-4 text-slate-400 shrink-0" />
+        <div className="bg-kinari/80 border border-suna rounded-xl p-3 flex items-center gap-2 text-xs text-nibi leading-tight">
+          <Info className="w-4 h-4 text-ai shrink-0" />
           <span>Bạn cần hoàn thành một bài thi để vào bảng xếp hạng</span>
         </div>
       )}
 
       {/* 4. BỤC VINH DANH TOP 3 & DANH SÁCH THỨ HẠNG */}
       {loading ? (
-        <div className="py-16 text-center text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-2" />
+        <div className="py-16 text-center text-nibi">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-ai mb-2" />
           <p className="text-xs font-semibold">Đang tải bảng xếp hạng...</p>
         </div>
       ) : rankings.length === 0 ? (
-        <div className="py-12 px-4 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2 text-slate-400">
-            <Crown className="w-6 h-6" />
+        <div className="py-12 px-4 text-center bg-kinari/50 rounded-xl border border-dashed border-suna">
+          <div className="w-12 h-12 rounded-full bg-surface border border-suna flex items-center justify-center mx-auto mb-2 text-nibi shadow-2xs">
+            <Crown className="w-6 h-6 text-nibi/70" />
           </div>
-          <p className="text-xs font-bold text-slate-700 mb-1">Chưa có lượt thi nào</p>
-          <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+          <p className="text-xs font-bold text-sumi mb-1">Chưa có lượt thi nào</p>
+          <p className="text-[11px] text-nibi max-w-xs mx-auto">
             Chưa có thí sinh nào hoàn thành bài thi {selectedLevel} trong khoảng thời gian này.
             Hãy làm bài thi ngay để ghi danh lên đầu bảng!
           </p>
