@@ -128,40 +128,40 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
         </div>
 
         {/* Nút hành động nổi bật */}
-        <div className="flex items-center gap-2.5 shrink-0 self-start">
+        <div className="flex items-center gap-2 shrink-0 self-start flex-wrap">
           <button
             type="button"
             onClick={handlePlayAudio}
-            className="p-3.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-2 font-semibold text-sm"
+            className="px-4 py-2.5 rounded-md border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm cursor-pointer"
             title="Nghe phát âm chuẩn"
           >
-            <Volume2 className="w-5 h-5" />
-            <span className="hidden sm:inline">Phát âm</span>
+            <Volume2 className="w-4 h-4" />
+            <span>Phát âm</span>
           </button>
 
           <button
             type="button"
             onClick={handleAddToSrs}
             disabled={isAddedToSrs || addToSrs.isPending}
-            className={`p-3.5 rounded-md hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm ${
+            className={`px-4 py-2.5 rounded-md hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm ${
               isAddedToSrs
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
                 : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
             }`}
             title={isAddedToSrs ? 'Đã thêm vào SRS' : 'Thêm vào SRS để ôn tập'}
           >
-            {isAddedToSrs ? <Check className="w-5 h-5 text-emerald-600" /> : <BookmarkPlus className="w-5 h-5 text-rose-600" />}
-            <span className="hidden sm:inline">{isAddedToSrs ? 'Đã lưu SRS' : 'Lưu SRS'}</span>
+            {isAddedToSrs ? <Check className="w-4 h-4 text-emerald-600" /> : <BookmarkPlus className="w-4 h-4 text-rose-600" />}
+            <span>{isAddedToSrs ? 'Đã lưu SRS' : 'Lưu SRS'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsAddToNotebookOpen(true)}
-            className="p-3.5 rounded-md bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm cursor-pointer"
+            className="px-4 py-2.5 rounded-md border border-transparent bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm cursor-pointer"
             title="Thêm từ vựng vào sổ tay"
           >
-            <Plus className="w-5 h-5 text-gray-700" />
-            <span className="hidden sm:inline">Sổ tay</span>
+            <Plus className="w-4 h-4 text-gray-700" />
+            <span>Sổ tay</span>
           </button>
         </div>
       </div>

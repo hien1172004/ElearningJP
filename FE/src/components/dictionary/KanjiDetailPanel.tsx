@@ -132,11 +132,11 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-start flex-wrap">
+        <div className="flex items-center gap-2 self-start flex-wrap md:justify-end md:max-w-[55%]">
           <button
             type="button"
             onClick={() => playSmartAudio({ text: detail.character })}
-            className="px-3.5 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs cursor-pointer"
+            className="px-4 py-2.5 rounded-md border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm cursor-pointer"
             title="Nghe phát âm"
           >
             <Volume2 className="w-4 h-4" />
@@ -146,7 +146,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
           <button
             type="button"
             onClick={() => setIsPracticeOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs cursor-pointer"
+            className="px-4 py-2.5 rounded-md border border-transparent bg-amber-500 hover:bg-amber-600 text-white hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm cursor-pointer"
             title="Luyện viết & Chấm điểm nét AI"
           >
             <PenTool className="w-4 h-4" />
@@ -157,7 +157,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
             type="button"
             onClick={handleAddToSrs}
             disabled={isAddedToSrs || addToSrs.isPending}
-            className={`px-3.5 py-2 rounded-xl hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs ${
+            className={`px-4 py-2.5 rounded-md hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm ${
               isAddedToSrs
                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
                 : 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer'
@@ -171,7 +171,7 @@ export const KanjiDetailPanel: React.FC<KanjiDetailPanelProps> = ({
           <button
             type="button"
             onClick={() => setIsAddToNotebookOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 hover:scale-105 active:scale-95 transition shadow-2xs flex items-center gap-1.5 font-semibold text-xs cursor-pointer"
+            className="px-4 py-2.5 rounded-md border border-transparent bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 hover:scale-105 active:scale-95 transition shadow-sm flex items-center gap-1.5 font-semibold text-sm cursor-pointer"
             title="Thêm chữ Hán vào sổ tay"
           >
             <Plus className="w-4 h-4 text-gray-700" />
