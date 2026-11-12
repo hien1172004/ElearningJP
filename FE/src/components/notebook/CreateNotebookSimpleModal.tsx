@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Input, Button } from 'antd'
 import { FileTextOutlined } from '@ant-design/icons'
+import { RequiredMark } from '@/components/common'
 
 interface CreateNotebookSimpleModalProps {
   open: boolean
@@ -54,7 +55,7 @@ export const CreateNotebookSimpleModal: React.FC<CreateNotebookSimpleModalProps>
         {/* Input Tên sổ tay */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-gray-700">
-            Tên sổ tay
+            Tên sổ tay<RequiredMark />
           </label>
           <Input
             placeholder="Nhập tên sổ tay"

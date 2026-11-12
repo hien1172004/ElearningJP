@@ -62,7 +62,7 @@ import {
   ArrowRight,
   ShieldCheck,
 } from 'lucide-react'
-import { BackButton } from '@/components/common'
+import { BackButton, RequiredMark } from '@/components/common'
 
 export const AdminExamPreviewPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>()
@@ -1855,7 +1855,7 @@ export const AdminExamPreviewPage: React.FC = () => {
 
                                         <div>
                                           <label className="block text-xs font-bold text-slate-700 mb-1">
-                                            Bản dịch tiếng Việt tham khảo (tùy chọn):
+                                            Bản dịch tiếng Việt tham khảo:
                                           </label>
                                           <textarea
                                             rows={2}
@@ -2008,7 +2008,7 @@ export const AdminExamPreviewPage: React.FC = () => {
               <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-2">
                 <label className="block text-xs font-bold text-indigo-950 flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-indigo-600" />
-                  <span>Chọn Mondai (Bài thi thành phần): *</span>
+                  <span>Chọn Mondai (Bài thi thành phần):<RequiredMark /></span>
                 </label>
                 <select
                   value={selectedMondaiCode}
@@ -2628,7 +2628,7 @@ export const AdminExamPreviewPage: React.FC = () => {
             {/* Nhập ghi chú thay đổi (Changelog) */}
             <div className="space-y-1.5">
               <label className="block text-xs font-bold text-slate-700">
-                Ghi chú phát hành / Lý do cập nhật (Tùy chọn):
+                Ghi chú phát hành / Lý do cập nhật:
               </label>
               <textarea
                 value={publishChangelog}
@@ -3240,7 +3240,7 @@ const QuestionItemComponent: React.FC<QuestionItemComponentProps> = ({
           {/* Giải thích */}
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">
-              Giải thích đáp án (tùy chọn):
+              Giải thích đáp án:
             </label>
             <textarea
               rows={2}

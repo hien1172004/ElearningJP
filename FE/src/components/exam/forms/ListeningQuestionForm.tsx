@@ -3,6 +3,7 @@ import { Image as ImageIcon, Volume2, Sparkles, Trash2 } from 'lucide-react'
 import { QuestionAudioPlayer } from '@/components/exam/QuestionAudioPlayer'
 import { AudioSegmentTrimmer } from '@/components/exam/AudioSegmentTrimmer'
 import { FileUploadButton } from '@/components/exam/FileUploadButton'
+import { RequiredMark } from '@/components/common'
 
 export interface ListeningOptionItem {
   id?: number
@@ -296,7 +297,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
         {/* CÁC PHƯƠNG ÁN LỰA CHỌN */}
         <div className="space-y-2">
           <label className="block text-xs font-bold text-slate-800">
-            {options.length} Phương án lựa chọn (Chọn 1 đáp án đúng): *
+            {options.length} Phương án lựa chọn (Chọn 1 đáp án đúng):<RequiredMark />
           </label>
 
           {data.hasVisualOptions ? (

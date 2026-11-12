@@ -3,7 +3,8 @@ import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { Pencil, Trash2, Plus, BookOpen, X as XIcon, Check, Eye } from 'lucide-react'
 import { Modal, App, Button, Input, InputNumber } from 'antd'
 import { toast } from 'sonner'
-import { useLessonDetail, useLessonQuizManage, useQuizItemMutations } from '@/hooks'
+import { useLessonDetail, useLessonQuizManage, useQuizItemMutations, useOnConcurrentReload, useFormAutosave } from '@/hooks'
+import { AutosaveBar, AutosaveScope } from '@/components/course/autosave'
 import { QUIZ_TYPE_LABEL } from './constants'
 import type { LessonQuizItem } from '@/hooks/useQuizItemMutations'
 import type { QuizQuestionWithAnswer } from '@/types'
@@ -12,6 +13,7 @@ import {
   type MatchingData,
 } from './MatchingPairsEditor'
 import { shuffleMatchingRight } from './matchingFromLesson'
+import { RequiredMark } from '@/components/common'
 
 interface QuizPanelProps {
   lessonId: number
@@ -648,6 +650,11 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
   const { message } = App.useApp()
   const { createQuizItem, updateQuizItem } = useQuizItemMutations(lessonId)
 
+  // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
+  useOnConcurrentReload(() => {
+    if (open && editing) onClose()
+  })
+
   // Lấy dữ liệu lesson (kèm sections + items) để làm candidates cho MATCHING.
   // Hook có sẵn sẽ tự cache 60s; nếu lesson chưa load thì vẫn cho phép nhập tay.
   const { data: lesson } = useLessonDetail(lessonId)
@@ -670,6 +677,35 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
       { key: 'R1', label: '' },
       { key: 'R2', label: '' },
     ],
+  })
+
+  // Tự lưu câu hỏi đang soạn dở (chỉ người này thấy): F5 / đóng / xung đột không mất phần đã gõ
+  const autosave = useFormAutosave<{
+    questionText: string
+    explanation: string
+    orderIndex?: number
+    questionType: string
+    mcOptions: McOptionRow[]
+    correctText: string
+    matchingData: MatchingData
+  }>({
+    lessonId,
+    formKey: open ? (editing ? `quiz:${editing.id}` : 'quiz:new') : null,
+    currentVersion: editing?.version,
+    getSnapshot: () => ({
+      baseVersion: editing?.version,
+      values: { questionText, explanation, orderIndex, questionType, mcOptions, correctText, matchingData },
+    }),
+    changeSignal: [questionText, explanation, orderIndex, questionType, mcOptions, correctText, matchingData],
+    onRestore: ({ values: v }) => {
+      setQuestionText(v.questionText ?? '')
+      setExplanation(v.explanation ?? '')
+      setOrderIndex(v.orderIndex)
+      if (!editing && v.questionType) setQuestionType(v.questionType) // loại câu không đổi khi sửa
+      if (v.mcOptions) setMcOptions(v.mcOptions)
+      setCorrectText(v.correctText ?? '')
+      if (v.matchingData) setMatchingData(v.matchingData)
+    },
   })
 
   /**
@@ -882,6 +918,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
       } else {
         await createQuizItem.mutateAsync(payload)
       }
+      autosave.clear() // lưu thành công → bỏ bản tự lưu
       onClose()
     } catch {
       /* lỗi đã toast trong hook */
@@ -905,10 +942,12 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
       destroyOnHidden
       width={820}
     >
+      <AutosaveBar autosave={autosave} />
+      <AutosaveScope autosave={autosave}>
       <div className="space-y-3 pt-2">
         {/* Loại câu hỏi */}
         <div>
-          <label className="text-xs font-semibold text-gray-700 mb-1 block">Loại câu hỏi</label>
+          <label className="text-xs font-semibold text-gray-700 mb-1 block">Loại câu hỏi<RequiredMark /></label>
           <div className="grid grid-cols-3 gap-2">
             {(['MULTIPLE_CHOICE', 'FILL_IN_THE_BLANK', 'MATCHING'] as const).map((t) => (
               <button
@@ -930,7 +969,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
         {/* Nội dung + giải thích + thứ tự */}
         <div className="rounded-md border border-emerald-200 bg-emerald-50/30 p-3 space-y-2">
           <div>
-            <label className="text-xs font-semibold text-gray-700 mb-1 block">Nội dung câu hỏi</label>
+            <label className="text-xs font-semibold text-gray-700 mb-1 block">Nội dung câu hỏi<RequiredMark /></label>
             <Input.TextArea
               rows={2}
               value={questionText}
@@ -941,7 +980,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
           {/* Ô thứ tự chỉ hiện khi sửa; thêm mới → BE tự gán vào cuối danh sách */}
           <div className={editing ? 'grid grid-cols-3 gap-2' : undefined}>
             <div className={editing ? 'col-span-2' : undefined}>
-              <label className="text-xs font-semibold text-gray-700 mb-1 block">Giải thích (tuỳ chọn)</label>
+              <label className="text-xs font-semibold text-gray-700 mb-1 block">Giải thích</label>
               <Input
                 value={explanation}
                 onChange={(e) => setExplanation(e.target.value)}
@@ -966,7 +1005,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
         {questionType === 'MULTIPLE_CHOICE' && (
           <div className="rounded-md border border-cyan-200 bg-cyan-50/30 p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-cyan-700">Các đáp án (chọn 1 đáp án đúng)</p>
+              <p className="text-xs font-bold text-cyan-700">Các đáp án (chọn 1 đáp án đúng)<RequiredMark /></p>
               <Button
                 size="small"
                 onClick={() =>
@@ -1027,7 +1066,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
         {/* Đáp án cho FILL_IN_THE_BLANK */}
         {questionType === 'FILL_IN_THE_BLANK' && (
           <div className="rounded-md border border-amber-200 bg-amber-50/30 p-3 space-y-2">
-            <p className="text-xs font-bold text-amber-700">Đáp án đúng</p>
+            <p className="text-xs font-bold text-amber-700">Đáp án đúng<RequiredMark /></p>
             <Input
               value={correctText}
               onChange={(e) => setCorrectText(e.target.value)}
@@ -1044,7 +1083,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
           <div className="rounded-md border border-indigo-200 bg-indigo-50/30 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider">
-                Câu ghép cặp
+                Câu ghép cặp<RequiredMark />
               </p>
               <span className="text-[10px] text-indigo-500 italic">
                 Mỗi hàng = 1 cặp (vế trái ↔ vế phải)
@@ -1062,6 +1101,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
           </div>
         )}
       </div>
+      </AutosaveScope>
     </Modal>
   )
 }

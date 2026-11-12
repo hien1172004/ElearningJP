@@ -5,6 +5,7 @@ import { GitCompare, RefreshCw } from 'lucide-react'
 import { EmptyState, LoadingState } from '@/components/common'
 import { useCourseChanges } from '@/hooks'
 import type { ChangeStatus, ItemsChange, LessonChange } from '@/types'
+import { cn } from '@/utils/cn'
 
 const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
 
@@ -35,7 +36,12 @@ const formatTime = (iso?: string | null) => (iso ? new Date(iso).toLocaleString(
  * Thay đổi của bản đang soạn so với bản học viên đang học — ADMIN duyệt đúng phần thay đổi,
  * giáo viên kiểm tra trước khi gửi.
  */
-export const CourseChangesView: React.FC<{ courseId: number }> = ({ courseId }) => {
+export const CourseChangesView: React.FC<{
+  courseId: number
+  title?: string
+  /** Bài có trang soạn để mở (đã có trong danh sách bài); bài mới chờ duyệt (V66) không có → không gắn link. */
+  linkable?: (lessonId: number) => boolean
+}> = ({ courseId, title = 'Thay đổi chờ duyệt', linkable }) => {
   const { data, isLoading, isError, refetch, isFetching } = useCourseChanges(courseId)
   const changedLessons = (data?.lessons ?? []).filter((l) => l.status !== 'UNCHANGED')
   const changedExams = (data?.exams ?? []).filter((x) => x.status !== 'UNCHANGED')
@@ -45,7 +51,7 @@ export const CourseChangesView: React.FC<{ courseId: number }> = ({ courseId }) 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="font-bold text-sm text-gray-800 flex items-center gap-1.5">
-            <GitCompare className="w-4 h-4 text-indigo-600" /> Thay đổi chờ duyệt
+            <GitCompare className="w-4 h-4 text-indigo-600" /> {title}
           </h4>
           <p className="text-xs text-gray-500 mt-0.5">
             {data?.publishedVersionNo
@@ -69,7 +75,12 @@ export const CourseChangesView: React.FC<{ courseId: number }> = ({ courseId }) 
           {changedLessons.length > 0 && (
             <ul className="space-y-2">
               {changedLessons.map((l) => (
-                <LessonChangeRow key={l.lessonId} courseId={courseId} change={l} />
+                <LessonChangeRow
+                  key={l.lessonId}
+                  courseId={courseId}
+                  change={l}
+                  linkable={linkable ? linkable(l.lessonId) : true}
+                />
               ))}
             </ul>
           )}
@@ -94,7 +105,11 @@ export const CourseChangesView: React.FC<{ courseId: number }> = ({ courseId }) 
   )
 }
 
-const LessonChangeRow: React.FC<{ courseId: number; change: LessonChange }> = ({ courseId, change: l }) => {
+const LessonChangeRow: React.FC<{ courseId: number; change: LessonChange; linkable: boolean }> = ({
+  courseId,
+  change: l,
+  linkable,
+}) => {
   const details: string[] = []
   if (l.infoChanged) details.push('đổi tên bài')
   if (l.moved) details.push('đổi vị trí')
@@ -103,16 +118,25 @@ const LessonChangeRow: React.FC<{ courseId: number; change: LessonChange }> = ({
   if (l.speakingChanged) details.push('luyện nói thay đổi')
   const sections = l.sections.filter((s) => s.status !== 'UNCHANGED')
 
+  const removed = l.status === 'REMOVED' || !linkable
   return (
-    <li className="rounded-lg border border-gray-100 p-3 space-y-1.5">
+    // Cả thẻ bấm được (link phủ thẻ qua ::after); bài sẽ gỡ không còn trang để mở
+    <li
+      className={cn(
+        'relative rounded-lg border border-gray-100 p-3 space-y-1.5',
+        !removed && 'group transition-colors hover:border-indigo-200 hover:bg-indigo-50/40',
+      )}
+    >
       <div className="flex items-center gap-2 min-w-0">
         <Tag className="rounded-md !m-0 shrink-0" color={STATUS[l.status].color}>{STATUS[l.status].text}</Tag>
-        {l.status === 'REMOVED' ? (
-          <span className="text-sm font-semibold text-gray-500 line-through truncate">{l.title}</span>
+        {removed ? (
+          <span className={cn('text-sm font-semibold truncate', l.status === 'REMOVED' ? 'text-gray-500 line-through' : 'text-gray-900')}>
+            {l.title}
+          </span>
         ) : (
           <Link
             to={`/teacher/courses/${courseId}/lessons/${l.lessonId}`}
-            className="text-sm font-semibold text-gray-900 hover:text-indigo-600 truncate"
+            className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 truncate after:absolute after:inset-0 after:rounded-lg after:content-['']"
           >
             {l.title}
           </Link>

@@ -1,9 +1,12 @@
 package com.jp.elearningjp.entity.curriculum;
 
+import com.jp.elearningjp.shared.enums.CourseReviewStatus;
 import com.jp.elearningjp.shared.persitence.SoftDeletableEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,6 +21,8 @@ import org.hibernate.annotations.DynamicInsert;
 
 /**
  * Entity {@code Lesson} — bài học thuộc một {@link Course}.
+ *
+ * <p>V65: nội dung thuộc 2 bản nháp theo phía ({@link LessonDraft}) — không map collection nội dung trên Lesson.</p>
  *
  * <p>SAU KHI REFACTOR (V14): bảng {@code lessons} chỉ còn giữ thông tin khung
  * của bài học (title, thứ tự, archived). Toàn bộ nội dung (Kanji / Vocabulary /
@@ -51,15 +56,7 @@ public class Lesson extends SoftDeletableEntity {
     @Column(name = "archived_at")
     private Instant archivedAt;
 
-    @Builder.Default
-    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("orderIndex ASC")
-    private List<LessonSection> sections = new ArrayList<>();
 
-    @Builder.Default
-    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("orderIndex ASC")
-    private List<LessonSpeakingScenario> speakingScenarios = new ArrayList<>();
 
     /**
      * Bài có trong phiên bản đang xuất bản (dùng tính tiến độ học viên).
@@ -68,13 +65,41 @@ public class Lesson extends SoftDeletableEntity {
     @Column(name = "in_published_version", insertable = false, updatable = false)
     private Boolean inPublishedVersion;
 
-    public void addSection(LessonSection child) {
-        sections.add(child);
-        child.setLesson(this);
-    }
+    /**
+     * Tăng mỗi lần nội dung live của bài đổi (V65); nháp dựa trên số cũ hơn là nháp đã cũ.
+     * Chỉ đọc: ghi bằng câu lệnh ({@code LessonRepository#bumpLiveRevision}).
+     */
+    @Column(name = "live_revision", insertable = false, updatable = false)
+    private Long liveRevision;
 
-    public void removeSection(LessonSection child) {
-        sections.remove(child);
-        child.setLesson(null);
-    }
+    /**
+     * Phía tạo bài khi bài chưa từng lên bản học viên (V66): chỉ phía này thấy bài; null = cả hai phía thấy.
+     * Ghi lúc tạo bài; xóa về null bằng câu lệnh khi bài lên bản học viên ({@code LessonRepository#markPublishedLessons}).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "created_kind", length = 10, updatable = false)
+    private com.jp.elearningjp.shared.enums.DraftKind createdKind;
+
+    // ---- Duyệt theo bài (V62). CHỈ ĐỌC qua entity: ghi bằng câu lệnh UPDATE có điều kiện trong
+    // LessonRepository để 2 thao tác chồng nhau (sửa / gửi duyệt) được DB xếp hàng theo khóa dòng,
+    // và để save() của entity (vd: sửa tiêu đề) không ghi đè giá trị cũ đang nằm trong bộ nhớ.
+
+    /** EDITING | PENDING_REVIEW (bài chờ duyệt: chỉ đọc với mọi người, kể cả ADMIN). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "review_status", insertable = false, updatable = false)
+    private CourseReviewStatus reviewStatus;
+
+    /** Bản nháp của bài khác bản live. */
+    @Column(name = "has_unpublished_changes", insertable = false, updatable = false)
+    private Boolean hasUnpublishedChanges;
+
+    /** Tăng mỗi lần ghi nội dung bài; gửi duyệt phải khớp số này. */
+    @Column(name = "draft_revision", insertable = false, updatable = false)
+    private Long draftRevision;
+
+    @Column(name = "draft_updated_by_name", insertable = false, updatable = false)
+    private String draftUpdatedByName;
+
+    @Column(name = "draft_updated_at", insertable = false, updatable = false)
+    private Instant draftUpdatedAt;
 }

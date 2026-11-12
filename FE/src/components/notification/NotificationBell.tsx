@@ -130,7 +130,12 @@ export const NotificationBell: React.FC = () => {
 
     // Được giao khóa / luồng duyệt: mở đường dẫn đính kèm (trang soạn khóa hoặc hàng chờ duyệt).
     // Bị gỡ khỏi khóa: không còn quyền nên không có link → không điều hướng.
-    if (notification.type === 'COURSE_TEACHER_ASSIGNMENT' || notification.type === 'COURSE_REVIEW') {
+    if (
+      notification.type === 'COURSE_TEACHER_ASSIGNMENT' ||
+      notification.type === 'COURSE_REVIEW' ||
+      notification.type.startsWith('LESSON_') ||
+      notification.type === 'DRAFT_STALE'
+    ) {
       const link = typeof data?.link === 'string' && data.link.startsWith('/') && !data.link.startsWith('//')
         ? data.link
         : null

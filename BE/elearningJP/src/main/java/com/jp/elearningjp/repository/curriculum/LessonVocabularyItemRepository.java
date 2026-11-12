@@ -13,9 +13,15 @@ public interface LessonVocabularyItemRepository extends JpaRepository<LessonVoca
 
     List<LessonVocabularyItem> findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(Long sectionId);
 
-    List<LessonVocabularyItem> findBySectionLessonIdAndDeletedFalseOrderByOrderIndexAsc(Long lessonId);
+    List<LessonVocabularyItem> findBySectionDraftIdAndDeletedFalseOrderByOrderIndexAsc(Long draftId);
 
     /** Batch fetch VOCAB items kèm vocab (many-to-1) — KHÔNG fetch examples (Bag). */
-    @Query("SELECT DISTINCT vi FROM LessonVocabularyItem vi LEFT JOIN FETCH vi.vocab WHERE vi.section.lesson.id = :lessonId AND vi.deleted = false ORDER BY vi.orderIndex ASC")
-    List<LessonVocabularyItem> findByLessonIdWithVocab(@Param("lessonId") Long lessonId);
+    @Query("SELECT DISTINCT vi FROM LessonVocabularyItem vi LEFT JOIN FETCH vi.vocab WHERE vi.section.draft.id = :draftId AND vi.deleted = false ORDER BY vi.orderIndex ASC")
+    List<LessonVocabularyItem> findByDraftIdWithVocab(@Param("draftId") Long draftId);
+
+    /**
+     * Dòng mang id ổn định {@code originId} (V65) — id trong bản live có thể là id của dòng đã bị xóa khi nháp được
+     * dựng lại; dùng để tìm bài chứa phần tử khi đọc theo id của bản live.
+     */
+    java.util.Optional<LessonVocabularyItem> findFirstByOriginIdOrderByIdDesc(Long originId);
 }

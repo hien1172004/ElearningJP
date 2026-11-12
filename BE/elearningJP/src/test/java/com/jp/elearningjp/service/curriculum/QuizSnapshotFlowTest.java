@@ -63,6 +63,7 @@ class QuizSnapshotFlowTest {
     @Mock LessonProgressRecorder lessonProgressRecorder;
     @Mock EntityManager entityManager;
     @Mock PublishedLessonResolver publishedLessonResolver;
+    @org.mockito.Mock com.jp.elearningjp.service.curriculum.LessonDraftService lessonDraftService;
     @InjectMocks QuizService service;
 
     Lesson lesson;
@@ -71,6 +72,18 @@ class QuizSnapshotFlowTest {
 
     @BeforeEach
     void setUp() {
+        // V65: nháp của bài X có id = X (quy ước trong test)
+        org.mockito.Mockito.lenient().when(lessonDraftService.readDraftId(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> ((com.jp.elearningjp.entity.curriculum.Lesson) inv.getArgument(0)).getId());
+        org.mockito.Mockito.lenient().when(courseAccessGuard.requireLessonEditable(
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> {
+                    com.jp.elearningjp.entity.curriculum.Lesson l = inv.getArgument(0);
+                    com.jp.elearningjp.entity.curriculum.LessonDraft d = com.jp.elearningjp.entity.curriculum.LessonDraft.builder()
+                            .lesson(l).kind(com.jp.elearningjp.shared.enums.DraftKind.TEACHER).build();
+                    d.setId(l.getId());
+                    return d;
+                });
         Course course = Course.builder().title("N5").slug("n5").build();
         course.setId(1L);
         lesson = Lesson.builder().course(course).title("Bài 1").orderIndex(1).build();
@@ -143,7 +156,7 @@ class QuizSnapshotFlowTest {
         verify(srsItemRepository).save(srs.capture());
         assertThat(srs.getValue().getVocab()).isSameAs(vocabRef);
         // Không đọc quiz / đáp án của bản đang soạn
-        verify(quizRepository, never()).findByLessonIdAndDeletedFalse(anyLong());
+        verify(quizRepository, never()).findByDraftIdAndDeletedFalse(anyLong());
         verifyNoInteractions(questionRepository, optionRepository);
     }
 }

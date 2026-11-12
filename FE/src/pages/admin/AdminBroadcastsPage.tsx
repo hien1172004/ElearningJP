@@ -5,7 +5,7 @@ import { Button as AntdButton, Input, Select, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { BackButton, EmptyState, SearchInput, confirmDialog, FilterBar } from '@/components/common'
+import { BackButton, EmptyState, SearchInput, confirmDialog, FilterBar, RequiredMark } from '@/components/common'
 import { useBroadcastHistory, useCourses, useRecipientCount, useSendBroadcast } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { isAdmin } from '@/utils/roles'
@@ -185,7 +185,7 @@ export const AdminBroadcastsPage: React.FC = () => {
         <div className="grid md:grid-cols-2 gap-3">
           {/* Không có ô phụ (vai trò / khóa học) → chiếm trọn chiều ngang khung */}
           <label className={audience === 'ALL_USERS' ? 'space-y-1 md:col-span-2' : 'space-y-1'}>
-            <span className="text-sm font-medium text-slate-700">Gửi tới</span>
+            <span className="text-sm font-medium text-slate-700">Gửi tới<RequiredMark /></span>
             <Select
               value={audience}
               onChange={(v: BroadcastAudience) => setAudience(v)}
@@ -196,13 +196,13 @@ export const AdminBroadcastsPage: React.FC = () => {
           </label>
           {audience === 'ROLE' && (
             <label className="space-y-1">
-              <span className="text-sm font-medium text-slate-700">Vai trò</span>
+              <span className="text-sm font-medium text-slate-700">Vai trò<RequiredMark /></span>
               <Select value={role} onChange={setRole} options={ROLE_OPTIONS} className="w-full" />
             </label>
           )}
           {audience === 'COURSE_STUDENTS' && (
             <label className="space-y-1">
-              <span className="text-sm font-medium text-slate-700">Khóa học</span>
+              <span className="text-sm font-medium text-slate-700">Khóa học<RequiredMark /></span>
               <Select
                 value={courseId}
                 onChange={(v: number) => setCourseId(v)}
@@ -218,7 +218,7 @@ export const AdminBroadcastsPage: React.FC = () => {
         </div>
 
         <label className="block space-y-1">
-          <span className="text-sm font-medium text-slate-700">Tiêu đề</span>
+          <span className="text-sm font-medium text-slate-700">Tiêu đề<RequiredMark /></span>
           <Input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -228,7 +228,7 @@ export const AdminBroadcastsPage: React.FC = () => {
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-sm font-medium text-slate-700">Nội dung</span>
+          <span className="text-sm font-medium text-slate-700">Nội dung<RequiredMark /></span>
           <Input.TextArea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -240,7 +240,7 @@ export const AdminBroadcastsPage: React.FC = () => {
         </label>
         <label className="block space-y-1">
           <span className="text-sm font-medium text-slate-700">
-            Đường dẫn khi bấm thông báo <span className="font-normal text-slate-400">(không bắt buộc)</span>
+            Đường dẫn khi bấm thông báo
           </span>
           <Input
             value={link}

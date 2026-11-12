@@ -12,8 +12,10 @@ import {
   type LessonVocabularyExampleUpsertRequest,
   type VocabularyDetail,
 } from '@/types'
-import { useVocabItemMutations, useVocabItemDetail } from '@/hooks'
-import { MediaUploadField } from '@/components/common'
+import { useVocabItemMutations, useVocabItemDetail, useOnConcurrentReload, useFormAutosave } from '@/hooks'
+import { AutosaveBar, AutosaveScope } from '@/components/course/autosave'
+import { isConcurrentModification } from '@/lib/queryClient'
+import { MediaUploadField, RequiredMark } from '@/components/common'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
 
@@ -634,6 +636,32 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
     setLoadingVocabDetail(false)
   }
 
+  // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
+  useOnConcurrentReload(() => {
+    if (editing) closeModal()
+  })
+
+  // Tự lưu form đang soạn dở (chỉ người này thấy): F5 / đóng / xung đột không mất phần đã gõ
+  const autosave = useFormAutosave<
+    { form: Partial<FormValues>; examples: ExampleRow[] },
+    { selectedVocab: typeof selectedVocab }
+  >({
+    lessonId,
+    formKey: isOpen ? (editing ? `vocab:${editing.id}` : `vocab:new:${sectionId}`) : null,
+    currentVersion: editing?.version,
+    getSnapshot: () => ({
+      baseVersion: editing?.version,
+      values: { form: form.getFieldsValue(true) as Partial<FormValues>, examples },
+      ui: { selectedVocab },
+    }),
+    changeSignal: examples,
+    onRestore: (snap) => {
+      form.setFieldsValue(snap.values.form)
+      setExamples(snap.values.examples ?? [])
+      if (snap.ui?.selectedVocab) setSelectedVocab(snap.ui.selectedVocab)
+    },
+  })
+
   // ========================================================================
   // Submit
   // ========================================================================
@@ -716,8 +744,10 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
         }
         await createVocabItem.mutateAsync(payload)
       }
+      autosave.clear() // lưu thành công → bỏ bản tự lưu
       closeModal()
     } catch (err) {
+      if (isConcurrentModification(err)) return // modal "Tải bản mới nhất" đã xử lý
       if (err && typeof err === 'object' && 'response' in err) {
         const axErr = err as any
         const msg = axErr.response?.data?.message ?? 'Yêu cầu không hợp lệ'
@@ -840,14 +870,16 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
         destroyOnHidden
         okButtonProps={{ disabled: !editing && examples.length === 0 && false }}
       >
+        <AutosaveBar autosave={autosave} />
+        <AutosaveScope autosave={autosave}>
         <Form form={form} layout="vertical" className="pt-2">
           {/* ============================================================== */}
           {/* CREATE MODE: Tìm vocab từ từ điển */}
           {/* ============================================================== */}
           {!editing && !selectedVocab && (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3 mb-3 space-y-2">
+            <div data-autosave-ignore className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3 mb-3 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 uppercase tracking-wider">
-                <Search className="w-3.5 h-3.5" /> Tìm từ vựng từ từ điển
+                <Search className="w-3.5 h-3.5" /> Tìm từ vựng từ từ điển<RequiredMark />
               </div>
               <Select
                 showSearch
@@ -1080,7 +1112,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
                     <div className="grid grid-cols-2 gap-1.5">
                       <Input
                         size="small"
-                        placeholder="Romaji (tuỳ chọn)"
+                        placeholder="Romaji"
                         value={ex.exampleRomaji}
                         onChange={(e) =>
                           updateExample(idx, { exampleRomaji: e.target.value })
@@ -1107,6 +1139,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
             )}
           </div>
         </Form>
+        </AutosaveScope>
       </Modal>
 
       <ItemPreviewModal type="VOCABULARY" items={items} itemId={previewId} onClose={() => setPreviewId(null)} />

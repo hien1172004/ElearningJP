@@ -35,6 +35,7 @@ class CourseContentAccessGuardTest {
     @Mock CurrentUserService currentUserService;
     @Mock CourseEnrollmentRepository enrollmentRepository;
     @Mock CourseTeacherRepository courseTeacherRepository;
+    @Mock com.jp.elearningjp.service.curriculum.LessonDraftService lessonDraftService;
     @InjectMocks CourseAccessGuard guard;
 
     private Course course;
@@ -54,6 +55,9 @@ class CourseContentAccessGuardTest {
         when(lesson.getCourse()).thenReturn(course);
         section = mock(LessonSection.class);
         when(section.getLesson()).thenReturn(lesson);
+        // V65: section thuộc nháp TEACHER của bài (phía người xem kiểm ở LessonDraftService — mock)
+        when(section.getDraft()).thenReturn(com.jp.elearningjp.entity.curriculum.LessonDraft.builder().lesson(lesson)
+                .kind(com.jp.elearningjp.shared.enums.DraftKind.TEACHER).build());
         when(currentUserService.getCurrentUserId()).thenReturn(VIEWER_ID);
     }
 

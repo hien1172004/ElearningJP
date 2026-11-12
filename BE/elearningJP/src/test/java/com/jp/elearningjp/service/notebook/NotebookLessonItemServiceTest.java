@@ -69,7 +69,11 @@ class NotebookLessonItemServiceTest {
         SectionService sectionService = mock(SectionService.class);
         CurrentUserService currentUser = mock(CurrentUserService.class);
 
-        service = new NotebookLessonItemService(lessonRepo, sectionRepo, sectionService, mock(CourseAccessGuard.class),
+        // V65: nháp của bài X có id = X (quy ước trong test)
+        com.jp.elearningjp.service.curriculum.LessonDraftService drafts =
+                mock(com.jp.elearningjp.service.curriculum.LessonDraftService.class);
+        when(drafts.readDraftId(org.mockito.ArgumentMatchers.any())).thenAnswer(inv -> ((Lesson) inv.getArgument(0)).getId());
+        service = new NotebookLessonItemService(lessonRepo, sectionRepo, sectionService, drafts, mock(CourseAccessGuard.class),
                 currentUser, notebookRepo, mock(NotebookGroupRepository.class), wordRepo, counter);
 
         User user = new User();
@@ -138,7 +142,7 @@ class NotebookLessonItemServiceTest {
         LessonSection grammarSection = section(30L, LessonSectionType.GRAMMAR, 3);
         grammarSection.setGrammarItems(new ArrayList<>(List.of(g1)));
 
-        when(sectionRepo.findByLessonIdWithAllItems(LESSON_ID))
+        when(sectionRepo.findByDraftIdWithAllItems(LESSON_ID))
                 .thenReturn(List.of(vocabSection, kanjiSection, grammarSection));
     }
 
@@ -230,7 +234,7 @@ class NotebookLessonItemServiceTest {
 
     @Test
     void lessonWithoutContent_rejected() {
-        when(sectionRepo.findByLessonIdWithAllItems(LESSON_ID)).thenReturn(List.of());
+        when(sectionRepo.findByDraftIdWithAllItems(LESSON_ID)).thenReturn(List.of());
         SaveLessonItemsRequest req = SaveLessonItemsRequest.builder().lessonId(LESSON_ID).notebookId(NOTEBOOK_ID).build();
 
         assertThatThrownBy(() -> service.saveLessonItems(req))

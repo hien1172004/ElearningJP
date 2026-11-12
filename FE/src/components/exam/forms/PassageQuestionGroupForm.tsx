@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { BookOpen, Link2 } from 'lucide-react'
 import type { TakingPassage } from '@/types'
 import { cleanPassageTitle } from '@/utils/format'
+import { RequiredMark } from '@/components/common'
 
 export interface PassageOptionItem {
   id?: number
@@ -156,7 +157,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
           <div className="space-y-3">
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Tiêu đề đoạn văn: *
+                Tiêu đề đoạn văn:<RequiredMark />
               </label>
               <input
                 type="text"
@@ -171,7 +172,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-[11px] font-bold text-slate-700">
-                  Nội dung tiếng Nhật của bài đọc: *
+                  Nội dung tiếng Nhật của bài đọc:<RequiredMark />
                 </label>
                 {isClozeText && (
                   <div className="flex items-center gap-1">
@@ -201,7 +202,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
 
             <div>
               <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                Bản dịch tiếng Việt tham khảo (tùy chọn):
+                Bản dịch tiếng Việt tham khảo:
               </label>
               <textarea
                 rows={2}
@@ -220,7 +221,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
       <div className="space-y-4">
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-slate-800">
-            Câu hỏi con (Ví dụ: &quot;(19)に入る最もよいものはどれか&quot; hoặc &quot;この文章で筆者が最も言いたいことは何か&quot;): *
+            Câu hỏi con (Ví dụ: &quot;(19)に入る最もよいものはどれか&quot; hoặc &quot;この文章で筆者が最も言いたいことは何か&quot;):<RequiredMark />
           </label>
           <input
             type="text"
@@ -235,7 +236,7 @@ export const PassageQuestionGroupForm: React.FC<PassageQuestionGroupFormProps> =
         {/* 4 Lựa chọn cho câu hỏi này */}
         <div className="space-y-2">
           <label className="block text-xs font-bold text-slate-800">
-            4 Phương án trả lời cho câu hỏi này: *
+            4 Phương án trả lời cho câu hỏi này:<RequiredMark />
           </label>
           <div className="space-y-2">
             {options.map((opt, idx) => {

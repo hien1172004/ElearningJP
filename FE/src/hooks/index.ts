@@ -20,24 +20,28 @@ export { useReportComment } from './useReportComment'
 export { useRecipientCount, useBroadcastHistory, useSendBroadcast } from './useBroadcasts'
 export { useCourseStudents, useStudentCourseDetail } from './useCourseStudents'
 export { useCourseTeachers, useAssignCourseTeacher, useUnassignCourseTeacher } from './useCourseTeachers'
+export { useSaveCourseVersion, useCourseChanges } from './useCourseReview'
 export {
-  useCourseReviewHistory,
-  useCourseReviewQueue,
-  useSubmitCourseReview,
-  useWithdrawCourseReview,
-  useApproveCourseReview,
-  useRejectCourseReview,
-  useCourseChanges,
-  useCourseReviewComments,
-  useCourseReviewCommentMutations,
-} from './useCourseReview'
+  useLessonReviewStates,
+  useLessonReviewState,
+  useLessonReviewHistory,
+  useLessonReviewQueue,
+  useSubmitLessonReviews,
+  useWithdrawLessonReview,
+  useApproveLessonReview,
+  useRejectLessonReview,
+  useSaveLessonToLive,
+} from './useLessonReview'
+export { useCourseEditLock, useCourseEditSession, useLessonDraftActions, useArchivedLessonDraft, useLessonReviewRequestContent } from './useCourseEditSession'
+export { useFormAutosave, type AutosaveSnapshot, type FormAutosave } from './useFormAutosave'
 
 // Đăng nhập bằng Google (GSI idToken + luồng OAuth2 redirect)
 export { useGoogleLogin, useGoogleCallback } from './useGoogleLogin'
 
 // Course / Lesson / Enrollment
 export { useCourses } from './useCourses'
-export { useCourseDetail } from './useCourseDetail'
+export { useCourseDetail, useFetchFreshCourseDetail, useInvalidateCourseDraftState } from './useCourseDetail'
+export { useCourseContentUpdates, type CourseContentAudience } from './useCourseContentUpdates'
 export { useCreateCourse } from './useCreateCourse'
 export { useUpdateCourse } from './useUpdateCourse'
 export { useDeleteCourse } from './useDeleteCourse'
@@ -50,6 +54,7 @@ export { useCreateLesson } from './useCreateLesson'
 export { useUpdateLesson } from './useUpdateLesson'
 export { useDeleteLesson } from './useDeleteLesson'
 export { useReorderLessons } from './useReorderLessons'
+export { useOnConcurrentReload } from './useOnConcurrentReload'
 export { useStartLesson } from './useStartLesson'
 export { useCompleteLesson } from './useCompleteLesson'
 export { useSectionMutations, useKanjiItemMutations, useVocabItemMutations, useGrammarItemMutations } from './useSectionMutations'

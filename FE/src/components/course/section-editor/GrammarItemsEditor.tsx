@@ -12,9 +12,12 @@ import {
   type LessonGrammarExampleUpsertRequest,
   type GrammarDetail,
 } from '@/types'
-import { useGrammarItemMutations, useGrammarItemDetail } from '@/hooks'
+import { useGrammarItemMutations, useGrammarItemDetail, useOnConcurrentReload, useFormAutosave } from '@/hooks'
+import { AutosaveBar, AutosaveScope } from '@/components/course/autosave'
+import { isConcurrentModification } from '@/lib/queryClient'
 import { dictionaryService } from '@/services'
 import { playSmartAudio } from '@/utils'
+import { RequiredMark } from '@/components/common'
 
 // ============================================================================
 // Form schema
@@ -554,6 +557,32 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
     setLoadingGrammarDetail(false)
   }
 
+  // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
+  useOnConcurrentReload(() => {
+    if (editing) closeModal()
+  })
+
+  // Tự lưu form đang soạn dở (chỉ người này thấy): F5 / đóng / xung đột không mất phần đã gõ
+  const autosave = useFormAutosave<
+    { form: Partial<FormValues>; examples: ExampleRow[] },
+    { selectedGrammar: typeof selectedGrammar }
+  >({
+    lessonId,
+    formKey: isOpen ? (editing ? `grammar:${editing.id}` : `grammar:new:${sectionId}`) : null,
+    currentVersion: editing?.version,
+    getSnapshot: () => ({
+      baseVersion: editing?.version,
+      values: { form: form.getFieldsValue(true) as Partial<FormValues>, examples },
+      ui: { selectedGrammar },
+    }),
+    changeSignal: examples,
+    onRestore: (snap) => {
+      form.setFieldsValue(snap.values.form)
+      setExamples(snap.values.examples ?? [])
+      if (snap.ui?.selectedGrammar) setSelectedGrammar(snap.ui.selectedGrammar)
+    },
+  })
+
   // ========================================================================
   // Submit
   // ========================================================================
@@ -617,8 +646,10 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
         }
         await createGrammarItem.mutateAsync(payload)
       }
+      autosave.clear() // lưu thành công → bỏ bản tự lưu
       closeModal()
     } catch (err) {
+      if (isConcurrentModification(err)) return // modal "Tải bản mới nhất" đã xử lý
       if (err && typeof err === 'object' && 'response' in err) {
         const axErr = err as any
         const msg = axErr.response?.data?.message ?? 'Yêu cầu không hợp lệ'
@@ -737,14 +768,16 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
         confirmLoading={createGrammarItem.isPending || updateGrammarItem.isPending}
         destroyOnHidden
       >
+        <AutosaveBar autosave={autosave} />
+        <AutosaveScope autosave={autosave}>
         <Form form={form} layout="vertical" className="pt-2">
           {/* ============================================================== */}
           {/* CREATE MODE: Tìm grammar từ từ điển */}
           {/* ============================================================== */}
           {!editing && !selectedGrammar && (
-            <div className="rounded-md border border-purple-200 bg-purple-50/50 p-3 mb-3 space-y-2">
+            <div data-autosave-ignore className="rounded-md border border-purple-200 bg-purple-50/50 p-3 mb-3 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-purple-700 uppercase tracking-wider">
-                <Search className="w-3.5 h-3.5" /> Tìm ngữ pháp từ từ điển
+                <Search className="w-3.5 h-3.5" /> Tìm ngữ pháp từ từ điển<RequiredMark />
               </div>
               <Select
                 showSearch
@@ -948,6 +981,7 @@ export const GrammarItemsEditor: React.FC<GrammarItemsEditorProps> = ({
             )}
           </div>
         </Form>
+        </AutosaveScope>
       </Modal>
 
       <ItemPreviewModal type="GRAMMAR" items={items} itemId={previewId} onClose={() => setPreviewId(null)} />

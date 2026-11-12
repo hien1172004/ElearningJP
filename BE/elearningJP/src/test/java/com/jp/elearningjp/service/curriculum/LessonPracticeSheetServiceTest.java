@@ -53,11 +53,20 @@ class LessonPracticeSheetServiceTest {
     /** Ký tự có dữ liệu nét trong "DB" giả. */
     final Map<String, Integer> strokeData = new HashMap<>(Map.of("家", 10, "族", 11, "学", 8, "校", 10, "ね", 2, "こ", 2));
 
+    /** V65: nháp của bài X có id = X (quy ước trong test). */
+    private static LessonDraftService draftService() {
+        LessonDraftService drafts = org.mockito.Mockito.mock(LessonDraftService.class);
+        org.mockito.Mockito.when(drafts.readDraftId(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> ((Lesson) inv.getArgument(0)).getId());
+        return drafts;
+    }
+
     @BeforeEach
     void setUp() {
         service = new LessonPracticeSheetService(lessonRepository, sectionRepository, kanjiItemRepository,
                 vocabItemRepository, strokeRepository, courseAccessGuard, new PracticeSheetRenderer(),
-                org.mockito.Mockito.mock(com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver.class));
+                org.mockito.Mockito.mock(com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver.class),
+                draftService());
         lesson = new Lesson();
         lesson.setId(1L);
         lesson.setTitle("Bai 1");
@@ -93,7 +102,7 @@ class LessonPracticeSheetServiceTest {
     private void givenVocabularySections() {
         LessonSection family = section(10L, "Gia đình");
         LessonSection school = section(20L, "Trường học");
-        when(sectionRepository.findByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(1L, LessonSectionType.VOCABULARY))
+        when(sectionRepository.findByDraftIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(1L, LessonSectionType.VOCABULARY))
                 .thenReturn(List.of(family, school));
         when(vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(10L)).thenReturn(List.of(
                 vocabItem(101L, "家族", "かぞく"), vocabItem(102L, "ねこ", "ねこ"), vocabItem(103L, "コーヒー", "こーひー")));
@@ -162,7 +171,7 @@ class LessonPracticeSheetServiceTest {
         WritingCharacter ka = WritingCharacter.builder().character("家").onyomi(List.of("カ", "ケ")).kunyomi(List.of("いえ")).build();
         LessonKanjiItem item = LessonKanjiItem.builder().character(ka).build();
         item.setId(301L);
-        when(sectionRepository.findByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(1L, LessonSectionType.KANJI))
+        when(sectionRepository.findByDraftIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(1L, LessonSectionType.KANJI))
                 .thenReturn(List.of(s));
         when(kanjiItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(30L)).thenReturn(List.of(item));
 

@@ -33,6 +33,10 @@ public class LessonKanjiRelatedVocab extends SoftDeletableEntity {
     @JoinColumn(name = "kanji_item_id", nullable = false)
     private LessonKanjiItem kanjiItem;
 
+    /** Id ổn định của phần tử trong bản live (V65); null = chính {@code id}. Bản chụp ghi COALESCE(originId, id). */
+    @Column(name = "origin_id")
+    private Long originId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vocab_id", nullable = false)
     private Vocabulary vocab;

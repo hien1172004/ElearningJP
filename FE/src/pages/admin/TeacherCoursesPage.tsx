@@ -25,10 +25,12 @@ const PUBLISH_OPTIONS: { value: PublishFilter; label: string }[] = [
   { value: 'draft', label: 'Bản nháp' },
 ]
 
-type ChangesFilter = 'all' | 'pending'
+// "Chờ duyệt" = giáo viên đã gửi; "Đang soạn" = có thay đổi nhưng chưa ai gửi duyệt
+type ChangesFilter = 'all' | 'pending_review' | 'editing'
 const CHANGES_OPTIONS: { value: ChangesFilter; label: string }[] = [
   { value: 'all', label: 'Tất cả bản soạn' },
-  { value: 'pending', label: 'Có thay đổi chưa duyệt' },
+  { value: 'pending_review', label: 'Chờ duyệt' },
+  { value: 'editing', label: 'Đang soạn · chưa gửi duyệt' },
 ]
 
 function statusBadge(course: CourseSummary) {
@@ -67,8 +69,8 @@ export const TeacherCoursesPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null)
   const [publishingId, setPublishingId] = useState<number | null>(null)
 
-  // Bộ lọc của ADMIN: chỉ khóa có thay đổi chưa duyệt (giáo viên đã sửa nhưng chưa được duyệt)
-  const [pendingOnly, setPendingOnly] = useState(false)
+  // Bộ lọc của ADMIN theo bản đang soạn: chờ duyệt (đã gửi) / đang soạn (có thay đổi, chưa gửi)
+  const [changesFilter, setChangesFilter] = useState<ChangesFilter>('all')
   // Tìm kiếm + lọc + phân trang phía server
   const [keywordInput, setKeywordInput] = useState('')
   const [keyword, setKeyword] = useState('')
@@ -79,7 +81,14 @@ export const TeacherCoursesPage: React.FC = () => {
     admin: true,
     page,
     size: PAGE_SIZE,
-    pendingChanges: admin && pendingOnly,
+    pendingChanges: admin && changesFilter === 'editing',
+    reviewStatus: !admin
+      ? undefined
+      : changesFilter === 'pending_review'
+        ? 'PENDING_REVIEW'
+        : changesFilter === 'editing'
+          ? 'EDITING'
+          : undefined,
     keyword: keyword || undefined,
     jlptLevel: level,
     published: publishFilter ? publishFilter === 'published' : undefined,
@@ -169,8 +178,8 @@ export const TeacherCoursesPage: React.FC = () => {
               record.published
                 ? 'Chuyển nháp'
                 : record.publishedVersionId
-                  ? 'Mở lại khóa (bản đã duyệt)'
-                  : 'Chưa có bản được duyệt — giáo viên cần gửi duyệt'
+                  ? 'Xuất bản (phiên bản đã chốt)'
+                  : 'Chưa có phiên bản nào — cần duyệt hoặc lưu ở trang quản lý khóa'
             }
           >
             <AntdButton
@@ -263,17 +272,17 @@ export const TeacherCoursesPage: React.FC = () => {
             className="md:w-44"
             aria-label="Lọc theo trạng thái xuất bản"
           />
-          {/* Bộ lọc của ADMIN: khóa có thay đổi chưa duyệt (trước đây là thẻ tab) */}
+          {/* Bộ lọc của ADMIN theo bản đang soạn (trước đây là thẻ tab) */}
           {admin && (
             <Select<ChangesFilter>
-              value={pendingOnly ? 'pending' : 'all'}
+              value={changesFilter}
               onChange={(v) => {
-                setPendingOnly(v === 'pending')
+                setChangesFilter(v)
                 setPage(1)
               }}
               options={CHANGES_OPTIONS}
               className="md:w-56"
-              aria-label="Lọc theo thay đổi chưa duyệt"
+              aria-label="Lọc theo trạng thái bản đang soạn"
             />
           )}
         </FilterBar>
@@ -287,14 +296,20 @@ export const TeacherCoursesPage: React.FC = () => {
           />
         )}
 
-        {!isLoading && courses.length === 0 && !filtered && pendingOnly && admin && (
+        {!isLoading && courses.length === 0 && !filtered && changesFilter !== 'all' && admin && (
           <EmptyState
-            title="Không có khóa nào có thay đổi chưa duyệt"
-            description="Nội dung giáo viên đang soạn ở mọi khóa đều đã được duyệt."
+            title={
+              changesFilter === 'pending_review' ? 'Không có khóa nào chờ duyệt' : 'Không có khóa nào đang soạn dở'
+            }
+            description={
+              changesFilter === 'pending_review'
+                ? 'Chưa có giáo viên nào gửi khóa học lên duyệt.'
+                : 'Mọi khóa đều không có thay đổi chưa gửi duyệt / chưa lưu.'
+            }
           />
         )}
 
-        {!isLoading && courses.length === 0 && !filtered && !(pendingOnly && admin) && (
+        {!isLoading && courses.length === 0 && !filtered && !(changesFilter !== 'all' && admin) && (
           <EmptyState
             title={admin ? 'Chưa có khóa học nào' : 'Bạn chưa được giao khóa học nào'}
             description={

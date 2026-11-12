@@ -101,7 +101,9 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     public LessonGrammarItemResponse addGrammarItem(Long sectionId, LessonGrammarItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.GRAMMAR);
         // Chỉ giáo viên được giao hoặc ADMIN được sửa nội dung section
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
 
         GrammarPoint grammar = grammarPointRepository.findByIdAndDeletedFalse(request.getGrammarId())
                 .orElseThrow(() -> new AppException(ErrorCode.GRAMMAR_NOT_FOUND));
@@ -158,6 +160,8 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     @Transactional(readOnly = true)
     public LessonGrammarItemResponse getGrammarItem(Long itemId) {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
+                // id của bản live có thể là id ổn định của dòng đã bị xóa khi nháp được dựng lại (V65)
+                .or(() -> grammarItemRepository.findFirstByOriginIdOrderByIdDesc(itemId))
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
         // Học viên của khóa đã xuất bản: item theo bản đã duyệt
         Optional<PublishedLessonResolver.PublishedLesson> published =
@@ -201,7 +205,9 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
         VersionCheck.requireVersion(item, request.getVersion());
-        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(item.getSection().getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);
         }
@@ -262,7 +268,9 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     public void deleteGrammarItem(Long itemId) {
         LessonGrammarItem item = grammarItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND));
-        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(item.getSection().getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_GRAMMAR_ITEM_NOT_FOUND);
         if (item.isDeleted()) return;
         item.softDelete();
         // Cascade soft-delete examples
@@ -283,7 +291,9 @@ public class GrammarSectionItemService extends AbstractSectionItemService {
     @Transactional
     public List<LessonGrammarItemResponse> reorderGrammarItems(Long sectionId, ItemBulkReorderRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.GRAMMAR);
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);

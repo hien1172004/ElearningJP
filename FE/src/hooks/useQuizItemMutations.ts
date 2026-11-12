@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { isConcurrentModification } from '@/lib/queryClient'
 import { axiosClient } from '@/services/api/axiosClient'
 import { QUERY_KEYS } from '@/lib/queryKeys'
+import { invalidateCourseDraftState } from './useCourseDetail'
 import type { ApiResponse, QuizQuestionType } from '@/types'
 
 // ============================================================================
@@ -154,6 +156,7 @@ export function useQuizItemMutations(lessonId: number) {
       )
     },
     onSuccess: () => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã thêm câu hỏi')
       // CHỈ invalidate, KHÔNG optimistic applyToAllQuizCaches.
       // Lý do: response từ POST là LessonQuizItem (không có đáp án đúng
@@ -163,6 +166,7 @@ export function useQuizItemMutations(lessonId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Thêm câu hỏi thất bại', {
         description: getErrorMessage(e, 'Lỗi không xác định'),
       })
@@ -210,6 +214,7 @@ export function useQuizItemMutations(lessonId: number) {
       return updated
     },
     onSuccess: () => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã cập nhật câu hỏi')
       // CHỈ invalidate, KHÔNG applyToAllQuizCaches.
       // Lý do: response từ PUT /quiz/questions/{id} là LessonQuizItem
@@ -220,6 +225,7 @@ export function useQuizItemMutations(lessonId: number) {
       invalidate()
     },
     onError: (e: unknown) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       const axErr = e as AxiosError<ApiResponse<unknown>>
       toast.error('Cập nhật câu hỏi thất bại', {
         description: getErrorMessage(axErr, 'Lỗi không xác định'),
@@ -234,6 +240,7 @@ export function useQuizItemMutations(lessonId: number) {
     mutationFn: async (questionId: number) =>
       axiosClient.delete<ApiResponse<void>>(`/quiz/questions/${questionId}`),
     onSuccess: (_res, id) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã xoá câu hỏi')
       // Xoá trong cả 2 cache /quiz và /quiz/manage
       applyToAllQuizCaches(qc, lessonId, (old) => {
@@ -249,6 +256,7 @@ export function useQuizItemMutations(lessonId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Xoá câu hỏi thất bại', {
         description: getErrorMessage(e, 'Lỗi không xác định'),
       })

@@ -42,7 +42,8 @@ public class PublishedSnapshotBackfill implements ApplicationRunner {
             try {
                 transactionTemplate.executeWithoutResult(status -> courseRepository.findById(courseId)
                         .filter(c -> c.getPublishedVersionId() == null)
-                        .ifPresent(c -> courseSnapshotService.publish(c, null)));
+                        .ifPresent(c -> courseSnapshotService.publish(c, null,
+                                com.jp.elearningjp.shared.enums.DraftKind.TEACHER)));
             } catch (RuntimeException e) {
                 log.error("[SNAPSHOT-BACKFILL] Course id={} failed", courseId, e);
             }

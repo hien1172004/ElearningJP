@@ -18,6 +18,7 @@ import { speakingService } from '@/services/speaking.service'
 import { useAuthStore } from '@/stores'
 import { MaziikoMascot } from '@/components/speaking/MaziikoMascot'
 import type { AiScenario, AiSession, JlptLevel } from '@/types/speaking.types'
+import { RequiredMark } from '@/components/common'
 
 // Danh sách các chủ đề hội thoại mô phỏng Mazii
 const TOPIC_CATEGORIES = [
@@ -524,7 +525,7 @@ export const SpeakingLobbyPage: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs sm:text-sm font-bold text-slate-700">
-                    Vai của tôi
+                    Vai của tôi<RequiredMark />
                   </label>
                   <button
                     type="button"
@@ -549,7 +550,7 @@ export const SpeakingLobbyPage: React.FC = () => {
               {/* 2. Vai của AI */}
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                  Vai của AI
+                  Vai của AI<RequiredMark />
                 </label>
                 <input
                   type="text"
@@ -564,7 +565,7 @@ export const SpeakingLobbyPage: React.FC = () => {
               {/* 3. Mô tả (max 200 ký tự) */}
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                  Mô tả
+                  Mô tả<RequiredMark />
                 </label>
                 <div className="relative">
                   <textarea

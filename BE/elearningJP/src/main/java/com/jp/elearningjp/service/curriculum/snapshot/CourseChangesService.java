@@ -41,7 +41,8 @@ import java.util.stream.Collectors;
 /**
  * So bản đang soạn với bản học viên đang học: bài thêm / bỏ / sửa, trong bài thì section, item,
  * câu hỏi quiz, luyện nói; cùng các đề thi gắn khóa.
- * Bản đang soạn được dựng giống hệt lúc tạo snapshot ({@link CourseSnapshotService#buildLesson}) nên so được 1-1.
+ * Bản đang soạn = nháp phía người xem (V65), dựng giống hệt lúc tạo snapshot ({@link CourseSnapshotService#buildDraft},
+ * id ổn định) nên so được 1-1.
  * So nội dung bỏ qua {@code version} / {@code orderIndex}; đổi thứ tự báo riêng.
  */
 @Service
@@ -59,9 +60,29 @@ public class CourseChangesService {
     CourseSnapshotReader snapshotReader;
     ExamSnapshotService examSnapshotService;
     CourseAccessGuard courseAccessGuard;
+    com.jp.elearningjp.service.curriculum.LessonDraftService lessonDraftService;
+    com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository requestRepository;
     ObjectMapper objectMapper;
 
-    /** ADMIN hoặc giáo viên được giao. */
+    /** Bản chụp lúc gửi duyệt; yêu cầu cũ (trước V65) chưa có → chụp từ nháp đã gửi (đang khóa). */
+    private LessonSnapshot submittedContent(com.jp.elearningjp.entity.curriculum.LessonReviewRequest request) {
+        if (request.getContent() != null) {
+            try {
+                return objectMapper.readValue(request.getContent(), LessonSnapshot.class);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new AppException(ErrorCode.UNCAUGHT_EXCEPTION);
+            }
+        }
+        if (request.getDraft() == null) {
+            throw new AppException(ErrorCode.LESSON_DRAFT_NOT_FOUND);
+        }
+        return courseSnapshotService.buildDraft(request.getDraft());
+    }
+
+    /**
+     * ADMIN hoặc giáo viên được giao. Mỗi phía so nháp của mình với bản học viên; riêng ADMIN, bài giáo viên đang chờ
+     * duyệt được so theo bản giáo viên đã gửi (V65/V66).
+     */
     @Transactional(readOnly = true)
     public CourseChangesResponse getChanges(Long courseId) {
         Course course = courseRepository.findByIdAndDeletedFalse(courseId)
@@ -74,14 +95,26 @@ public class CourseChangesService {
         Map<Long, LessonOutlineResponse> publishedById = publishedOutline.stream()
                 .collect(Collectors.toMap(LessonOutlineResponse::getId, o -> o, (a, b) -> a, LinkedHashMap::new));
 
-        List<Lesson> draftLessons = lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId);
+        // V66: bài mới phía bên kia tạo (chưa gửi duyệt) bị ẩn
+        com.jp.elearningjp.shared.enums.DraftKind kind = lessonDraftService.currentKind();
+        List<Lesson> draftLessons = lessonRepository.findReviewableByCourseId(courseId, kind);
+        // ADMIN: bài giáo viên đã gửi duyệt → so đúng bản đã gửi (ADMIN không đọc nháp đang soạn của giáo viên)
+        Map<Long, com.jp.elearningjp.entity.curriculum.LessonReviewRequest> pendingByLesson =
+                kind != com.jp.elearningjp.shared.enums.DraftKind.ADMIN ? Map.of()
+                        : requestRepository.findByCourseIdAndStatus(courseId,
+                                        com.jp.elearningjp.shared.enums.ReviewRequestStatus.PENDING).stream()
+                                .collect(Collectors.toMap(r -> r.getLesson().getId(), r -> r, (a, b) -> a));
         Set<Long> movedIds = movedIds(
                 draftLessons.stream().map(Lesson::getId).toList(),
                 publishedOutline.stream().map(LessonOutlineResponse::getId).toList());
 
         List<LessonChange> lessons = new ArrayList<>();
         for (Lesson lesson : draftLessons) {
-            LessonSnapshot draft = courseSnapshotService.buildLesson(lesson);
+            com.jp.elearningjp.entity.curriculum.LessonReviewRequest pending = pendingByLesson.get(lesson.getId());
+            LessonSnapshot draft = pending != null
+                    ? submittedContent(pending)
+                    : courseSnapshotService.buildDraft(lessonDraftService.findActive(lesson.getId(), kind)
+                            .orElseThrow(() -> new AppException(ErrorCode.LESSON_DRAFT_NOT_FOUND)));
             LessonOutlineResponse publishedLesson = publishedById.get(lesson.getId());
             Optional<LessonSnapshot> published = publishedLesson == null
                     ? Optional.empty()

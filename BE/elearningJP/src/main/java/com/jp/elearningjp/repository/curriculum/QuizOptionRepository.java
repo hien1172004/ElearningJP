@@ -19,6 +19,6 @@ public interface QuizOptionRepository extends JpaRepository<QuizOption, Long> {
     Optional<QuizOption> findByIdAndDeletedFalse(Long id);
 
     /** Batch fetch options cho tất cả questions của 1 lesson (qua quiz). */
-    @Query("SELECT o FROM QuizOption o WHERE o.question.quiz.lesson.id = :lessonId AND o.deleted = false ORDER BY o.question.id, o.optionKey ASC")
-    List<QuizOption> findByLessonId(@Param("lessonId") Long lessonId);
+    @Query("SELECT o FROM QuizOption o WHERE o.question.quiz.draft.id = :draftId AND o.deleted = false ORDER BY o.question.id, o.optionKey ASC")
+    List<QuizOption> findByDraftId(@Param("draftId") Long draftId);
 }

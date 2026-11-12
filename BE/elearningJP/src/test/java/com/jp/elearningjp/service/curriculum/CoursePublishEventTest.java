@@ -53,6 +53,7 @@ class CoursePublishEventTest {
     @Mock CourseReviewService courseReviewService;
     @Mock ApplicationEventPublisher eventPublisher;
 
+    @org.mockito.Mock com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository lessonReviewRequestRepository;
     @InjectMocks CourseService courseService;
 
     private Course course;

@@ -12,25 +12,28 @@ import java.util.Optional;
 @Repository
 public interface LessonSpeakingScenarioRepository extends JpaRepository<LessonSpeakingScenario, Long> {
 
-    @Query("SELECT DISTINCT lss.lesson.id FROM LessonSpeakingScenario lss WHERE lss.lesson.id IN :lessonIds")
-    List<Long> findLessonIdsWithSpeaking(@Param("lessonIds") List<Long> lessonIds);
+    /** Trong các lesson cho trước, lấy id những lesson có luyện nói trong nháp đang dùng của phía {@code kind}. */
+    @Query("SELECT DISTINCT lss.lesson.id FROM LessonSpeakingScenario lss WHERE lss.lesson.id IN :lessonIds "
+            + "AND lss.draft.kind = :kind AND lss.draft.status <> com.jp.elearningjp.shared.enums.DraftStatus.ARCHIVED")
+    List<Long> findLessonIdsWithSpeaking(@Param("lessonIds") List<Long> lessonIds,
+                                         @Param("kind") com.jp.elearningjp.shared.enums.DraftKind kind);
 
-    @Query("SELECT lss FROM LessonSpeakingScenario lss JOIN FETCH lss.scenario WHERE lss.lesson.id = :lessonId ORDER BY lss.orderIndex ASC")
-    List<LessonSpeakingScenario> findByLessonIdWithScenariosOrderByOrderIndexAsc(@Param("lessonId") Long lessonId);
+    @Query("SELECT lss FROM LessonSpeakingScenario lss JOIN FETCH lss.scenario WHERE lss.draft.id = :draftId ORDER BY lss.orderIndex ASC")
+    List<LessonSpeakingScenario> findByDraftIdWithScenariosOrderByOrderIndexAsc(@Param("draftId") Long draftId);
 
-    List<LessonSpeakingScenario> findByLessonIdOrderByOrderIndexAsc(Long lessonId);
+    List<LessonSpeakingScenario> findByDraftIdOrderByOrderIndexAsc(Long draftId);
 
-    Optional<LessonSpeakingScenario> findByLessonIdAndScenarioId(Long lessonId, Long scenarioId);
+    Optional<LessonSpeakingScenario> findByDraftIdAndScenarioId(Long draftId, Long scenarioId);
 
-    Optional<LessonSpeakingScenario> findByIdAndLessonId(Long id, Long lessonId);
+    Optional<LessonSpeakingScenario> findByIdAndDraftId(Long id, Long draftId);
 
-    boolean existsByLessonId(Long lessonId);
+    boolean existsByDraftId(Long draftId);
 
-    boolean existsByLessonIdAndScenarioId(Long lessonId, Long scenarioId);
+    boolean existsByDraftIdAndScenarioId(Long draftId, Long scenarioId);
 
-    void deleteByLessonId(Long lessonId);
+    void deleteByDraftId(Long draftId);
 
-    void deleteByLessonIdAndScenarioId(Long lessonId, Long scenarioId);
+    void deleteByDraftIdAndScenarioId(Long draftId, Long scenarioId);
 
-    long countByLessonId(Long lessonId);
+    long countByDraftId(Long draftId);
 }

@@ -34,7 +34,9 @@ public class ImportSectionResolver {
 
     public LessonSection requireWritable(Long sectionId, LessonSectionType expectedType) {
         LessonSection section = requireEditable(sectionId, expectedType);
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
         return section;
     }
 }

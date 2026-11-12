@@ -259,7 +259,6 @@ export const ProfilePage: React.FC = () => {
                     form={personalForm}
                     layout="vertical"
                     onFinish={onSavePersonalInfo}
-                    requiredMark={false}
                   >
                     <Form.Item label="Email">
                       <Input value={profile.email} disabled className="!bg-gray-50 text-gray-500" />
@@ -332,7 +331,6 @@ export const ProfilePage: React.FC = () => {
                     form={learningForm}
                     layout="vertical"
                     onFinish={onSaveLearningGoals}
-                    requiredMark={false}
                   >
                     <Form.Item name="currentLevel" label="Trình độ hiện tại">
                       <Select
@@ -422,7 +420,6 @@ export const ProfilePage: React.FC = () => {
                     form={passwordForm}
                     layout="vertical"
                     onFinish={onSavePassword}
-                    requiredMark={false}
                   >
                     <Form.Item
                       name="oldPassword"

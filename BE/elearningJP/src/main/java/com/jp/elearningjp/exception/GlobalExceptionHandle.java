@@ -27,7 +27,8 @@ public class GlobalExceptionHandle {
         ErrorCode errorCode = e.getErrorCode();
         ApiResponse<?> apiResponse = new ApiResponse<>();
         apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
+        // Mặc định = message của mã lỗi; AppException(code, detail) cho message cụ thể hơn
+        apiResponse.setMessage(e.getMessage());
         return ResponseEntity.status(errorCode.getHttpStatusCode()).body(apiResponse);
     }
 
@@ -79,7 +80,9 @@ public class GlobalExceptionHandle {
      * <ul>
      *   <li>Postgres error code 23505 (unique_violation) liên quan đến
      *       {@code order_index} → {@link ErrorCode#LESSON_ORDER_CONFLICT} (409)</li>
-     *   <li>Các constraint khác → fallback 409 với message generic</li>
+     *   <li>{@code uq_course_teachers_course_teacher} → {@link ErrorCode#COURSE_TEACHER_ALREADY_ASSIGNED} (409)</li>
+     *   <li>{@code uq_course_review_requests_pending} → {@link ErrorCode#COURSE_REVIEW_ALREADY_PENDING} (409)</li>
+     *   <li>Các constraint khác → {@link ErrorCode#UNCAUGHT_EXCEPTION} (500)</li>
      * </ul>
      */
     @ExceptionHandler(value = org.springframework.dao.DataIntegrityViolationException.class)
@@ -88,16 +91,12 @@ public class GlobalExceptionHandle {
         String rootMsg = e.getMostSpecificCause() != null
                 ? e.getMostSpecificCause().getMessage()
                 : e.getMessage();
-        boolean isOrderIndexConflict = rootMsg != null
-                && rootMsg.toLowerCase().contains("order_index");
+        ErrorCode known = knownConstraintError(rootMsg);
+        ErrorCode errorCode = known != null ? known : ErrorCode.UNCAUGHT_EXCEPTION;
 
-        ErrorCode errorCode = isOrderIndexConflict
-                ? ErrorCode.LESSON_ORDER_CONFLICT
-                : ErrorCode.UNCAUGHT_EXCEPTION;
-
-        if (isOrderIndexConflict) {
+        if (known != null) {
             org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class)
-                    .warn("[DB-CONFLICT] Order index unique constraint violated: {}", rootMsg);
+                    .warn("[DB-CONFLICT] Unique constraint violated ({}): {}", known, rootMsg);
         } else {
             org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandle.class)
                     .error("[DB-CONFLICT] Data integrity violation: ", e);
@@ -108,6 +107,30 @@ public class GlobalExceptionHandle {
                         .code(errorCode.getCode())
                         .message(errorCode.getMessage())
                         .build());
+    }
+
+    /**
+     * Ràng buộc DB bị vi phạm khi 2 thao tác chạy song song cùng vượt qua bước kiểm tra ở service
+     * → trả mã nghiệp vụ 409 như khi bị chặn tuần tự, không trả 500. Không nhận ra → null.
+     */
+    static ErrorCode knownConstraintError(String rootMsg) {
+        if (rootMsg == null) {
+            return null;
+        }
+        String msg = rootMsg.toLowerCase(java.util.Locale.ROOT);
+        if (msg.contains("uq_course_teachers_course_teacher")) {
+            return ErrorCode.COURSE_TEACHER_ALREADY_ASSIGNED;
+        }
+        if (msg.contains("uq_course_review_requests_pending")) {
+            return ErrorCode.COURSE_REVIEW_ALREADY_PENDING;
+        }
+        if (msg.contains("uq_lesson_review_requests_pending")) {
+            return ErrorCode.LESSON_REVIEW_ALREADY_PENDING;
+        }
+        if (msg.contains("order_index")) {
+            return ErrorCode.LESSON_ORDER_CONFLICT;
+        }
+        return null;
     }
 
     /**

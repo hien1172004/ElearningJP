@@ -31,7 +31,7 @@ import com.jp.elearningjp.shared.util.JapaneseReadingService;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /** Giáo viên không phải chủ khóa học không được thêm/sửa/xoá item trong section của khóa đó. */
@@ -45,8 +45,11 @@ class SectionItemPermissionTest {
     void setUp() {
         sectionRepo = mock(LessonSectionRepository.class);
         guard = mock(CourseAccessGuard.class);
+        // Ghi item là ghi nội dung nháp của bài → guard kiểm theo nháp chứa section (requireDraftEditable, V65)
         doThrow(new AppException(ErrorCode.FORBIDDEN_LESSON_ACCESS))
-                .when(guard).requireContentEditable(eq(course), any(ErrorCode.class));
+                .when(guard).requireDraftEditable(
+                        argThat(d -> d != null && d.getLesson() != null && d.getLesson().getCourse() == course),
+                        any(ErrorCode.class), any(ErrorCode.class));
     }
 
     private LessonSection section(LessonSectionType type) {
@@ -55,6 +58,8 @@ class SectionItemPermissionTest {
         LessonSection section = new LessonSection();
         section.setId(1L);
         section.setLesson(lesson);
+        section.setDraft(com.jp.elearningjp.entity.curriculum.LessonDraft.builder().lesson(lesson)
+                .kind(com.jp.elearningjp.shared.enums.DraftKind.TEACHER).build());
         section.setSectionType(type);
         when(sectionRepo.findById(1L)).thenReturn(Optional.of(section));
         return section;

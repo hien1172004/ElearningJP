@@ -23,10 +23,16 @@ export interface CourseSummary {
   published: boolean
   /** Bản đang soạn: EDITING | PENDING_REVIEW (chờ ADMIN duyệt, giáo viên tạm khóa sửa). */
   reviewStatus?: CourseReviewStatus
-  /** Bản đang soạn có thay đổi chưa được duyệt / xuất bản. */
+  /** Bản đang soạn có thay đổi chưa được chốt (chưa duyệt / chưa lưu). */
   hasUnpublishedChanges?: boolean
+  /** Người / thời điểm sửa bản đang soạn gần nhất (chỉ người soạn thấy; null = chưa rõ). */
+  draftUpdatedById?: number | null
+  draftUpdatedByName?: string | null
+  draftUpdatedAt?: string | null
   /** Phiên bản đã duyệt gần nhất; null = chưa từng được duyệt (ADMIN chưa mở được khóa). */
   publishedVersionId?: number | null
+  /** Số bài đang chờ duyệt theo bài (chỉ có ở trang quản lý). */
+  pendingLessonReviews?: number | null
   createdByUserId?: number
   createdByName?: string
   totalLessons?: number

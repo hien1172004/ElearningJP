@@ -52,6 +52,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Bình luận tải lúc còn là khách có owner/deletable/moderator/liked = false.
     // Đăng nhập ngay trên trang (modal) → tải lại để hiện đúng nút Sửa/Xoá và ẩn nút báo cáo.
     void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.comment.all })
+    // Danh sách khóa theo người xem: đã đăng nhập thì kèm khóa đã chuyển nháp mà mình đã đăng ký
+    void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.course.listAll })
   },
 
   setUser: (user) => {

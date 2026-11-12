@@ -75,7 +75,8 @@ public class AdminExamServiceImpl implements AdminExamService {
         Exam exam = examRepository.findByIdAndDeletedFalse(examId)
                 .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
         if (exam.getCourse() != null) {
-            courseAccessGuard.requireContentEditable(exam.getCourse());
+            // Đề thi chưa tách nháp theo phía (PR 5) → không bắt giữ khóa sửa khóa học
+            courseAccessGuard.requireExamContentEditable(exam.getCourse());
         }
     }
 
@@ -111,7 +112,7 @@ public class AdminExamServiceImpl implements AdminExamService {
             course = courseRepository.findByIdAndDeletedFalse(request.getCourseId())
                     .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
             // Đề gắn với khóa: chỉ ADMIN hoặc giáo viên được giao khóa đó mới tạo được (khóa khi chờ duyệt)
-            courseAccessGuard.requireContentEditable(course);
+            courseAccessGuard.requireExamContentEditable(course);
         }
 
         Exam exam = Exam.builder()

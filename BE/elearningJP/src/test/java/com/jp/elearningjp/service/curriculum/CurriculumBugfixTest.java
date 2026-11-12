@@ -77,8 +77,17 @@ class CurriculumBugfixTest {
 
     @Mock PublishedLessonResolver publishedLessonResolver;
     @Mock CourseSnapshotReader courseSnapshotReader;
+    @Mock LessonDraftService lessonDraftService;
+    @org.mockito.Mock com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository lessonReviewRequestRepository;
     @InjectMocks CourseService courseService;
     @InjectMocks LessonService lessonService;
+
+    /** V65: nháp của bài X có id = X; người xem đọc nháp TEACHER (quy ước trong test). */
+    @org.junit.jupiter.api.BeforeEach
+    void stubDrafts() {
+        when(lessonDraftService.readDraftId(any())).thenAnswer(inv -> ((Lesson) inv.getArgument(0)).getId());
+        when(lessonDraftService.readKind(any())).thenReturn(com.jp.elearningjp.shared.enums.DraftKind.TEACHER);
+    }
 
     private static Lesson lessonAt(long id, int orderIndex, Course course) {
         Lesson lesson = Lesson.builder().title("L" + id).orderIndex(orderIndex).course(course).build();
@@ -124,7 +133,7 @@ class CurriculumBugfixTest {
         third.setId(3L);
         Lesson lesson = lessonAt(LESSON_ID, 1, new Course());
         when(lessonRepository.findByIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.of(lesson));
-        when(sectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(LESSON_ID))
+        when(sectionRepository.findByDraftIdAndDeletedFalseOrderByOrderIndexAsc(LESSON_ID))
                 .thenReturn(List.of(first, third));
         Integer[] indexAtInsert = new Integer[1];
         when(sectionRepository.save(any(LessonSection.class))).thenAnswer(i -> {
@@ -134,9 +143,14 @@ class CurriculumBugfixTest {
             return saved;
         });
 
+        // V65: nháp phía mình của bài có id = LESSON_ID
+        com.jp.elearningjp.entity.curriculum.LessonDraft draft = com.jp.elearningjp.entity.curriculum.LessonDraft.builder()
+                .lesson(lesson).kind(com.jp.elearningjp.shared.enums.DraftKind.TEACHER).build();
+        draft.setId(LESSON_ID);
+        when(courseAccessGuard.requireLessonEditable(any(), any())).thenReturn(draft);
         SectionService service = new SectionService(sectionRepository, lessonRepository, courseRepository,
                 courseAccessGuard, null, null, null, null, null, null, null, quizRepository, null,
-                lessonSectionMapper, null);
+                lessonSectionMapper, null, null);
         service.createSection(LESSON_ID, LessonSectionType.KANJI, "Mới", null);
 
         assertThat(indexAtInsert[0]).isEqualTo(4);

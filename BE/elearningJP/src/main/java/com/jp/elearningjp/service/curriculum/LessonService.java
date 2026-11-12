@@ -43,6 +43,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -71,6 +73,7 @@ public class LessonService {
     LessonProgressRecorder lessonProgressRecorder;
     LessonSpeakingService lessonSpeakingService;
     PublishedLessonResolver publishedLessonResolver;
+    LessonDraftService lessonDraftService;
 
     /**
      * Xem nội dung chi tiết bài học (kèm sections + items).
@@ -102,8 +105,10 @@ public class LessonService {
 
         // 3. Chuẩn bị dữ liệu phản hồi
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(lesson);
+        // Người quản lý đọc nháp phía mình; học viên (khóa chưa có bản live) đọc nháp TEACHER (V65)
+        Long draftId = lessonDraftService.readDraftId(lesson);
         // "Lesson có quiz" = lesson_quizzes có row chưa bị xoá (refactor V20, source of truth là bảng lesson_quizzes)
-        response.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lessonId));
+        response.setHasQuiz(quizRepository.existsByDraftIdAndDeletedFalse(draftId));
 
         List<LessonSpeakingResponse> speakingList = lessonSpeakingService.getSpeakingListForLesson(lessonId, currentUser.getId());
         response.setHasSpeaking(!speakingList.isEmpty());
@@ -119,7 +124,7 @@ public class LessonService {
         }
 
         // 4. Load sections + nested collections qua SectionService
-        List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
+        List<LessonSection> sections = lessonSectionRepository.findByDraftIdWithAllItems(draftId);
         sectionService.loadNestedCollections(sections);
         response.setSections(lessonSectionMapper.toSectionResponses(sections));
 
@@ -192,6 +197,8 @@ public class LessonService {
 
         Lesson lesson = lessonMapper.toLessonEntity(request);
         lesson.setCourse(course);
+        // Bài mới chỉ phía tạo thấy tới khi lên bản học viên (V66)
+        lesson.setCreatedKind(lessonDraftService.currentKind());
         // orderIndex tạm MAX+1 — sẽ được gán lại chính xác khi persist.
         // Không dùng size+1: xoá mềm để lại lỗ hổng, [1,3] có size+1 = 3 sẽ trùng UNIQUE.
         lesson.setOrderIndex(OrderIndexResolver.maxOrderIndex(ordered, Lesson::getOrderIndex) + 1);
@@ -210,6 +217,8 @@ public class LessonService {
                 Lesson::setOrderIndex,
                 lessonRepository::flush
         );
+        // Mỗi bài luôn có 1 nháp TEACHER + 1 nháp ADMIN (V65)
+        lessonDraftService.createDraftsFor(saved);
         log.info("[LESSON] Created lesson id={}, title='{}' at orderIndex={} in course id={}",
                 saved.getId(), saved.getTitle(), saved.getOrderIndex(), courseId);
 
@@ -237,7 +246,10 @@ public class LessonService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         VersionCheck.requireVersion(lesson, request.getVersion());
+        // Tiêu đề / thứ tự thuộc cấu trúc khóa (dùng chung 2 phía tới khi tách nháp cấu trúc — PR 4):
+        // quyền + khóa sửa khóa học của phía mình; bài mới phía bên kia tạo coi như không tồn tại (V66)
         ensureCourseOwnerOrAdmin(lesson.getCourse());
+        lessonDraftService.requireVisible(lesson, lessonDraftService.currentKind());
 
         Integer newOrderIndex = request.getOrderIndex();
         Integer oldOrderIndex = lesson.getOrderIndex();
@@ -274,13 +286,14 @@ public class LessonService {
         log.info("[LESSON] Updated lesson id={}, orderIndex={}", updated.getId(), updated.getOrderIndex());
 
         LessonDetailResponse response = lessonMapper.toLessonDetailResponse(updated);
-        response.setHasQuiz(quizRepository.existsByLessonIdAndDeletedFalse(lessonId));
+        Long draftId = lessonDraftService.readDraftId(updated);
+        response.setHasQuiz(quizRepository.existsByDraftIdAndDeletedFalse(draftId));
         LessonSpeakingResponse speaking = lessonSpeakingService.getSpeakingForLesson(lessonId, null);
         response.setHasSpeaking(speaking != null);
         response.setSpeakingScenario(speaking);
 
         // Load sections sau khi update
-        List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
+        List<LessonSection> sections = lessonSectionRepository.findByDraftIdWithAllItems(draftId);
         sectionService.loadNestedCollections(sections);
         response.setSections(lessonSectionMapper.toSectionResponses(sections));
 
@@ -294,7 +307,15 @@ public class LessonService {
     public void deleteLesson(Long lessonId) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        // Xóa bài thuộc cấu trúc khóa: quyền + khóa sửa khóa học của phía mình. Nháp giáo viên đang chờ duyệt thì
+        // không xóa (phải duyệt / từ chối / rút trước)
         ensureCourseOwnerOrAdmin(lesson.getCourse());
+        lessonDraftService.requireVisible(lesson, lessonDraftService.currentKind());
+        lessonDraftService.findActive(lessonId, com.jp.elearningjp.shared.enums.DraftKind.TEACHER)
+                .filter(d -> d.getStatus() == com.jp.elearningjp.shared.enums.DraftStatus.SUBMITTED)
+                .ifPresent(d -> {
+                    throw new AppException(ErrorCode.LESSON_PENDING_REVIEW_LOCKED);
+                });
 
         lesson.softDelete();
         lessonRepository.save(lesson);
@@ -341,8 +362,9 @@ public class LessonService {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
         }
 
-        // 1) Load tất cả lesson active của course, sắp theo orderIndex ASC
-        List<Lesson> currentLessons = lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId);
+        // 1) Bài phía mình thấy (V66: bài mới phía bên kia tạo bị ẩn, giữ nguyên vị trí của nó)
+        List<Lesson> allLessons = lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId);
+        List<Lesson> currentLessons = lessonRepository.findVisibleByCourseId(courseId, lessonDraftService.currentKind());
         Set<Long> currentIds = new HashSet<>();
         for (Lesson l : currentLessons) currentIds.add(l.getId());
 
@@ -361,22 +383,23 @@ public class LessonService {
         // Người khác vừa sắp xếp lại / sửa bài → danh sách client đang xem đã cũ
         VersionCheck.requireVersions(currentLessons, request.getVersions());
 
-        // 3) Sắp xếp lại trong bộ nhớ theo list client gửi (orderIndex = 1..N)
-        currentLessons = OrderIndexResolver.bulkReorder(
-                currentLessons,
-                request.getLessonIds(),
-                Lesson::getId,
-                Lesson::setOrderIndex
-        );
+        // 3) Bài phía mình thấy xếp lại theo list client gửi, chiếm đúng các vị trí chúng đang giữ; bài bị ẩn giữ chỗ
+        Map<Long, Lesson> visibleById = new HashMap<>();
+        currentLessons.forEach(l -> visibleById.put(l.getId(), l));
+        java.util.Iterator<Long> requested = request.getLessonIds().iterator();
+        List<Lesson> merged = new ArrayList<>(allLessons.size());
+        for (Lesson l : allLessons) {
+            merged.add(visibleById.containsKey(l.getId()) ? visibleById.get(requested.next()) : l);
+        }
 
         // 4) Ghi an toàn 2 pha (marker âm → 1..N), tránh UNIQUE conflict
         OrderIndexResolver.persistSequential(
-                currentLessons,
+                merged,
                 Lesson::getId,
                 Lesson::setOrderIndex,
                 lessonRepository::flush
         );
-        List<Lesson> saved = currentLessons;
+        List<Lesson> saved = merged.stream().filter(l -> visibleById.containsKey(l.getId())).toList();
 
         log.info("[LESSON] Bulk reordered {} lesson(s) in course id={}", saved.size(), courseId);
         // Trả về list theo thứ tự mới
@@ -420,7 +443,8 @@ public class LessonService {
             QuizSnapshot quiz = published.get().snapshot().getQuiz();
             passingScore = Optional.ofNullable(quiz).map(QuizSnapshot::getPassingScorePercent);
         } else {
-            passingScore = quizRepository.findByLessonIdAndDeletedFalse(lessonId).map(Quiz::getPassingScorePercent);
+            passingScore = quizRepository.findByDraftIdAndDeletedFalse(lessonDraftService.readDraftId(lesson))
+                    .map(Quiz::getPassingScorePercent);
         }
         boolean hasQuiz = passingScore.isPresent();
         passingScore.ifPresent(passing -> {

@@ -105,7 +105,9 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     public LessonVocabularyItemResponse addVocabularyItem(Long sectionId, LessonVocabularyItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.VOCABULARY);
         // Chỉ giáo viên được giao hoặc ADMIN được sửa nội dung section
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
 
         // Eager-load vocab kèm examples chỉ khi cần auto-copy (teacher không gửi examples HOẶC gửi []).
         // Khi teacher cung cấp examples, dùng findByIdAndDeletedFalse cho nhẹ.
@@ -175,6 +177,8 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     @Transactional(readOnly = true)
     public LessonVocabularyItemResponse getVocabularyItem(Long itemId) {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
+                // id của bản live có thể là id ổn định của dòng đã bị xóa khi nháp được dựng lại (V65)
+                .or(() -> vocabItemRepository.findFirstByOriginIdOrderByIdDesc(itemId))
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
         // Học viên của khóa đã xuất bản: item theo bản đã duyệt
         Optional<PublishedLessonResolver.PublishedLesson> published =
@@ -218,7 +222,9 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
         VersionCheck.requireVersion(item, request.getVersion());
-        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(item.getSection().getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);
         }
@@ -291,7 +297,9 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     public void deleteVocabularyItem(Long itemId) {
         LessonVocabularyItem item = vocabItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND));
-        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(item.getSection().getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_VOCABULARY_ITEM_NOT_FOUND);
         if (item.isDeleted()) return;
         item.softDelete();
         // Cascade soft-delete examples
@@ -312,7 +320,9 @@ public class VocabularySectionItemService extends AbstractSectionItemService {
     @Transactional
     public List<LessonVocabularyItemResponse> reorderVocabularyItems(Long sectionId, ItemBulkReorderRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.VOCABULARY);
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);

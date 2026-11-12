@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Input, Button, message } from 'antd'
 import { PlusCircleOutlined } from '@ant-design/icons'
+import { RequiredMark } from '@/components/common'
 
 interface ImportShareSimpleModalProps {
   open: boolean
@@ -55,7 +56,7 @@ export const ImportShareSimpleModal: React.FC<ImportShareSimpleModalProps> = ({
         {/* Input: Mã sổ tay */}
         <div className="space-y-2">
           <label className="block text-xs font-semibold text-gray-700">
-            Mã sổ tay
+            Mã sổ tay<RequiredMark />
           </label>
           <Input
             placeholder="Mã sổ tay"

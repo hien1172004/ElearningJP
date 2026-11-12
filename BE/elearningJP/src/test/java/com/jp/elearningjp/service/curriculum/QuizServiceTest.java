@@ -81,6 +81,7 @@ class QuizServiceTest {
     @Mock LessonProgressRecorder lessonProgressRecorder;
 
     @Mock PublishedLessonResolver publishedLessonResolver;
+    @org.mockito.Mock com.jp.elearningjp.service.curriculum.LessonDraftService lessonDraftService;
     @InjectMocks QuizService service;
 
     private Course course;
@@ -90,6 +91,18 @@ class QuizServiceTest {
 
     @BeforeEach
     void setUp() {
+        // V65: nháp của bài X có id = X (quy ước trong test)
+        org.mockito.Mockito.lenient().when(lessonDraftService.readDraftId(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> ((com.jp.elearningjp.entity.curriculum.Lesson) inv.getArgument(0)).getId());
+        org.mockito.Mockito.lenient().when(courseAccessGuard.requireLessonEditable(
+                        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> {
+                    com.jp.elearningjp.entity.curriculum.Lesson l = inv.getArgument(0);
+                    com.jp.elearningjp.entity.curriculum.LessonDraft d = com.jp.elearningjp.entity.curriculum.LessonDraft.builder()
+                            .lesson(l).kind(com.jp.elearningjp.shared.enums.DraftKind.TEACHER).build();
+                    d.setId(l.getId());
+                    return d;
+                });
         course = Course.builder().title("N5").slug("n5").build();
         course.setId(1L);
 
@@ -162,7 +175,7 @@ class QuizServiceTest {
             q1.getOptions().add(optCorrect);
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q1));
 
@@ -181,7 +194,7 @@ class QuizServiceTest {
         @DisplayName("Xem quiz dùng quyền xem nội dung (admin/giáo viên xem trước được), không bắt buộc đăng ký")
         void usesContentAccess_notEnrollment() {
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of());
 
@@ -205,7 +218,7 @@ class QuizServiceTest {
         @DisplayName("Lesson chưa có quiz → QUIZ_NOT_FOUND")
         void noQuiz_throws() {
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.empty());
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.getLessonQuiz(10L))
                     .isInstanceOf(AppException.class)
@@ -237,7 +250,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -284,7 +297,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -321,7 +334,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -364,7 +377,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(lessonProgressRecorder.lockOrCreate(7L, 10L))
@@ -397,7 +410,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(lessonProgressRecorder.lockOrCreate(7L, 10L))
@@ -429,7 +442,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(lessonProgressRecorder.lockOrCreate(7L, 10L))
@@ -475,7 +488,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -518,7 +531,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -554,7 +567,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -599,7 +612,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -636,7 +649,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -673,7 +686,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -717,7 +730,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -774,7 +787,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -818,7 +831,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -857,7 +870,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -909,7 +922,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -988,7 +1001,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q1, q2, q3, q4));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))
@@ -1021,7 +1034,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of());
 
@@ -1087,7 +1100,7 @@ class QuizServiceTest {
 
             when(lessonRepository.findByIdAndDeletedFalse(10L)).thenReturn(Optional.of(lesson));
             when(currentUserService.getCurrentUser()).thenReturn(user);
-            when(quizRepository.findByLessonIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
+            when(quizRepository.findByDraftIdAndDeletedFalse(10L)).thenReturn(Optional.of(quiz));
             when(questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(500L))
                     .thenReturn(List.of(q));
             when(optionRepository.findByQuestionIdAndDeletedFalseOrderByOptionKeyAsc(1L))

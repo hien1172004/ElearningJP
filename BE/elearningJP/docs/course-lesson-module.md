@@ -5,6 +5,11 @@
 >
 > - **Frontend (FE):** `FE/src/...` — React + TypeScript, Vite, React Query, Ant Design.
 > - **Backend (BE):** `BE/elearningJP/src/main/java/com/jp/elearningjp/...` — Spring Boot, package nội bộ gọi là `curriculum`.
+>
+> **Cập nhật 2026-11-12:** phân quyền và xuất bản đã đổi — chỉ ADMIN tạo / sửa thông tin / xóa / xuất bản khóa và giao giáo viên
+> (`course_teachers`, V54); giáo viên được giao soạn bài rồi **gửi duyệt theo bài**; học viên học trên bản snapshot đã duyệt.
+> Các mục 1, 4.2, 7.6 đã sửa; luồng duyệt, phiên sửa của ADMIN, autosave và ma trận xung đột xem `course-teacher-assignment.md`
+> và `lesson-review-design.md`.
 
 ---
 
@@ -18,7 +23,8 @@ Module này phụ trách toàn bộ vòng đời của **khóa học tiếng Nh�
 |---|---|
 | **Public (khách)** | Xem danh sách khóa học công khai, xem chi tiết khóa học. |
 | **Học viên (Student)** | Đăng ký (enroll), học bài (xem Kanji/Vocab/Grammar, làm Quiz), theo dõi tiến độ, hoàn thành bài. |
-| **Giáo viên / Admin (TEACHER, ADMIN)** | CRUD khóa học, xuất bản/nháp, CRUD bài học, sắp xếp thứ tự, quản lý Section (Kanji/Vocab/Grammar) và Quiz. |
+| **Quản trị viên (ADMIN)** | Tạo / sửa thông tin / xóa / xuất bản khóa, giao giáo viên, duyệt / từ chối bài, "Lưu bài" / lưu cả khóa, sửa nội dung bài trong **phiên sửa** (khóa bài với người khác). |
+| **Giáo viên được giao (TEACHER)** | Soạn bài học, section (Kanji/Vocab/Grammar), quiz, luyện nói của khóa được giao; gửi duyệt theo bài, rút yêu cầu. |
 
 ### Cấu trúc URL (FE)
 
@@ -190,16 +196,17 @@ Module này phụ trách toàn bộ vòng đời của **khóa học tiếng Nh�
 
 ```
 1. /teacher/courses
-   GET /courses/admin?page=0&size=20         (list tất cả course kể cả draft)
+   GET /courses/admin?page=1&size=20         (ADMIN: mọi khóa; giáo viên: khóa được giao)
 
-2. Bấm "Tạo khóa học"
+2. ADMIN bấm "Tạo khóa học" rồi giao giáo viên
    POST /courses
-   { title, slug, jlptLevel, description?, thumbnailUrl?, published? }
+   { title, slug, jlptLevel, description?, thumbnailUrl? }
+   POST /courses/{id}/teachers { teacherId }
 
-3. Trong TeacherCourseEditorPage (2 tabs: Tổng quan | Bài học):
-   3.1. Sửa thông tin:
+3. Trong TeacherCourseEditorPage (Tổng quan | Bài học | Đề thi | Học viên | Duyệt | Giáo viên):
+   3.1. Sửa thông tin / xuất bản (chỉ ADMIN):
         PUT /courses/{id}
-        PATCH /courses/{id}/publish?publish=true|false
+        PATCH /courses/{id}/publish?publish=true|false   (cần đã có phiên bản được duyệt)
 
    3.2. Thêm bài học:
         POST /courses/{id}/lessons
@@ -448,7 +455,7 @@ BE **shuffle sẵn** thứ tự `right[]` mỗi lần teacher save → mỗi l�
   - Hỗ trợ backward-compat với URL cũ dạng `/learn/{courseId}/{lessonId}` (số) — tự redirect sang slug khi load xong.
 
 ### 7.6 Bảo mật endpoint Quiz Manage
-`GET /lessons/{id}/quiz/manage` (lấy đề kèm đáp án) — BE kiểm tra **owner**: chỉ Teacher tạo course đó mới xem được. Teacher khác → 403.
+`GET /lessons/{id}/quiz/manage` (lấy đề kèm đáp án) — BE kiểm tra `CourseAccessGuard.requireAssignedOrAdmin`: ADMIN hoặc giáo viên **được giao** khóa; giáo viên khác → 403.
 
 ### 7.7 Soft delete
 - Course: set `archivedAt` (không xoá cứng).
@@ -544,7 +551,7 @@ Mọi hook đều dùng React Query → tự động:
 ## 9. Tóm tắt các điểm cần nhớ khi báo cáo
 
 1. **Hai tên gọi một thực thể:** FE gọi "Course/Lesson", BE gọi "curriculum". Khi trích dẫn file phải nói rõ đang ở phía nào.
-2. **Phân quyền rõ ràng:** Public (catalog/detail), Student (learn), Teacher/Admin (manage). Endpoint `quiz/manage` có check owner.
+2. **Phân quyền rõ ràng:** Public (catalog/detail), Student (learn trên bản đã duyệt), ADMIN / giáo viên được giao (manage). Endpoint `quiz/manage` kiểm tra được giao.
 3. **3 loại nội dung lesson:** Kanji / Vocabulary / Grammar — đều tham chiếu sang `dictionary`, có field `custom*` để override mà không sửa gốc.
 4. **Cơ chế "auto-derive"** cho Kanji related vocab và Vocab/Grammar examples: nếu FE không gửi → BE tự suy ra từ dictionary. Có 3-state semantics rất tinh tế (null = giữ, [] = reset, [...] = upsert).
 5. **Quiz 3 dạng câu hỏi:** MCQ, MATCHING (BE shuffle right), FILL_IN_THE_BLANK. Matching là điểm đặc biệt vì BE đã chống ghi nhớ.

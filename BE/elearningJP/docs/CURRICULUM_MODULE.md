@@ -3,6 +3,13 @@
 > Phạm vi: `BE/elearningJP/src/main/java/com/jp/elearningjp/`
 > Module này gồm 4 sub-module: **Course**, **Lesson**, **Enrollment**, **Progress** (4 controller, 4 service, 4 repository, 9 entity, 4 mapper, 10 event class).
 > Tài liệu này mô tả **đúng những gì source code hiện đang làm**, không phải lý thuyết chung. Mọi "suy luận" đã được đánh dấu rõ.
+>
+> **Cập nhật 2026-11-12 — đọc trước:** quyền quản lý khóa học **không còn dựa vào người tạo (`createdBy`)**. Từ V54 chỉ ADMIN
+> tạo khóa và giao cho giáo viên (`course_teachers`); mọi giáo viên được giao có quyền ngang nhau. Từ V55–V64 khóa học có
+> luồng duyệt (bản nháp ↔ bản học viên đang học = snapshot), duyệt **theo bài**, phiên sửa của ADMIN (lock Redis) và autosave.
+> Các mục 4.1, 4.4, 4.5, 5.1.1, 5.1.4 bên dưới đã sửa theo mô hình mới; phần còn lại của tài liệu (vd `contentMarkdown`,
+> `requireOwnerOrAdmin` ở mục 9–12) có thể còn lỗi thời. Chi tiết: `course-teacher-assignment.md` (hiện trạng + ma trận
+> xung đột) và `lesson-review-design.md` (thiết kế duyệt theo bài).
 
 ---
 
@@ -153,7 +160,7 @@ LearningPathTemplate >─ Course
 | GET | `/api/v1/courses/slug/{slug}` | `getCourseBySlug` | `findBySlugAndDeletedFalse` |
 | GET | `/api/v1/courses` | `getAllPublishedCourses` | `findByDeletedFalseAndPublishedTrue(Pageable)` |
 | GET | `/api/v1/courses/level/{level}` | `getCoursesByLevel` | `findByDeletedFalseAndPublishedTrueAndJlptLevel` |
-| GET | `/api/v1/courses/admin/all` | `getAllCoursesAdmin` | TEACHER: `findByCreatedBy_IdAndDeletedFalse` + manual Page; ADMIN: `findByDeletedFalse(Pageable)` |
+| GET | `/api/v1/courses/admin` | `getAllCoursesForAdmin` | TEACHER: khóa được giao (`adminListSpec`, phân trang DB); ADMIN: mọi khóa |
 | PUT | `/api/v1/courses/{id}` | `updateCourse` | `existsBySlugAndDeletedFalseAndIdNot` (nếu đổi slug), `countByCourse_IdAndStatusAndDeletedFalse` (nếu đổi level), `save` |
 | POST | `/api/v1/courses/{id}/publish` | `publishCourse` | `save` |
 | POST | `/api/v1/courses/{id}/unpublish` | `unpublishCourse` | `save` |
@@ -193,6 +200,18 @@ LearningPathTemplate >─ Course
 | GET | `/api/v1/progress/lessons/{lessonId}` | `getMyProgressForLesson` | `findByUser_IdAndLesson_IdAndDeletedFalse` (trả `null` nếu không có) |
 | GET | `/api/v1/progress/courses/{courseId}` | `getMyProgressForCourse` | `findByIdAndDeletedFalse` (course) + `findByUserAndCourseWithLesson` (JPQL `JOIN FETCH p.lesson`) + `countByCourse_IdAndDeletedFalse` |
 
+### 3.5 Phân công, duyệt, phiên sửa, autosave (V54–V64)
+
+| Controller | Đường dẫn chính | Ghi chú |
+|---|---|---|
+| `CourseTeacherController` | `GET/POST /courses/{courseId}/teachers`, `DELETE …/teachers/{teacherId}` | ADMIN giao / gỡ giáo viên |
+| `CourseReviewController` | `/courses/{courseId}/review-requests[/withdraw]`, `/courses/{courseId}/versions`, `/course-review-requests/{id}/approve\|reject` | Duyệt cả khóa (luồng cũ) + ADMIN lưu cả khóa |
+| `LessonReviewController` | `/courses/{courseId}/lesson-reviews`, `/courses/{courseId}/lesson-review-states`, `/lessons/{id}/review/withdraw\|save`, `/lesson-review-requests[/{id}/approve\|reject]` | Duyệt theo bài (luồng chính) |
+| `LessonEditLockController` | `POST/PUT/DELETE /lessons/{id}/edit-lock` | Phiên sửa bài của ADMIN (Redis) |
+| `LessonAutosaveController` | `GET /lessons/{id}/autosaves`, `PUT/DELETE /lessons/{id}/autosaves/{formKey}` | Bản chưa lưu theo người + bài |
+
+Nghiệp vụ & ma trận xung đột: `course-teacher-assignment.md`; thiết kế: `lesson-review-design.md`.
+
 ---
 
 ## 4. Phân quyền (Authentication / Authorization)
@@ -205,7 +224,7 @@ LearningPathTemplate >─ Course
 |---|---|---|
 | **URL-level** | `requestMatchers(HttpMethod.GET, ...).permitAll()` cho các GET công khai; `.anyRequest().authenticated()` cho phần còn lại | `SecurityConfig` |
 | **Role-level (annotation)** | `@EnableMethodSecurity` được bận nhưng **không có `@PreAuthorize`/`@Secured` nào trong module curriculum** | `SecurityConfig` |
-| **Owner-level (Service)** | Helper `requireOwnerOrAdmin(course, user)` / `requireTeacherOrAdmin(user)` / `requireEnrolledUser(userId, courseId)` trong từng Service | `CourseService`, `LessonService`, `EnrollmentService`, `ProgressService` |
+| **Course-level (Service)** | `CourseAccessGuard`: `requireAssignedOrAdmin` (quản lý / xem bản nháp), `requireContentEditable` (ghi nội dung cấp khóa), `requireLessonEditable` (ghi nội dung 1 bài: thêm khóa khi bài chờ duyệt + phiên sửa của ADMIN), `requireEnrolled` / `requireContentAccess` (học / xem) | `CourseService`, `LessonService`, `SectionService`, `*SectionItemService`, `QuizService`, `LessonSpeakingService`, `ProgressService`… |
 | **Resource-level** | `findByIdAndCourse_IdAndDeletedFalse` — lesson chỉ tìm thấy nếu đúng courseId (chống URL hacking) | `LessonRepository` |
 
 ### 4.2 URL public (không cần JWT)
@@ -230,29 +249,26 @@ Mọi POST/PUT/DELETE trên course, lesson, enrollment, progress **đều yêu c
 
 | Hành động | Yêu cầu | Check ở đâu |
 |---|---|---|
-| Tạo course | TEACHER hoặc ADMIN | `CourseService.requireTeacherOrAdmin` |
-| Sửa/Xoá/Publish/Unpublish/Archive course | Owner (`createdBy == currentUser`) HOẶC ADMIN | `CourseService.requireOwnerOrAdmin` |
+| Tạo course | Chỉ ADMIN | `@PreAuthorize("hasRole('ADMIN')")` |
+| Sửa thông tin / Xoá / Xuất bản / Chuyển nháp course | Chỉ ADMIN | `@PreAuthorize`; xuất bản cần đã có phiên bản được duyệt (`COURSE_NOT_YET_APPROVED`) |
+| Giao / gỡ giáo viên | Chỉ ADMIN | `CourseTeacherService` |
 | Xem course detail (course đã publish) | Public (bất kỳ ai) | URL permit + Service vẫn gắn `isEnrolled` (Boolean: null=anonymous, true/false) |
-| Xem course detail (course CHƯA publish) | Owner hoặc ADMIN | `buildDetailResponse` wrap trong `try/catch`, throw `COURSE_NOT_PUBLISHED` nếu fail |
-| Tạo/Sửa/Xoá/Reorder lesson | Owner của course chứa lesson HOẶC ADMIN | `LessonService.requireOwnerOrAdmin` |
+| Xem course detail (course CHƯA publish) | ADMIN hoặc giáo viên được giao (bản nháp); học viên đã đăng ký đọc bản snapshot | `CourseService.getCourseDetail` |
+| Tạo / Sắp xếp lesson | ADMIN hoặc giáo viên được giao (giáo viên bị khóa khi cả khóa chờ duyệt) | `CourseAccessGuard.requireContentEditable` |
+| Sửa tiêu đề / Xoá lesson | Như trên + bài không chờ duyệt + không có ADMIN **khác** đang sửa bài | `requireLessonEditable(lesson, …, false)` |
+| Sửa nội dung bài (section, item, quiz, luyện nói, import) | Như trên; ADMIN phải đang giữ **phiên sửa bài** | `requireLessonEditable(lesson, …)` |
+| Gửi / rút duyệt bài, ADMIN duyệt / từ chối / lưu bài | Xem `course-teacher-assignment.md` mục 2 | `LessonReviewService` |
 | Xem list lesson trong course | Public | URL permit |
-| Xem lesson detail (course đã publish) | Owner/ADMIN HOẶC user có enrollment ACTIVE | `LessonService.getLessonById` |
-| Xem lesson detail (course chưa publish) | Owner/ADMIN | `LessonService.getLessonById` (nhánh đầu) |
+| Xem lesson detail | ADMIN / giáo viên được giao → bản nháp; học viên đã đăng ký → bản snapshot (`PublishedLessonResolver`) | `LessonService.getLessonDetail` |
 | Enroll | User authenticated; course đã publish, chưa archived; chưa có enrollment ACTIVE | `EnrollmentService.enrollInCourse` |
 | Drop enrollment | Owner (`enrollment.user == currentUser`) HOẶC ADMIN | `EnrollmentService.dropEnrollment` |
 | Xem enrollment detail | Owner hoặc ADMIN | `EnrollmentService.getEnrollmentById` |
 | Start/Complete lesson | Có enrollment ACTIVE | `ProgressService.requireEnrolledUser` |
 
-### 4.5 Quy tắc "owner" chính xác
-Trong `CourseService.requireOwnerOrAdmin`:
-```java
-if (currentUserService.isAdmin()) return; // admin bypass
-if (course.getCreatedBy() != null && course.getCreatedBy().getId().equals(user.getId())) {
-    return; // teacher owner
-}
-throw new AppException(ErrorCode.FORBIDDEN_COURSE_ACCESS);
-```
-> **Suy luận:** TEACHER chỉ là owner nếu `createdBy.id == currentUser.id`. Một TEACHER khác (dù cùng role) sẽ bị 403. ADMIN bypass hoàn toàn.
+### 4.5 Quy tắc "được giao" (thay cho "owner" cũ)
+`CourseAccessGuard.isAssignedTeacher(course, userId)` = có dòng trong `course_teachers` (V54). ADMIN luôn pass các kiểm tra quản lý.
+`courses.created_by` không còn dùng để phân quyền (người tạo luôn là ADMIN). Gỡ giáo viên = xóa dòng; nội dung họ đã soạn giữ nguyên.
+Ma trận đầy đủ (kể cả khi chờ duyệt, phiên sửa của ADMIN, autosave): `course-teacher-assignment.md`.
 
 ### 4.6 Helper lấy user hiện tại — `CurrentUserService`
 
@@ -266,7 +282,7 @@ Xem chi tiết ở [mục 10](#10-helper-class--currentuserservice).
 
 #### 5.1.1 State machine
 ```
-            create (TEACHER/ADMIN)
+            create (ADMIN)
                 ↓
         [DRAFT, published=false]
             ↙          ↘
@@ -286,8 +302,9 @@ Xem chi tiết ở [mục 10](#10-helper-class--currentuserservice).
            ↓
       [DELETED]
 ```
-- **publish:** set `published=true`. Idempotent — nếu đã publish thì log skip, không throw.
-- **unpublish:** set `published=false`. Idempotent.
+- **publish:** chỉ ADMIN; set `published=true` và hiện lại **phiên bản đã duyệt gần nhất** (snapshot V56) — chưa từng có phiên bản
+  thì `COURSE_NOT_YET_APPROVED`. Nội dung mới chỉ tới học viên qua duyệt (theo bài / cả khóa) hoặc ADMIN lưu. Idempotent.
+- **unpublish:** chỉ ADMIN; set `published=false`, không đụng bản nháp / yêu cầu duyệt. Idempotent.
 - **archive:** set `archivedAt=now()` + `published=false` đồng thời. Không idempotent nhưng nếu đã archive thì skip.
 - **delete:** soft-delete course + cascade soft-delete lesson + enrollment (xem [mục 6](#6-soft-delete--cascade)).
 
@@ -315,7 +332,7 @@ Trong `CourseService.buildDetailResponse` (mục 5.1.3 trong code):
 
 #### 5.1.4 Admin list
 - ADMIN: dùng `findByDeletedFalse(Pageable)` (mọi course, kể cả chưa publish).
-- TEACHER: dùng `findByCreatedBy_IdAndDeletedFalse(userId)` rồi manual convert `List<Course>` → `Page` (vì method này không trả `Page`). Suy luận: có thể vì lý do đơn giản (không phân trang phức tạp), nhưng hiệu năng có thể kém khi teacher tạo nhiều course.
+- TEACHER: chỉ khóa **được giao** (`CourseService.adminListSpec(teacherId, …)` lọc theo `course_teachers`), phân trang ở DB.
 
 ### 5.2 Lesson (LessonService)
 

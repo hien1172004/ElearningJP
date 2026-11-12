@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { courseService } from '@/services'
 import { QUERY_KEYS } from '@/lib/queryKeys'
-import type { JlptLevel, PageResponse, CourseSummary } from '@/types'
+import type { CourseReviewStatus, JlptLevel, PageResponse, CourseSummary } from '@/types'
 
 interface UseCoursesParams {
   jlptLevel?: JlptLevel
@@ -9,8 +9,10 @@ interface UseCoursesParams {
   size?: number
   /** Nếu true -> lấy tất cả cho admin/teacher. */
   admin?: boolean
-  /** (admin) Chỉ khóa có thay đổi chưa duyệt. */
+  /** (admin) Chỉ khóa có thay đổi chưa chốt. */
   pendingChanges?: boolean
+  /** (admin) PENDING_REVIEW = chờ duyệt; EDITING (kèm pendingChanges) = đang soạn, chưa gửi. */
+  reviewStatus?: CourseReviewStatus
   /** (admin) Tìm theo tên khóa học. */
   keyword?: string
   /** (admin) true = đã xuất bản, false = bản nháp. */
@@ -29,6 +31,7 @@ export function useCourses(params: UseCoursesParams = {}) {
             page: params.page ?? 1,
             size: params.size ?? 10,
             pendingChanges: params.pendingChanges || undefined,
+            reviewStatus: params.reviewStatus,
             keyword: params.keyword || undefined,
             jlptLevel: params.jlptLevel,
             published: params.published,

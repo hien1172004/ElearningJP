@@ -24,6 +24,10 @@ public class QuizQuestion extends SoftDeletableEntity {
     @JoinColumn(name = "quiz_id", nullable = false)
     private Quiz quiz;
 
+    /** Id ổn định của phần tử trong bản live (V65); null = chính {@code id}. Bản chụp ghi COALESCE(originId, id). */
+    @Column(name = "origin_id")
+    private Long originId;
+
     @Column(name = "question_text", nullable = false, columnDefinition = "text")
     private String questionText;
 

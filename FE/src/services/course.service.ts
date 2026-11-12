@@ -2,6 +2,7 @@ import { axiosClient } from './api/axiosClient'
 import type {
   ApiResponse,
   PageResponse,
+  CourseReviewStatus,
   CourseSummary,
   CourseDetail,
   CourseCreateRequest,
@@ -66,8 +67,10 @@ export const courseService = {
   getAllCoursesAdmin(params?: {
     page?: number
     size?: number
-    /** Chỉ khóa có thay đổi chưa duyệt. */
+    /** Chỉ khóa có thay đổi chưa chốt. */
     pendingChanges?: boolean
+    /** PENDING_REVIEW = đã gửi, chờ duyệt; EDITING (kèm pendingChanges) = đang soạn, chưa gửi duyệt. */
+    reviewStatus?: CourseReviewStatus
     /** Tìm theo tên khóa học. */
     keyword?: string
     jlptLevel?: JlptLevel

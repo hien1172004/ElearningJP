@@ -15,13 +15,13 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
     /**
      * Lấy tất cả section (chưa xoá) của một lesson, sắp xếp theo orderIndex tăng dần.
      */
-    List<LessonSection> findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(Long lessonId);
+    List<LessonSection> findByDraftIdAndDeletedFalseOrderByOrderIndexAsc(Long draftId);
 
     /**
      * Lấy section theo lesson + loại section (KANJI / VOCABULARY / GRAMMAR).
      */
-    List<LessonSection> findByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(
-            Long lessonId, LessonSectionType sectionType);
+    List<LessonSection> findByDraftIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(
+            Long draftId, LessonSectionType sectionType);
 
     /**
      * Kiểm tra lesson có chứa section thuộc loại nào đó hay không.
@@ -29,8 +29,8 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
      * Hãy dùng {@link com.jp.elearningjp.repository.curriculum.QuizRepository#existsByLessonIdAndDeletedFalse}
      * (query thẳng bảng {@code lesson_quizzes}).</p>
      */
-    boolean existsByLessonIdAndSectionTypeAndDeletedFalse(
-            Long lessonId, LessonSectionType sectionType);
+    boolean existsByDraftIdAndSectionTypeAndDeletedFalse(
+            Long draftId, LessonSectionType sectionType);
 
     /**
      * Chỉ load section cơ bản + lesson. KHÔNG JOIN FETCH bất kỳ collection nào
@@ -42,6 +42,12 @@ public interface LessonSectionRepository extends JpaRepository<LessonSection, Lo
      * {@link com.jp.elearningjp.repository.curriculum.QuizRepository}.
      * Cùng persistence context → Hibernate tự gắn dữ liệu vào các section đã load.</p>
      */
-    @Query("SELECT DISTINCT s FROM LessonSection s WHERE s.lesson.id = :lessonId AND s.deleted = false ORDER BY s.orderIndex ASC")
-    List<LessonSection> findByLessonIdWithAllItems(@Param("lessonId") Long lessonId);
+    @Query("SELECT DISTINCT s FROM LessonSection s WHERE s.draft.id = :draftId AND s.deleted = false ORDER BY s.orderIndex ASC")
+    List<LessonSection> findByDraftIdWithAllItems(@Param("draftId") Long draftId);
+
+    /**
+     * Dòng mang id ổn định {@code originId} (V65) — id trong bản live có thể là id của dòng đã bị xóa khi nháp được
+     * dựng lại; dùng để tìm bài chứa phần tử khi đọc theo id của bản live.
+     */
+    java.util.Optional<LessonSection> findFirstByOriginIdOrderByIdDesc(Long originId);
 }

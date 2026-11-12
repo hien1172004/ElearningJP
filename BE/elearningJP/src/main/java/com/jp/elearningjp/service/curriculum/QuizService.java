@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.entity.curriculum.LessonDraft;
 import com.jp.elearningjp.shared.util.VersionCheck;
 import com.jp.elearningjp.dto.request.curriculum.ItemBulkReorderRequest;
 import com.jp.elearningjp.dto.request.curriculum.QuizAnswerItem;
@@ -81,6 +82,7 @@ public class QuizService {
     LessonProgressRecorder lessonProgressRecorder;
     EntityManager entityManager;
     PublishedLessonResolver publishedLessonResolver;
+    LessonDraftService lessonDraftService;
 
     // =========================================================
     // READ
@@ -108,7 +110,7 @@ public class QuizService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         courseAccessGuard.requireLessonContentAccess(lesson);
 
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+        Quiz quiz = quizRepository.findByDraftIdAndDeletedFalse(lessonDraftService.readDraftId(lesson))
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
         return buildLessonQuizResponse(quiz, lesson);
@@ -120,10 +122,14 @@ public class QuizService {
     @Transactional(readOnly = true)
     public LessonQuizResponse getQuiz(Long quizId) {
         Quiz quiz = quizRepository.findById(quizId)
+                // id của bản live có thể là id ổn định của dòng đã bị xóa khi nháp được dựng lại (V65)
+                .or(() -> quizRepository.findFirstByOriginIdOrderByIdDesc(quizId))
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
         if (quiz.isDeleted()) {
             throw new AppException(ErrorCode.QUIZ_NOT_FOUND);
         }
+        // Quyền xem bài + quiz thuộc nháp đúng phía người xem (V65)
+        courseAccessGuard.requireDraftContentAccess(quiz.getDraft(), ErrorCode.QUIZ_NOT_FOUND);
         // Load questions + options cho response
         loadQuestionsForRead(quiz);
         return buildLessonQuizResponse(quiz, quiz.getLesson());
@@ -157,7 +163,8 @@ public class QuizService {
         // Check quyền teacher-owner hoặc admin
         courseAccessGuard.requireAssignedOrAdmin(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+        // Nháp của phía người quản lý (V65)
+        Quiz quiz = quizRepository.findByDraftIdAndDeletedFalse(lessonDraftService.readDraftId(lesson))
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
         return buildLessonQuizManageResponse(quiz, lesson);
@@ -188,7 +195,7 @@ public class QuizService {
         courseAccessGuard.requireEnrolledInLesson(lesson);
         User currentUser = currentUserService.getCurrentUser();
 
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+        Quiz quiz = quizRepository.findByDraftIdAndDeletedFalse(lessonDraftService.readDraftId(lesson))
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
         List<QuizQuestion> questions = questionRepository.findByQuizIdAndDeletedFalseOrderByOrderIndexAsc(quiz.getId());
@@ -285,12 +292,13 @@ public class QuizService {
     public QuizQuestionResponse addQuestionToLesson(Long lessonId, QuizQuestionCreateRequest request) {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
-        courseAccessGuard.requireContentEditable(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        LessonDraft draft = courseAccessGuard.requireLessonEditable(lesson, ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+        Quiz quiz = quizRepository.findByDraftIdAndDeletedFalse(draft.getId())
                 .orElseGet(() -> {
                     Quiz newQuiz = Quiz.builder()
                             .lesson(lesson)
+                            .draft(draft)
                             .title("Bài kiểm tra: " + lesson.getTitle())
                             .passingScorePercent(80)
                             .build();
@@ -404,10 +412,11 @@ public class QuizService {
         QuizQuestion question = questionRepository.findByIdWithOptions(questionId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
         VersionCheck.requireVersion(question, request.getVersion());
-        // Check quyền: admin pass, teacher chỉ update được câu hỏi thuộc course được giao
-        courseAccessGuard.requireContentEditable(
-                question.getQuiz().getLesson().getCourse(),
-                ErrorCode.FORBIDDEN_LESSON_ACCESS
+        // Check quyền: admin pass, teacher chỉ update được câu hỏi thuộc course được giao; đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(
+                question.getQuiz().getDraft(),
+                ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.QUESTION_NOT_FOUND
         );
 
         Long quizId = question.getQuiz().getId();
@@ -550,10 +559,11 @@ public class QuizService {
     public void deleteQuestion(Long questionId) {
         QuizQuestion question = questionRepository.findByIdAndDeletedFalse(questionId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUESTION_NOT_FOUND));
-        // Check quyền: admin pass, teacher chỉ xoá được câu hỏi thuộc course được giao
-        courseAccessGuard.requireContentEditable(
-                question.getQuiz().getLesson().getCourse(),
-                ErrorCode.FORBIDDEN_LESSON_ACCESS
+        // Check quyền: admin pass, teacher chỉ xoá được câu hỏi thuộc course được giao; đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(
+                question.getQuiz().getDraft(),
+                ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.QUESTION_NOT_FOUND
         );
         Long quizId = question.getQuiz().getId();
     Long lessonId = question.getQuiz().getLesson().getId();
@@ -592,14 +602,12 @@ public class QuizService {
      */
     @Transactional
     public List<QuizQuestionResponse> reorderQuizQuestions(Long lessonId, ItemBulkReorderRequest request) {
-        Quiz quiz = quizRepository.findByLessonIdAndDeletedFalse(lessonId)
+        Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        // Check quyền: admin pass, teacher chỉ reorder câu hỏi trong course được giao; quiz của nháp phía mình (V65)
+        LessonDraft draft = courseAccessGuard.requireLessonEditable(lesson, ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        Quiz quiz = quizRepository.findByDraftIdAndDeletedFalse(draft.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
-
-        // Check quyền: admin pass, teacher chỉ reorder câu hỏi trong course được giao
-        courseAccessGuard.requireContentEditable(
-                quiz.getLesson().getCourse(),
-                ErrorCode.FORBIDDEN_LESSON_ACCESS
-        );
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);

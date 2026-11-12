@@ -3,7 +3,7 @@ import { Modal, Form, Input, Select, App } from 'antd'
 import { Save, BookPlus, BookOpen } from 'lucide-react'
 import { z } from 'zod'
 import type { CourseCreateRequest, CourseDetail, CourseUpdateRequest, JlptLevel } from '@/types'
-import { useCreateCourse, useUpdateCourse } from '@/hooks'
+import { useCreateCourse, useUpdateCourse, useOnConcurrentReload } from '@/hooks'
 import { MediaUploadField } from '@/components/common'
 
 const JLPT_LEVELS: JlptLevel[] = ['N5', 'N4', 'N3', 'N2', 'N1']
@@ -37,6 +37,11 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
   const create = useCreateCourse()
   const update = useUpdateCourse(course?.id ?? 0)
   const isPending = create.isPending || update.isPending
+
+  // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
+  useOnConcurrentReload(() => {
+    if (open && isEdit) onClose()
+  })
 
   useEffect(() => {
     if (open) {
@@ -120,7 +125,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       <Form
         form={form}
         layout="vertical"
-        requiredMark={false}
         disabled={isPending}
         className="pt-2"
       >
@@ -165,7 +169,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
 
         <Form.Item
           name="thumbnailUrl"
-          label="Ảnh bìa (tuỳ chọn)"
+          label="Ảnh bìa"
           rules={[
             {
               type: 'url',

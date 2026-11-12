@@ -48,6 +48,7 @@ public class ProgressService {
     private final CourseAccessGuard courseAccessGuard;
     private final ApplicationEventPublisher eventPublisher;
     private final LessonProgressRecorder lessonProgressRecorder;
+    private final LessonDraftService lessonDraftService;
     private final PublishedLessonResolver publishedLessonResolver;
 
     // ============================================================
@@ -115,7 +116,8 @@ public class ProgressService {
         // Học viên của khóa đã xuất bản: quiz theo bản đã duyệt
         Optional<Integer> passingScore = published.isPresent()
                 ? Optional.ofNullable(published.get().snapshot().getQuiz()).map(QuizSnapshot::getPassingScorePercent)
-                : quizRepository.findByLessonIdAndDeletedFalse(lessonId).map(Quiz::getPassingScorePercent);
+                : quizRepository.findByDraftIdAndDeletedFalse(lessonDraftService.readDraftId(lesson))
+                        .map(Quiz::getPassingScorePercent);
         boolean isMiniTest = passingScore.isPresent();
         if (isMiniTest) {
             BigDecimal bestScore = progress.getBestScore();
