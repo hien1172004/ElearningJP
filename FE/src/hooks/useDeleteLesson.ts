@@ -16,6 +16,7 @@ export function useDeleteLesson(courseId?: number) {
       if (courseId) {
         qc.invalidateQueries({ queryKey: ['courses', courseId, 'lessons'] })
         qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detail(courseId) })
+        qc.invalidateQueries({ queryKey: QUERY_KEYS.lessonReview.all }) // trạng thái duyệt theo bài (draftRevision)
       } else {
         qc.invalidateQueries({ queryKey: ['courses'] })
         qc.invalidateQueries({ queryKey: ['lessons'] })

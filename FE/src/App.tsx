@@ -1,7 +1,7 @@
 import React from 'react'
 import { Toaster } from 'sonner'
 import { AppRouter } from '@/routes'
-import { ErrorBoundary } from './components'
+import { ConcurrentEditModal, ErrorBoundary } from './components'
 import { useThemeStore } from '@/stores'
 
 export const App: React.FC = () => {
@@ -9,6 +9,7 @@ export const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <AppRouter />
+      <ConcurrentEditModal />
       <Toaster position="top-right" richColors closeButton theme={theme} />
     </ErrorBoundary>
   )

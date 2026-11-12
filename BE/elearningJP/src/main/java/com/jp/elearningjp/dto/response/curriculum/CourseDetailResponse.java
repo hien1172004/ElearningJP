@@ -30,8 +30,14 @@ public class CourseDetailResponse {
     CourseReviewStatus reviewStatus;
     /** Bản đang soạn có thay đổi chưa được duyệt / xuất bản. */
     Boolean hasUnpublishedChanges;
+    /** Người / thời điểm sửa bản đang soạn gần nhất (null = chưa rõ). */
+    Long draftUpdatedById;
+    String draftUpdatedByName;
+    Instant draftUpdatedAt;
     /** Phiên bản đã duyệt gần nhất (null = chưa từng được duyệt → ADMIN chưa mở được khóa). */
     Long publishedVersionId;
+    /** Số bài đang chờ duyệt theo bài (chỉ trả cho trang quản lý; null ở trang công khai). */
+    Long pendingLessonReviews;
     /** Phiên bản học viên đang học (chỉ trả cho ADMIN / giáo viên được giao; null = chưa có). */
     Integer publishedVersionNo;
     Instant publishedVersionAt;

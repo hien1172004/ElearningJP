@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button as AntdButton, Tabs } from 'antd'
 import { BookOpen, ChevronRight, FileCheck, Languages, Pencil, Plus, Trash2, Type, Mic } from 'lucide-react'
@@ -6,10 +6,15 @@ import { BackButton, EmptyState, LoadingState } from '@/components/common'
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import {
   CourseEditLockBanner,
+  countPendingReviews,
   CourseEditLockContext,
+  CourseEditSessionControls,
+  CourseContentUpdateNotice,
+  LessonDraftPanel,
   LessonFormModal,
-  courseEditLockReason,
-  LessonReviewComments,
+  lessonEditLockReason,
+  LessonReviewActions,
+  LessonReviewStatusTag,
   useCourseEditLocked,
 } from '@/components/course'
 import {
@@ -21,7 +26,15 @@ import {
 import { QuizPanel } from '@/components/course/quiz-editor'
 import { LessonSpeakingPanel } from '@/components/course/speaking-editor/LessonSpeakingPanel'
 import { PracticeSheetButton } from '@/components/course/practice-sheet'
-import { useCourseDetail, useLessonDetail, useSectionMutations } from '@/hooks'
+import {
+  useCourseDetail,
+  useCourseEditSession,
+  useInvalidateCourseDraftState,
+  useLessonDetail,
+  useLessonReviewState,
+  useLessonReviewStates,
+  useSectionMutations,
+} from '@/hooks'
 import type { LessonSection, LessonSectionType } from '@/types'
 import { useAuthStore } from '@/stores'
 import { isAdmin } from '@/utils/roles'
@@ -160,12 +173,26 @@ export const TeacherLessonEditorPage: React.FC = () => {
   const [editOpen, setEditOpen] = useState(false)
 
   const { data: course } = useCourseDetail(courseId)
+  // Vào trang: làm mới trạng thái khóa (cache 5 phút có thể còn cờ khóa sửa / thay đổi cũ)
+  const invalidateCourseDraft = useInvalidateCourseDraftState()
+  useEffect(() => {
+    invalidateCourseDraft()
+  }, [courseId, invalidateCourseDraft])
   const { data: lesson, isLoading } = useLessonDetail(lessonId || undefined)
-  // Đang chờ duyệt: giáo viên tạm khóa sửa (ADMIN vẫn sửa được)
   const currentUser = useAuthStore((s) => s.user)
   const admin = isAdmin(currentUser)
-  // ADMIN chỉ xem & duyệt; giáo viên bị khóa sửa khi khóa đang chờ duyệt
-  const lockReason = courseEditLockReason(course, admin)
+  const { data: reviewState } = useLessonReviewState(courseId, lessonId)
+  // Khóa sửa khóa học của phía mình (V65 — giáo viên / quản trị viên sửa 2 nháp riêng, mỗi phía 1 người sửa)
+  const editSession = useCourseEditSession(courseId)
+  // Khóa đang chờ duyệt cả khóa / bài đã gửi duyệt → giáo viên chỉ xem; người cùng phía đang sửa hoặc chưa bấm
+  // "Sửa khóa học" → chỉ xem
+  // ADMIN: còn bài chờ duyệt / cả khóa chờ duyệt → duyệt / từ chối hết trước khi sửa (chặn theo khóa học)
+  const { data: reviewStates } = useLessonReviewStates(courseId, admin)
+  const pendingReviews = admin ? countPendingReviews(reviewStates) : 0
+  const lockReason = lessonEditLockReason(course, reviewState, admin, editSession, pendingReviews)
+  const editBlockedReason = !admin
+    ? course?.reviewStatus === 'PENDING_REVIEW' ? 'Khóa học đang chờ duyệt cả khóa — rút yêu cầu trước khi sửa' : null
+    : pendingReviews > 0 || course?.reviewStatus === 'PENDING_REVIEW' ? `Khóa học còn ${pendingReviews > 0 ? `${pendingReviews} bài chờ duyệt` : 'yêu cầu duyệt cả khóa'} — duyệt / từ chối hết trước khi sửa` : null
   const locked = lockReason !== null
   const coursePath = `/teacher/courses/${courseId}`
 
@@ -211,7 +238,7 @@ export const TeacherLessonEditorPage: React.FC = () => {
       <div className="max-w-6xl mx-auto px-3 sm:px-4 space-y-4 pb-12" data-edit-locked={locked || undefined}>
         <BackButton onClick={() => navigate(coursePath)} />
 
-        {/* Header: breadcrumb khóa học → bài học + sửa bài học */}
+        {/* Header: breadcrumb khóa học → bài học + trạng thái duyệt + sửa bài học + thao tác duyệt theo bài */}
         <div className={`${CARD} px-4 py-3 flex flex-wrap items-center justify-between gap-3`}>
           <div className="flex items-center gap-1.5 min-w-0 text-sm">
             <Link to={coursePath} className="truncate font-semibold text-slate-500 hover:text-indigo-600">
@@ -223,14 +250,27 @@ export const TeacherLessonEditorPage: React.FC = () => {
               {lesson.title}
             </h1>
           </div>
-          <AntdButton size="small" icon={<Pencil className="w-3.5 h-3.5" />} disabled={locked} onClick={() => setEditOpen(true)}>
-            Sửa bài học
-          </AntdButton>
+          <div className="flex flex-wrap items-center gap-2">
+            <LessonReviewStatusTag state={reviewState} />
+            <AntdButton size="small" icon={<Pencil className="w-3.5 h-3.5" />} disabled={locked} onClick={() => setEditOpen(true)}>
+              Sửa bài học
+            </AntdButton>
+            {/* Sửa khóa học / Tiếp quản / Xong (khóa sửa theo phía, dùng chung với trang khóa học) */}
+            <CourseEditSessionControls
+              session={editSession}
+              disabledReason={editBlockedReason}
+            />
+            {/* Duyệt theo bài: giáo viên gửi / rút; ADMIN duyệt / từ chối / lưu bài lên bản học viên */}
+            {course && <LessonReviewActions course={course} state={reviewState} admin={admin} />}
+          </div>
         </div>
 
-        <CourseEditLockBanner />
+        <CourseEditLockBanner lock={editSession.lock} pendingReviews={pendingReviews} />
+        {/* Nháp của phía mình: đã cũ → cập nhật bản mới; bỏ nháp; xem nháp cũ */}
+        <LessonDraftPanel lessonId={lessonId} state={reviewState} admin={admin} editing={editSession.mine} />
+        {/* Người khác vừa sửa / chốt nội dung → nhắc tải lại (trước đây chỉ biết khi lưu bị 409) */}
+        <CourseContentUpdateNotice courseId={courseId} audience="editor" />
 
-        <LessonReviewComments courseId={courseId} lessonId={lessonId} sections={sections} admin={admin} />
 
         <div className={`${CARD} px-4 pb-4`}>
           <Tabs

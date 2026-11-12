@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { isConcurrentModification } from '@/lib/queryClient'
 import {
   sectionService,
   kanjiItemService,
@@ -8,6 +9,7 @@ import {
   grammarItemService,
 } from '@/services'
 import { QUERY_KEYS } from '@/lib/queryKeys'
+import { invalidateCourseDraftState } from './useCourseDetail'
 import type {
   ApiResponse,
   LessonSection,
@@ -121,6 +123,7 @@ export function useSectionMutations(lessonId: number) {
     mutationFn: async (payload: LessonSectionCreateRequest) =>
       sectionService.createSection(lessonId, payload),
     onSuccess: (res) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã thêm mục mới')
       // BE trả về section mới trong res.data → patch thẳng vào cache lesson detail
       // (sections nằm NESTED trong lesson.sections, không có query 'sections' riêng).
@@ -131,6 +134,7 @@ export function useSectionMutations(lessonId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Thêm mục thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -139,6 +143,7 @@ export function useSectionMutations(lessonId: number) {
     mutationFn: async (params: { id: number; payload: LessonSectionUpdateRequest }) =>
       sectionService.updateSection(params.id, params.payload),
     onSuccess: (res) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã cập nhật mục')
       const updated: LessonSection | undefined = (res as any)?.data
       if (updated?.id) {
@@ -149,6 +154,7 @@ export function useSectionMutations(lessonId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Cập nhật thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -156,6 +162,7 @@ export function useSectionMutations(lessonId: number) {
   const deleteSection = useMutation({
     mutationFn: async (id: number) => sectionService.deleteSection(id),
     onSuccess: (_res, id) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã xoá section')
       // Xoá khỏi cache lesson detail
       patchSectionsCache(qc, lessonId, (sections) => sections.filter((s) => s.id !== id))
@@ -166,6 +173,7 @@ export function useSectionMutations(lessonId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Xoá thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -174,10 +182,12 @@ export function useSectionMutations(lessonId: number) {
     mutationFn: async (payload: LessonSectionReorderRequest) =>
       sectionService.reorderSections(lessonId, payload),
     onSuccess: () => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã cập nhật thứ tự section')
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Sắp xếp thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -201,6 +211,7 @@ export function useKanjiItemMutations(lessonId: number, sectionId: number) {
     mutationFn: async (payload: LessonKanjiItemCreateRequest) =>
       kanjiItemService.createItem(sectionId, payload),
     onSuccess: (res) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã thêm Kanji')
       // BE trả về kanji item đầy đủ (kèm relatedVocabulary) trong res.data
       const newItem: LessonKanjiItem | undefined = (res as any)?.data
@@ -210,6 +221,7 @@ export function useKanjiItemMutations(lessonId: number, sectionId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Thêm Kanji thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -218,6 +230,7 @@ export function useKanjiItemMutations(lessonId: number, sectionId: number) {
     mutationFn: async (params: { id: number; payload: LessonKanjiItemUpdateRequest }) =>
       kanjiItemService.updateItem(params.id, params.payload),
     onSuccess: (res, vars) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã cập nhật Kanji')
       // Update cache detail của item này ngay (BE trả về item mới kèm relatedVocabulary)
       const updated: LessonKanjiItem | undefined = (res as any)?.data
@@ -230,6 +243,7 @@ export function useKanjiItemMutations(lessonId: number, sectionId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Cập nhật Kanji thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -237,12 +251,14 @@ export function useKanjiItemMutations(lessonId: number, sectionId: number) {
   const deleteKanjiItem = useMutation({
     mutationFn: async (id: number) => kanjiItemService.deleteItem(id),
     onSuccess: (_res, id) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã xoá Kanji')
       // Xoá cache detail của item này
       removeItemCache(qc, 'kanji-item', id)
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Xoá Kanji thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -261,6 +277,7 @@ export function useVocabItemMutations(lessonId: number, sectionId: number) {
     mutationFn: async (payload: LessonVocabularyItemCreateRequest) =>
       vocabItemService.createItem(sectionId, payload),
     onSuccess: (res) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã thêm từ vựng')
       const newItem: LessonVocabularyItem | undefined = (res as any)?.data
       if (newItem?.id) {
@@ -269,6 +286,7 @@ export function useVocabItemMutations(lessonId: number, sectionId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Thêm từ vựng thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -277,6 +295,7 @@ export function useVocabItemMutations(lessonId: number, sectionId: number) {
     mutationFn: async (params: { id: number; payload: LessonVocabularyItemUpdateRequest }) =>
       vocabItemService.updateItem(params.id, params.payload),
     onSuccess: (res, vars) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã cập nhật từ vựng')
       const updated: LessonVocabularyItem | undefined = (res as any)?.data
       if (updated?.id) {
@@ -287,6 +306,7 @@ export function useVocabItemMutations(lessonId: number, sectionId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Cập nhật từ vựng thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -294,11 +314,13 @@ export function useVocabItemMutations(lessonId: number, sectionId: number) {
   const deleteVocabItem = useMutation({
     mutationFn: async (id: number) => vocabItemService.deleteItem(id),
     onSuccess: (_res, id) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã xoá từ vựng')
       removeItemCache(qc, 'vocab-item', id)
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Xoá từ vựng thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -317,6 +339,7 @@ export function useGrammarItemMutations(lessonId: number, sectionId: number) {
     mutationFn: async (payload: LessonGrammarItemCreateRequest) =>
       grammarItemService.createItem(sectionId, payload),
     onSuccess: (res) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã thêm ngữ pháp')
       const newItem: LessonGrammarItem | undefined = (res as any)?.data
       if (newItem?.id) {
@@ -325,6 +348,7 @@ export function useGrammarItemMutations(lessonId: number, sectionId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Thêm ngữ pháp thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -333,6 +357,7 @@ export function useGrammarItemMutations(lessonId: number, sectionId: number) {
     mutationFn: async (params: { id: number; payload: LessonGrammarItemUpdateRequest }) =>
       grammarItemService.updateItem(params.id, params.payload),
     onSuccess: (res, vars) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã cập nhật ngữ pháp')
       const updated: LessonGrammarItem | undefined = (res as any)?.data
       if (updated?.id) {
@@ -343,6 +368,7 @@ export function useGrammarItemMutations(lessonId: number, sectionId: number) {
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Cập nhật ngữ pháp thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })
@@ -350,11 +376,13 @@ export function useGrammarItemMutations(lessonId: number, sectionId: number) {
   const deleteGrammarItem = useMutation({
     mutationFn: async (id: number) => grammarItemService.deleteItem(id),
     onSuccess: (_res, id) => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã xoá ngữ pháp')
       removeItemCache(qc, 'grammar-item', id)
       invalidate()
     },
     onError: (e: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(e)) return // modal "Tải bản mới nhất" đã xử lý
       toast.error('Xoá ngữ pháp thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') })
     },
   })

@@ -310,7 +310,7 @@ export const AdminModerationPage: React.FC = () => {
         <Input.TextArea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Lý do gửi kèm thông báo cho người viết (không bắt buộc)"
+          placeholder="Lý do gửi kèm thông báo cho người viết"
           maxLength={MAX_NOTE_LENGTH}
           showCount
           autoSize={{ minRows: 2, maxRows: 4 }}

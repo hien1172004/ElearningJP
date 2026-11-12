@@ -3,7 +3,8 @@ import { Modal, Form, Input, InputNumber, App } from 'antd'
 import { Save, Plus, Pencil } from 'lucide-react'
 import { z } from 'zod'
 import type { LessonCreateRequest, LessonDetail, LessonUpdateRequest } from '@/types'
-import { useCreateLesson, useUpdateLesson } from '@/hooks'
+import { useCreateLesson, useUpdateLesson, useOnConcurrentReload, useFormAutosave } from '@/hooks'
+import { AutosaveBar, AutosaveScope } from '@/components/course/autosave'
 
 const schema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tiêu đề').max(200),
@@ -38,6 +39,20 @@ export const LessonFormModal: React.FC<LessonFormModalProps> = ({
   const update = useUpdateLesson(lesson?.id ?? 0, courseId)
   const isPending = create.isPending || update.isPending
 
+  // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
+  useOnConcurrentReload(() => {
+    if (open && isEdit) onClose()
+  })
+
+  // Tự lưu khi sửa thông tin bài (tạo bài mới chưa có bài để gắn bản tự lưu)
+  const autosave = useFormAutosave<{ form: Partial<FormValues> }>({
+    lessonId: lesson?.id ?? 0,
+    formKey: open && isEdit ? 'lesson:info' : null,
+    currentVersion: lesson?.version,
+    getSnapshot: () => ({ baseVersion: lesson?.version, values: { form: form.getFieldsValue(true) as Partial<FormValues> } }),
+    onRestore: (snap) => form.setFieldsValue(snap.values.form),
+  })
+
   useEffect(() => {
     if (open) {
       if (lesson) {
@@ -64,6 +79,7 @@ export const LessonFormModal: React.FC<LessonFormModalProps> = ({
         // Gửi kèm version đã đọc: người khác vừa sửa bài này → BE trả 409 thay vì ghi đè
         const payload: LessonUpdateRequest = { ...parsed.data, version: lesson.version }
         const res = await update.mutateAsync(payload)
+        autosave.clear() // lưu thành công → bỏ bản tự lưu
         if (res?.data) onSuccess?.(res.data as LessonDetail)
       } else {
         const payload: LessonCreateRequest = parsed.data
@@ -99,7 +115,9 @@ export const LessonFormModal: React.FC<LessonFormModalProps> = ({
       destroyOnHidden
       width={720}
     >
-      <Form form={form} layout="vertical" requiredMark={false} className="pt-2">
+      <AutosaveBar autosave={autosave} />
+      <AutosaveScope autosave={autosave}>
+      <Form form={form} layout="vertical" className="pt-2">
         <Form.Item
           name="title"
           label="Tiêu đề bài học"
@@ -132,6 +150,7 @@ export const LessonFormModal: React.FC<LessonFormModalProps> = ({
           <InputNumber size="large" min={1} step={1} className="!w-full" />
         </Form.Item>
       </Form>
+      </AutosaveScope>
     </Modal>
   )
 }

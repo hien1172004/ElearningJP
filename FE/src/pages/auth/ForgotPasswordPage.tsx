@@ -44,7 +44,6 @@ export const ForgotPasswordPage: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          requiredMark={false}
           onFinish={onFinish}
           disabled={isPending}
           className="px-6 sm:px-8 py-7"

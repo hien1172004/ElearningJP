@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react'
 import { Input as AntdInput } from 'antd'
 import type { InputProps as AntdInputProps, InputRef } from 'antd'
 import { clsx } from 'clsx'
+import { RequiredMark } from './RequiredMark'
 
 export interface InputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'> {
@@ -55,6 +56,7 @@ export const Input = forwardRef<InputRef, InputProps>(
             className="block text-sm font-semibold text-gray-700 mb-1.5"
           >
             {label}
+            {rest.required && <RequiredMark />}
           </label>
         )}
         <AntdInput

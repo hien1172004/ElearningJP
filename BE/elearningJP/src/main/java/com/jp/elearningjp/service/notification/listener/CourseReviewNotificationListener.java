@@ -25,8 +25,8 @@ import java.util.Objects;
  * Thông báo {@code COURSE_REVIEW} cho luồng duyệt khóa học:
  * <ul>
  *   <li>SUBMITTED / WITHDRAWN → mọi ADMIN (mở hàng chờ duyệt);</li>
- *   <li>APPROVED / REJECTED / PUBLISHED / UNPUBLISHED → giáo viên được giao (mở trang soạn khóa);</li>
- *   <li>APPROVED cho khóa vốn đang xuất bản → học viên đã đăng ký nhận "khóa có nội dung mới".</li>
+ *   <li>APPROVED / SAVED / REJECTED / PUBLISHED / UNPUBLISHED → giáo viên được giao (mở trang soạn khóa);</li>
+ *   <li>APPROVED / SAVED khi khóa đang xuất bản → học viên đã đăng ký nhận "khóa có nội dung mới".</li>
  * </ul>
  * Chạy AFTER_COMMIT, lỗi từng người nhận chỉ log — không làm hỏng thao tác gốc. Không báo cho người thao tác.
  */
@@ -52,10 +52,11 @@ public class CourseReviewNotificationListener {
             String link = toAdmins ? "/admin/course-reviews" : "/teacher/courses/" + event.getCourseId();
             int sent = send(recipients, event, buildTitle(event), buildBody(event), link);
 
-            if (event.getAction() == Action.APPROVED && event.isContentUpdatedWhilePublished()) {
+            boolean newVersion = event.getAction() == Action.APPROVED || event.getAction() == Action.SAVED;
+            if (newVersion && event.isContentUpdatedWhilePublished()) {
                 sent += send(enrollmentRepository.findActiveUserIdsByCourseId(event.getCourseId()), event,
                         "Khóa học \"" + event.getCourseTitle() + "\" có nội dung mới",
-                        "Giáo viên vừa cập nhật nội dung khóa học bạn đã đăng ký. Vào học ngay nhé!",
+                        "Khóa học bạn đã đăng ký vừa được cập nhật nội dung. Vào học ngay nhé!",
                         "/courses/" + event.getCourseId());
             }
             log.info("[Notification] course {} review {} -> notified {} user(s)",
@@ -89,7 +90,8 @@ public class CourseReviewNotificationListener {
         return switch (event.getAction()) {
             case SUBMITTED -> "Khóa học " + name + " chờ duyệt";
             case WITHDRAWN -> "Yêu cầu duyệt khóa học " + name + " đã được rút";
-            case APPROVED -> "Khóa học " + name + " đã được duyệt và xuất bản";
+            case APPROVED -> "Khóa học " + name + " đã được duyệt";
+            case SAVED -> "Quản trị viên đã cập nhật khóa học " + name;
             case REJECTED -> "Khóa học " + name + " chưa được duyệt";
             case PUBLISHED -> "Khóa học " + name + " đã được xuất bản";
             case UNPUBLISHED -> "Khóa học " + name + " đã chuyển về bản nháp";
@@ -101,10 +103,18 @@ public class CourseReviewNotificationListener {
         return switch (event.getAction()) {
             case SUBMITTED -> note != null ? "Ghi chú của giáo viên: " + note : "Giáo viên vừa gửi khóa học lên duyệt.";
             case WITHDRAWN -> "Giáo viên đã rút yêu cầu duyệt để sửa tiếp nội dung.";
-            case APPROVED -> "Học viên đã thấy nội dung mới nhất của khóa học.";
+            case APPROVED -> publishedHint(event);
+            case SAVED -> "Quản trị viên đã lưu phiên bản mới — mọi thay đổi trong bản đang soạn (kể cả phần bạn đang soạn) "
+                    + "đã được chốt, không cần gửi duyệt. " + publishedHint(event);
             case REJECTED -> note != null ? "Lý do: " + note : "Vui lòng xem lại nội dung và gửi duyệt lại.";
             case PUBLISHED -> "Quản trị viên đã xuất bản khóa học bạn được giao.";
             case UNPUBLISHED -> "Quản trị viên đã ẩn khóa học khỏi học viên.";
         };
+    }
+
+    private static String publishedHint(CourseReviewEvent event) {
+        return event.isContentUpdatedWhilePublished()
+                ? "Học viên đã thấy nội dung mới nhất của khóa học."
+                : "Khóa học chưa xuất bản — học viên sẽ thấy khi quản trị viên xuất bản.";
     }
 }

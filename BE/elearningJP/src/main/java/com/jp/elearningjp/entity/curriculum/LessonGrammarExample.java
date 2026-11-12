@@ -32,6 +32,10 @@ public class LessonGrammarExample extends SoftDeletableEntity {
     @JoinColumn(name = "grammar_item_id", nullable = false)
     private LessonGrammarItem grammarItem;
 
+    /** Id ổn định của phần tử trong bản live (V65); null = chính {@code id}. Bản chụp ghi COALESCE(originId, id). */
+    @Column(name = "origin_id")
+    private Long originId;
+
     @Column(name = "example_jp", nullable = false, columnDefinition = "text")
     private String exampleJp;
 

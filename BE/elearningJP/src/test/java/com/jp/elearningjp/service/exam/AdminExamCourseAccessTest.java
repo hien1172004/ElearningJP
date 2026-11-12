@@ -93,7 +93,7 @@ class AdminExamCourseAccessTest {
         doThrow(new AppException(ErrorCode.FORBIDDEN_COURSE_ACCESS))
                 .when(courseAccessGuard).requireAssignedOrAdmin(course);
         doThrow(new AppException(ErrorCode.FORBIDDEN_COURSE_ACCESS))
-                .when(courseAccessGuard).requireContentEditable(course);
+                .when(courseAccessGuard).requireExamContentEditable(course);
 
         assertRejected(() -> service.deleteExam(COURSE_EXAM_ID), ErrorCode.FORBIDDEN_COURSE_ACCESS);
         assertRejected(() -> service.getExamPreview(COURSE_EXAM_ID), ErrorCode.FORBIDDEN_COURSE_ACCESS);
@@ -111,7 +111,7 @@ class AdminExamCourseAccessTest {
         assertThat(courseExam.isDeleted()).isFalse();
         assertThat(courseExam.isPublished()).isTrue();
         assertThat(courseExam.isPendingRemoval()).isTrue();
-        verify(courseAccessGuard).requireContentEditable(course);
+        verify(courseAccessGuard).requireExamContentEditable(course);
 
         service.cancelExamRemoval(COURSE_EXAM_ID);
         assertThat(courseExam.isPendingRemoval()).isFalse();
@@ -129,7 +129,7 @@ class AdminExamCourseAccessTest {
         service.deleteExam(STANDALONE_EXAM_ID);
 
         verify(courseAccessGuard, never()).requireAssignedOrAdmin(any());
-        verify(courseAccessGuard, never()).requireContentEditable(any());
+        verify(courseAccessGuard, never()).requireExamContentEditable(any());
     }
 
     @Test
@@ -162,7 +162,7 @@ class AdminExamCourseAccessTest {
     @Test
     void importIntoCourse_teacherNotAssigned_rejected() {
         doThrow(new AppException(ErrorCode.FORBIDDEN_COURSE_ACCESS))
-                .when(courseAccessGuard).requireContentEditable(course);
+                .when(courseAccessGuard).requireExamContentEditable(course);
         ImportExamRequest request = new ImportExamRequest();
         request.setTitle("Đề mới");
         request.setCourseId(COURSE_ID);

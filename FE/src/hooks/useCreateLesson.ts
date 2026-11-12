@@ -18,6 +18,7 @@ export function useCreateLesson(courseId: number) {
       })
       qc.invalidateQueries({ queryKey: ['courses', courseId, 'lessons'] })
       qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detail(courseId) })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.lessonReview.all }) // trạng thái duyệt theo bài (draftRevision)
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const msg =

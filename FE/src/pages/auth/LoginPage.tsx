@@ -185,7 +185,6 @@ export const LoginPage: React.FC = () => {
             <Form
               form={form}
               layout="vertical"
-              requiredMark={false}
               onFinish={onFinish}
               disabled={isPending || isGooglePending}
               initialValues={{ email: '', password: '' }}

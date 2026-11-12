@@ -64,6 +64,7 @@ public class LessonPracticeSheetService {
     CourseAccessGuard courseAccessGuard;
     PracticeSheetRenderer renderer;
     PublishedLessonResolver publishedLessonResolver;
+    LessonDraftService lessonDraftService;
 
     /** File PDF trả về cho trình duyệt. */
     public record PracticeSheetFile(String fileName, byte[] content) {
@@ -156,26 +157,30 @@ public class LessonPracticeSheetService {
                      List<String> strokeChars, List<String> wordChars) {
         }
         List<Draft> drafts = new ArrayList<>();
+        // Bản đã duyệt dùng id ổn định (origin_id) của phần tử; người quản lý dùng id dòng trong nháp phía mình (V65)
+        boolean byOrigin = published.isPresent();
         for (LessonSection section : sectionRepository
-                .findByLessonIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(lessonId, type)) {
+                .findByDraftIdAndSectionTypeAndDeletedFalseOrderByOrderIndexAsc(lessonDraftService.readDraftId(lesson), type)) {
             if (type == LessonSectionType.KANJI) {
                 for (LessonKanjiItem item : kanjiItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId())) {
                     WritingCharacter ch = item.getCharacter();
-                    if (!wanted.contains(item.getId()) || ch == null || ch.getCharacter() == null) continue;
+                    Long key = byOrigin && item.getOriginId() != null ? item.getOriginId() : item.getId();
+                    if (!wanted.contains(key) || ch == null || ch.getCharacter() == null) continue;
                     String k = ch.getCharacter().trim();
                     List<String> chars = splitChars(k);
-                    drafts.add(new Draft(item.getId(), section, k, kanjiReading(ch), distinct(chars), chars));
+                    drafts.add(new Draft(key, section, k, kanjiReading(ch), distinct(chars), chars));
                 }
             } else {
                 for (LessonVocabularyItem item : vocabItemRepository.findBySectionIdAndDeletedFalseOrderByOrderIndexAsc(section.getId())) {
                     Vocabulary v = item.getVocab();
-                    if (!wanted.contains(item.getId()) || v == null || v.getWord() == null) continue;
+                    Long key = byOrigin && item.getOriginId() != null ? item.getOriginId() : item.getId();
+                    if (!wanted.contains(key) || v == null || v.getWord() == null) continue;
                     String word = v.getWord().trim();
                     List<String> wordChars = splitChars(word);
                     List<String> kanji = PracticeSheetRenderer.extractKanji(word);
                     // Có chữ Hán → luyện nét chữ Hán; toàn Kana → luyện nét từng Kana
                     List<String> strokeChars = distinct(kanji.isEmpty() ? wordChars : kanji);
-                    drafts.add(new Draft(item.getId(), section, word, vocabReading(item, v), strokeChars, wordChars));
+                    drafts.add(new Draft(key, section, word, vocabReading(item, v), strokeChars, wordChars));
                 }
             }
         }

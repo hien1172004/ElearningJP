@@ -117,6 +117,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     @Transactional(readOnly = true)
     public LessonKanjiItemResponse getKanjiItem(Long itemId) {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
+                // id của bản live có thể là id ổn định của dòng đã bị xóa khi nháp được dựng lại (V65)
+                .or(() -> kanjiItemRepository.findFirstByOriginIdOrderByIdDesc(itemId))
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
         // Học viên của khóa đã xuất bản: item theo bản đã duyệt
         Optional<PublishedLessonResolver.PublishedLesson> published =
@@ -152,7 +154,9 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     public LessonKanjiItemResponse addKanjiItem(Long sectionId, LessonKanjiItemCreateRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.KANJI);
         // Chỉ giáo viên được giao hoặc ADMIN được sửa nội dung section
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
 
         // Validate chữ Hán tồn tại trong từ điển qua DictionaryService
         String character = request.getCharacter();
@@ -226,7 +230,9 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
         VersionCheck.requireVersion(item, request.getVersion());
-        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(item.getSection().getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND);
         if (item.isDeleted()) {
             throw new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND);
         }
@@ -282,7 +288,9 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     public void deleteKanjiItem(Long itemId) {
         LessonKanjiItem item = kanjiItemRepository.findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND));
-        courseAccessGuard.requireContentEditable(item.getSection().getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(item.getSection().getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_KANJI_ITEM_NOT_FOUND);
         if (item.isDeleted()) return;
 
         // V25+: cascade soft-delete tất cả related vocab thuộc kanji item này.
@@ -313,7 +321,9 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
     @Transactional
     public List<LessonKanjiItemResponse> reorderKanjiItems(Long sectionId, ItemBulkReorderRequest request) {
         LessonSection section = getActiveSection(sectionId, LessonSectionType.KANJI);
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Đúng nháp phía mình (V65)
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);

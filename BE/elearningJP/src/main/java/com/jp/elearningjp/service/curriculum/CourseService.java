@@ -36,6 +36,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import com.jp.elearningjp.entity.curriculum.CourseTeacher;
+import com.jp.elearningjp.entity.curriculum.CourseEnrollment;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -59,6 +60,7 @@ public class CourseService {
     UserLessonProgressRepository progressRepository;
     QuizRepository quizRepository;
     LessonSpeakingScenarioRepository lessonSpeakingRepo;
+    LessonDraftService lessonDraftService;
     UserRepository userRepository;
     CourseMapper courseMapper;
     LessonMapper lessonMapper;
@@ -68,20 +70,48 @@ public class CourseService {
     CourseSnapshotReader courseSnapshotReader;
     CoursePublishedVersionRepository publishedVersionRepository;
     ApplicationEventPublisher eventPublisher;
+    com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository lessonReviewRequestRepository;
 
     private static final String DEFAULT_SLUG = "khoa-hoc";
 
     /**
-     * Lấy danh sách khóa học công khai cho học viên (có phân trang và lọc theo cấp độ JLPT)
+     * Lấy danh sách khóa học công khai cho học viên (có phân trang và lọc theo cấp độ JLPT).
+     * Đã đăng nhập: kèm cả khóa đã chuyển nháp mà người dùng đã đăng ký — học viên cũ vẫn học tiếp được
+     * (khớp {@link #getCourseDetail}), người khác vẫn không thấy.
      */
     @Transactional(readOnly = true)
     public PageResponse<CourseResponse> getPublicCourses(JlptLevel jlptLevel, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Course> coursePage = (jlptLevel != null)
-                ? courseRepository.findByJlptLevelAndPublishedTrueAndDeletedFalse(jlptLevel, pageable)
-                : courseRepository.findByPublishedTrueAndDeletedFalse(pageable);
+        User currentUser = currentUserService.getCurrentUserOrNull();
+        Page<Course> coursePage;
+        if (currentUser != null) {
+            coursePage = courseRepository.findAll(learnerListSpec(currentUser.getId(), jlptLevel), pageable);
+        } else {
+            coursePage = (jlptLevel != null)
+                    ? courseRepository.findByJlptLevelAndPublishedTrueAndDeletedFalse(jlptLevel, pageable)
+                    : courseRepository.findByPublishedTrueAndDeletedFalse(pageable);
+        }
 
         return toCoursePageResponse(coursePage, page, size, true);
+    }
+
+    /** Danh sách cho học viên {@code userId}: khóa chưa xóa, đang xuất bản hoặc người đó đã đăng ký (chưa hủy). */
+    public static Specification<Course> learnerListSpec(Long userId, JlptLevel jlptLevel) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("deleted"), false));
+            if (jlptLevel != null) {
+                predicates.add(cb.equal(root.get("jlptLevel"), jlptLevel));
+            }
+            Subquery<Long> enrolled = query.subquery(Long.class);
+            Root<CourseEnrollment> enrollment = enrolled.from(CourseEnrollment.class);
+            enrolled.select(enrollment.get("id"))
+                    .where(cb.equal(enrollment.get("course"), root),
+                            cb.equal(enrollment.get("user").get("id"), userId),
+                            cb.equal(enrollment.get("deleted"), false));
+            predicates.add(cb.or(cb.equal(root.get("published"), true), cb.exists(enrolled)));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     /**
@@ -108,13 +138,25 @@ public class CourseService {
     @Transactional(readOnly = true)
     public PageResponse<CourseResponse> getAllCoursesForAdmin(int page, int size, boolean pendingChangesOnly,
                                                                String keyword, JlptLevel jlptLevel, Boolean published) {
+        return getAllCoursesForAdmin(page, size, pendingChangesOnly, keyword, jlptLevel, published, null);
+    }
+
+    /**
+     * Như trên, kèm lọc trạng thái duyệt: PENDING_REVIEW = đã gửi, chờ duyệt; EDITING (kèm
+     * {@code pendingChangesOnly}) = đang soạn, có thay đổi nhưng chưa gửi duyệt.
+     */
+    @Transactional(readOnly = true)
+    public PageResponse<CourseResponse> getAllCoursesForAdmin(int page, int size, boolean pendingChangesOnly,
+                                                               String keyword, JlptLevel jlptLevel, Boolean published,
+                                                               CourseReviewStatus reviewStatus) {
         Pageable pageable = PageRequest.of(Math.max(0, page - 1), size, Sort.by(Sort.Direction.DESC, "createdAt"));
         boolean hasKeyword = keyword != null && !keyword.isBlank();
         Page<Course> coursePage;
-        if (hasKeyword || jlptLevel != null || published != null) {
+        if (hasKeyword || jlptLevel != null || published != null || reviewStatus != null) {
             Long teacherId = currentUserService.isAdmin() ? null : currentUserService.getCurrentUserId();
             coursePage = courseRepository.findAll(
-                    adminListSpec(teacherId, pendingChangesOnly, hasKeyword ? keyword : null, jlptLevel, published),
+                    adminListSpec(teacherId, pendingChangesOnly, hasKeyword ? keyword : null, jlptLevel, published,
+                            reviewStatus),
                     pageable);
         } else if (currentUserService.isAdmin()) {
             coursePage = pendingChangesOnly
@@ -133,6 +175,13 @@ public class CourseService {
     /** Điều kiện lọc danh sách quản lý; {@code teacherId} != null → chỉ khóa được giao cho giáo viên đó. */
     public static Specification<Course> adminListSpec(Long teacherId, boolean pendingChangesOnly,
                                                String keyword, JlptLevel jlptLevel, Boolean published) {
+        return adminListSpec(teacherId, pendingChangesOnly, keyword, jlptLevel, published, null);
+    }
+
+    /** Như trên, kèm lọc {@code reviewStatus} (null = không lọc). */
+    public static Specification<Course> adminListSpec(Long teacherId, boolean pendingChangesOnly,
+                                               String keyword, JlptLevel jlptLevel, Boolean published,
+                                               CourseReviewStatus reviewStatus) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("deleted"), false));
@@ -155,6 +204,9 @@ public class CourseService {
             }
             if (published != null) {
                 predicates.add(cb.equal(root.get("published"), published));
+            }
+            if (reviewStatus != null) {
+                predicates.add(cb.equal(root.get("reviewStatus"), reviewStatus));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -204,14 +256,17 @@ public class CourseService {
                     completedCount, currentUser);
         }
 
-        List<Lesson> lessons = lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(courseId);
+        // V66: bài mới phía bên kia tạo (chưa lên bản học viên) bị ẩn
+        List<Lesson> lessons = lessonDraftService.visibleLessons(course);
         List<Long> allLessonIds = lessons.stream().map(Lesson::getId).toList();
+        // Cờ quiz / luyện nói theo nháp mà người xem đọc (V65)
+        com.jp.elearningjp.shared.enums.DraftKind draftKind = lessonDraftService.readKind(course);
         Set<Long> lessonIdsWithQuiz = lessons.isEmpty()
                 ? Set.of()
-                : new HashSet<>(quizRepository.findLessonIdsWithQuiz(allLessonIds));
+                : new HashSet<>(quizRepository.findLessonIdsWithQuiz(allLessonIds, draftKind));
         Set<Long> lessonIdsWithSpeaking = lessons.isEmpty()
                 ? Set.of()
-                : new HashSet<>(lessonSpeakingRepo.findLessonIdsWithSpeaking(allLessonIds));
+                : new HashSet<>(lessonSpeakingRepo.findLessonIdsWithSpeaking(allLessonIds, draftKind));
 
         List<LessonOutlineResponse> outlineList = lessons.stream()
                 .map(lesson -> {
@@ -249,6 +304,16 @@ public class CourseService {
         CourseDetailResponse response = courseMapper.toCourseDetailResponse(course);
         response.setEnrolled(isEnrolled);
         response.setCanManage(canManage);
+        if (!canManage) {
+            // Người sửa / thời điểm sửa bản đang soạn là thông tin nội bộ của người soạn
+            response.setDraftUpdatedById(null);
+            response.setDraftUpdatedByName(null);
+            response.setDraftUpdatedAt(null);
+        }
+        if (canManage) {
+            response.setPendingLessonReviews((long) lessonReviewRequestRepository
+                    .findPendingLessonTitles(course.getId()).size());
+        }
         if (canManage && course.getPublishedVersionId() != null) {
             publishedVersionRepository.findById(course.getPublishedVersionId()).ifPresent(v -> {
                 response.setPublishedVersionNo(v.getVersionNo());
@@ -312,6 +377,10 @@ public class CourseService {
         Course updated = courseRepository.save(course);
         courseRepository.flush();
         log.info("[COURSE] Updated course id={}", updated.getId());
+        // Thông tin khóa không qua duyệt → học viên đang mở khóa cũng cần tải lại (listener AFTER_COMMIT)
+        eventPublisher.publishEvent(new com.jp.elearningjp.shared.event.curriculum.CourseContentChangedEvent(
+                this, updated.getId(), com.jp.elearningjp.shared.event.curriculum.CourseContentChangedEvent.Scope.PUBLISHED,
+                currentUserService.getCurrentUserId()));
 
         CourseResponse response = courseMapper.toCourseResponse(updated);
         long totalLessons = lessonRepository.countByCourseIdAndDeletedFalse(courseId);
@@ -419,6 +488,13 @@ public class CourseService {
                         .collect(Collectors.toMap(
                                 LessonRepository.CourseLessonCount::getCourseId,
                                 LessonRepository.CourseLessonCount::getLessonCount));
+        // Trang quản lý: số bài chờ duyệt theo bài của từng khóa
+        Map<Long, Long> pendingReviews = learnerCounts || courseIds.isEmpty()
+                ? Map.of()
+                : lessonReviewRequestRepository.countPendingByCourseIds(courseIds).stream()
+                        .collect(Collectors.toMap(
+                                com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository.CoursePendingCount::getCourseId,
+                                com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository.CoursePendingCount::getPendingCount));
         Map<Long, Long> enrollmentCounts = courseIds.isEmpty()
                 ? Map.of()
                 : enrollmentRepository.countActiveByCourseIds(courseIds).stream()
@@ -429,8 +505,17 @@ public class CourseService {
         List<CourseResponse> items = coursePage.getContent().stream()
                 .map(course -> {
                     CourseResponse response = courseMapper.toCourseResponse(course);
+                    if (learnerCounts) {
+                        // Danh sách công khai: không lộ người / thời điểm sửa bản đang soạn
+                        response.setDraftUpdatedById(null);
+                        response.setDraftUpdatedByName(null);
+                        response.setDraftUpdatedAt(null);
+                    }
                     response.setTotalLessons(lessonCounts.getOrDefault(course.getId(), 0L).intValue());
                     response.setTotalEnrollments(enrollmentCounts.getOrDefault(course.getId(), 0L));
+                    if (!learnerCounts) {
+                        response.setPendingLessonReviews(pendingReviews.getOrDefault(course.getId(), 0L));
+                    }
                     return response;
                 })
                 .toList();

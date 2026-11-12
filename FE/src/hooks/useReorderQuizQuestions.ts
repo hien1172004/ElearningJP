@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { isConcurrentModification } from '@/lib/queryClient'
 import { axiosClient } from '@/services/api/axiosClient'
 import { QUERY_KEYS } from '@/lib/queryKeys'
+import { invalidateCourseDraftState } from './useCourseDetail'
 import type { ApiResponse } from '@/types'
 import type { LessonQuizItem } from './useQuizItemMutations'
 import { toVersionMap } from '@/utils/versions'
@@ -41,6 +43,7 @@ export function useReorderQuizQuestions(lessonId: number) {
       return res.data
     },
     onSuccess: () => {
+      invalidateCourseDraftState(qc)
       toast.success('Đã cập nhật thứ tự câu hỏi')
       // Invalidate cả 2 endpoint quiz (học viên + teacher) + lesson detail
       qc.invalidateQueries({ queryKey: QUERY_KEYS.lesson.quiz(lessonId) })
@@ -50,6 +53,7 @@ export function useReorderQuizQuestions(lessonId: number) {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.lesson.detail(lessonId) })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(error)) return // modal "Tải bản mới nhất" đã xử lý
       const msg =
         error.response?.data?.message ??
         'Không thể sắp xếp lại. Vui lòng thử lại.'

@@ -11,7 +11,7 @@ interface CourseOutlineSidebarProps {
   studentCount: number
   /** Mục Cài đặt (sửa thông tin, xuất bản, xóa khóa) chỉ dành cho ADMIN. */
   showSettings: boolean
-  /** Khóa đang chờ duyệt → chấm nhắc ở tab Duyệt & xuất bản. */
+  /** Khóa đang chờ duyệt → chấm nhắc ở tab Duyệt. */
   reviewPending: boolean
 }
 
@@ -19,7 +19,7 @@ type View = 'overview' | 'review' | 'exams' | 'students' | 'teachers' | 'setting
 
 /**
  * Mục lục khóa học dạng thanh tab ngang (trượt ngang khi màn hình hẹp):
- * Tổng quan · Bài học · Duyệt & xuất bản · Bài kiểm tra · Học viên · Giáo viên · Cài đặt.
+ * Tổng quan · Bài học · Duyệt · Bài kiểm tra · Học viên · Giáo viên · Cài đặt.
  * Mở 1 bài học vẫn tính là đang ở "Tổng quan".
  */
 export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
@@ -43,7 +43,7 @@ export const CourseOutlineSidebar: React.FC<CourseOutlineSidebarProps> = ({
     { view: 'overview', label: 'Tổng quan · Bài học', icon: <LayoutDashboard className="w-4 h-4" />, badge: lessonCount },
     {
       view: 'review',
-      label: 'Duyệt & xuất bản',
+      label: 'Duyệt',
       icon: <Send className="w-4 h-4" />,
       badge: reviewPending ? <span className="block w-2 h-2 rounded-full bg-amber-500" aria-label="Đang chờ duyệt" /> : undefined,
     },

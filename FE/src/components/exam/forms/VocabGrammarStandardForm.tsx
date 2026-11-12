@@ -1,5 +1,6 @@
 import React from 'react'
 import { HelpCircle } from 'lucide-react'
+import { RequiredMark } from '@/components/common'
 
 export interface StandardOptionItem {
   id?: number
@@ -77,7 +78,7 @@ export const VocabGrammarStandardForm: React.FC<VocabGrammarStandardFormProps> =
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <label className="block text-xs font-bold text-slate-800">
-            Nội dung câu hỏi: *
+            Nội dung câu hỏi:<RequiredMark />
           </label>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-slate-400">Phím tắt chèn nhanh:</span>
@@ -113,7 +114,7 @@ export const VocabGrammarStandardForm: React.FC<VocabGrammarStandardFormProps> =
       {/* 4 Lựa chọn trả lời */}
       <div className="space-y-2">
         <label className="block text-xs font-bold text-slate-800">
-          4 Phương án lựa chọn (Chọn 1 đáp án đúng): *
+          4 Phương án lựa chọn (Chọn 1 đáp án đúng):<RequiredMark />
         </label>
         <div className="space-y-2">
           {options.map((opt, idx) => {

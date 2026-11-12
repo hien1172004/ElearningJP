@@ -17,6 +17,7 @@ import {
 } from '@ant-design/icons'
 import { PageHeader, LoadingState, StudyTimerTracker, BackButton } from '@/components/common'
 import { CommentSection } from '@/components/comment'
+import { CourseContentUpdateNotice } from '@/components/course'
 import { PracticeSheetButton } from '@/components/course/practice-sheet'
 import { SaveLessonToNotebookButton } from '@/components/course/save-to-notebook'
 import {
@@ -563,6 +564,8 @@ export const LessonViewerPage: React.FC = () => {
     <div className="pb-12">
       {/* Đếm thời gian học — component ẩn, không ảnh hưởng layout */}
       <StudyTimerTracker />
+      {/* Khóa vừa có phiên bản mới trong lúc đang học → nhắc tải lại */}
+      <CourseContentUpdateNotice courseId={cId} audience="learner" />
       {/* Vào từ trang khóa học → lùi đúng số bài đã đi để về trang khóa học cũ (giữ lịch sử phía trước);
           vào thẳng (thông báo, link…) → mở trang khóa học */}
       <BackButton onClick={backToCourse} label="Quay lại khóa học" className="mb-2" />

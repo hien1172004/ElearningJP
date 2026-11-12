@@ -331,6 +331,8 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
             </div>
           }
           rules={[{ required: true, message: 'Vui lòng nhập từ vựng' }]}
+          // Dấu * đã nằm trong nhãn (cạnh nút Gợi ý) — tắt dấu tự động để không bị lặp; rules vẫn kiểm tra
+          required={false}
           className="!mb-3"
         >
           <Input
@@ -418,7 +420,7 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
           name="meaning"
           label={
             <span className="text-xs font-semibold text-gray-700">
-              Nghĩa của từ <span className="text-red-500">*</span>
+              Nghĩa của từ
             </span>
           }
           rules={[{ required: true, message: 'Vui lòng nhập nghĩa của từ' }]}
@@ -439,7 +441,7 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
           name="partOfSpeech"
           label={
             <span className="text-xs font-semibold text-gray-700">
-              Từ loại <span className="text-red-500">*</span>
+              Từ loại
             </span>
           }
           rules={[{ required: true, message: 'Vui lòng chọn từ loại' }]}
@@ -465,7 +467,7 @@ export const WordFormModal: React.FC<WordFormModalProps> = ({
           className="!mb-3"
         >
           <Input
-            placeholder="Nhập ghi chú cá nhân (tùy chọn)"
+            placeholder="Nhập ghi chú cá nhân"
             className="h-11 rounded-xl border-gray-200 text-sm focus:border-blue-500"
           />
         </Form.Item>

@@ -260,7 +260,6 @@ export const AuthModal: React.FC = () => {
               <Form
                 form={loginForm}
                 layout="vertical"
-                requiredMark={false}
                 onFinish={onLogin}
                 disabled={isLoginPending}
                 initialValues={{ email: '', password: '' }}
@@ -341,7 +340,6 @@ export const AuthModal: React.FC = () => {
               <Form
                 form={registerForm}
                 layout="vertical"
-                requiredMark={false}
                 onFinish={onRegister}
                 disabled={isRegisterPending}
                 initialValues={{

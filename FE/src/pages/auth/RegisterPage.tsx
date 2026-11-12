@@ -134,7 +134,6 @@ export const RegisterPage: React.FC = () => {
             <Form
               form={form}
               layout="vertical"
-              requiredMark={false}
               onFinish={onFinish}
               disabled={isPending}
               initialValues={{

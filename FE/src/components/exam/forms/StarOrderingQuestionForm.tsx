@@ -1,5 +1,6 @@
 import React from 'react'
 import { Star, Sparkles } from 'lucide-react'
+import { RequiredMark } from '@/components/common'
 
 export interface StarOptionItem {
   id?: number
@@ -79,7 +80,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
       {/* Câu hỏi hoặc ngữ cảnh đầu câu */}
       <div className="space-y-1.5">
         <label className="block text-xs font-bold text-slate-800">
-          Câu đề bài (Ví dụ: 毎朝、私は ____ ____ ★ ____ 学校へ行きます。): *
+          Câu đề bài (Ví dụ: 毎朝、私は ____ ____ ★ ____ 学校へ行きます。):<RequiredMark />
         </label>
         <textarea
           rows={2}
@@ -148,7 +149,7 @@ export const StarOrderingQuestionForm: React.FC<StarOrderingQuestionFormProps> =
       {/* 4 Ô nhập liệu cụm từ xáo trộn */}
       <div className="space-y-2">
         <label className="block text-xs font-bold text-slate-800">
-          4 Cụm từ/Từ ngữ xáo trộn (Thí sinh sắp xếp 1, 2, 3, 4): *
+          4 Cụm từ/Từ ngữ xáo trộn (Thí sinh sắp xếp 1, 2, 3, 4):<RequiredMark />
         </label>
         <div className="space-y-2">
           {options.map((opt, idx) => {

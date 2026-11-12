@@ -158,4 +158,10 @@ public interface UserLessonProgressRepository extends JpaRepository<UserLessonPr
 
         Long getCompletedLessons();
     }
+
+    /** Học viên đã hoàn thành bài (tiến độ chưa xóa) — báo LESSON_UPDATED khi bài có thay đổi lớn. */
+    @Query("SELECT DISTINCT p.user.id FROM UserLessonProgress p WHERE p.lesson.id = :lessonId "
+            + "AND p.status = :status AND p.deleted = false")
+    List<Long> findUserIdsByLessonIdAndStatus(@Param("lessonId") Long lessonId,
+                                              @Param("status") ProgressStatus status);
 }

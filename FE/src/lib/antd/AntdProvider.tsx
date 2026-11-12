@@ -1,6 +1,8 @@
 ﻿import React from 'react'
 import { ConfigProvider, App as AntdApp, theme as antdTheme } from 'antd'
 import { useThemeStore } from '@/stores/useThemeStore'
+// Import thẳng file (không qua barrel components/common) để tránh vòng import lib ↔ components
+import { RequiredMark } from '@/components/common/RequiredMark'
 import viVN from 'antd/locale/vi_VN'
 // antd v6 already supports React 19, no patch needed.
 
@@ -75,6 +77,14 @@ const componentsTheme = {
   },
 }
 
+/** Mọi Form antd: trường bắt buộc hiện "Nhãn *" (đỏ, sau nhãn) — cùng kiểu với label tự viết dùng RequiredMark. */
+const renderRequiredMark = (label: React.ReactNode, { required }: { required: boolean }) => (
+  <>
+    {label}
+    {required && <RequiredMark />}
+  </>
+)
+
 interface AntdProviderProps {
   children: React.ReactNode
 }
@@ -89,6 +99,7 @@ export const AntdProvider: React.FC<AntdProviderProps> = ({ children }) => {
         token: { ...themeToken, ...surfaceTokens[mode] },
         components: componentsTheme,
       }}
+      form={{ requiredMark: renderRequiredMark }}
     >
       <AntdApp>{children}</AntdApp>
     </ConfigProvider>

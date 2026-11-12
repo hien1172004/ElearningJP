@@ -107,13 +107,33 @@ class CurriculumQueriesIT {
     }
 
     @Test
-    void findLessonIdsWithQuiz_onlyActiveQuizzes() {
-        jdbc.update("INSERT INTO lesson_quizzes (lesson_id, title, passing_score_percent) VALUES (?, 'Q', 80)",
-                lessonIds[0]);
-        jdbc.update("INSERT INTO lesson_quizzes (lesson_id, title, passing_score_percent, deleted) VALUES (?, 'Q', 80, TRUE)",
-                lessonIds[1]);
-        assertThat(quizRepository.findLessonIdsWithQuiz(List.of(lessonIds[0], lessonIds[1], lessonIds[2])))
+    void findLessonIdsWithQuiz_onlyActiveQuizzesOfRequestedSide() {
+        // V65: quiz thuộc nháp theo phía; chỉ tính quiz chưa xóa trong nháp đang dùng của phía được hỏi
+        long t0 = draft(lessonIds[0], "TEACHER");
+        long t1 = draft(lessonIds[1], "TEACHER");
+        long a2 = draft(lessonIds[2], "ADMIN");
+        jdbc.update("INSERT INTO lesson_quizzes (lesson_id, draft_id, title, passing_score_percent) VALUES (?, ?, 'Q', 80)",
+                lessonIds[0], t0);
+        jdbc.update("INSERT INTO lesson_quizzes (lesson_id, draft_id, title, passing_score_percent, deleted) "
+                + "VALUES (?, ?, 'Q', 80, TRUE)", lessonIds[1], t1);
+        jdbc.update("INSERT INTO lesson_quizzes (lesson_id, draft_id, title, passing_score_percent) VALUES (?, ?, 'Q', 80)",
+                lessonIds[2], a2);
+        List<Long> ids = List.of(lessonIds[0], lessonIds[1], lessonIds[2]);
+        assertThat(quizRepository.findLessonIdsWithQuiz(ids, com.jp.elearningjp.shared.enums.DraftKind.TEACHER))
                 .containsExactly(lessonIds[0]);
+        assertThat(quizRepository.findLessonIdsWithQuiz(ids, com.jp.elearningjp.shared.enums.DraftKind.ADMIN))
+                .containsExactly(lessonIds[2]);
+    }
+
+    /** Nháp đang dùng của 1 phía cho bài (tạo nếu chưa có). */
+    private long draft(long lessonId, String kind) {
+        List<Long> found = jdbc.queryForList("SELECT id FROM lesson_drafts WHERE lesson_id = ? AND kind = ? "
+                + "AND status <> 'ARCHIVED'", Long.class, lessonId, kind);
+        if (!found.isEmpty()) {
+            return found.get(0);
+        }
+        return jdbc.queryForObject("INSERT INTO lesson_drafts (lesson_id, kind) VALUES (?, ?) RETURNING id",
+                Long.class, lessonId, kind);
     }
 
     @Test
@@ -152,6 +172,35 @@ class CurriculumQueriesIT {
                 .extracting(e -> e.getId()).containsExactly(visible);
         assertThat(enrollmentRepository.findByIdAndDeletedFalseAndCourse_DeletedFalse(hidden)).isEmpty();
         assertThat(enrollmentRepository.findByIdAndDeletedFalseAndCourse_DeletedFalse(visible)).isPresent();
+    }
+
+    @Test
+    void learnerList_includesUnpublishedCourseOnlyForEnrolledUser() {
+        long published = insertCourse("pub-" + System.nanoTime(), false);
+        long draftEnrolled = insertCourse("draft-enrolled-" + System.nanoTime(), false);
+        long draftOther = insertCourse("draft-other-" + System.nanoTime(), false);
+        long draftCancelled = insertCourse("draft-cancel-" + System.nanoTime(), false);
+        jdbc.update("UPDATE courses SET is_published = (id = ?) WHERE id IN (?, ?, ?, ?)",
+                published, published, draftEnrolled, draftOther, draftCancelled);
+        jdbc.update("INSERT INTO course_enrollments (user_id, course_id, status) VALUES (?, ?, 'ACTIVE')",
+                userId, draftEnrolled);
+        jdbc.update("INSERT INTO course_enrollments (user_id, course_id, status, deleted) VALUES (?, ?, 'ACTIVE', TRUE)",
+                userId, draftCancelled);
+        long otherUser = jdbc.queryForObject(
+                "INSERT INTO users (email, password_hash, full_name) VALUES (?, 'x', 'O') RETURNING id",
+                Long.class, "other-" + System.nanoTime() + "@test.local");
+        jdbc.update("INSERT INTO course_enrollments (user_id, course_id, status) VALUES (?, ?, 'ACTIVE')",
+                otherUser, draftOther);
+
+        List<Long> visible = courseRepository.findAll(
+                com.jp.elearningjp.service.curriculum.CourseService.learnerListSpec(userId, null)).stream()
+                .map(c -> c.getId()).toList();
+        assertThat(visible).contains(published, draftEnrolled).doesNotContain(draftOther, draftCancelled);
+
+        // Lọc cấp độ vẫn áp dụng cho khóa đã đăng ký (khóa seed ở đây đều N5)
+        assertThat(courseRepository.findAll(com.jp.elearningjp.service.curriculum.CourseService.learnerListSpec(
+                userId, com.jp.elearningjp.shared.enums.JlptLevel.N4)).stream().map(c -> c.getId()).toList())
+                .doesNotContain(published, draftEnrolled);
     }
 
     @Test

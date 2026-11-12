@@ -9,7 +9,8 @@ import type {
   LessonSectionType,
   LessonSectionCreateRequest,
 } from '@/types'
-import { useSectionMutations } from '@/hooks'
+import { useSectionMutations, useOnConcurrentReload, useFormAutosave } from '@/hooks'
+import { AutosaveBar, AutosaveScope } from '@/components/course/autosave'
 
 const SECTION_TYPES: { value: LessonSectionType; label: string }[] = [
   { value: 'VOCABULARY', label: 'Từ vựng (Vocabulary)' },
@@ -59,6 +60,25 @@ export const SectionList: React.FC<SectionListProps> = ({
     deleteSection.isPending ||
     reorderSections.isPending
 
+  // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
+  useOnConcurrentReload(() => {
+    if (!editingSection) return
+    setIsModalOpen(false)
+    setEditingSection(null)
+  })
+
+  // Tự lưu form section đang soạn dở (chỉ người này thấy)
+  const autosave = useFormAutosave<{ form: Partial<FormValues> }>({
+    lessonId,
+    formKey: isModalOpen ? (editingSection ? `section:${editingSection.id}` : 'section:new') : null,
+    currentVersion: editingSection?.version,
+    getSnapshot: () => ({
+      baseVersion: editingSection?.version,
+      values: { form: form.getFieldsValue(true) as Partial<FormValues> },
+    }),
+    onRestore: (snap) => form.setFieldsValue(snap.values.form),
+  })
+
   const openCreate = () => {
     setEditingSection(null)
     form.resetFields()
@@ -102,6 +122,7 @@ export const SectionList: React.FC<SectionListProps> = ({
           orderIndex: parsed.data.orderIndex,
         } as LessonSectionCreateRequest)
       }
+      autosave.clear() // lưu thành công → bỏ bản tự lưu
       setIsModalOpen(false)
     } catch {
       /* */
@@ -233,7 +254,9 @@ export const SectionList: React.FC<SectionListProps> = ({
         maskClosable={!isPending}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" requiredMark={false} className="pt-2">
+        <AutosaveBar autosave={autosave} />
+        <AutosaveScope autosave={autosave}>
+        <Form form={form} layout="vertical" className="pt-2">
           {!editingSection && (
             <Form.Item
               name="sectionType"
@@ -260,6 +283,7 @@ export const SectionList: React.FC<SectionListProps> = ({
             <InputNumber min={1} className="!w-full" size="large" />
           </Form.Item>
         </Form>
+        </AutosaveScope>
       </Modal>
     </div>
   )

@@ -89,7 +89,7 @@ export const NotebookFormModal: React.FC<NotebookFormModalProps> = ({
         >
           <Input.TextArea
             rows={3}
-            placeholder="Mô tả chi tiết về sổ tay (tùy chọn)..."
+            placeholder="Mô tả chi tiết về sổ tay..."
           />
         </Form.Item>
 

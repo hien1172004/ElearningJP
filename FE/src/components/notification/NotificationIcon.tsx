@@ -37,6 +37,13 @@ const ICONS: Record<NotificationType, IconSpec> = {
   COURSE_STATUS_CHANGED: { Icon: GraduationCap, tone: 'bg-sky-50 text-sky-600' },
   COURSE_TEACHER_ASSIGNMENT: { Icon: GraduationCap, tone: 'bg-emerald-50 text-emerald-600' },
   COURSE_REVIEW: { Icon: ClipboardCheck, tone: 'bg-amber-50 text-amber-600' },
+  LESSON_SUBMITTED: { Icon: ClipboardCheck, tone: 'bg-amber-50 text-amber-600' },
+  LESSON_WITHDRAWN: { Icon: ClipboardCheck, tone: 'bg-slate-100 text-slate-600' },
+  LESSON_APPROVED: { Icon: ClipboardCheck, tone: 'bg-emerald-50 text-emerald-600' },
+  LESSON_REJECTED: { Icon: ClipboardCheck, tone: 'bg-rose-50 text-rose-600' },
+  DRAFT_STALE: { Icon: ClipboardCheck, tone: 'bg-orange-50 text-orange-600' },
+  LESSON_UPDATED: { Icon: GraduationCap, tone: 'bg-sky-50 text-sky-600' },
+  LESSON_DRAFT_DISCARDED: { Icon: ClipboardCheck, tone: 'bg-rose-50 text-rose-600' },
   COMMUNITY_REPLY: {
     Icon: MessageCircle,
     tone: 'bg-indigo-50 text-indigo-600',

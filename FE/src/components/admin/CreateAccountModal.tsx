@@ -73,24 +73,23 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({ open, on
       <Form<FormValues>
         form={form}
         layout="vertical"
-        requiredMark={false}
         initialValues={{ role: 'TEACHER' }}
         disabled={createUser.isPending}
         className="pt-2"
       >
-        <Form.Item name="role" label="Vai trò">
+        <Form.Item name="role" required label="Vai trò">
           <Radio.Group options={ROLE_OPTIONS} optionType="button" buttonStyle="solid" />
         </Form.Item>
-        <Form.Item name="fullName" label="Họ tên">
+        <Form.Item name="fullName" required label="Họ tên">
           <Input maxLength={100} placeholder="VD: Nguyễn Văn A" />
         </Form.Item>
-        <Form.Item name="email" label="Email đăng nhập">
+        <Form.Item name="email" required label="Email đăng nhập">
           <Input maxLength={255} placeholder="giaovien@example.com" autoComplete="off" />
         </Form.Item>
-        <Form.Item name="password" label="Mật khẩu">
+        <Form.Item name="password" required label="Mật khẩu">
           <Input.Password maxLength={100} placeholder="Tối thiểu 8 ký tự" autoComplete="new-password" />
         </Form.Item>
-        <Form.Item name="confirmPassword" label="Nhập lại mật khẩu">
+        <Form.Item name="confirmPassword" required label="Nhập lại mật khẩu">
           <Input.Password maxLength={100} autoComplete="new-password" />
         </Form.Item>
         <p className="text-xs text-slate-500">

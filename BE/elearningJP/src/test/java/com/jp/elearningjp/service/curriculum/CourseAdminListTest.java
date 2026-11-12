@@ -46,6 +46,7 @@ class CourseAdminListTest {
     @Mock CourseMapper courseMapper;
     @Mock CurrentUserService currentUserService;
 
+    @org.mockito.Mock com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository lessonReviewRequestRepository;
     @InjectMocks CourseService courseService;
 
     private static Course course(long id) {

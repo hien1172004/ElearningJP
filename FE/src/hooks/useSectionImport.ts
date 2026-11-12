@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import type { SectionImportApi } from '@/services/sectionImport.service'
 import type { ApiResponse } from '@/types'
+import { invalidateCourseDraftState } from './useCourseDetail'
 import { invalidateLesson } from './useSectionMutations'
 
 const getErrorMessage = (err: unknown, fallback: string) =>
@@ -27,7 +28,10 @@ export function useSectionImport(api: SectionImportApi, lessonId: number, sectio
 
   const commit = useMutation({
     mutationFn: (file: File) => api.commit(sectionId, file).then((res) => res.data),
-    onSuccess: () => invalidateLesson(qc, lessonId),
+    onSuccess: () => {
+      invalidateLesson(qc, lessonId)
+      invalidateCourseDraftState(qc)
+    },
     onError: (e) => toast.error('Import thất bại', { description: getErrorMessage(e, 'Lỗi không xác định') }),
   })
 

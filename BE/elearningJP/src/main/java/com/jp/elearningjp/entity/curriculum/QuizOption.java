@@ -19,6 +19,10 @@ public class QuizOption extends SoftDeletableEntity {
     @JoinColumn(name = "question_id", nullable = false)
     private QuizQuestion question;
 
+    /** Id ổn định của phần tử trong bản live (V65); null = chính {@code id}. Bản chụp ghi COALESCE(originId, id). */
+    @Column(name = "origin_id")
+    private Long originId;
+
     @Column(name = "option_key", nullable = false)
     private Short optionKey; // 1, 2, 3, 4 (A, B, C, D)
 

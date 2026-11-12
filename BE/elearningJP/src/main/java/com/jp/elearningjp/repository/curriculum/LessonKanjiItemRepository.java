@@ -20,6 +20,12 @@ public interface LessonKanjiItemRepository extends JpaRepository<LessonKanjiItem
      * KHÔNG fetch relatedVocabulary ở đây (cũng là List) — dùng
      * {@link LessonKanjiRelatedVocabRepository#findByKanjiItemIdsWithVocab} riêng.
      */
-    @Query("SELECT DISTINCT ki FROM LessonKanjiItem ki LEFT JOIN FETCH ki.character WHERE ki.section.lesson.id = :lessonId AND ki.deleted = false ORDER BY ki.orderIndex ASC")
-    List<LessonKanjiItem> findByLessonIdWithCharacter(@Param("lessonId") Long lessonId);
+    @Query("SELECT DISTINCT ki FROM LessonKanjiItem ki LEFT JOIN FETCH ki.character WHERE ki.section.draft.id = :draftId AND ki.deleted = false ORDER BY ki.orderIndex ASC")
+    List<LessonKanjiItem> findByDraftIdWithCharacter(@Param("draftId") Long draftId);
+
+    /**
+     * Dòng mang id ổn định {@code originId} (V65) — id trong bản live có thể là id của dòng đã bị xóa khi nháp được
+     * dựng lại; dùng để tìm bài chứa phần tử khi đọc theo id của bản live.
+     */
+    java.util.Optional<LessonKanjiItem> findFirstByOriginIdOrderByIdDesc(Long originId);
 }

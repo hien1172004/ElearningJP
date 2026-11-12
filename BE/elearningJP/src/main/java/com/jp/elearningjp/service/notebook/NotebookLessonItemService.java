@@ -69,6 +69,7 @@ public class NotebookLessonItemService {
     LessonRepository lessonRepository;
     LessonSectionRepository lessonSectionRepository;
     SectionService sectionService;
+    com.jp.elearningjp.service.curriculum.LessonDraftService lessonDraftService;
     CourseAccessGuard courseAccessGuard;
     CurrentUserService currentUserService;
     NotebookRepository notebookRepository;
@@ -84,7 +85,8 @@ public class NotebookLessonItemService {
         User user = currentUserService.getCurrentUser();
 
         // 1. Gom các mục cần lưu theo đúng thứ tự trong bài
-        List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lesson.getId());
+        // Người quản lý: nháp phía mình; còn lại: nháp TEACHER (V65)
+        List<LessonSection> sections = lessonSectionRepository.findByDraftIdWithAllItems(lessonDraftService.readDraftId(lesson));
         SectionService.RelatedVocabBundle bundle = sectionService.loadNestedCollections(sections);
         List<NotebookWord> candidates = collectCandidates(sections, bundle, request, lesson);
         if (candidates.isEmpty()) {

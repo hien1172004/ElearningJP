@@ -42,6 +42,15 @@ public class Quiz extends SoftDeletableEntity {
     @JoinColumn(name = "lesson_id", nullable = false)
     private Lesson lesson;
 
+    /** Bản nháp chứa phần tử này (V65) — nháp TEACHER hoặc ADMIN của bài. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "draft_id", nullable = false, updatable = false)
+    private LessonDraft draft;
+
+    /** Id ổn định của phần tử trong bản live (V65); null = chính {@code id}. Bản chụp ghi COALESCE(originId, id). */
+    @Column(name = "origin_id")
+    private Long originId;
+
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 

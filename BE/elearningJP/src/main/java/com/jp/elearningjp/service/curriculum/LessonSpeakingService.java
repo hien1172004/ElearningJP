@@ -17,7 +17,9 @@ import com.jp.elearningjp.entity.speaking.AiScenario;
 import com.jp.elearningjp.entity.speaking.AiSession;
 import com.jp.elearningjp.exception.AppException;
 import com.jp.elearningjp.exception.ErrorCode;
+import com.jp.elearningjp.entity.curriculum.LessonDraft;
 import com.jp.elearningjp.repository.curriculum.LessonRepository;
+import com.jp.elearningjp.repository.curriculum.LessonSectionRepository;
 import com.jp.elearningjp.repository.curriculum.LessonSpeakingScenarioRepository;
 import com.jp.elearningjp.repository.speaking.AiMessageRepository;
 import com.jp.elearningjp.repository.speaking.AiScenarioRepository;
@@ -54,6 +56,8 @@ public class LessonSpeakingService {
     private final CourseAccessGuard courseAccessGuard;
     private final ObjectMapper objectMapper;
     private final PublishedLessonResolver publishedLessonResolver;
+    private final LessonDraftService lessonDraftService;
+    private final LessonSectionRepository lessonSectionRepository;
 
     @Value("${gemini.api-key:}")
     private String geminiApiKey = "";
@@ -84,7 +88,9 @@ public class LessonSpeakingService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
-        List<LessonSpeakingScenario> list = lessonSpeakingRepo.findByLessonIdWithScenariosOrderByOrderIndexAsc(lessonId);
+        // Người quản lý: nháp phía mình; còn lại (khóa chưa có bản live): nháp TEACHER (V65)
+        List<LessonSpeakingScenario> list = lessonSpeakingRepo
+                .findByDraftIdWithScenariosOrderByOrderIndexAsc(lessonDraftService.readDraftId(lesson));
         return list.stream()
                 .map(lss -> buildResponse(lss, currentUserId))
                 .toList();
@@ -108,18 +114,19 @@ public class LessonSpeakingService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Course course = lesson.getCourse();
-        courseAccessGuard.requireContentEditable(course);
+        LessonDraft draft = courseAccessGuard.requireLessonEditable(lesson);
 
         AiScenario scenario = scenarioRepository.findById(request.getScenarioId())
                 .orElseThrow(() -> new AppException(ErrorCode.AI_SCENARIO_NOT_FOUND));
 
         int nextOrderIndex = request.getOrderIndex() != null && request.getOrderIndex() > 0
                 ? request.getOrderIndex()
-                : (int) lessonSpeakingRepo.countByLessonId(lessonId) + 1;
+                : (int) lessonSpeakingRepo.countByDraftId(draft.getId()) + 1;
 
-        LessonSpeakingScenario lessonSpeaking = lessonSpeakingRepo.findByLessonIdAndScenarioId(lessonId, request.getScenarioId())
+        LessonSpeakingScenario lessonSpeaking = lessonSpeakingRepo.findByDraftIdAndScenarioId(draft.getId(), request.getScenarioId())
                 .orElseGet(() -> LessonSpeakingScenario.builder()
                         .lesson(lesson)
+                        .draft(draft)
                         .scenario(scenario)
                         .build());
 
@@ -144,13 +151,13 @@ public class LessonSpeakingService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
-        courseAccessGuard.requireContentEditable(lesson.getCourse());
+        LessonDraft draft = courseAccessGuard.requireLessonEditable(lesson);
 
         if (scenarioId != null) {
-            lessonSpeakingRepo.deleteByLessonIdAndScenarioId(lessonId, scenarioId);
+            lessonSpeakingRepo.deleteByDraftIdAndScenarioId(draft.getId(), scenarioId);
             log.info("[LESSON_SPEAKING] Removed scenario id={} from lesson id={}", scenarioId, lessonId);
         } else {
-            lessonSpeakingRepo.deleteByLessonId(lessonId);
+            lessonSpeakingRepo.deleteByDraftId(draft.getId());
             log.info("[LESSON_SPEAKING] Removed all speaking scenarios from lesson id={}", lessonId);
         }
     }
@@ -164,13 +171,14 @@ public class LessonSpeakingService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         Course course = lesson.getCourse();
-        courseAccessGuard.requireContentEditable(course);
+        LessonDraft draft = courseAccessGuard.requireLessonEditable(lesson);
 
-        // 1. Trích xuất từ vựng và ngữ pháp bài học
+        // 1. Trích xuất từ vựng và ngữ pháp bài học (theo nháp của phía người tạo)
         List<String> vocabList = new ArrayList<>();
         List<String> grammarList = new ArrayList<>();
-        if (lesson.getSections() != null) {
-            for (LessonSection section : lesson.getSections()) {
+        List<LessonSection> draftSections = lessonSectionRepository.findByDraftIdAndDeletedFalseOrderByOrderIndexAsc(draft.getId());
+        {
+            for (LessonSection section : draftSections) {
                 if (section.getVocabularyItems() != null) {
                     for (LessonVocabularyItem item : section.getVocabularyItems()) {
                         if (item.getVocab() != null) {
@@ -284,11 +292,12 @@ public class LessonSpeakingService {
         AiScenario savedScenario = scenarioRepository.save(scenario);
 
         // 4. Gán kịch bản vào bài học theo thứ tự tiếp theo
-        int currentCount = (int) lessonSpeakingRepo.countByLessonId(lessonId);
+        int currentCount = (int) lessonSpeakingRepo.countByDraftId(draft.getId());
         int nextOrder = currentCount + 1;
 
         LessonSpeakingScenario lessonSpeaking = LessonSpeakingScenario.builder()
                 .lesson(lesson)
+                .draft(draft)
                 .scenario(savedScenario)
                 .orderIndex(nextOrder)
                 .minTurns(3)

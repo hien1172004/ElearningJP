@@ -4,12 +4,13 @@ import lombok.Getter;
 
 /**
  * Sự kiện trong luồng duyệt khóa học — listener gửi thông báo sau khi giao dịch commit:
- * SUBMITTED / WITHDRAWN → mọi ADMIN; APPROVED / REJECTED / PUBLISHED / UNPUBLISHED → giáo viên được giao.
+ * SUBMITTED / WITHDRAWN → mọi ADMIN; APPROVED / SAVED / REJECTED / PUBLISHED / UNPUBLISHED → giáo viên được giao.
  */
 @Getter
 public class CourseReviewEvent extends CurriculumEvent {
 
-    public enum Action { SUBMITTED, WITHDRAWN, APPROVED, REJECTED, PUBLISHED, UNPUBLISHED }
+    /** SAVED: ADMIN tự chốt phiên bản mới từ bản đang soạn (không qua duyệt). */
+    public enum Action { SUBMITTED, WITHDRAWN, APPROVED, SAVED, REJECTED, PUBLISHED, UNPUBLISHED }
 
     private final Long courseId;
     private final String courseTitle;
@@ -18,7 +19,7 @@ public class CourseReviewEvent extends CurriculumEvent {
     private final Long actorId;
     /** Ghi chú khi gửi / lý do từ chối (có thể null). */
     private final String note;
-    /** APPROVED cho khóa vốn đang xuất bản → học viên nhận "khóa có nội dung mới". */
+    /** APPROVED / SAVED khi khóa đang xuất bản → học viên nhận "khóa có nội dung mới". */
     private final boolean contentUpdatedWhilePublished;
 
     public CourseReviewEvent(Object source, Long courseId, String courseTitle, Action action,

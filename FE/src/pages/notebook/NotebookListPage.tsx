@@ -39,7 +39,7 @@ import { ShareNotebookModal } from '@/components/notebook/ShareNotebookModal'
 import { ReviewModeSelectModal } from '@/components/notebook/ReviewModeSelectModal'
 import { notebookService } from '@/services/notebook.service'
 import type { Notebook, NotebookGroup } from '@/types'
-import { BackButton } from '@/components/common'
+import { BackButton, RequiredMark } from '@/components/common'
 
 type SortOption = 'newest' | 'oldest' | 'nameAsc' | 'nameDesc'
 
@@ -671,7 +671,7 @@ export const NotebookListPage: React.FC = () => {
       >
         <div className="py-3 space-y-2">
           <label className="block text-xs font-semibold text-gray-700">
-            Tên nhóm sổ tay mới
+            Tên nhóm sổ tay mới<RequiredMark />
           </label>
           <Input
             value={newGroupName}

@@ -70,6 +70,8 @@ public class SrsServiceImpl implements SrsService {
     WritingCharacterRepository writingCharacterRepository;
     GrammarPointRepository grammarPointRepository;
     LessonSectionRepository lessonSectionRepository;
+    com.jp.elearningjp.repository.curriculum.LessonRepository lessonRepository;
+    com.jp.elearningjp.service.curriculum.LessonDraftService lessonDraftService;
     LessonKanjiItemRepository lessonKanjiItemRepository;
     LessonVocabularyItemRepository lessonVocabularyItemRepository;
     LessonGrammarItemRepository lessonGrammarItemRepository;
@@ -139,8 +141,11 @@ public class SrsServiceImpl implements SrsService {
         User user = getUser(userId);
 
         // Đọc tất cả section (chưa xoá) của lesson, sắp xếp theo orderIndex
+        // Nháp mà người dùng hiện tại đọc (người quản lý: phía mình; còn lại: TEACHER) — V65
+        com.jp.elearningjp.entity.curriculum.Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         List<LessonSection> sections = lessonSectionRepository
-                .findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
+                .findByDraftIdAndDeletedFalseOrderByOrderIndexAsc(lessonDraftService.readDraftId(lesson));
 
         List<SrsItem> toSave = new ArrayList<>();
 

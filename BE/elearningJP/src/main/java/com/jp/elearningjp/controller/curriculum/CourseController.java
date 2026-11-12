@@ -7,6 +7,7 @@ import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.CourseResponse;
 import com.jp.elearningjp.service.curriculum.CourseService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
+import com.jp.elearningjp.shared.enums.CourseReviewStatus;
 import com.jp.elearningjp.shared.enums.JlptLevel;
 import com.jp.elearningjp.shared.response.ApiResponse;
 import com.jp.elearningjp.shared.response.PageResponse;
@@ -67,7 +68,8 @@ public class CourseController {
 
     @Operation(summary = "[Admin/Teacher] Danh sách khóa học để quản lý",
             description = "Kể cả khóa chưa xuất bản. Quản trị viên thấy toàn bộ khóa học; giáo viên chỉ thấy khóa học được giao cho mình. "
-                    + "pendingChanges=true: chỉ khóa có thay đổi chưa duyệt. "
+                    + "pendingChanges=true: chỉ khóa có thay đổi chưa chốt. "
+                    + "reviewStatus: PENDING_REVIEW = đã gửi, chờ duyệt; EDITING (kèm pendingChanges=true) = đang soạn, chưa gửi duyệt. "
                     + "Lọc thêm: keyword (tên khóa), jlptLevel, published (true = đã xuất bản, false = bản nháp)")
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
@@ -78,11 +80,12 @@ public class CourseController {
             @RequestParam(defaultValue = "false") boolean pendingChanges,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) JlptLevel jlptLevel,
-            @RequestParam(required = false) Boolean published
+            @RequestParam(required = false) Boolean published,
+            @RequestParam(required = false) CourseReviewStatus reviewStatus
     ) {
         return ApiResponse.<PageResponse<CourseResponse>>builder()
                 .success(true)
-                .data(courseService.getAllCoursesForAdmin(page, size, pendingChanges, keyword, jlptLevel, published))
+                .data(courseService.getAllCoursesForAdmin(page, size, pendingChanges, keyword, jlptLevel, published, reviewStatus))
                 .build();
     }
 

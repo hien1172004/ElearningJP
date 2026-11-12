@@ -18,6 +18,8 @@ export * from './adminBroadcast.service'
 export * from './courseStudent.service'
 export * from './courseTeacher.service'
 export * from './courseReview.service'
+export * from './lessonReview.service'
+export * from './lessonAutosave.service'
 // Đặt tên cụ thể để tránh đụng `progressService` của course.service.ts
 // (service này gọi /progress/lessons/* — lesson progress).
 export { progressService as learningProgressService } from './progress.service'

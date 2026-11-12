@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import { lessonSpeakingService } from '@/services/lessonSpeaking.service'
 import { speakingService } from '@/services/speaking.service'
 import { confirmDialog } from '@/components/common/ConfirmModal'
+import { useInvalidateCourseDraftState } from '@/hooks'
 import { EmptyState, LoadingState } from '@/components/common'
 import type { LessonSpeakingScenario } from '@/types/course.types'
 import type { AiScenario } from '@/types/speaking.types'
@@ -39,6 +40,8 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
   const locked = useCourseEditLocked()
   const navigate = useNavigate()
   const [speakingList, setSpeakingList] = useState<LessonSpeakingScenario[]>([])
+  // Gán / gỡ / sinh kịch bản là sửa nội dung khóa → làm mới trạng thái khóa (nút Gửi duyệt / Lưu)
+  const invalidateCourseDraft = useInvalidateCourseDraftState()
   const [isLoading, setIsLoading] = useState(true)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [allScenarios, setAllScenarios] = useState<AiScenario[]>([])
@@ -72,6 +75,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
     try {
       const generated = await lessonSpeakingService.generateSpeakingScenario(lessonId)
       setSpeakingList((prev) => [...prev, generated])
+      invalidateCourseDraft()
       toast.success('AI đã tạo và thêm kịch bản hội thoại vào bài học thành công!', { id: toastId })
     } catch (err) {
       console.error('Lỗi khi AI sinh kịch bản:', err)
@@ -142,6 +146,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
         orderIndex: speakingList.length + 1,
       })
       await loadLessonSpeaking()
+      invalidateCourseDraft()
       setIsAssignModalOpen(false)
       toast.success('Gán kịch bản hội thoại vào bài học thành công!')
     } catch (err) {
@@ -167,6 +172,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
     try {
       await lessonSpeakingService.removeSpeakingScenario(lessonId, scenarioId)
       setSpeakingList((prev) => prev.filter((s) => s.scenarioId !== scenarioId))
+      invalidateCourseDraft()
       toast.success('Đã gỡ kịch bản khỏi bài học.')
     } catch (err) {
       console.error('Lỗi gỡ kịch bản:', err)

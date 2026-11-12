@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Input, Modal, Radio } from 'antd'
 import { isAxiosError } from 'axios'
+import { RequiredMark } from '@/components/common'
 import { useReportComment } from '@/hooks/useReportComment'
 import { REPORT_REASON_LABELS } from './reportReasons'
 import type { ReportReason } from '@/types'
@@ -61,6 +62,7 @@ export const ReportCommentModal: React.FC<ReportCommentModalProps> = ({
     >
       <p className="text-sm text-gray-600 mb-3">
         Nội dung này vi phạm quy định cộng đồng như thế nào?
+        <RequiredMark />
       </p>
       <Radio.Group
         value={reason}
@@ -76,7 +78,7 @@ export const ReportCommentModal: React.FC<ReportCommentModalProps> = ({
       <Input.TextArea
         value={detail}
         onChange={(e) => setDetail(e.target.value)}
-        placeholder="Mô tả thêm (không bắt buộc)"
+        placeholder="Mô tả thêm"
         maxLength={MAX_DETAIL_LENGTH}
         showCount
         autoSize={{ minRows: 2, maxRows: 5 }}

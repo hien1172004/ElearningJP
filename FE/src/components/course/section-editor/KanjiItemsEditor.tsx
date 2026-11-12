@@ -23,10 +23,13 @@ import type {
   LessonKanjiRelatedVocabRequest,
 } from '@/types'
 import type { KanjiSummary, KanjiDetail, KanjiRelatedWord } from '@/types'
-import { useKanjiItemMutations, useKanjiItemDetail } from '@/hooks'
+import { useKanjiItemMutations, useKanjiItemDetail, useOnConcurrentReload, useFormAutosave } from '@/hooks'
+import { AutosaveBar, AutosaveScope } from '@/components/course/autosave'
+import { isConcurrentModification } from '@/lib/queryClient'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import { dictionaryService } from '@/services'
 import { KanjiHandwritingModal } from '@/components/dictionary'
+import { RequiredMark } from '@/components/common'
 
 // =============================================================================
 // Schema + types
@@ -456,6 +459,36 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
     form.resetFields()
   }
 
+  // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
+  useOnConcurrentReload(() => {
+    if (editing) closeModal()
+  })
+
+  // Tự lưu form đang soạn dở (chỉ người này thấy). Không lưu chi tiết từ điển (lớn) — khôi phục thì nạp lại theo chữ.
+  const autosave = useFormAutosave<
+    { form: Partial<FormValues>; newVocabs: NewVocabRow[] },
+    { relatedVocabIds: number[]; relatedDirty: boolean }
+  >({
+    lessonId,
+    formKey: isOpen ? (editing ? `kanji:${editing.id}` : `kanji:new:${sectionId}`) : null,
+    currentVersion: editing?.version,
+    getSnapshot: () => ({
+      baseVersion: editing?.version,
+      values: { form: form.getFieldsValue(true) as Partial<FormValues>, newVocabs },
+      ui: { relatedVocabIds, relatedDirty },
+    }),
+    changeSignal: [newVocabs, relatedVocabIds],
+    onRestore: (snap) => {
+      form.setFieldsValue(snap.values.form)
+      if (!editing && snap.values.form.character) void handleHandwritingSelect(snap.values.form.character)
+      setNewVocabs(snap.values.newVocabs ?? [])
+      if (snap.ui) {
+        setRelatedVocabIds(snap.ui.relatedVocabIds ?? [])
+        setRelatedDirty(!!snap.ui.relatedDirty)
+      }
+    },
+  })
+
   // ========================================================================
   // Submit
   // ========================================================================
@@ -531,8 +564,10 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         }
         await createKanjiItem.mutateAsync(payload)
       }
+      autosave.clear() // lưu thành công → bỏ bản tự lưu
       closeModal()
     } catch (err) {
+      if (isConcurrentModification(err)) return // modal "Tải bản mới nhất" đã xử lý
       if (err && typeof err === 'object' && 'response' in err) {
         const axErr = err as any
         const msg = axErr.response?.data?.message ?? 'Yêu cầu không hợp lệ'
@@ -664,14 +699,16 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         width={880}
         destroyOnHidden
       >
+        <AutosaveBar autosave={autosave} />
+        <AutosaveScope autosave={autosave}>
         <Form form={form} layout="vertical" className="pt-2">
           {/* ============================================================== */}
           {/* CREATE MODE: Tìm kanji từ từ điển */}
           {/* ============================================================== */}
           {!editing && !selectedKanji && (
-            <div className="rounded-md border border-amber-200 bg-amber-50/50 p-3 mb-3 space-y-2">
+            <div data-autosave-ignore className="rounded-md border border-amber-200 bg-amber-50/50 p-3 mb-3 space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold text-amber-700 uppercase tracking-wider">
-                <Search className="w-3.5 h-3.5" /> Tìm Kanji từ từ điển
+                <Search className="w-3.5 h-3.5" /> Tìm Kanji từ từ điển<RequiredMark />
               </div>
               <div className="flex items-stretch gap-2">
                 <Select
@@ -988,6 +1025,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
             )}
           </div>
         </Form>
+        </AutosaveScope>
       </Modal>
 
       <ItemPreviewModal type="KANJI" items={items} itemId={previewId} onClose={() => setPreviewId(null)} />

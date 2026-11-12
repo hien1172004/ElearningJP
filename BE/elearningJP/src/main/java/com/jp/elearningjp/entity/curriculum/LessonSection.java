@@ -46,6 +46,15 @@ public class LessonSection extends SoftDeletableEntity {
     @JoinColumn(name = "lesson_id", nullable = false)
     private Lesson lesson;
 
+    /** Bản nháp chứa phần tử này (V65) — nháp TEACHER hoặc ADMIN của bài. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "draft_id", nullable = false, updatable = false)
+    private LessonDraft draft;
+
+    /** Id ổn định của phần tử trong bản live (V65); null = chính {@code id}. Bản chụp ghi COALESCE(originId, id). */
+    @Column(name = "origin_id")
+    private Long originId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "section_type", nullable = false, length = 20)
     private LessonSectionType sectionType;

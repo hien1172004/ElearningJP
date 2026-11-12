@@ -35,6 +35,7 @@ class ReorderVersionCheckTest {
     @Mock LessonRepository lessonRepository;
     @Mock CourseAccessGuard courseAccessGuard;
     @Mock LessonMapper lessonMapper;
+    @Mock LessonDraftService lessonDraftService;
     @InjectMocks LessonService lessonService;
 
     Lesson l1;
@@ -53,6 +54,31 @@ class ReorderVersionCheckTest {
         when(courseRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(course));
         when(lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(1L))
                 .thenReturn(new ArrayList<>(List.of(l1, l2)));
+        // V66: phía người sắp xếp thấy cả 2 bài
+        org.mockito.Mockito.lenient().when(lessonDraftService.currentKind())
+                .thenReturn(com.jp.elearningjp.shared.enums.DraftKind.TEACHER);
+        org.mockito.Mockito.lenient().when(lessonRepository.findVisibleByCourseId(1L,
+                com.jp.elearningjp.shared.enums.DraftKind.TEACHER)).thenReturn(new ArrayList<>(List.of(l1, l2)));
+    }
+
+    @Test
+    void hiddenLessonOfOtherSide_keepsItsSlot_visibleOnesReorderAroundIt() {
+        // Bài 1.5 giáo viên mới tạo (chưa gửi duyệt) nằm giữa — ADMIN không thấy, không gửi trong danh sách
+        Lesson hidden = Lesson.builder().course(l1.getCourse()).title("Bài mới").orderIndex(2).build();
+        hidden.setId(15L);
+        l2.setOrderIndex(3);
+        when(lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(1L))
+                .thenReturn(new ArrayList<>(List.of(l1, hidden, l2)));
+        when(lessonDraftService.currentKind()).thenReturn(com.jp.elearningjp.shared.enums.DraftKind.ADMIN);
+        when(lessonRepository.findVisibleByCourseId(1L, com.jp.elearningjp.shared.enums.DraftKind.ADMIN))
+                .thenReturn(new ArrayList<>(List.of(l1, l2)));
+
+        lessonService.reorderLessons(1L, LessonReorderRequest.builder()
+                .lessonIds(List.of(20L, 10L)).versions(Map.of(10L, 3L, 20L, 8L)).build());
+
+        assertThat(l2.getOrderIndex()).isEqualTo(1);
+        assertThat(hidden.getOrderIndex()).isEqualTo(2);
+        assertThat(l1.getOrderIndex()).isEqualTo(3);
     }
 
     @Test

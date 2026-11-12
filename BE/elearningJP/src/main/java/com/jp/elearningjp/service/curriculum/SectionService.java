@@ -6,6 +6,7 @@ import com.jp.elearningjp.dto.response.curriculum.LessonSectionResponse;
 import com.jp.elearningjp.entity.content.Vocabulary;
 import com.jp.elearningjp.entity.curriculum.Course;
 import com.jp.elearningjp.entity.curriculum.Lesson;
+import com.jp.elearningjp.entity.curriculum.LessonDraft;
 import com.jp.elearningjp.entity.curriculum.LessonKanjiItem;
 import com.jp.elearningjp.entity.curriculum.LessonKanjiRelatedVocab;
 import com.jp.elearningjp.entity.curriculum.LessonSection;
@@ -80,6 +81,7 @@ public class SectionService {
     QuizOptionRepository quizOptionRepository;
     LessonSectionMapper lessonSectionMapper;
     PublishedLessonResolver publishedLessonResolver;
+    LessonDraftService lessonDraftService;
 
     // ============================================================
     // READ
@@ -98,7 +100,9 @@ public class SectionService {
         Lesson lesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         courseAccessGuard.requireLessonContentAccess(lesson);
-        List<LessonSection> sections = lessonSectionRepository.findByLessonIdWithAllItems(lessonId);
+        // Người quản lý: nháp của phía mình (V65)
+        List<LessonSection> sections = lessonSectionRepository.findByDraftIdWithAllItems(
+                lessonDraftService.readDraftId(lesson));
         RelatedVocabBundle bundle = loadNestedCollections(sections);
         return lessonSectionMapper.toSectionResponses(
                 sections, bundle.relatedVocabsByCharacter, bundle.teacherRelatedVocabsByKanjiItem);
@@ -110,6 +114,8 @@ public class SectionService {
     @Transactional(readOnly = true)
     public LessonSectionResponse getSection(Long sectionId) {
         LessonSection section = lessonSectionRepository.findById(sectionId)
+                // id của bản live có thể là id ổn định của dòng đã bị xóa khi nháp được dựng lại (V65)
+                .or(() -> lessonSectionRepository.findFirstByOriginIdOrderByIdDesc(sectionId))
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
         Optional<PublishedLessonResolver.PublishedLesson> published =
                 publishedLessonResolver.forReading(section.getLesson().getId());
@@ -120,9 +126,9 @@ public class SectionService {
                     .orElseThrow(() -> new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND));
         }
         courseAccessGuard.requireSectionContentAccess(section);
-        // Load full graph theo lesson
+        // Load full graph theo nháp chứa section
         List<LessonSection> sections = lessonSectionRepository
-                .findByLessonIdWithAllItems(section.getLesson().getId());
+                .findByDraftIdWithAllItems(section.getDraft().getId());
         RelatedVocabBundle bundle = loadNestedCollections(sections);
         return sections.stream()
                 .filter(s -> s.getId().equals(sectionId))
@@ -153,15 +159,16 @@ public class SectionService {
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
 
         // Teacher chỉ được tạo section trong course do mình làm chủ (admin bypass).
-        courseAccessGuard.requireContentEditable(lesson.getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        LessonDraft draft = courseAccessGuard.requireLessonEditable(lesson, ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         // SEQUENTIAL RENUMBER: chèn section vào vị trí đích trong bộ nhớ, rồi
         // đánh số lại 1..N và ghi an toàn (marker âm → 1..N).
         List<LessonSection> ordered = new ArrayList<>(
-                lessonSectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId));
+                lessonSectionRepository.findByDraftIdAndDeletedFalseOrderByOrderIndexAsc(draft.getId()));
 
         LessonSection section = LessonSection.builder()
                 .lesson(lesson)
+                .draft(draft)
                 .sectionType(sectionType)
                 .title(title)
                 // Tạm MAX+1 (không dùng size+1): xoá mềm để lại lỗ hổng, [1,3] có size+1 = 3 sẽ trùng UNIQUE.
@@ -205,7 +212,8 @@ public class SectionService {
             throw new AppException(ErrorCode.LESSON_SECTION_NOT_FOUND);
         }
         VersionCheck.requireVersion(section, version);
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
 
         if (title != null) {
             section.setTitle(title);
@@ -214,7 +222,7 @@ public class SectionService {
         if (orderIndex != null && orderIndex > 0 && !orderIndex.equals(section.getOrderIndex())) {
             Long lessonId = section.getLesson().getId();
             List<LessonSection> ordered = new ArrayList<>(
-                    lessonSectionRepository.findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId));
+                    lessonSectionRepository.findByDraftIdAndDeletedFalseOrderByOrderIndexAsc(section.getDraft().getId()));
 
             boolean moved = OrderIndexResolver.moveToPosition(
                     ordered,
@@ -257,7 +265,8 @@ public class SectionService {
         if (section.isDeleted()) {
             return; // đã xoá rồi, idempotent
         }
-        courseAccessGuard.requireContentEditable(section.getLesson().getCourse(), ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        courseAccessGuard.requireDraftEditable(section.getDraft(), ErrorCode.FORBIDDEN_LESSON_ACCESS,
+                ErrorCode.LESSON_SECTION_NOT_FOUND);
         section.softDelete();
         lessonSectionRepository.save(section);
         log.info("[SECTION] Soft-deleted section id={}", sectionId);
@@ -277,13 +286,12 @@ public class SectionService {
      */
     @Transactional
     public List<LessonSectionResponse> reorderSections(Long lessonId, ItemBulkReorderRequest request) {
-        // Auth check
-        Course course = courseRepository.findByIdAndDeletedFalse(
-                lessonRepository.findByIdAndDeletedFalse(lessonId)
-                        .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND))
-                        .getCourse().getId()
-        ).orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        courseAccessGuard.requireContentEditable(course, ErrorCode.FORBIDDEN_LESSON_ACCESS);
+        // Auth check (thứ tự section là nội dung của bài → khóa theo bài khi bài chờ duyệt)
+        Lesson reorderLesson = lessonRepository.findByIdAndDeletedFalse(lessonId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        courseRepository.findByIdAndDeletedFalse(reorderLesson.getCourse().getId())
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        LessonDraft draft = courseAccessGuard.requireLessonEditable(reorderLesson, ErrorCode.FORBIDDEN_LESSON_ACCESS);
 
         if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
             throw new AppException(ErrorCode.LESSON_REORDER_LIST_EMPTY);
@@ -291,7 +299,7 @@ public class SectionService {
 
         // Load current sections
         List<LessonSection> currentSections = lessonSectionRepository
-                .findByLessonIdAndDeletedFalseOrderByOrderIndexAsc(lessonId);
+                .findByDraftIdAndDeletedFalseOrderByOrderIndexAsc(draft.getId());
         Set<Long> currentIds = new HashSet<>();
         for (LessonSection s : currentSections) currentIds.add(s.getId());
 
@@ -349,19 +357,20 @@ public class SectionService {
         if (sections == null || sections.isEmpty()) {
             return RelatedVocabBundle.empty();
         }
-        Long lessonId = sections.get(0).getLesson().getId();
+        // Mọi section cùng 1 nháp (V65) — batch theo nháp
+        Long draftId = sections.get(0).getDraft().getId();
         List<Long> sectionIds = sections.stream().map(LessonSection::getId).toList();
 
         // === Level 1: 4 collection trên LessonSection — mỗi query 1 collection List<> ===
-        kanjiItemRepository.findByLessonIdWithCharacter(lessonId);
-        vocabularyItemRepository.findByLessonIdWithVocab(lessonId);
-        grammarItemRepository.findByLessonIdWithGrammar(lessonId);
-        quizRepository.findByLessonIdWithQuestions(lessonId);
+        kanjiItemRepository.findByDraftIdWithCharacter(draftId);
+        vocabularyItemRepository.findByDraftIdWithVocab(draftId);
+        grammarItemRepository.findByDraftIdWithGrammar(draftId);
+        quizRepository.findByDraftIdWithQuestions(draftId);
 
         // === Level 2: collection bên trong item — mỗi query 1 collection List<> ===
         grammarExampleRepository.findBySectionIds(sectionIds);
         vocabularyExampleRepository.findBySectionIds(sectionIds);
-        quizOptionRepository.findByLessonId(lessonId);
+        quizOptionRepository.findByDraftId(draftId);
 
         // === Related vocab cho kanji items ===
         // 1) Teacher override từ bảng lesson_kanji_related_vocabulary (group theo kanji item id)

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Input, Button } from 'antd'
 import { FolderAddOutlined } from '@ant-design/icons'
+import { RequiredMark } from '@/components/common'
 
 interface CreateGroupWithNotebookModalProps {
   open: boolean
@@ -53,7 +54,7 @@ export const CreateGroupWithNotebookModal: React.FC<CreateGroupWithNotebookModal
         {/* Input 1: Tên nhóm sổ tay */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-gray-700">
-            Tên nhóm sổ tay
+            Tên nhóm sổ tay<RequiredMark />
           </label>
           <Input
             placeholder="Nhập tên nhóm sổ tay"
@@ -67,7 +68,7 @@ export const CreateGroupWithNotebookModal: React.FC<CreateGroupWithNotebookModal
         {/* Input 2: Tên sổ tay */}
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-gray-700">
-            Tên sổ tay
+            Tên sổ tay<RequiredMark />
           </label>
           <Input
             placeholder="Nhập tên sổ tay"

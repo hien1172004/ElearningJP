@@ -42,31 +42,28 @@ public final class ApiPaths {
         /** Giáo viên được giao khóa học (ADMIN giao/gỡ). */
         public static final String TEACHERS = "/{courseId}/teachers";
         public static final String TEACHER_BY_ID = "/{courseId}/teachers/{teacherId}";
-        /** Luồng duyệt: lịch sử (GET) / gửi duyệt (POST) và rút yêu cầu đang chờ. */
-        public static final String REVIEW_REQUESTS = "/{courseId}/review-requests";
-        public static final String REVIEW_WITHDRAW = "/{courseId}/review-requests/withdraw";
-        /** Nhận xét của lượt duyệt gần nhất. */
-        public static final String REVIEW_COMMENTS = "/{courseId}/review-comments";
+        /** ADMIN chốt nháp ADMIN cả khóa thành phiên bản mới (không qua duyệt). */
+        public static final String VERSIONS = "/{courseId}/versions";
         /** Thay đổi của bản đang soạn so với bản học viên đang học. */
         public static final String PENDING_CHANGES = "/{courseId}/pending-changes";
+        /** Duyệt theo bài (V62): lịch sử (GET) / gửi nhiều bài (POST) và trạng thái duyệt từng bài. */
+        public static final String LESSON_REVIEWS = "/{courseId}/lesson-reviews";
+        public static final String LESSON_REVIEW_STATES = "/{courseId}/lesson-review-states";
+        /** Khóa sửa khóa học theo phía (V65): GET xem, POST bắt đầu / tiếp quản, PUT gia hạn, DELETE kết thúc. */
+        public static final String EDIT_LOCK = "/{courseId}/edit-lock";
 
         // Relative paths cho LessonController (khi đã map tới LESSONS)
         public static final String LESSON_BY_ID_RELATIVE = "/{lessonId}";
         public static final String LESSON_REORDER_RELATIVE = "/reorder";
     }
 
-    /** Hàng chờ duyệt khóa học của ADMIN. */
-    public static final class CourseReview {
-        public static final String BASE = "/course-review-requests";
+    /** Hàng chờ duyệt theo bài của ADMIN (V62). */
+    public static final class LessonReview {
+        public static final String BASE = "/lesson-review-requests";
         public static final String APPROVE = "/{requestId}/approve";
         public static final String REJECT = "/{requestId}/reject";
-        public static final String COMMENTS = "/{requestId}/comments";
-    }
-
-    public static final class CourseReviewComment {
-        public static final String BASE = "/course-review-comments";
-        public static final String BY_ID = "/{commentId}";
-        public static final String RESOLVE = "/{commentId}/resolve";
+        /** Bản chụp nội dung bài lúc giáo viên gửi (ADMIN xem để duyệt — V65). */
+        public static final String CONTENT = "/{requestId}/content";
     }
 
     public static final class Lesson {
@@ -83,6 +80,17 @@ public final class ApiPaths {
         /** In phiếu luyện viết (PDF) cho mục Chữ Hán / Từ vựng của bài + kiểm tra ký tự thiếu nét trước khi in. */
         public static final String PRACTICE_SHEET = "/{id}/practice-sheet";
         public static final String PRACTICE_SHEET_CHECK = "/{id}/practice-sheet/check";
+        /** Duyệt theo bài: giáo viên rút yêu cầu đang chờ; ADMIN đưa bản nháp của bài lên bản live. */
+        public static final String REVIEW_WITHDRAW = "/{id}/review/withdraw";
+        public static final String SAVE_TO_LIVE = "/{id}/review/save";
+        /** ADMIN bỏ thay đổi chưa duyệt: bản nháp của bài quay về đúng bản học viên đang học. */
+        public static final String DISCARD_DRAFT = "/{id}/review/discard-draft";
+        /** Nháp theo phía (V65): cập nhật bản mới (nháp hiện tại thành nháp cũ) / xem nháp cũ chỉ đọc. */
+        public static final String DRAFT_REBASE = "/{id}/draft/rebase";
+        public static final String DRAFT_ARCHIVED = "/{id}/draft/archived";
+        /** Autosave nội dung chưa lưu của người dùng hiện tại: GET danh sách; PUT / DELETE theo form. */
+        public static final String AUTOSAVES = "/{id}/autosaves";
+        public static final String AUTOSAVE_BY_KEY = "/{id}/autosaves/{formKey}";
 
         // ===== Section endpoints =====
         // Lưu ý: phải có prefix BASE ("/lessons") để path đầy đủ là

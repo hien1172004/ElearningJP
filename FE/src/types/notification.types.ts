@@ -31,6 +31,20 @@ export type NotificationType =
   | 'COURSE_REVIEW'
   /** Đề thi được cập nhật phiên bản mới hoặc đính chính */
   | 'EXAM_UPDATED'
+  /** Duyệt theo bài: giáo viên gửi bài (gửi ADMIN, 1 thông báo / lượt) */
+  | 'LESSON_SUBMITTED'
+  /** Duyệt theo bài: giáo viên rút yêu cầu (gửi ADMIN) */
+  | 'LESSON_WITHDRAWN'
+  /** Duyệt theo bài: ADMIN duyệt bài (gửi giáo viên đã gửi) */
+  | 'LESSON_APPROVED'
+  /** Duyệt theo bài: ADMIN từ chối bài kèm lý do (gửi giáo viên đã gửi) */
+  | 'LESSON_REJECTED'
+  /** Bản học viên của bài vừa đổi → người còn bản chưa lưu (tự lưu) của bài: bản đó đã cũ */
+  | 'DRAFT_STALE'
+  /** Bài có thay đổi lớn → học viên đã hoàn thành bài */
+  | 'LESSON_UPDATED'
+  /** ADMIN bỏ thay đổi chưa duyệt của bài (bản nháp về bản live) → giáo viên được giao */
+  | 'LESSON_DRAFT_DISCARDED'
 
 /** Dữ liệu đính kèm — dùng để điều hướng khi click (vd reply bình luận). */
 export interface NotificationData {

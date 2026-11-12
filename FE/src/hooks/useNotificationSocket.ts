@@ -3,6 +3,7 @@ import { Client, type IMessage } from '@stomp/stompjs'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getWebSocketUrl } from '@/lib/wsUrl'
+import { attachStompClient, detachStompClient } from '@/lib/stompSubscriptions'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useNotificationStore } from '@/stores/useNotificationStore'
@@ -78,6 +79,10 @@ export function useNotificationSocket() {
           try {
             const notification = JSON.parse(message.body) as AppNotification
             pushNotification(notification)
+            // Duyệt theo bài: hàng chờ (ADMIN) / trạng thái bài (giáo viên) đang mở tự cập nhật
+            if (notification.type.startsWith('LESSON_') || notification.type === 'DRAFT_STALE') {
+              queryClient.invalidateQueries({ queryKey: QUERY_KEYS.lessonReview.all })
+            }
             toast(notification.title, {
               description: notification.body,
               duration: 6000,
@@ -87,12 +92,16 @@ export function useNotificationSocket() {
           }
         })
 
+        // Topic khác (vd: nội dung khóa học vừa đổi) dùng chung kết nối này
+        attachStompClient(client)
+
         // Đồng bộ lại sau khi (re)connect — bù các thông báo bị lỡ khi mất mạng.
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notification.all })
         void hydrateUnreadCount(setUnreadCount)
       },
 
       onWebSocketClose: () => {
+        detachStompClient()
         if (!disposed) {
           setConnected(false)
         }
@@ -124,6 +133,7 @@ export function useNotificationSocket() {
     return () => {
       disposed = true
       clientRef.current = null
+      detachStompClient()
       setConnected(false)
       void client.deactivate()
     }

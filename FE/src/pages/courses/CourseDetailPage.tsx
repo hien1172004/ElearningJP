@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { Users, BookOpen, GraduationCap, ArrowRight, LogIn, Award, FileCheck, Clock } from 'lucide-react'
 import { Button as AntdButton } from 'antd'
 import { PageHeader, LoadingState, BackButton } from '@/components/common'
-import { LessonOutlineList } from '@/components/course'
+import { CourseContentUpdateNotice, LessonOutlineList } from '@/components/course'
 import { CourseProgressBar } from '@/components/common'
 import { useCourseDetail, useEnrollCourse, useMyEnrollments } from '@/hooks'
 import { useAuthStore } from '@/stores'
@@ -55,6 +55,8 @@ export const CourseDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 space-y-4 pb-12">
+      {/* Khóa vừa có phiên bản mới / bị ẩn trong lúc đang xem → nhắc tải lại */}
+      <CourseContentUpdateNotice courseId={courseId} audience="learner" />
       <BackButton to="/courses" />
       {/* Hero */}
       <PageHeader

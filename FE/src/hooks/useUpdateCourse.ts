@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AxiosError } from 'axios'
+import { isConcurrentModification } from '@/lib/queryClient'
 import { courseService } from '@/services'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import type { ApiResponse, CourseUpdateRequest, CourseSummary } from '@/types'
@@ -20,6 +21,7 @@ export function useUpdateCourse(id: number) {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detail(id) })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
+      if (isConcurrentModification(error)) return // modal "Tải bản mới nhất" đã xử lý
       const msg =
         error.response?.data?.message ??
         'Không thể cập nhật khóa học. Vui lòng thử lại.'

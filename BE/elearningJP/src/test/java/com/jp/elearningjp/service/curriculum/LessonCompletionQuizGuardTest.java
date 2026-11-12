@@ -62,14 +62,19 @@ class LessonCompletionQuizGuardTest {
     @Mock LessonSpeakingService lessonSpeakingService;
 
     @Mock PublishedLessonResolver publishedLessonResolver;
+    @org.mockito.Mock com.jp.elearningjp.service.curriculum.LessonDraftService lessonDraftService;
     @InjectMocks ProgressService progressService;
     @InjectMocks LessonService lessonService;
 
     @BeforeEach
     void setUp() {
+        // V65: nháp của bài X có id = X (quy ước trong test)
+        org.mockito.Mockito.lenient().when(lessonDraftService.readDraftId(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> ((com.jp.elearningjp.entity.curriculum.Lesson) inv.getArgument(0)).getId());
         Course course = mock(Course.class);
         when(course.getId()).thenReturn(COURSE_ID);
         Lesson lesson = mock(Lesson.class);
+        when(lesson.getId()).thenReturn(LESSON_ID);
         when(lesson.getCourse()).thenReturn(course);
         User user = mock(User.class);
         when(user.getId()).thenReturn(USER_ID);
@@ -85,7 +90,7 @@ class LessonCompletionQuizGuardTest {
     private void lessonHasQuizPassingAt(int percent) {
         Quiz quiz = mock(Quiz.class);
         when(quiz.getPassingScorePercent()).thenReturn(percent);
-        when(quizRepository.findByLessonIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.of(quiz));
+        when(quizRepository.findByDraftIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.of(quiz));
     }
 
     private void existingProgress(String bestScore) {
@@ -130,7 +135,7 @@ class LessonCompletionQuizGuardTest {
 
     @Test
     void progressRoute_noQuiz_completes() {
-        when(quizRepository.findByLessonIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.empty());
+        when(quizRepository.findByDraftIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.empty());
 
         progressService.completeLesson(LESSON_ID);
 
@@ -166,7 +171,7 @@ class LessonCompletionQuizGuardTest {
         // Bấm hoàn thành lần 2 không được cộng XP lần nữa.
         UserLessonProgress done = UserLessonProgress.builder().status(ProgressStatus.COMPLETED).build();
         when(progressRecorder.lockOrCreate(USER_ID, LESSON_ID)).thenReturn(done);
-        when(quizRepository.findByLessonIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.empty());
+        when(quizRepository.findByDraftIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.empty());
 
         assertThat(lessonService.completeLesson(LESSON_ID)).isNotNull();
 
@@ -175,7 +180,7 @@ class LessonCompletionQuizGuardTest {
 
     @Test
     void lessonRoute_noQuiz_completes() {
-        when(quizRepository.findByLessonIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.empty());
+        when(quizRepository.findByDraftIdAndDeletedFalse(LESSON_ID)).thenReturn(Optional.empty());
 
         assertThat(lessonService.completeLesson(LESSON_ID)).isNotNull();
 

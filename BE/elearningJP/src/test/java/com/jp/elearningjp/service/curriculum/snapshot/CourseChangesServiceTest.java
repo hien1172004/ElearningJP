@@ -43,9 +43,17 @@ class CourseChangesServiceTest {
     CourseSnapshotReader snapshotReader = mock(CourseSnapshotReader.class);
     ExamSnapshotService examSnapshotService = mock(ExamSnapshotService.class);
     CourseAccessGuard guard = mock(CourseAccessGuard.class);
+    com.jp.elearningjp.service.curriculum.LessonDraftService drafts =
+            mock(com.jp.elearningjp.service.curriculum.LessonDraftService.class);
     CourseChangesService service = new CourseChangesService(courseRepository, lessonRepository, examRepository,
-            versionRepository, courseSnapshotService, snapshotReader, examSnapshotService, guard,
+            versionRepository, courseSnapshotService, snapshotReader, examSnapshotService, guard, drafts,
+            mock(com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository.class),
             Jackson2ObjectMapperBuilder.json().build());
+
+    /** V65: bản đang soạn = nháp phía người xem của bài {@code l}. */
+    private static com.jp.elearningjp.entity.curriculum.LessonDraft draftOf(Lesson l) {
+        return org.mockito.ArgumentMatchers.argThat(d -> d != null && d.getLesson() == l);
+    }
 
     Course course;
 
@@ -67,6 +75,17 @@ class CourseChangesServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(drafts.currentKind()).thenReturn(com.jp.elearningjp.shared.enums.DraftKind.TEACHER);
+        when(drafts.findActive(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(inv -> {
+                    Long lessonId = inv.getArgument(0);
+                    Lesson l = lessonRepository.findReviewableByCourseId(1L, com.jp.elearningjp.shared.enums.DraftKind.TEACHER).stream()
+                            .filter(x -> x.getId().equals(lessonId)).findFirst().orElseThrow();
+                    com.jp.elearningjp.entity.curriculum.LessonDraft d = com.jp.elearningjp.entity.curriculum.LessonDraft
+                            .builder().lesson(l).kind(com.jp.elearningjp.shared.enums.DraftKind.TEACHER).build();
+                    d.setId(lessonId * 10);
+                    return Optional.of(d);
+                });
         course = Course.builder().title("N5").slug("n5").build();
         course.setId(1L);
         course.setPublishedVersionId(100L);
@@ -83,13 +102,13 @@ class CourseChangesServiceTest {
     void addedRemovedModifiedLessons_andItemCounts() {
         Lesson l1 = lesson(10L, "Bài 1", 1);
         Lesson l3 = lesson(30L, "Bài 3 mới", 2);
-        when(lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(1L)).thenReturn(List.of(l1, l3));
+        when(lessonRepository.findReviewableByCourseId(1L, com.jp.elearningjp.shared.enums.DraftKind.TEACHER)).thenReturn(List.of(l1, l3));
         // Bài 1: item 50 sửa nghĩa, item 51 bị bỏ, item 52 thêm; item 53 chỉ đổi version (không tính là sửa)
         when(snapshotReader.findLesson(100L, 10L)).thenReturn(Optional.of(snapshot(
                 kanji(50, "ngày", 1), kanji(51, "mặt trời", 1), kanji(53, "năm", 1))));
-        when(courseSnapshotService.buildLesson(l1)).thenReturn(snapshot(
+        when(courseSnapshotService.buildDraft(draftOf(l1))).thenReturn(snapshot(
                 kanji(50, "ngày, mặt trời", 2), kanji(53, "năm", 4), kanji(52, "tháng", 0)));
-        when(courseSnapshotService.buildLesson(l3)).thenReturn(snapshot(kanji(60, "người", 0)));
+        when(courseSnapshotService.buildDraft(draftOf(l3))).thenReturn(snapshot(kanji(60, "người", 0)));
         when(examRepository.findByCourseIdAndDeletedFalse(1L)).thenReturn(List.of());
 
         CourseChangesResponse res = service.getChanges(1L);
@@ -112,11 +131,11 @@ class CourseChangesServiceTest {
     void identicalContent_unchanged_evenIfVersionsDiffer() {
         Lesson l1 = lesson(10L, "Bài 1", 1);
         Lesson l2 = lesson(20L, "Bài 2", 2);
-        when(lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(1L)).thenReturn(List.of(l1, l2));
+        when(lessonRepository.findReviewableByCourseId(1L, com.jp.elearningjp.shared.enums.DraftKind.TEACHER)).thenReturn(List.of(l1, l2));
         when(snapshotReader.findLesson(100L, 10L)).thenReturn(Optional.of(snapshot(kanji(50, "ngày", 1))));
         when(snapshotReader.findLesson(100L, 20L)).thenReturn(Optional.of(snapshot()));
-        when(courseSnapshotService.buildLesson(l1)).thenReturn(snapshot(kanji(50, "ngày", 9)));
-        when(courseSnapshotService.buildLesson(l2)).thenReturn(snapshot());
+        when(courseSnapshotService.buildDraft(draftOf(l1))).thenReturn(snapshot(kanji(50, "ngày", 9)));
+        when(courseSnapshotService.buildDraft(draftOf(l2))).thenReturn(snapshot());
         Exam exam = Exam.builder().title("Giữa kỳ").publishedVersionId(7L).build();
         exam.setId(70L);
         when(examRepository.findByCourseIdAndDeletedFalse(1L)).thenReturn(List.of(exam));
@@ -133,11 +152,11 @@ class CourseChangesServiceTest {
     void lessonOrderSwapped_markedMoved() {
         Lesson l1 = lesson(10L, "Bài 1", 2);
         Lesson l2 = lesson(20L, "Bài 2", 1);
-        when(lessonRepository.findByCourseIdAndDeletedFalseOrderByOrderIndexAsc(1L)).thenReturn(List.of(l2, l1));
+        when(lessonRepository.findReviewableByCourseId(1L, com.jp.elearningjp.shared.enums.DraftKind.TEACHER)).thenReturn(List.of(l2, l1));
         when(snapshotReader.findLesson(100L, 10L)).thenReturn(Optional.of(snapshot()));
         when(snapshotReader.findLesson(100L, 20L)).thenReturn(Optional.of(snapshot()));
-        when(courseSnapshotService.buildLesson(l1)).thenReturn(snapshot());
-        when(courseSnapshotService.buildLesson(l2)).thenReturn(snapshot());
+        when(courseSnapshotService.buildDraft(draftOf(l1))).thenReturn(snapshot());
+        when(courseSnapshotService.buildDraft(draftOf(l2))).thenReturn(snapshot());
         when(examRepository.findByCourseIdAndDeletedFalse(1L)).thenReturn(List.of());
 
         CourseChangesResponse res = service.getChanges(1L);

@@ -6,7 +6,6 @@ import { Button as AntdButton, Modal, Pagination, Select } from 'antd'
 import { toast } from 'sonner'
 import { LoadingState, EmptyState, BackButton, SearchInput, FilterBar } from '@/components/common'
 import { StatTile } from '@/components/admin'
-import { formatRelativeTime } from '@/utils/format'
 import {
   CourseFormModal,
   LessonFormModal,
@@ -15,11 +14,14 @@ import {
   CourseStudentsPanel,
   CourseTeachersPanel,
   CourseReviewBadge,
-  CourseReviewPanel,
+  CourseSaveVersionButton,
+  CourseContentUpdateNotice,
+  LessonReviewPanel,
   CourseEditLockBanner,
+  countPendingReviews,
   CourseEditLockContext,
+  CourseEditSessionControls,
   CourseChangesView,
-  CourseReviewCommentsPanel,
   courseEditLockReason,
   editLockHint,
   parseSelection,
@@ -28,7 +30,10 @@ import {
 } from '@/components/course'
 import {
   useCourseDetail,
+  useCourseEditSession,
+  useLessonReviewStates,
   useDeleteCourse,
+  useInvalidateCourseDraftState,
   useLessonDetail,
   usePublishCourse,
   useDeleteLesson,
@@ -55,7 +60,7 @@ const isExamPublished = (exam: ExamSummary) => !!exam.published || exam.status =
 
 /**
  * Không gian soạn khóa học (giáo viên): thanh tab ngang dưới thanh chú thích
- * (Tổng quan · Duyệt & xuất bản · Bài kiểm tra · Học viên · Giáo viên · Cài đặt [ADMIN]; trượt ngang khi màn hình hẹp),
+ * (Tổng quan · Duyệt · Bài kiểm tra · Học viên · Giáo viên · Cài đặt [ADMIN]; trượt ngang khi màn hình hẹp),
  * bên dưới là nội dung của mục đang chọn. Danh sách bài học (tìm kiếm + phân trang) nằm trong Tổng quan.
  * Mục đang chọn lưu trên URL (xem `workspaceSelection`).
  */
@@ -128,12 +133,19 @@ export const TeacherCourseEditorPage: React.FC = () => {
   const reorderLessons = useReorderLessons(id)
 
   const lessons = course?.lessons ?? []
-  // Đang chờ duyệt: giáo viên tạm khóa sửa (ADMIN vẫn sửa được)
-  // ADMIN chỉ xem & duyệt; giáo viên bị khóa sửa khi khóa đang chờ duyệt
-  const lockReason = courseEditLockReason(course, admin)
+  // Khóa sửa khóa học của phía mình (V65): phải bấm "Sửa khóa học" mới ghi được; người cùng phía đang sửa → chỉ xem.
+  // Giáo viên còn bị khóa khi cả khóa đang chờ duyệt
+  const editSession = useCourseEditSession(id)
+  // ADMIN: còn bài chờ duyệt / cả khóa chờ duyệt → duyệt / từ chối hết trước khi sửa (chặn theo khóa học, BE cũng chặn)
+  const { data: reviewStates } = useLessonReviewStates(id, admin)
+  const pendingReviews = admin ? countPendingReviews(reviewStates) : 0
+  const lockReason = courseEditLockReason(course, admin, editSession, pendingReviews)
+  const editBlockedReason = !admin
+    ? course?.reviewStatus === 'PENDING_REVIEW' ? 'Khóa học đang chờ duyệt cả khóa — rút yêu cầu trước khi sửa' : null
+    : pendingReviews > 0 || course?.reviewStatus === 'PENDING_REVIEW' ? `Khóa học còn ${pendingReviews > 0 ? `${pendingReviews} bài chờ duyệt` : 'yêu cầu duyệt cả khóa'} — duyệt / từ chối hết trước khi sửa` : null
   const locked = lockReason !== null
   const lockedTitle = editLockHint(lockReason)
-  // Mở lại khóa chỉ được khi đã có bản được duyệt (hiện lại đúng bản đó)
+  // Xuất bản / mở lại chỉ được khi đã có phiên bản được chốt (duyệt hoặc ADMIN lưu) — hiện đúng bản đó
   const canReopen = !!course?.publishedVersionId
   const openLessonId = selection.view === 'lesson' ? selection.lessonId : undefined
   // Chỉ tải bài thuộc khóa này (tránh mở bài của khóa khác qua URL)
@@ -159,6 +171,13 @@ export const TeacherCourseEditorPage: React.FC = () => {
     loadExams()
   }, [id])
 
+  // Sửa đề thi / nội dung ở trang khác rồi quay lại: course detail (staleTime 5 phút) có thể còn cờ
+  // hasUnpublishedChanges cũ → làm mới 1 lần khi vào trang.
+  const invalidateCourseDraft = useInvalidateCourseDraftState()
+  useEffect(() => {
+    invalidateCourseDraft()
+  }, [id, invalidateCourseDraft])
+
   const handleTogglePublishExam = async (examId: number, currentlyPublished?: boolean) => {
     try {
       if (currentlyPublished) {
@@ -180,27 +199,28 @@ export const TeacherCourseEditorPage: React.FC = () => {
     const confirmed = await confirmDialog(
       approved
         ? {
-            title: `Gỡ đề thi "${exam.title}" khỏi khóa?`,
-            content:
-              'Đề đang có trong bản học viên học nên chưa xóa ngay: học viên vẫn thi được cho tới khi quản trị viên ' +
-              'duyệt khóa lần tới, lúc đó đề mới bị gỡ. Bạn có thể hủy yêu cầu gỡ trước khi duyệt.',
-            okText: 'Đánh dấu gỡ',
-            cancelText: 'Hủy',
-            danger: true,
-          }
+          title: `Gỡ đề thi "${exam.title}" khỏi khóa?`,
+          content:
+            'Đề đang có trong bản học viên học nên chưa xóa ngay: học viên vẫn thi được cho tới khi quản trị viên ' +
+            'duyệt khóa lần tới, lúc đó đề mới bị gỡ. Bạn có thể hủy yêu cầu gỡ trước khi duyệt.',
+          okText: 'Đánh dấu gỡ',
+          cancelText: 'Hủy',
+          danger: true,
+        }
         : {
-            title: `Xóa đề thi "${exam.title}"?`,
-            content: 'Thao tác này không thể hoàn tác. Toàn bộ câu hỏi và kết quả thi liên quan sẽ bị xóa vĩnh viễn.',
-            okText: 'Xóa đề thi',
-            cancelText: 'Hủy',
-            danger: true,
-          },
+          title: `Xóa đề thi "${exam.title}"?`,
+          content: 'Thao tác này không thể hoàn tác. Toàn bộ câu hỏi và kết quả thi liên quan sẽ bị xóa vĩnh viễn.',
+          okText: 'Xóa đề thi',
+          cancelText: 'Hủy',
+          danger: true,
+        },
     )
     if (!confirmed) return
     try {
       const res = await examService.deleteExam(exam.id)
       toast.success(res?.message || (approved ? 'Đã đánh dấu gỡ đề thi' : 'Đã xóa đề thi thành công'))
       loadExams()
+      invalidateCourseDraft()
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Không thể xóa đề thi lúc này')
     }
@@ -211,6 +231,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
       await examService.cancelExamRemoval(examId)
       toast.success('Đã hủy yêu cầu gỡ đề thi')
       loadExams()
+      invalidateCourseDraft()
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Không thể hủy yêu cầu gỡ lúc này')
     }
@@ -234,7 +255,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
     const target = direction === 'up' ? idx - 1 : idx + 1
     if (target < 0 || target >= lessons.length) return
     const newOrder = [...lessons]
-    ;[newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]]
+      ;[newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]]
     await reorderLessons.mutateAsync(newOrder)
   }
 
@@ -261,7 +282,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
   const overviewPanel = (
     <div className="space-y-4">
       {/* Thẻ thông số: cùng kiểu thẻ với trang Học viên (StatTile) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Ô "Bài học": cuộn xuống danh sách bên dưới (chưa có bài → mở form thêm bài) */}
         <StatTile
           label="Bài học"
@@ -282,51 +303,51 @@ export const TeacherCourseEditorPage: React.FC = () => {
           title="Xem học viên của khóa"
           onClick={() => select({ view: 'students' })}
         />
-        <StatTile label="Cấp độ" value={`JLPT ${course.jlptLevel}`} />
-        <StatTile
+        <StatTile label="Cấp độ" value={`${course.jlptLevel}`} />
+        {/* <StatTile
           label="Cập nhật lần cuối"
           value={course.updatedAt ? new Date(course.updatedAt).toLocaleDateString('vi-VN') : '—'}
           hint={course.updatedAt ? formatRelativeTime(course.updatedAt) : undefined}
-        />
+        /> */}
       </div>
-    <div className={`${CARD} p-6 space-y-4`}>
-      {lessons.length === 0 ? (
-        <EmptyState
-          title="Chưa có bài học nào"
-          description="Thêm bài học đầu tiên để bắt đầu giảng dạy."
-          action={
-            <AntdButton
-              type="primary"
-              icon={<Plus className="w-4 h-4" />}
-              onClick={openCreateLesson}
-              disabled={locked}
-              title={lockedTitle}
-              className="!rounded-md"
-            >
-              Thêm bài học đầu tiên
-            </AntdButton>
-          }
-        />
-      ) : (
-        <div
-          ref={lessonListRef}
-          className={`scroll-mt-24 rounded-xl transition-shadow duration-500 ${lessonListFlash ? 'ring-2 ring-indigo-300 ring-offset-4 ring-offset-surface' : ''}`}
-        >
-        <CourseLessonList
-          lessons={lessons}
-          onOpen={(l) => select({ view: 'lesson', lessonId: l.id })}
-          onAdd={openCreateLesson}
-          onEdit={openEditLesson}
-          onDelete={setDeleteLessonTarget}
-          onMove={handleReorder}
-          reorderPending={reorderLessons.isPending}
-        />
-        </div>
-      )}
-      <p className="text-xs text-slate-500">
-        Bấm vào một bài để soạn từ vựng, ngữ pháp, chữ Hán và quiz.
-      </p>
-    </div>
+      <div className={`${CARD} p-6 space-y-4`}>
+        {lessons.length === 0 ? (
+          <EmptyState
+            title="Chưa có bài học nào"
+            description="Thêm bài học đầu tiên để bắt đầu giảng dạy."
+            action={
+              <AntdButton
+                type="primary"
+                icon={<Plus className="w-4 h-4" />}
+                onClick={openCreateLesson}
+                disabled={locked}
+                title={lockedTitle}
+                className="!rounded-md"
+              >
+                Thêm bài học đầu tiên
+              </AntdButton>
+            }
+          />
+        ) : (
+          <div
+            ref={lessonListRef}
+            className={`scroll-mt-24 rounded-xl transition-shadow duration-500 ${lessonListFlash ? 'ring-2 ring-indigo-300 ring-offset-4 ring-offset-surface' : ''}`}
+          >
+            <CourseLessonList
+              lessons={lessons}
+              onOpen={(l) => select({ view: 'lesson', lessonId: l.id })}
+              onAdd={openCreateLesson}
+              onEdit={openEditLesson}
+              onDelete={setDeleteLessonTarget}
+              onMove={handleReorder}
+              reorderPending={reorderLessons.isPending}
+            />
+          </div>
+        )}
+        <p className="text-xs text-slate-500">
+          Bấm vào một bài để soạn từ vựng, ngữ pháp, chữ Hán và quiz.
+        </p>
+      </div>
     </div>
   )
 
@@ -402,111 +423,110 @@ export const TeacherCourseEditorPage: React.FC = () => {
         />
       ) : (
         <>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {pagedExams.map((exam) => {
-            const isPublished = isExamPublished(exam)
-            return (
-              <div
-                key={exam.id}
-                onClick={() => navigate(`/admin/exams/${exam.id}/preview`)}
-                className="bg-surface rounded-xl border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm p-4 shadow-xs transition flex flex-col justify-between gap-3 cursor-pointer"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                        {exam.jlptLevel ? `JLPT ${exam.jlptLevel}` : 'Mini-test'}
-                      </span>
-                      <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                          isPublished
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pagedExams.map((exam) => {
+              const isPublished = isExamPublished(exam)
+              return (
+                <div
+                  key={exam.id}
+                  onClick={() => navigate(`/admin/exams/${exam.id}/preview`)}
+                  className="bg-surface rounded-xl border border-gray-200/80 hover:border-indigo-300 hover:shadow-sm p-4 shadow-xs transition flex flex-col justify-between gap-3 cursor-pointer"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {exam.jlptLevel ? `JLPT ${exam.jlptLevel}` : 'Mini-test'}
+                        </span>
+                        <span
+                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${isPublished
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
-                      >
-                        {isPublished ? 'Đã phát hành' : 'Bản nháp'}
-                      </span>
-                      {exam.pendingRemoval && (
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                          Chờ gỡ khi duyệt
+                            }`}
+                        >
+                          {isPublished ? 'Đã phát hành' : 'Bản nháp'}
                         </span>
-                      )}
+                        {exam.pendingRemoval && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                            Chờ gỡ khi duyệt
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        {exam.totalDurationMinutes} phút
+                      </span>
                     </div>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      {exam.totalDurationMinutes} phút
-                    </span>
+
+                    <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{exam.title}</h4>
+                    <p className="text-xs text-gray-500">
+                      Số câu hỏi: <strong className="text-gray-700">{exam.totalQuestions}</strong> câu • Điểm tối đa: <strong className="text-gray-700">{exam.totalScaledMaxScore || 180}</strong>
+                    </p>
                   </div>
 
-                  <h4 className="font-bold text-sm text-gray-900 line-clamp-1">{exam.title}</h4>
-                  <p className="text-xs text-gray-500">
-                    Số câu hỏi: <strong className="text-gray-700">{exam.totalQuestions}</strong> câu • Điểm tối đa: <strong className="text-gray-700">{exam.totalScaledMaxScore || 180}</strong>
-                  </p>
-                </div>
+                  <div
+                    className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Link to={`/admin/exams/${exam.id}/preview`}>
+                        <AntdButton size="small" icon={<Edit3 className="w-3.5 h-3.5" />} className="!rounded-md">
+                          Sửa đề
+                        </AntdButton>
+                      </Link>
+                      {/* Đề gắn với khóa: nội dung lên cùng lần duyệt / lưu khóa; ở đây ADMIN chỉ ẩn / hiện lại bản đã chốt */}
+                      {admin && (isPublished || exam.publishedVersionId) ? (
+                        <AntdButton
+                          size="small"
+                          onClick={() => handleTogglePublishExam(exam.id, isPublished)}
+                          className="!rounded-md"
+                        >
+                          {isPublished ? 'Ẩn đề' : 'Hiện lại'}
+                        </AntdButton>
+                      ) : admin ? (
+                        <span className="text-[11px] text-slate-400">Lên cùng lần duyệt / lưu khóa</span>
+                      ) : null}
+                    </div>
 
-                <div
-                  className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Link to={`/admin/exams/${exam.id}/preview`}>
-                      <AntdButton size="small" icon={<Edit3 className="w-3.5 h-3.5" />} className="!rounded-md">
-                        {admin ? 'Xem đề' : 'Sửa đề'}
-                      </AntdButton>
-                    </Link>
-                    {/* Đề gắn với khóa: nội dung lên cùng lần duyệt khóa; ADMIN chỉ ẩn / hiện lại bản đã duyệt */}
-                    {admin && (isPublished || exam.publishedVersionId) ? (
+                    {exam.pendingRemoval ? (
                       <AntdButton
                         size="small"
-                        onClick={() => handleTogglePublishExam(exam.id, isPublished)}
+                        onClick={() => handleCancelExamRemoval(exam.id)}
+                        disabled={locked}
+                        title={lockedTitle}
                         className="!rounded-md"
                       >
-                        {isPublished ? 'Ẩn đề' : 'Hiện lại'}
+                        Hủy gỡ
                       </AntdButton>
-                    ) : admin ? (
-                      <span className="text-[11px] text-slate-400">Lên cùng lần duyệt khóa</span>
-                    ) : null}
+                    ) : (
+                      <AntdButton
+                        size="small"
+                        danger
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                        onClick={() => handleDeleteExam(exam)}
+                        disabled={locked}
+                        title={lockedTitle ?? (exam.publishedVersionId ? 'Gỡ khỏi khóa (khi duyệt lần tới)' : 'Xóa đề')}
+                        className="!rounded-md"
+                      />
+                    )}
                   </div>
-
-                  {exam.pendingRemoval ? (
-                    <AntdButton
-                      size="small"
-                      onClick={() => handleCancelExamRemoval(exam.id)}
-                      disabled={locked}
-                      title={lockedTitle}
-                      className="!rounded-md"
-                    >
-                      Hủy gỡ
-                    </AntdButton>
-                  ) : (
-                    <AntdButton
-                      size="small"
-                      danger
-                      icon={<Trash2 className="w-3.5 h-3.5" />}
-                      onClick={() => handleDeleteExam(exam)}
-                      disabled={locked}
-                      title={lockedTitle ?? (exam.publishedVersionId ? 'Gỡ khỏi khóa (khi duyệt lần tới)' : 'Xóa đề')}
-                      className="!rounded-md"
-                    />
-                  )}
                 </div>
-              </div>
-            )
-          })}
-        </div>
-        {filteredExams.length > EXAM_PAGE_SIZE && (
-          <div className="flex justify-end">
-            <Pagination
-              size="small"
-              current={examCurrentPage}
-              pageSize={EXAM_PAGE_SIZE}
-              total={filteredExams.length}
-              onChange={setExamPage}
-              showSizeChanger={false}
-              showTotal={(total, [from, to]) => `${from}–${to} / ${total} bài kiểm tra`}
-            />
+              )
+            })}
           </div>
-        )}
+          {filteredExams.length > EXAM_PAGE_SIZE && (
+            <div className="flex justify-end">
+              <Pagination
+                size="small"
+                current={examCurrentPage}
+                pageSize={EXAM_PAGE_SIZE}
+                total={filteredExams.length}
+                onChange={setExamPage}
+                showSizeChanger={false}
+                showTotal={(total, [from, to]) => `${from}–${to} / ${total} bài kiểm tra`}
+              />
+            </div>
+          )}
         </>
       )}
     </div>
@@ -552,10 +572,10 @@ export const TeacherCourseEditorPage: React.FC = () => {
             <p className="font-semibold text-sm text-gray-900">Hiển thị với học viên</p>
             <p className="text-xs text-gray-500 mt-0.5">
               {course.published
-                ? 'Khóa học đang công khai với bản đã duyệt gần nhất.'
+                ? 'Khóa học đang công khai với phiên bản đã chốt gần nhất.'
                 : canReopen
-                  ? 'Khóa học đang ẩn. Mở lại sẽ hiện đúng bản đã duyệt gần nhất (không kèm phần đang soạn).'
-                  : 'Khóa học chưa có bản nào được duyệt — giáo viên cần gửi duyệt trước.'}
+                  ? 'Khóa học đang ẩn. Xuất bản sẽ hiện đúng phiên bản đã chốt gần nhất (không kèm phần đang soạn).'
+                  : 'Khóa học chưa có phiên bản nào — cần duyệt yêu cầu của giáo viên hoặc bấm Lưu trước.'}
             </p>
           </div>
           <AntdButton
@@ -566,7 +586,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
             onClick={() => publishCourse.mutate(!course.published)}
             className="!rounded-md !font-semibold"
           >
-            {course.published ? 'Chuyển nháp' : 'Mở lại khóa'}
+            {course.published ? 'Chuyển nháp' : 'Xuất bản'}
           </AntdButton>
         </div>
 
@@ -641,9 +661,13 @@ export const TeacherCourseEditorPage: React.FC = () => {
       studentsPanel
     ) : selection.view === 'review' ? (
       <div className="space-y-4">
-        <CourseReviewPanel course={course} admin={admin} currentUserId={currentUser?.id} />
-        <CourseReviewCommentsPanel course={course} admin={admin} />
-        <CourseChangesView courseId={id} />
+        {/* Duyệt theo bài (luồng duyệt duy nhất) + thay đổi so với bản học viên đang học */}
+        <LessonReviewPanel course={course} admin={admin} />
+        <CourseChangesView
+          courseId={id}
+          linkable={(lessonId) => lessons.some((l) => l.id === lessonId)}
+          title={admin ? 'Thay đổi chưa lưu & bản chờ duyệt' : 'Thay đổi chưa gửi duyệt'}
+        />
       </div>
     ) : selection.view === 'teachers' ? (
       <CourseTeachersPanel courseId={id} canManage={admin} />
@@ -655,94 +679,103 @@ export const TeacherCourseEditorPage: React.FC = () => {
 
   return (
     <CourseEditLockContext.Provider value={lockReason}>
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 space-y-4 pb-12" data-edit-locked={locked || undefined}>
-      <BackButton onClick={leaveWorkspace} />
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 space-y-4 pb-12" data-edit-locked={locked || undefined}>
+        <BackButton onClick={leaveWorkspace} />
 
-      {/* Header khóa học: luôn thấy trạng thái + Xem trước + Xuất bản */}
-      <div className={`${CARD} px-4 py-3 flex flex-wrap items-center justify-between gap-3`}>
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold text-sumi leading-tight truncate">{course.title}</h1>
-          {course.description && (
-            <p className="text-sm text-nibi line-clamp-1 max-w-3xl" title={course.description}>
-              {course.description}
-            </p>
-          )}
+        {/* Header khóa học: luôn thấy trạng thái + Xem trước + Xuất bản.
+            Luôn xếp dọc (tiêu đề → mô tả → hàng nút) để mọi khóa cùng 1 kiểu, có mô tả hay không. */}
+        <div className={`${CARD} px-4 py-3 flex flex-col gap-3`}>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-sumi leading-tight truncate">{course.title}</h1>
+            {course.description && (
+              <p className="text-sm text-nibi line-clamp-1" title={course.description}>
+                {course.description}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <CourseReviewBadge course={course} />
+            <CourseEditSessionControls
+              session={editSession}
+              size="middle"
+              disabledReason={editBlockedReason}
+            />
+            <Link to={`/courses/${id}`}>
+              <AntdButton icon={<BookOpen className="w-4 h-4" />} className="!rounded-md">
+                Xem trước
+              </AntdButton>
+            </Link>
+            {/* ADMIN: Lưu chốt phần đã sửa thành phiên bản mới; Xuất bản / Chuyển nháp bật / tắt phiên bản đã chốt */}
+            {admin && <CourseSaveVersionButton course={course} />}
+            {admin && (course.published || canReopen) && (
+              <AntdButton
+                type={course.published ? 'default' : 'primary'}
+                onClick={() => publishCourse.mutate(!course.published)}
+                loading={publishCourse.isPending}
+                icon={course.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                className="!rounded-md !font-semibold"
+              >
+                {course.published ? 'Chuyển nháp' : 'Xuất bản'}
+              </AntdButton>
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <CourseReviewBadge course={course} />
-          <Link to={`/courses/${id}`}>
-            <AntdButton icon={<BookOpen className="w-4 h-4" />} className="!rounded-md">
-              Xem trước
-            </AntdButton>
-          </Link>
-          {/* ADMIN: nội dung mới chỉ lên qua duyệt yêu cầu; ở đây chỉ ẩn / mở lại bản đã duyệt */}
-          {admin && (course.published || canReopen) && (
-            <AntdButton
-              type={course.published ? 'default' : 'primary'}
-              onClick={() => publishCourse.mutate(!course.published)}
-              loading={publishCourse.isPending}
-              icon={course.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              className="!rounded-md !font-semibold"
-            >
-              {course.published ? 'Chuyển nháp' : 'Mở lại khóa'}
-            </AntdButton>
-          )}
+
+        <CourseEditLockBanner lock={editSession.lock} pendingReviews={pendingReviews} />
+        {/* Người khác vừa sửa / chốt nội dung → nhắc tải lại (trước đây chỉ biết khi lưu bị 409) */}
+        <CourseContentUpdateNotice courseId={id} audience="editor" />
+
+        {/* Mục lục dạng thanh tab ngang ngay dưới thanh chú thích, nội dung chiếm toàn bộ chiều ngang */}
+        <div className="lg:sticky-panel z-10">
+          <CourseOutlineSidebar
+            lessonCount={lessons.length}
+            selection={selection}
+            onSelect={select}
+            examCount={courseExams.length}
+            studentCount={course.totalEnrollments ?? 0}
+            showSettings={admin}
+            reviewPending={course.reviewStatus === 'PENDING_REVIEW'}
+          />
         </div>
-      </div>
+        <main className="min-w-0">{mainPanel}</main>
 
-      <CourseEditLockBanner />
-
-      {/* Mục lục dạng thanh tab ngang ngay dưới thanh chú thích, nội dung chiếm toàn bộ chiều ngang */}
-      <div className="lg:sticky-panel z-10">
-        <CourseOutlineSidebar
-          lessonCount={lessons.length}
-          selection={selection}
-          onSelect={select}
-          examCount={courseExams.length}
-          studentCount={course.totalEnrollments ?? 0}
-          showSettings={admin}
-          reviewPending={course.reviewStatus === 'PENDING_REVIEW'}
+        {/* Modals */}
+        <CourseFormModal
+          open={isCourseModalOpen}
+          course={course}
+          onClose={() => setIsCourseModalOpen(false)}
         />
+
+        <LessonFormModal
+          open={isLessonModalOpen}
+          courseId={id}
+          lesson={editingLesson}
+          suggestedOrder={lessons.length + 1}
+          onClose={() => {
+            setIsLessonModalOpen(false)
+            setEditingLesson(null)
+          }}
+          onSuccess={(saved) => {
+            // Tạo bài mới → mở ngay bài đó để soạn nội dung
+            if (!editingLesson && saved?.id) select({ view: 'lesson', lessonId: saved.id })
+          }}
+        />
+
+        <Modal
+          open={!!deleteLessonTarget}
+          title="Xác nhận xóa bài học"
+          onOk={handleDeleteLesson}
+          onCancel={() => setDeleteLessonTarget(null)}
+          okText="Xóa"
+          cancelText="Huỷ"
+          okButtonProps={{ danger: true, loading: deleteLesson.isPending }}
+          centered
+        >
+          <p className="text-sm text-gray-600">
+            Bạn có chắc muốn xóa bài học <strong>"{deleteLessonTarget?.title}"</strong>?
+          </p>
+        </Modal>
       </div>
-      <main className="min-w-0">{mainPanel}</main>
-
-      {/* Modals */}
-      <CourseFormModal
-        open={isCourseModalOpen}
-        course={course}
-        onClose={() => setIsCourseModalOpen(false)}
-      />
-
-      <LessonFormModal
-        open={isLessonModalOpen}
-        courseId={id}
-        lesson={editingLesson}
-        suggestedOrder={lessons.length + 1}
-        onClose={() => {
-          setIsLessonModalOpen(false)
-          setEditingLesson(null)
-        }}
-        onSuccess={(saved) => {
-          // Tạo bài mới → mở ngay bài đó để soạn nội dung
-          if (!editingLesson && saved?.id) select({ view: 'lesson', lessonId: saved.id })
-        }}
-      />
-
-      <Modal
-        open={!!deleteLessonTarget}
-        title="Xác nhận xóa bài học"
-        onOk={handleDeleteLesson}
-        onCancel={() => setDeleteLessonTarget(null)}
-        okText="Xóa"
-        cancelText="Huỷ"
-        okButtonProps={{ danger: true, loading: deleteLesson.isPending }}
-        centered
-      >
-        <p className="text-sm text-gray-600">
-          Bạn có chắc muốn xóa bài học <strong>"{deleteLessonTarget?.title}"</strong>?
-        </p>
-      </Modal>
-    </div>
     </CourseEditLockContext.Provider>
   )
 }

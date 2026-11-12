@@ -71,4 +71,18 @@ public class Course extends SoftDeletableEntity {
     @Column(name = "published_version_id")
     private Long publishedVersionId;
 
+    /**
+     * Người sửa bản đang soạn gần nhất (id thô, không association — danh sách khóa không phải join users).
+     * Ghi qua {@code CourseRepository.markDraftEdited}; null = chưa ai sửa từ khi có cột / tài khoản đã xóa.
+     */
+    @Column(name = "draft_updated_by")
+    private Long draftUpdatedById;
+
+    /** Tên chụp lúc sửa (hiển thị "Đang soạn bởi …"). */
+    @Column(name = "draft_updated_by_name", length = 255)
+    private String draftUpdatedByName;
+
+    @Column(name = "draft_updated_at")
+    private Instant draftUpdatedAt;
+
 }

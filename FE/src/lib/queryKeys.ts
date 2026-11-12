@@ -5,6 +5,7 @@
 export const QUERY_KEYS = {
   me: ['me'] as const,
   course: {
+    listAll: ['courses', 'list'] as const,
     list: (params: Record<string, unknown>) => ['courses', 'list', params] as const,
     detailAll: ['courses', 'detail'] as const,
     detail: (id: number | string) => ['courses', 'detail', id] as const,
@@ -88,10 +89,31 @@ export const QUERY_KEYS = {
   },
   courseReview: {
     all: ['course-review'] as const,
-    history: (courseId: number) => ['course-review', 'history', courseId] as const,
-    queue: (params: Record<string, unknown>) => ['course-review', 'queue', params] as const,
+    changesAll: ['course-review', 'changes'] as const,
     changes: (courseId: number) => ['course-review', 'changes', courseId] as const,
-    comments: (courseId: number) => ['course-review', 'comments', courseId] as const,
+  },
+  /** Duyệt theo bài (V62). */
+  lessonReview: {
+    all: ['lesson-review'] as const,
+    states: (courseId: number) => ['lesson-review', 'states', courseId] as const,
+    /** Không truyền page = mọi trang lịch sử của khóa (dùng để invalidate). */
+    history: (courseId: number, page?: number) =>
+      page == null
+        ? (['lesson-review', 'history', courseId] as const)
+        : (['lesson-review', 'history', courseId, page] as const),
+    queue: (params: Record<string, unknown>) => ['lesson-review', 'queue', params] as const,
+    /** Nháp cũ chỉ đọc của phía người xem (V65). */
+    archived: (lessonId: number) => ['lesson-review', 'archived', lessonId] as const,
+    /** Bản giáo viên đã gửi của 1 yêu cầu duyệt (ADMIN xem để duyệt). */
+    content: (requestId: number) => ['lesson-review', 'content', requestId] as const,
+  },
+  /** Khóa sửa khóa học theo phía (V65). */
+  courseEditLock: {
+    detail: (courseId: number) => ['course-edit-lock', courseId] as const,
+  },
+  /** Bản chưa lưu (autosave) của người dùng hiện tại theo bài. */
+  lessonAutosave: {
+    list: (lessonId: number) => ['lesson-autosave', lessonId] as const,
   },
   courseTeachers: {
     list: (courseId: number) => ['course-teachers', courseId] as const,
