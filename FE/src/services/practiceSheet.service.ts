@@ -31,10 +31,15 @@ export const practiceSheetService = {
   check: (lessonId: number, body: PracticeSheetRequest): Promise<ApiResponse<PracticeSheetCheckResponse>> =>
     axiosClient.post(`/lessons/${lessonId}/practice-sheet/check`, body),
 
-  /** Tạo PDF và tải về máy (axios interceptor trả thẳng `response.data` là Blob). */
-  download: async (lessonId: number, body: PracticeSheetRequest, fileName: string): Promise<void> => {
+  /** Tạo PDF (axios interceptor trả thẳng `response.data` là Blob). */
+  generate: async (lessonId: number, body: PracticeSheetRequest): Promise<Blob> => {
     const data = await axiosClient.post(`/lessons/${lessonId}/practice-sheet`, body, { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: 'application/pdf' }))
+    return new Blob([data as unknown as BlobPart], { type: 'application/pdf' })
+  },
+
+  /** Lưu Blob PDF đã tạo về máy. */
+  saveFile: (blob: Blob, fileName: string): void => {
+    const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = fileName
