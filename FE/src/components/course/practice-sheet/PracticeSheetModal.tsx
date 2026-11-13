@@ -1,10 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Button, Checkbox, Empty, Modal, Tag, Tree } from 'antd'
-import type { TreeDataNode } from 'antd'
-import { Printer } from 'lucide-react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Button, Checkbox, Empty, Input, Modal, Pagination, Select, Spin, Tag } from 'antd'
+import { ArrowLeft, Download, Eye, Printer, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
-import { confirmDialog } from '@/components/common/ConfirmModal'
 import { practiceSheetService, type MissingStrokeItem, type PracticeSheetType } from '@/services'
 import type { ApiResponse, LessonSection } from '@/types'
 import { toSlug } from '@/utils'
@@ -22,8 +20,8 @@ interface PracticeSheetModalProps {
 }
 
 const MAX_ITEMS = 300
+const PAGE_SIZES = [6, 10, 20]
 const TYPE_LABEL: Record<PracticeSheetType, string> = { KANJI: 'chữ Hán', VOCABULARY: 'từ vựng' }
-const groupKey = (sectionId: number) => `g-${sectionId}`
 
 interface GroupItem {
   id: number
@@ -31,17 +29,24 @@ interface GroupItem {
   sub?: string
 }
 
+interface Preview {
+  url: string
+  blob: Blob
+  missing: MissingStrokeItem[]
+  total: number
+}
+
 const getErrorMessage = (err: unknown) =>
   (err as AxiosError<ApiResponse<unknown>>)?.response?.data?.message ?? 'Lỗi không xác định'
 
-/** Danh sách mục thiếu nét hiển thị trong hộp xác nhận. */
+/** Danh sách mục thiếu nét hiển thị trong bước xem trước. */
 const MissingList: React.FC<{ items: MissingStrokeItem[]; total: number }> = ({ items, total }) => (
   <div className="space-y-2">
     <p className="text-sm text-slate-600">
       {items.length}/{total} mục có ký tự chưa có dữ liệu thứ tự nét. Các ký tự này vẫn được in chữ mẫu và chữ mờ để
       tô theo, nhưng <b>không có hàng thứ tự từng nét</b>.
     </p>
-    <div className="max-h-60 overflow-y-auto rounded-md border border-slate-200 divide-y divide-slate-100">
+    <div className="max-h-32 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-100">
       {items.map((m) => (
         <div key={m.itemId} className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm">
           <span className="min-w-0 truncate">
@@ -58,13 +63,18 @@ const MissingList: React.FC<{ items: MissingStrokeItem[]; total: number }> = ({ 
         </div>
       ))}
     </div>
-    <p className="text-sm text-slate-600">Bạn có muốn tiếp tục in không?</p>
   </div>
 )
 
+/** Trạng thái checkbox của một tập id so với danh sách đang chọn. */
+const checkState = (ids: number[], selected: Set<number>) => {
+  const n = ids.filter((id) => selected.has(id)).length
+  return { checked: ids.length > 0 && n === ids.length, indeterminate: n > 0 && n < ids.length }
+}
+
 /**
  * Chọn mục Chữ Hán / Từ vựng của bài để in phiếu luyện viết (PDF):
- * in tất cả, chọn theo nhóm (tick nhóm) hoặc chọn từng từ. Trước khi in kiểm tra ký tự thiếu nét và hỏi người dùng.
+ * tìm kiếm, chọn theo nhóm hoặc từng từ (phân trang trong mỗi nhóm), rồi xem trước PDF trước khi tải / in.
  */
 export const PracticeSheetModal: React.FC<PracticeSheetModalProps> = ({
   open,
@@ -101,126 +111,256 @@ export const PracticeSheetModal: React.FC<PracticeSheetModalProps> = ({
   const allIds = useMemo(() => groups.flatMap((g) => g.items.map((i) => i.id)), [groups])
 
   const [checked, setChecked] = useState<number[]>([])
+  const [query, setQuery] = useState('')
+  const [pageSize, setPageSize] = useState(10)
+  const [pages, setPages] = useState<Record<number, number>>({})
   const [busy, setBusy] = useState(false)
+  const [preview, setPreview] = useState<Preview | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Mỗi lần mở: chọn sẵn nhóm được truyền vào, không có thì chọn tất cả
   useEffect(() => {
     if (!open) return
     const initial = groups.find((g) => g.section.id === initialSectionId)
     setChecked(initial ? initial.items.map((i) => i.id) : allIds)
+    setQuery('')
+    setPages({})
+    setPreview(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialSectionId])
 
-  const treeData: TreeDataNode[] = groups.map((g) => ({
-    key: groupKey(g.section.id),
-    title: (
-      <span className="font-semibold text-slate-700">
-        {g.section.title}
-        <span className="ml-2 text-xs font-normal text-slate-400">{g.items.length} mục</span>
-      </span>
-    ),
-    children: g.items.map((i) => ({
-      key: i.id,
-      isLeaf: true,
-      title: (
-        <span>
-          <span className="text-base text-slate-800">{i.label}</span>
-          {i.sub && <span className="ml-2 text-xs text-slate-500">{i.sub}</span>}
-        </span>
-      ),
-    })),
-  }))
+  // Giải phóng object URL của bản xem trước cũ
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview.url) }, [preview])
 
-  const allChecked = allIds.length > 0 && checked.length === allIds.length
+  const selected = useMemo(() => new Set(checked), [checked])
+
+  // Lọc theo từ khoá (chữ, Hán Việt, hiragana, nghĩa); ẩn nhóm không có kết quả
+  const q = query.trim().toLowerCase()
+  const visibleGroups = useMemo(
+    () =>
+      groups
+        .map((g) => ({
+          ...g,
+          items: q ? g.items.filter((i) => `${i.label} ${i.sub ?? ''}`.toLowerCase().includes(q)) : g.items,
+        }))
+        .filter((g) => g.items.length > 0),
+    [groups, q],
+  )
+  const visibleIds = visibleGroups.flatMap((g) => g.items.map((i) => i.id))
+
+  /** Thêm / bỏ một tập id khỏi danh sách chọn (giữ nguyên các id khác, kể cả ở trang/nhóm khác). */
+  const toggle = (ids: number[], on: boolean) =>
+    setChecked((prev) => {
+      const next = new Set(prev)
+      ids.forEach((id) => (on ? next.add(id) : next.delete(id)))
+      return allIds.filter((id) => next.has(id))
+    })
+
   const label = TYPE_LABEL[type]
+  const tooMany = checked.length > MAX_ITEMS
 
-  const handlePrint = async () => {
+  const handleClose = () => {
+    setPreview(null)
+    onClose()
+  }
+
+  const handlePreview = async () => {
     // Giữ thứ tự theo bài học (BE cũng sắp lại theo nhóm → thứ tự trong nhóm)
-    const itemIds = allIds.filter((id) => checked.includes(id))
+    const itemIds = allIds.filter((id) => selected.has(id))
     if (itemIds.length === 0) return
     const body = { sectionType: type, itemIds }
     setBusy(true)
     try {
-      const res = await practiceSheetService.check(lessonId, body)
-      const missing = res.data?.missingItems ?? []
-      if (missing.length > 0) {
-        const ok = await confirmDialog({
-          title: 'Một số mục thiếu dữ liệu thứ tự nét',
-          content: <MissingList items={missing} total={res.data?.totalItems ?? itemIds.length} />,
-          okText: 'Vẫn in',
-          cancelText: 'Huỷ',
-        })
-        if (!ok) return
-      }
-      const slug = toSlug(lessonTitle ?? '') || `bai-${lessonId}`
-      const prefix = type === 'KANJI' ? 'luyen_viet_chu_han' : 'luyen_viet_tu_vung'
-      await practiceSheetService.download(lessonId, body, `${prefix}_${slug}.pdf`)
-      toast.success('Đã tạo phiếu luyện viết')
-      onClose()
+      const [res, blob] = await Promise.all([
+        practiceSheetService.check(lessonId, body),
+        practiceSheetService.generate(lessonId, body),
+      ])
+      setPreview({
+        url: URL.createObjectURL(blob),
+        blob,
+        missing: res.data?.missingItems ?? [],
+        total: res.data?.totalItems ?? itemIds.length,
+      })
     } catch (e) {
-      toast.error('In phiếu luyện viết thất bại', { description: getErrorMessage(e) })
+      toast.error('Tạo phiếu luyện viết thất bại', { description: getErrorMessage(e) })
     } finally {
       setBusy(false)
     }
   }
 
-  const tooMany = checked.length > MAX_ITEMS
+  const handleDownload = () => {
+    if (!preview) return
+    const slug = toSlug(lessonTitle ?? '') || `bai-${lessonId}`
+    const prefix = type === 'KANJI' ? 'luyen_viet_chu_han' : 'luyen_viet_tu_vung'
+    practiceSheetService.saveFile(preview.blob, `${prefix}_${slug}.pdf`)
+    toast.success('Đã tải phiếu luyện viết')
+  }
+
+  const handlePrint = () => {
+    if (!preview) return
+    try {
+      iframeRef.current?.contentWindow?.print()
+    } catch {
+      // Trình duyệt chặn in trong iframe (vd Safari di động) → mở PDF ở tab mới để in
+      window.open(preview.url, '_blank')
+    }
+  }
+
+  const footer = preview ? (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <Button icon={<ArrowLeft className="h-4 w-4" />} onClick={() => setPreview(null)}>
+        Chọn lại
+      </Button>
+      <div className="flex gap-2">
+        <Button icon={<Download className="h-4 w-4" />} onClick={handleDownload}>
+          Tải PDF
+        </Button>
+        <Button type="primary" icon={<Printer className="h-4 w-4" />} onClick={handlePrint}>
+          In
+        </Button>
+      </div>
+    </div>
+  ) : (
+    <div className="flex items-center justify-between gap-2">
+      <span className={`text-sm ${tooMany ? 'text-red-500' : 'text-slate-500'}`}>
+        Đã chọn {checked.length}/{allIds.length} mục{tooMany ? ` — tối đa ${MAX_ITEMS} mục mỗi lần in` : ''}
+      </span>
+      <div className="flex gap-2">
+        <Button onClick={handleClose}>Huỷ</Button>
+        <Button
+          type="primary"
+          icon={<Eye className="h-4 w-4" />}
+          loading={busy}
+          disabled={checked.length === 0 || tooMany}
+          onClick={handlePreview}
+        >
+          Xem trước
+        </Button>
+      </div>
+    </div>
+  )
 
   return (
     <Modal
       open={open}
-      onCancel={onClose}
+      onCancel={handleClose}
       title={`In phiếu luyện viết ${label}`}
-      width={640}
+      width={preview ? 960 : 640}
       destroyOnHidden
-      footer={
-        <div className="flex items-center justify-between gap-2">
-          <span className={`text-sm ${tooMany ? 'text-red-500' : 'text-slate-500'}`}>
-            Đã chọn {checked.length}/{allIds.length} mục{tooMany ? ` — tối đa ${MAX_ITEMS} mục mỗi lần in` : ''}
-          </span>
-          <div className="flex gap-2">
-            <Button onClick={onClose}>Huỷ</Button>
-            <Button
-              type="primary"
-              icon={<Printer className="h-4 w-4" />}
-              loading={busy}
-              disabled={checked.length === 0 || tooMany}
-              onClick={handlePrint}
-            >
-              In phiếu
-            </Button>
-          </div>
-        </div>
-      }
+      footer={footer}
     >
-      {groups.length === 0 ? (
+      {preview ? (
+        <div className="space-y-3">
+          {preview.missing.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              title="Một số mục thiếu dữ liệu thứ tự nét"
+              description={<MissingList items={preview.missing} total={preview.total} />}
+            />
+          )}
+          <iframe
+            ref={iframeRef}
+            src={preview.url}
+            title="Xem trước phiếu luyện viết"
+            className="h-[70vh] w-full rounded-md border border-slate-200"
+          />
+        </div>
+      ) : groups.length === 0 ? (
         <Empty description={`Bài học chưa có ${label} để in`} />
       ) : (
-        <div className="space-y-3">
-          <p className="text-sm text-slate-500">
-            Tick tên nhóm để chọn cả nhóm, hoặc chọn từng {label}. Mỗi nhóm được in thành một phần riêng trong file PDF.
-          </p>
-          <Checkbox
-            checked={allChecked}
-            indeterminate={checked.length > 0 && !allChecked}
-            onChange={(e) => setChecked(e.target.checked ? allIds : [])}
-          >
-            <span className="font-medium">Chọn tất cả ({allIds.length})</span>
-          </Checkbox>
-          <div className="max-h-[50vh] overflow-y-auto rounded-md border border-slate-200 p-2">
-            <Tree
-              checkable
-              selectable={false}
-              defaultExpandAll
-              treeData={treeData}
-              checkedKeys={checked}
-              onCheck={(keys) => {
-                const list = Array.isArray(keys) ? keys : keys.checked
-                setChecked(list.filter((k): k is number => typeof k === 'number'))
-              }}
-            />
+        <Spin spinning={busy} description="Đang tạo bản xem trước...">
+          <div className="space-y-3">
+            <p className="text-sm text-slate-500">
+              Tick tên nhóm để chọn cả nhóm, hoặc chọn từng {label}. Mỗi nhóm được in thành một phần riêng trong file
+              PDF.
+            </p>
+            <div className="flex flex-wrap items-stretch gap-2">
+              <Input
+                allowClear
+                prefix={<Search className="h-4 w-4 text-slate-400" aria-hidden />}
+                placeholder={`Tìm ${label} (chữ, cách đọc, nghĩa)`}
+                className="min-w-0 flex-1"
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setPages({})
+                }}
+              />
+              <span className="flex items-center gap-1.5 text-sm text-slate-500">
+                Mỗi trang
+                <Select
+                  aria-label="Số mục mỗi trang"
+                  value={pageSize}
+                  onChange={(v) => {
+                    setPageSize(v)
+                    setPages({})
+                  }}
+                  options={PAGE_SIZES.map((n) => ({ value: n, label: n }))}
+                  className="w-20 self-stretch !h-auto"
+                />
+              </span>
+            </div>
+            {/* Chỉ hiện "Chọn tất cả" khi có ≥ 2 nhóm — 1 nhóm thì checkbox nhóm đã làm việc này */}
+            {visibleGroups.length >= 2 && (
+              <Checkbox
+                {...checkState(visibleIds, selected)}
+                onChange={(e) => toggle(visibleIds, e.target.checked)}
+              >
+                <span className="font-medium">
+                  {q ? `Chọn tất cả kết quả (${visibleIds.length})` : `Chọn tất cả (${allIds.length})`}
+                </span>
+              </Checkbox>
+            )}
+            <div className="max-h-[50vh] space-y-3 overflow-y-auto">
+              {visibleGroups.length === 0 ? (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`Không tìm thấy ${label} phù hợp`} />
+              ) : (
+                visibleGroups.map((g) => {
+                  const ids = g.items.map((i) => i.id)
+                  const page = Math.min(pages[g.section.id] ?? 1, Math.ceil(g.items.length / pageSize))
+                  const pageItems = g.items.slice((page - 1) * pageSize, page * pageSize)
+                  return (
+                    <div key={g.section.id} className="rounded-md border border-slate-200">
+                      <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
+                        <Checkbox {...checkState(ids, selected)} onChange={(e) => toggle(ids, e.target.checked)}>
+                          <span className="font-semibold text-slate-700">
+                            {g.section.title}
+                            <span className="ml-2 text-xs font-normal text-slate-400">{g.items.length} mục</span>
+                          </span>
+                        </Checkbox>
+                      </div>
+                      <div className="divide-y divide-slate-50 px-3">
+                        {pageItems.map((i) => (
+                          <Checkbox
+                            key={i.id}
+                            className="!flex py-1.5"
+                            checked={selected.has(i.id)}
+                            onChange={(e) => toggle([i.id], e.target.checked)}
+                          >
+                            <span className="text-base text-slate-800">{i.label}</span>
+                            {i.sub && <span className="ml-2 text-xs text-slate-500">{i.sub}</span>}
+                          </Checkbox>
+                        ))}
+                      </div>
+                      {g.items.length > pageSize && (
+                        <div className="flex justify-end border-t border-slate-100 px-3 py-1.5">
+                          <Pagination
+                            size="small"
+                            current={page}
+                            pageSize={pageSize}
+                            total={g.items.length}
+                            showSizeChanger={false}
+                            onChange={(p) => setPages((prev) => ({ ...prev, [g.section.id]: p }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
           </div>
-        </div>
+        </Spin>
       )}
     </Modal>
   )
