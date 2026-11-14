@@ -48,6 +48,8 @@ import { isAdmin } from '@/utils/roles'
 
 const CARD = 'bg-surface rounded-xl border border-suna shadow-xs'
 const EXAM_PAGE_SIZE = 6
+/** Tạm ẩn nút "Xóa khóa học" — đổi thành true để hiện lại. */
+const COURSE_DELETE_ENABLED = false
 
 type ExamStatusFilter = 'published' | 'draft' | 'pendingRemoval'
 const EXAM_STATUS_OPTIONS: { value: ExamStatusFilter; label: string }[] = [
@@ -590,6 +592,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
           </AntdButton>
         </div>
 
+        {COURSE_DELETE_ENABLED && (
         <div className="flex items-center justify-between p-4 rounded-md border border-rose-100 bg-rose-50/50">
           <div>
             <p className="font-semibold text-sm text-rose-800">Xóa khóa học</p>
@@ -620,6 +623,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
             Xóa khóa học
           </AntdButton>
         </div>
+        )}
       </div>
     </div>
   )

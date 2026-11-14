@@ -16,6 +16,8 @@ import { isAdmin } from '@/utils/roles'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 
 const PAGE_SIZE = 10
+/** Tạm ẩn nút xóa khóa học — đổi thành true để hiện lại. */
+const COURSE_DELETE_ENABLED = false
 
 const LEVEL_OPTIONS = (['N5', 'N4', 'N3', 'N2', 'N1'] as const).map((l) => ({ value: l, label: `JLPT ${l}` }))
 
@@ -199,14 +201,16 @@ export const TeacherCoursesPage: React.FC = () => {
               Quản lý
             </AntdButton>
           </Tooltip> */}
-          <Tooltip title="Xóa">
-            <AntdButton
-              size="small"
-              danger
-              icon={<Trash2 className="w-4 h-4" />}
-              onClick={() => setDeleteTarget(record)}
-            />
-          </Tooltip>
+          {COURSE_DELETE_ENABLED && (
+            <Tooltip title="Xóa">
+              <AntdButton
+                size="small"
+                danger
+                icon={<Trash2 className="w-4 h-4" />}
+                onClick={() => setDeleteTarget(record)}
+              />
+            </Tooltip>
+          )}
         </div>
       ),
     },
