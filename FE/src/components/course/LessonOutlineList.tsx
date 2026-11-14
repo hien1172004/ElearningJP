@@ -1,6 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Circle, PlayCircle, Sparkles, ChevronRight, Mic } from 'lucide-react'
+import { CheckCircle2, Circle, PlayCircle, ChevronRight, Mic } from 'lucide-react'
+import { ProgressCircle } from '@/components/common'
 import { toSlug } from '@/utils'
 import { LESSON_FROM_COURSE_STATE } from '@/utils/lessonNav'
 import type { LessonOutline, ProgressStatus } from '@/types'
@@ -10,6 +11,8 @@ interface LessonOutlineListProps {
   courseId: number
   courseSlug: string
   isEnrolled?: boolean | null
+  /** Hiện vòng tròn % thay cho icon trạng thái (chỉ học viên đã đăng ký). */
+  showProgress?: boolean
   onSelect?: (lesson: LessonOutline) => void
 }
 
@@ -41,6 +44,7 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
   courseId,
   courseSlug,
   isEnrolled,
+  showProgress,
   onSelect,
 }) => {
   const navigate = useNavigate()
@@ -70,7 +74,7 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
               <div className="shrink-0 w-9 h-9 rounded-md bg-gray-50 text-gray-500 font-bold text-sm flex items-center justify-center border border-gray-200/80">
                 {String(idx + 1).padStart(2, '0')}
               </div>
-              {statusIcon(lesson.status)}
+              {showProgress ? <ProgressCircle percent={lesson.progressPercent ?? 0} size={40} /> : statusIcon(lesson.status)}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h4 className="font-semibold text-sm text-gray-900 truncate">
@@ -79,11 +83,6 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
                   {lesson.hasSpeaking && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
                       <Mic className="w-3 h-3" /> Hội thoại AI
-                    </span>
-                  )}
-                  {lesson.hasQuiz && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
-                      <Sparkles className="w-3 h-3" /> Có quiz
                     </span>
                   )}
                 </div>

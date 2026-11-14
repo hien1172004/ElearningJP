@@ -215,6 +215,7 @@ export const CourseDetailPage: React.FC = () => {
             courseId={courseId}
             courseSlug={course?.slug ?? ''}
             isEnrolled={canOpenLessons}
+            showProgress={isEnrolled}
           />
           {!canOpenLessons && (
             <div className="mt-4 p-4 bg-gray-50 rounded-md text-center text-sm text-gray-600">

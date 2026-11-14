@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { Volume2, BookOpen } from 'lucide-react'
 import { playSmartAudio } from '@/utils'
 import { useVocabItemDetail } from '@/hooks'
@@ -9,8 +9,8 @@ import { SaveItemToNotebookButton } from '@/components/course/save-to-notebook'
 interface VocabStudyViewProps {
   /** Danh sách vocab items đã load sẵn từ lesson.sections[].vocabularyItems[]. */
   items: LessonVocabularyItem[]
-  /** Được gọi 1 lần khi user đã mở tới trang cuối cùng. */
-  onSectionDone?: () => void
+  /** Báo số mục đã xem (trang hiện tại + 1) mỗi khi chuyển trang — tính % tiến độ của phần. */
+  onViewed?: (viewedCount: number) => void
   /** Mở sẵn tại item này (dùng cho popup xem trước của giáo viên). */
   initialItemId?: number
   /** Bài học đang học — có thì hiện nút "Lưu sổ tay" (bỏ trống ở popup xem trước). */
@@ -26,7 +26,7 @@ interface VocabStudyViewProps {
  * - Cuối: ví dụ minh họa.
  * - Có nút Next/Prev và phân trang "1/N" ở dưới.
  */
-export const VocabStudyView: React.FC<VocabStudyViewProps> = ({ items, onSectionDone, initialItemId, lessonId }) => {
+export const VocabStudyView: React.FC<VocabStudyViewProps> = ({ items, onViewed, initialItemId, lessonId }) => {
   // Sắp xếp theo orderIndex
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)),
@@ -41,17 +41,10 @@ export const VocabStudyView: React.FC<VocabStudyViewProps> = ({ items, onSection
     setPage(Math.max(idx, 0))
   }, [sortedItems, initialItemId])
 
-  // Báo "đã xem xong" khi user mở tới trang cuối (chỉ phát 1 lần)
-  const reportedDoneRef = useRef(false)
+  // Báo số mục đã xem; trang cha chỉ ghi nhận khi lớn hơn giá trị đã lưu
   useEffect(() => {
-    if (total > 0 && page >= total - 1 && !reportedDoneRef.current) {
-      reportedDoneRef.current = true
-      onSectionDone?.()
-    }
-    if (page === 0 && total > 0) {
-      reportedDoneRef.current = false
-    }
-  }, [page, total, onSectionDone])
+    if (total > 0) onViewed?.(Math.min(page + 1, total))
+  }, [page, total, onViewed])
 
   if (total === 0) {
     return (

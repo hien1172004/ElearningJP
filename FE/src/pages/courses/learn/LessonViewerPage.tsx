@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -15,7 +15,7 @@ import {
   FileTextOutlined,
   AudioOutlined,
 } from '@ant-design/icons'
-import { PageHeader, LoadingState, StudyTimerTracker, BackButton } from '@/components/common'
+import { PageHeader, LoadingState, StudyTimerTracker, BackButton, ProgressCircle } from '@/components/common'
 import { CommentSection } from '@/components/comment'
 import { CourseContentUpdateNotice } from '@/components/course'
 import { PracticeSheetButton } from '@/components/course/practice-sheet'
@@ -33,6 +33,7 @@ import {
   useLessonDetail,
   useStartLesson,
   useCompleteLesson,
+  useUpdateLessonProgress,
 } from '@/hooks'
 import { useAuthStore } from '@/stores'
 import { toSlug } from '@/utils'
@@ -44,6 +45,7 @@ import type {
   LessonKanjiItem,
   LessonVocabularyItem,
   LessonGrammarItem,
+  LessonProgressUpdateRequest,
 } from '@/types'
 
 type PageKind = 'KANJI' | 'VOCAB' | 'GRAMMAR' | 'SPEAKING' | 'QUIZ'
@@ -62,6 +64,10 @@ interface NavItem {
 
 /** Theo dõi trang nào user đã "xem xong" (đủ điều kiện complete lesson). */
 type SectionDoneMap = Partial<Record<PageKind, boolean>>
+/** Số mục đã xem theo dạng bài lý thuyết. */
+type ViewedMap = Partial<Record<PageKind, number>>
+/** % hoàn thành theo dạng bài (0-100). */
+type PercentMap = Partial<Record<PageKind, number>>
 
 export const LessonViewerPage: React.FC = () => {
   // URL dạng mới (slug): /learn/:courseSlug/:lessonSlug?courseId=1&lessonId=5
@@ -147,50 +153,61 @@ export const LessonViewerPage: React.FC = () => {
     }
   }, [lId, isAuthenticated, isEnrolled, isError])
 
-  // Build danh sách "trang" theo section.orderIndex (chỉ giữ section có items)
+  // Build danh sách "trang": Chữ Hán → Từ vựng → Ngữ pháp. Nhiều nhóm cùng loại gộp thành 1 trang
+  // (tiến độ lưu theo loại phần), giữ thứ tự nhóm theo orderIndex rồi tới thứ tự mục trong nhóm.
+  // Chỉ phụ thuộc các trường nội dung (không phụ thuộc cả `lesson`): lesson detail được tải lại sau mỗi lần
+  // lưu tiến độ, React Query giữ nguyên tham chiếu `sections` nên items không đổi → StudyView không nhảy về mục đầu.
+  const lessonSections = lesson?.sections
+  const lessonSpeaking = lesson?.speakingScenario
+  const lessonHasQuiz = lesson?.hasQuiz
   const navItems: NavItem[] = useMemo(() => {
-    if (!lesson) return []
-    const sections = (lesson.sections ?? [])
-      .slice()
-      // Thứ tự cố định Chữ Hán → Từ vựng → Ngữ pháp; cùng loại thì theo orderIndex
-      .sort((a, b) => (SECTION_ORDER[a.sectionType] ?? 9) - (SECTION_ORDER[b.sectionType] ?? 9) || a.orderIndex - b.orderIndex)
-    const items: NavItem[] = []
+    if (!lessonSections && !lessonSpeaking && !lessonHasQuiz) return []
+    const sections = (lessonSections ?? []).slice().sort((a, b) => a.orderIndex - b.orderIndex)
+    const kanji: LessonKanjiItem[] = []
+    const vocab: LessonVocabularyItem[] = []
+    const grammar: LessonGrammarItem[] = []
+    let kanjiSectionId: number | undefined
+    let vocabSectionId: number | undefined
     for (const sec of sections) {
-      const pageKind = mapSectionTypeToPageKind(sec.sectionType)
-      if (!pageKind) continue
-      if (pageKind === 'KANJI') {
-        const list = sec.kanjiItems ?? []
-        if (list.length === 0) continue
-        items.push({
-          kind: 'KANJI',
-          sectionId: sec.id,
-          label: defaultTitleForPage('KANJI'),
-          icon: <BookOutlined className="text-base" />,
-          kanjiItems: list,
-        })
-      } else if (pageKind === 'VOCAB') {
-        const list = sec.vocabularyItems ?? []
-        if (list.length === 0) continue
-        items.push({
-          kind: 'VOCAB',
-          sectionId: sec.id,
-          label: defaultTitleForPage('VOCAB'),
-          icon: <ReadOutlined className="text-base" />,
-          vocabItems: list,
-        })
-      } else if (pageKind === 'GRAMMAR') {
-        const list = sec.grammarItems ?? []
-        if (list.length === 0) continue
-        items.push({
-          kind: 'GRAMMAR',
-          label: defaultTitleForPage('GRAMMAR'),
-          icon: <EditOutlined className="text-base" />,
-          grammarItems: list,
-        })
+      if (sec.sectionType === 'KANJI' && sec.kanjiItems?.length) {
+        kanjiSectionId ??= sec.id
+        kanji.push(...byOrder(sec.kanjiItems))
+      } else if (sec.sectionType === 'VOCABULARY' && sec.vocabularyItems?.length) {
+        vocabSectionId ??= sec.id
+        vocab.push(...byOrder(sec.vocabularyItems))
+      } else if (sec.sectionType === 'GRAMMAR' && sec.grammarItems?.length) {
+        grammar.push(...byOrder(sec.grammarItems))
       }
     }
+    const items: NavItem[] = []
+    if (kanji.length > 0) {
+      items.push({
+        kind: 'KANJI',
+        sectionId: kanjiSectionId,
+        label: defaultTitleForPage('KANJI'),
+        icon: <BookOutlined className="text-base" />,
+        kanjiItems: renumber(kanji),
+      })
+    }
+    if (vocab.length > 0) {
+      items.push({
+        kind: 'VOCAB',
+        sectionId: vocabSectionId,
+        label: defaultTitleForPage('VOCAB'),
+        icon: <ReadOutlined className="text-base" />,
+        vocabItems: renumber(vocab),
+      })
+    }
+    if (grammar.length > 0) {
+      items.push({
+        kind: 'GRAMMAR',
+        label: defaultTitleForPage('GRAMMAR'),
+        icon: <EditOutlined className="text-base" />,
+        grammarItems: renumber(grammar),
+      })
+    }
     // Luyện nói hội thoại nếu bài học có kịch bản hội thoại
-    if (lesson.speakingScenario) {
+    if (lessonSpeaking) {
       items.push({
         kind: 'SPEAKING',
         label: 'Luyện nói',
@@ -198,7 +215,7 @@ export const LessonViewerPage: React.FC = () => {
       })
     }
     // Test (Quiz) cuối cùng nếu lesson có quiz
-    if (lesson.hasQuiz) {
+    if (lessonHasQuiz) {
       items.push({
         kind: 'QUIZ',
         label: 'Bài kiểm tra',
@@ -206,7 +223,7 @@ export const LessonViewerPage: React.FC = () => {
       })
     }
     return items
-  }, [lesson])
+  }, [lessonSections, lessonSpeaking, lessonHasQuiz])
 
   // Trang hiện tại
   const [pageIdx, setPageIdx] = useState(0)
@@ -218,91 +235,86 @@ export const LessonViewerPage: React.FC = () => {
     setIsSpeakingChatActive(false)
   }, [lId])
 
-  // Khóa lưu tiến độ các phần trong bài học vào localStorage theo user & lesson
-  const storageKey = user?.id && lId ? `lesson_sections_done_${user.id}_${lId}` : null
+  const isCompleted = lesson?.status === 'COMPLETED'
+  // Chỉ học viên đã đăng ký mới ghi tiến độ (xem trước của giáo viên/admin thì không)
+  const canSaveProgress = isEnrolled && !isPreview
+  const updateProgress = useUpdateLessonProgress(lId, cId)
 
   // Kiểm tra tình trạng kịch bản luyện nói từ backend:
   const speakingList = lesson?.speakingScenarios ?? (lesson?.speakingScenario ? [lesson.speakingScenario] : [])
-  const hasSpeakingScenarios = speakingList.length > 0
-  const areAllSpeakingScenariosDone = hasSpeakingScenarios && speakingList.every((s) => s.completed)
+  const speakingDoneCount = speakingList.filter((s) => s.completed).length
 
-  // Track trang nào đã "xem xong" (KANJI/VOCAB/GRAMMAR cuối trang, SPEAKING đạt mục tiêu, QUIZ đạt passingScore)
-  const [sectionDone, setSectionDone] = useState<SectionDoneMap>(() => {
-    if (!storageKey) return {}
-    try {
-      const saved = localStorage.getItem(storageKey)
-      return saved ? JSON.parse(saved) : {}
-    } catch {
-      return {}
-    }
-  })
-
-  // Khi đổi bài học hoặc trạng thái bài học thay đổi
+  // Số mục đã xem trong phiên hiện tại (hiện ngay, không chờ server) — gộp với giá trị server bằng max
+  const [localViewed, setLocalViewed] = useState<ViewedMap>({})
+  // Quiz đạt trong phiên; khi tải lại, server đã ghi bài COMPLETED nên không cần lưu riêng
+  const [quizPassed, setQuizPassed] = useState(false)
   useEffect(() => {
-    const speakingDoneVal = hasSpeakingScenarios ? areAllSpeakingScenariosDone : true
+    setLocalViewed({})
+    setQuizPassed(false)
+  }, [lId])
 
-    if (lesson?.status === 'COMPLETED' && (!hasSpeakingScenarios || areAllSpeakingScenariosDone)) {
-      const allDone: SectionDoneMap = {
-        KANJI: true,
-        VOCAB: true,
-        GRAMMAR: true,
-        SPEAKING: speakingDoneVal,
-        QUIZ: true,
-      }
-      setSectionDone(allDone)
-      if (storageKey) {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(allDone))
-        } catch {}
-      }
-      return
-    }
-
-    if (storageKey) {
-      try {
-        const saved = localStorage.getItem(storageKey)
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          // Đảm bảo SPEAKING không bị lưu oan là true nếu các tình huống nói chưa xong hết
-          if (hasSpeakingScenarios && !areAllSpeakingScenariosDone) {
-            parsed.SPEAKING = false
-            try {
-              localStorage.setItem(storageKey, JSON.stringify(parsed))
-            } catch {}
-          }
-          setSectionDone(parsed)
-          return
-        }
-      } catch {}
-    }
-    setSectionDone({})
-  }, [lId, lesson?.status, storageKey, hasSpeakingScenarios, areAllSpeakingScenariosDone])
-
-  const markSectionDone = (kind: PageKind) => {
-    if (kind === 'SPEAKING' && hasSpeakingScenarios && !areAllSpeakingScenariosDone) {
-      return
-    }
-    setSectionDone((prev) => {
-      if (prev[kind]) return prev
-      const updated = { ...prev, [kind]: true }
-      if (storageKey) {
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(updated))
-        } catch {}
-      }
-      return updated
-    })
+  const markViewed = (kind: PageKind, count: number) => {
+    setLocalViewed((prev) => ((prev[kind] ?? 0) >= count ? prev : { ...prev, [kind]: count }))
   }
 
-  // Section done map chính xác tuyệt đối:
-  // Nếu bài học có kịch bản nói (SPEAKING), chỉ coi là DONE khi TOÀN BỘ các tình huống luyện nói đều đã hoàn thành.
-  const effectiveSectionDone = useMemo<SectionDoneMap>(() => {
-    const res = { ...sectionDone }
-    if (hasSpeakingScenarios) {
-      res.SPEAKING = Boolean(areAllSpeakingScenariosDone)
+  /** % từng dạng bài: Chữ Hán/Từ vựng/Ngữ pháp theo số mục đã xem, Luyện nói theo số tình huống xong, Quiz 0/100. */
+  const pagePercent = useMemo<PercentMap>(() => {
+    const res: PercentMap = {}
+    for (const it of navItems) {
+      const sectionType = SECTION_TYPE_OF[it.kind]
+      if (sectionType) {
+        const viewed = Math.max(lesson?.sectionProgress?.[sectionType] ?? 0, localViewed[it.kind] ?? 0)
+        res[it.kind] = isCompleted ? 100 : toPercent(viewed, pageItemCount(it))
+      } else if (it.kind === 'SPEAKING') {
+        res.SPEAKING = toPercent(speakingDoneCount, speakingList.length)
+      } else if (it.kind === 'QUIZ') {
+        res.QUIZ = isCompleted || quizPassed ? 100 : 0
+      }
     }
     return res
-  }, [sectionDone, hasSpeakingScenarios, areAllSpeakingScenariosDone])
+  }, [navItems, lesson?.sectionProgress, localViewed, isCompleted, speakingDoneCount, speakingList.length, quizPassed])
+
+  // Dạng bài "xong" = đạt 100%
+  const effectiveSectionDone = useMemo<SectionDoneMap>(
+    () => Object.fromEntries(navItems.map((it) => [it.kind, (pagePercent[it.kind] ?? 0) >= 100])),
+    [navItems, pagePercent],
+  )
+
+  // % cả bài = trung bình các dạng bài (làm tròn xuống để chưa xong hết thì không hiện 100%)
+  const lessonPercent = isCompleted
+    ? 100
+    : navItems.length === 0
+      ? 0
+      : Math.floor(navItems.reduce((sum, it) => sum + (pagePercent[it.kind] ?? 0), 0) / navItems.length)
+  const savedLessonPercent = course?.lessons?.find((l) => l.id === lId)?.progressPercent ?? 0
+
+  // Gửi lên server khi số mục đã xem hoặc % cả bài vượt giá trị đã lưu (mỗi lần 1 request;
+  // request kế tiếp chạy sau khi lesson detail được tải lại)
+  const sentRef = useRef<{ viewed: ViewedMap; percent: number }>({ viewed: {}, percent: 0 })
+  useEffect(() => {
+    sentRef.current = { viewed: {}, percent: 0 }
+  }, [lId])
+  useEffect(() => {
+    if (!canSaveProgress || !lesson) return
+    const sent = sentRef.current
+    const changed = navItems.find((it) => {
+      const sectionType = SECTION_TYPE_OF[it.kind]
+      const viewed = localViewed[it.kind] ?? 0
+      return !!sectionType && viewed > (lesson.sectionProgress?.[sectionType] ?? 0) && viewed > (sent.viewed[it.kind] ?? 0)
+    })
+    const percent = !isCompleted && lessonPercent > savedLessonPercent && lessonPercent > sent.percent ? lessonPercent : undefined
+    if (!changed && percent === undefined) return
+    const payload: LessonProgressUpdateRequest = { lessonPercent: percent }
+    if (changed) {
+      const viewed = localViewed[changed.kind] ?? 0
+      sent.viewed[changed.kind] = viewed
+      payload.sectionType = SECTION_TYPE_OF[changed.kind]
+      payload.viewedCount = viewed
+    }
+    if (percent !== undefined) sent.percent = percent
+    updateProgress.mutate(payload)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canSaveProgress, lesson, navItems, localViewed, lessonPercent, savedLessonPercent, isCompleted])
 
   const safePageIdx = Math.max(0, Math.min(pageIdx, Math.max(0, navItems.length - 1)))
   const currentPage = navItems[safePageIdx]
@@ -310,13 +322,9 @@ export const LessonViewerPage: React.FC = () => {
   /**
    * Bài học có thể hoàn thành khi:
    * - Có ít nhất 1 trang (navItems.length > 0)
-   * - Tất cả các trang đều đã được đánh dấu "xong"
-   *   (xem trang cuối với Kanji/Vocab/Grammar, đạt passingScore với Quiz).
+   * - Tất cả các trang đều đạt 100% (xem hết mục, xong mọi tình huống nói, đạt passingScore với Quiz).
    */
-  const totalKinds = navItems.length
-  const completedKinds = navItems.filter((it) => effectiveSectionDone[it.kind]).length
-  const isLessonCompleteable = totalKinds > 0 && completedKinds === totalKinds
-  const isCompleted = lesson?.status === 'COMPLETED'
+  const isLessonCompleteable = navItems.length > 0 && navItems.every((it) => effectiveSectionDone[it.kind])
 
   // Tự động ghi nhận hoàn thành bài học vào Database khi người học hoàn thành tất cả các phần
   useEffect(() => {
@@ -445,8 +453,8 @@ export const LessonViewerPage: React.FC = () => {
   const goPrevPage = () => setPageIdx((p) => Math.max(0, p - 1))
   const goNextPage = () => {
     // Đánh dấu dạng bài hiện tại đã hoàn thành khi người học nhấn Next (chỉ cho lý thuyết KANJI/VOCAB/GRAMMAR; SPEAKING và QUIZ phải đạt điều kiện riêng)
-    if (currentPage && currentPage.kind !== 'SPEAKING' && currentPage.kind !== 'QUIZ') {
-      markSectionDone(currentPage.kind)
+    if (currentPage && SECTION_TYPE_OF[currentPage.kind]) {
+      markViewed(currentPage.kind, pageItemCount(currentPage))
     }
     if (safePageIdx < navItems.length - 1) {
       // Tìm trang kế tiếp KHÔNG bị khóa (bỏ qua các trang bị khóa)
@@ -606,6 +614,7 @@ export const LessonViewerPage: React.FC = () => {
               lessons={lessons}
               currentLessonId={lId}
               isEnrolled={isEnrolled || isPreview}
+              showProgress={canSaveProgress}
             />
             {/* Page navigator cho 4 dạng bài */}
             <PageNavigator
@@ -613,6 +622,8 @@ export const LessonViewerPage: React.FC = () => {
               currentIdx={safePageIdx}
               onSelect={setPageIdx}
               doneMap={effectiveSectionDone}
+              percentMap={pagePercent}
+              showProgress={canSaveProgress}
               lockedMap={lockedMap}
             />
           </div>
@@ -646,21 +657,21 @@ export const LessonViewerPage: React.FC = () => {
                 <KanjiStudyView
                   items={currentPage.kanjiItems ?? []}
                   lessonId={lId || undefined}
-                  onSectionDone={() => markSectionDone('KANJI')}
+                  onViewed={(n) => markViewed('KANJI', n)}
                 />
               )}
               {currentPage?.kind === 'VOCAB' && (
                 <VocabStudyView
                   items={currentPage.vocabItems ?? []}
                   lessonId={lId || undefined}
-                  onSectionDone={() => markSectionDone('VOCAB')}
+                  onViewed={(n) => markViewed('VOCAB', n)}
                 />
               )}
               {currentPage?.kind === 'GRAMMAR' && (
                 <GrammarStudyView
                   items={currentPage.grammarItems ?? []}
                   lessonId={lId || undefined}
-                  onSectionDone={() => markSectionDone('GRAMMAR')}
+                  onViewed={(n) => markViewed('GRAMMAR', n)}
                 />
               )}
               {currentPage?.kind === 'SPEAKING' && ((lesson.speakingScenarios && lesson.speakingScenarios.length > 0) || lesson.speakingScenario) && (
@@ -669,7 +680,6 @@ export const LessonViewerPage: React.FC = () => {
                   scenario={lesson.speakingScenario || undefined}
                   scenarios={lesson.speakingScenarios}
                   previewMode={isPreview}
-                  onSectionDone={() => markSectionDone('SPEAKING')}
                   onChatModeChange={setIsSpeakingChatActive}
                 />
               )}
@@ -678,7 +688,7 @@ export const LessonViewerPage: React.FC = () => {
                   lessonId={lId}
                   previewMode={isPreview}
                   onComplete={handleComplete}
-                  onSectionDone={() => markSectionDone('QUIZ')}
+                  onSectionDone={() => setQuizPassed(true)}
                 />
               )}
               {debugMode && (
@@ -736,14 +746,30 @@ export const LessonViewerPage: React.FC = () => {
 // ============================================================================
 // Helpers
 // ============================================================================
-function mapSectionTypeToPageKind(t: LessonSectionType | string): PageKind | null {
-  if (t === 'KANJI') return 'KANJI'
-  if (t === 'VOCABULARY') return 'VOCAB'
-  if (t === 'GRAMMAR') return 'GRAMMAR'
-  return null
+/** Dạng bài lý thuyết ↔ loại phần lưu trên server (SPEAKING/QUIZ không lưu theo mục). */
+const SECTION_TYPE_OF: Partial<Record<PageKind, LessonSectionType>> = {
+  KANJI: 'KANJI',
+  VOCAB: 'VOCABULARY',
+  GRAMMAR: 'GRAMMAR',
 }
 
-const SECTION_ORDER: Record<string, number> = { KANJI: 0, VOCABULARY: 1, GRAMMAR: 2 }
+function pageItemCount(it: NavItem): number {
+  return it.kanjiItems?.length ?? it.vocabItems?.length ?? it.grammarItems?.length ?? 0
+}
+
+/** Làm tròn xuống: chỉ hiện 100% khi đã xong thật. */
+function toPercent(done: number, total: number): number {
+  return total > 0 ? Math.min(100, Math.floor((done * 100) / total)) : 0
+}
+
+function byOrder<T extends { orderIndex?: number }>(list: T[]): T[] {
+  return [...list].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+}
+
+/** Đánh lại orderIndex sau khi gộp nhóm — các StudyView tự sắp theo orderIndex. */
+function renumber<T extends { orderIndex?: number }>(list: T[]): T[] {
+  return list.map((it, i) => ({ ...it, orderIndex: i }))
+}
 
 function defaultTitleForPage(kind: PageKind): string {
   switch (kind) {
@@ -768,6 +794,9 @@ interface PageNavigatorProps {
   currentIdx: number
   onSelect: (idx: number) => void
   doneMap: SectionDoneMap
+  percentMap: PercentMap
+  /** Hiện vòng tròn % (chỉ học viên đã đăng ký; xem trước thì giữ icon cũ). */
+  showProgress: boolean
   lockedMap: Record<PageKind, boolean>
 }
 const PageNavigator: React.FC<PageNavigatorProps> = ({
@@ -775,6 +804,8 @@ const PageNavigator: React.FC<PageNavigatorProps> = ({
   currentIdx,
   onSelect,
   doneMap,
+  percentMap,
+  showProgress,
   lockedMap,
 }) => {
   if (items.length === 0) return null
@@ -814,6 +845,8 @@ const PageNavigator: React.FC<PageNavigatorProps> = ({
             <span className="flex-1 truncate">{displayLabel}</span>
             {isLocked ? (
               <span className="text-[10px] font-bold text-gray-400 uppercase">Khóa</span>
+            ) : showProgress ? (
+              <ProgressCircle percent={percentMap[it.kind] ?? 0} />
             ) : (
               <>
                 {active && !isDone && (
