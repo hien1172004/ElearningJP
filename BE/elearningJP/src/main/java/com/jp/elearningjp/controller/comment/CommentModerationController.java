@@ -36,15 +36,17 @@ public class CommentModerationController {
 
     @GetMapping(ApiPaths.AdminModeration.REPORTS)
     @Operation(summary = "[Admin/Teacher] Hàng chờ báo cáo vi phạm",
-            description = "Gom báo cáo theo bình luận/trả lời, nhiều báo cáo nhất lên đầu. status: OPEN (mặc định) | RESOLVED | REJECTED")
+            description = "Gom báo cáo theo bình luận/trả lời, nhiều báo cáo nhất lên đầu. status: OPEN (mặc định) | RESOLVED | REJECTED; "
+                    + "keyword: lọc theo nội dung, tên hoặc email người viết")
     public ApiResponse<PageResponse<ModerationItemResponse>> getReports(
             @RequestParam(required = false) ReportStatus status,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         return ApiResponse.<PageResponse<ModerationItemResponse>>builder()
                 .success(true)
-                .data(moderationService.getReportQueue(status, page, size))
+                .data(moderationService.getReportQueue(status, keyword, page, size))
                 .build();
     }
 

@@ -110,22 +110,43 @@ export const AdminModerationPage: React.FC = () => {
   const resolveCommentLink = useResolveCommentLink()
 
   const [tab, setTab] = useState<TabKey>('open')
+  // Từ khóa dùng chung cho cả 3 chế độ (nội dung, tên hoặc email người viết) — đổi chế độ vẫn giữ
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [openPage, setOpenPage] = useState(1)
   const [handledStatus, setHandledStatus] = useState<Exclude<ModerationReportStatus, 'OPEN'>>('RESOLVED')
   const [handledPage, setHandledPage] = useState(1)
 
   const [browseStatus, setBrowseStatus] = useState<'VISIBLE' | 'HIDDEN' | undefined>()
   const [targetType, setTargetType] = useState<CommentTargetType | undefined>()
-  const [keywordInput, setKeywordInput] = useState('')
-  const [keyword, setKeyword] = useState('')
   const [browsePage, setBrowsePage] = useState(1)
+
+  const handleSearch = (v: string) => {
+    setKeyword(v)
+    setOpenPage(1)
+    setHandledPage(1)
+    setBrowsePage(1)
+  }
 
   // Hộp thoại nhập ghi chú khi ẩn (kiểm duyệt chỉ ẩn, không xóa)
   const [pending, setPending] = useState<{ item: ModerationItem; action: 'hide' } | null>(null)
   const [note, setNote] = useState('')
 
-  const openQueue = useModerationQueue({ status: 'OPEN', page: openPage, size: PAGE_SIZE })
-  const handledQueue = useModerationQueue({ status: handledStatus, page: handledPage, size: PAGE_SIZE })
+  const openQueue = useModerationQueue({
+    status: 'OPEN',
+    keyword: keyword || undefined,
+    page: openPage,
+    size: PAGE_SIZE,
+  })
+  // Số báo cáo chờ xử lý trên nhãn chế độ: luôn là tổng (không theo từ khóa). Chưa tìm + trang 1 → trùng
+  // query với openQueue nên không gọi thêm
+  const openTotal = useModerationQueue({ status: 'OPEN', page: 1, size: PAGE_SIZE })
+  const handledQueue = useModerationQueue({
+    status: handledStatus,
+    keyword: keyword || undefined,
+    page: handledPage,
+    size: PAGE_SIZE,
+  })
   // Tra cứu gộp cả bình luận gốc lẫn trả lời (không lọc theo loại)
   const browse = useModerationBrowse({
     status: browseStatus,
@@ -172,12 +193,12 @@ export const AdminModerationPage: React.FC = () => {
   }
 
   const listProps = { busyKey, onAction: handleAction, onOpen: handleOpen }
-  const openCount = openQueue.data?.totalElements ?? 0
+  const openCount = openTotal.data?.totalElements ?? 0
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
 
-      {/* Thanh bộ lọc: chế độ xem (trước đây là thẻ tab) + bộ lọc riêng của từng chế độ */}
+      {/* Thanh bộ lọc: chế độ xem + ô tìm kiếm dùng chung (cố định vị trí) + bộ lọc riêng của từng chế độ */}
       <FilterBar>
         <Select<TabKey>
           value={tab}
@@ -189,6 +210,13 @@ export const AdminModerationPage: React.FC = () => {
           ]}
           className="md:w-48"
           aria-label="Chế độ xem"
+        />
+        <SearchInput
+          placeholder="Nội dung, tên hoặc email người viết"
+          value={keywordInput}
+          onChange={setKeywordInput}
+          onSearch={handleSearch}
+          className="md:flex-1 md:min-w-60"
         />
         {tab === 'handled' && (
           <Select<Exclude<ModerationReportStatus, 'OPEN'>>
@@ -207,16 +235,6 @@ export const AdminModerationPage: React.FC = () => {
         )}
         {tab === 'browse' && (
           <>
-            <SearchInput
-              placeholder="Nội dung, tên hoặc email người viết"
-              value={keywordInput}
-              onChange={setKeywordInput}
-              onSearch={(v) => {
-                setKeyword(v)
-                setBrowsePage(1)
-              }}
-              className="md:flex-1 md:min-w-60"
-            />
             <Select
               allowClear
               placeholder="Mọi trạng thái"
@@ -264,8 +282,12 @@ export const AdminModerationPage: React.FC = () => {
           page={openPage}
           onPageChange={setOpenPage}
           showDismiss
-          emptyTitle="Không có báo cáo nào đang chờ"
-          emptyDescription="Khi người dùng báo cáo bình luận vi phạm, chúng sẽ xuất hiện ở đây."
+          emptyTitle={keyword ? 'Không có báo cáo phù hợp' : 'Không có báo cáo nào đang chờ'}
+          emptyDescription={
+            keyword
+              ? 'Thử đổi từ khóa tìm kiếm.'
+              : 'Khi người dùng báo cáo bình luận vi phạm, chúng sẽ xuất hiện ở đây.'
+          }
         />
       ) : tab === 'handled' ? (
         <ItemList
@@ -276,8 +298,8 @@ export const AdminModerationPage: React.FC = () => {
           onRetry={() => void handledQueue.refetch()}
           page={handledPage}
           onPageChange={setHandledPage}
-          emptyTitle="Chưa có báo cáo nào đã xử lý"
-          emptyDescription="Lịch sử các báo cáo đã xử lý sẽ hiện ở đây."
+          emptyTitle={keyword ? 'Không có báo cáo phù hợp' : 'Chưa có báo cáo nào đã xử lý'}
+          emptyDescription={keyword ? 'Thử đổi từ khóa tìm kiếm.' : 'Lịch sử các báo cáo đã xử lý sẽ hiện ở đây.'}
         />
       ) : (
         <ItemList

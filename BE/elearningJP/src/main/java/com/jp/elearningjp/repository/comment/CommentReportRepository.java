@@ -42,6 +42,8 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
      * Mỗi dòng: [comment_id, reply_id, số báo cáo, thời điểm báo cáo gần nhất].
      *
      * <p>{@code teacherId} khác null → chỉ bình luận trong bài học thuộc khóa giáo viên đó được giao.</p>
+     * <p>{@code keyword} (mẫu LIKE đã viết thường, kèm %) khác null → lọc theo nội dung bị báo cáo, tên hoặc email
+     * người viết.</p>
      */
     @Query(value = """
             SELECT r.comment_id, r.reply_id, COUNT(*) AS cnt, MAX(r.created_at) AS latest
@@ -50,10 +52,15 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
             JOIN comments c ON c.id = COALESCE(r.comment_id, rp.comment_id)
             LEFT JOIN lessons l ON c.target_type = 'LESSON' AND l.id = c.target_id
             LEFT JOIN courses co ON co.id = l.course_id
+            LEFT JOIN users u ON u.id = CASE WHEN r.reply_id IS NOT NULL THEN rp.user_id ELSE c.user_id END
             WHERE r.status = :status
               AND (CAST(:teacherId AS BIGINT) IS NULL OR EXISTS (
                     SELECT 1 FROM course_teachers ct
                     WHERE ct.course_id = co.id AND ct.teacher_id = CAST(:teacherId AS BIGINT)))
+              AND (CAST(:keyword AS TEXT) IS NULL
+                    OR LOWER(CASE WHEN r.reply_id IS NOT NULL THEN rp.content ELSE c.content END) LIKE CAST(:keyword AS TEXT)
+                    OR LOWER(u.full_name) LIKE CAST(:keyword AS TEXT)
+                    OR LOWER(u.email) LIKE CAST(:keyword AS TEXT))
             GROUP BY r.comment_id, r.reply_id
             ORDER BY cnt DESC, latest DESC
             """,
@@ -65,15 +72,20 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
                 JOIN comments c ON c.id = COALESCE(r.comment_id, rp.comment_id)
                 LEFT JOIN lessons l ON c.target_type = 'LESSON' AND l.id = c.target_id
                 LEFT JOIN courses co ON co.id = l.course_id
+                LEFT JOIN users u ON u.id = CASE WHEN r.reply_id IS NOT NULL THEN rp.user_id ELSE c.user_id END
                 WHERE r.status = :status
                   AND (CAST(:teacherId AS BIGINT) IS NULL OR EXISTS (
                     SELECT 1 FROM course_teachers ct
                     WHERE ct.course_id = co.id AND ct.teacher_id = CAST(:teacherId AS BIGINT)))
+                  AND (CAST(:keyword AS TEXT) IS NULL
+                    OR LOWER(CASE WHEN r.reply_id IS NOT NULL THEN rp.content ELSE c.content END) LIKE CAST(:keyword AS TEXT)
+                    OR LOWER(u.full_name) LIKE CAST(:keyword AS TEXT)
+                    OR LOWER(u.email) LIKE CAST(:keyword AS TEXT))
                 GROUP BY r.comment_id, r.reply_id
             ) grouped
             """,
             nativeQuery = true)
-    Page<Object[]> findReportGroups(String status, Long teacherId, Pageable pageable);
+    Page<Object[]> findReportGroups(String status, Long teacherId, String keyword, Pageable pageable);
 
     /** Báo cáo (theo trạng thái) của các bình luận gốc — để tổng hợp lý do & ghi chú. */
     @Query("""

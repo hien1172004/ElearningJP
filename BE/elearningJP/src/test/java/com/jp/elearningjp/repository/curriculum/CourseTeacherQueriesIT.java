@@ -163,11 +163,11 @@ class CourseTeacherQueriesIT {
         reportedLessonComment(assignedCourse, reporter);
         reportedLessonComment(otherCourse, reporter);
 
-        assertThat(commentReportRepository.findReportGroups("OPEN", teacherA, PageRequest.of(0, 10))
+        assertThat(commentReportRepository.findReportGroups("OPEN", teacherA, null, PageRequest.of(0, 10))
                 .getTotalElements()).isEqualTo(1);
-        assertThat(commentReportRepository.findReportGroups("OPEN", teacherB, PageRequest.of(0, 10))
+        assertThat(commentReportRepository.findReportGroups("OPEN", teacherB, null, PageRequest.of(0, 10))
                 .getTotalElements()).isEqualTo(2);
-        assertThat(commentReportRepository.findReportGroups("OPEN", null, PageRequest.of(0, 10))
+        assertThat(commentReportRepository.findReportGroups("OPEN", null, null, PageRequest.of(0, 10))
                 .getTotalElements()).isGreaterThanOrEqualTo(2);
     }
 }
