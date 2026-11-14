@@ -68,6 +68,8 @@ type SectionDoneMap = Partial<Record<PageKind, boolean>>
 type ViewedMap = Partial<Record<PageKind, number>>
 /** % hoàn thành theo dạng bài (0-100). */
 type PercentMap = Partial<Record<PageKind, number>>
+/** Hằng rỗng cố định (tham chiếu không đổi) để useMemo/useEffect không chạy lại mỗi lần render. */
+const EMPTY_VIEWED: ViewedMap = {}
 
 export const LessonViewerPage: React.FC = () => {
   // URL dạng mới (slug): /learn/:courseSlug/:lessonSlug?courseId=1&lessonId=5
@@ -244,17 +246,29 @@ export const LessonViewerPage: React.FC = () => {
   const speakingList = lesson?.speakingScenarios ?? (lesson?.speakingScenario ? [lesson.speakingScenario] : [])
   const speakingDoneCount = speakingList.filter((s) => s.completed).length
 
-  // Số mục đã xem trong phiên hiện tại (hiện ngay, không chờ server) — gộp với giá trị server bằng max
-  const [localViewed, setLocalViewed] = useState<ViewedMap>({})
+  // Số mục đã xem + quiz đạt trong phiên (hiện ngay, không chờ server) — gộp với giá trị server bằng max.
+  // Gắn kèm mã bài: chuyển bài không mount lại trang, nếu xóa bằng effect thì effect gửi tiến độ (chạy cùng lượt)
+  // vẫn thấy số của bài cũ và ghi nhầm sang bài mới. Khác mã bài → coi như trống.
+  const [local, setLocal] = useState<{ lessonId: number; viewed: ViewedMap; quizPassed: boolean }>({
+    lessonId: lId,
+    viewed: {},
+    quizPassed: false,
+  })
+  const isLocalOfThisLesson = local.lessonId === lId
+  const localViewed = isLocalOfThisLesson ? local.viewed : EMPTY_VIEWED
   // Quiz đạt trong phiên; khi tải lại, server đã ghi bài COMPLETED nên không cần lưu riêng
-  const [quizPassed, setQuizPassed] = useState(false)
-  useEffect(() => {
-    setLocalViewed({})
-    setQuizPassed(false)
-  }, [lId])
+  const quizPassed = isLocalOfThisLesson && local.quizPassed
 
   const markViewed = (kind: PageKind, count: number) => {
-    setLocalViewed((prev) => ((prev[kind] ?? 0) >= count ? prev : { ...prev, [kind]: count }))
+    setLocal((prev) => {
+      const same = prev.lessonId === lId
+      const viewed = same ? prev.viewed : {}
+      if (same && (viewed[kind] ?? 0) >= count) return prev
+      return { lessonId: lId, viewed: { ...viewed, [kind]: count }, quizPassed: same && prev.quizPassed }
+    })
+  }
+  const markQuizPassed = () => {
+    setLocal((prev) => ({ lessonId: lId, viewed: prev.lessonId === lId ? prev.viewed : {}, quizPassed: true }))
   }
 
   /** % từng dạng bài: Chữ Hán/Từ vựng/Ngữ pháp theo số mục đã xem, Luyện nói theo số tình huống xong, Quiz 0/100. */
@@ -312,7 +326,12 @@ export const LessonViewerPage: React.FC = () => {
       payload.viewedCount = viewed
     }
     if (percent !== undefined) sent.percent = percent
-    updateProgress.mutate(payload)
+    updateProgress.mutate(payload, {
+      // Lưu thất bại → bỏ dấu "đã gửi" để lần render sau gửi lại (nếu không, mục cuối sẽ không bao giờ được lưu)
+      onError: () => {
+        sentRef.current = { viewed: {}, percent: 0 }
+      },
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canSaveProgress, lesson, navItems, localViewed, lessonPercent, savedLessonPercent, isCompleted])
 
@@ -688,7 +707,7 @@ export const LessonViewerPage: React.FC = () => {
                   lessonId={lId}
                   previewMode={isPreview}
                   onComplete={handleComplete}
-                  onSectionDone={() => setQuizPassed(true)}
+                  onSectionDone={markQuizPassed}
                 />
               )}
               {debugMode && (

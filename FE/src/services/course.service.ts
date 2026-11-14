@@ -178,7 +178,10 @@ export const progressService = {
   },
 
   /** Lưu số mục đã xem của 1 phần và/hoặc % cả bài (server chỉ ghi khi tăng). */
-  updateSectionProgress(lessonId: number, payload: LessonProgressUpdateRequest): Promise<ApiResponse<void>> {
+  updateSectionProgress(
+    lessonId: number,
+    payload: LessonProgressUpdateRequest,
+  ): Promise<ApiResponse<Pick<LessonDetail, 'sectionProgress'>>> {
     return axiosClient.put(`/progress/lessons/${lessonId}/sections`, payload)
   },
 
