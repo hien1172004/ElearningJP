@@ -290,8 +290,12 @@ public class CourseService {
             if (progress != null) {
                 outline.setStatus(progress.getStatus());
                 outline.setBestScore(progress.getBestScore());
+                // Bài đã hoàn thành luôn 100% (kể cả dòng tạo trước V67 có progress_percent = 0)
+                outline.setProgressPercent(progress.getStatus() == ProgressStatus.COMPLETED
+                        ? 100 : progress.getProgressPercent());
             } else {
                 outline.setStatus(ProgressStatus.NOT_STARTED);
+                outline.setProgressPercent(0);
             }
         }
 

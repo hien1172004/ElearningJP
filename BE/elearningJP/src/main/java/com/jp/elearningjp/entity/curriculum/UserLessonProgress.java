@@ -12,10 +12,15 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import com.jp.elearningjp.shared.enums.LessonSectionType;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.*;
 import org.hibernate.annotations.DynamicInsert;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "user_lesson_progress")
@@ -51,5 +56,16 @@ public class UserLessonProgress extends SoftDeletableEntity {
 
     @Column(name = "best_score", precision = 5, scale = 2)
     private BigDecimal bestScore;
+
+    /** Số mục đã xem theo loại phần (KANJI/VOCABULARY/GRAMMAR) — V67. */
+    @Builder.Default
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "section_progress", nullable = false, columnDefinition = "jsonb")
+    private Map<LessonSectionType, Integer> sectionProgress = new HashMap<>();
+
+    /** % hoàn thành cả bài, chỉ dùng hiển thị — V67. */
+    @Builder.Default
+    @Column(name = "progress_percent", nullable = false)
+    private Integer progressPercent = 0;
 
 }

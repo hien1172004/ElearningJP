@@ -154,6 +154,7 @@ public final class ApiPaths {
         public static final String BASE = "/progress";
         public static final String START = "/lessons/{lessonId}/start";
         public static final String COMPLETE = "/lessons/{lessonId}/complete";
+        public static final String SECTIONS = "/lessons/{lessonId}/sections";
         public static final String BY_LESSON = "/lessons/{lessonId}";
         public static final String BY_COURSE = "/courses/{courseId}";
     }
