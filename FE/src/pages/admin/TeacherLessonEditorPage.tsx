@@ -253,7 +253,7 @@ export const TeacherLessonEditorPage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2">
             <LessonReviewStatusTag state={reviewState} />
             <AntdButton size="small" icon={<Pencil className="w-3.5 h-3.5" />} disabled={locked} onClick={() => setEditOpen(true)}>
-              Sửa bài học
+              Sửa tên bài
             </AntdButton>
             {/* Sửa khóa học / Tiếp quản / Xong (khóa sửa theo phía, dùng chung với trang khóa học) */}
             <CourseEditSessionControls
@@ -267,9 +267,20 @@ export const TeacherLessonEditorPage: React.FC = () => {
 
         <CourseEditLockBanner lock={editSession.lock} pendingReviews={pendingReviews} />
         {/* Nháp của phía mình: đã cũ → cập nhật bản mới; bỏ nháp; xem nháp cũ */}
-        <LessonDraftPanel lessonId={lessonId} state={reviewState} admin={admin} editing={editSession.mine} />
+        <LessonDraftPanel
+          lessonId={lessonId}
+          state={reviewState}
+          admin={admin}
+          session={editSession}
+          startBlockedReason={editBlockedReason}
+        />
         {/* Người khác vừa sửa / chốt nội dung → nhắc tải lại (trước đây chỉ biết khi lưu bị 409) */}
-        <CourseContentUpdateNotice courseId={courseId} audience="editor" />
+        <CourseContentUpdateNotice
+          courseId={courseId}
+          audience="editor"
+          draftOutdated={!!reviewState?.outdated}
+          admin={admin}
+        />
 
 
         <div className={`${CARD} px-4 pb-4`}>

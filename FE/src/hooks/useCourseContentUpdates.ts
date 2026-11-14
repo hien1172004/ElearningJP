@@ -56,6 +56,9 @@ export function useCourseContentUpdates(courseId: number | undefined, audience: 
         void qc.invalidateQueries({ queryKey: QUERY_KEYS.course.detail(courseId) })
         return
       }
+      // Người soạn: làm mới trạng thái duyệt ngay (chỉ nhãn / cờ "nháp đã cũ", không đổi nội dung đang sửa) để
+      // thông báo biết bài đang mở cần "Cập nhật bản mới" thay vì chỉ tải lại
+      if (audience === 'editor') void qc.invalidateQueries({ queryKey: QUERY_KEYS.lessonReview.all })
       setStale(true)
     })
   }, [courseId, audience, currentUserId, mySide, qc])

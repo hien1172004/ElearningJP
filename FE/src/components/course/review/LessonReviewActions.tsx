@@ -74,8 +74,9 @@ export const LessonReviewActions: React.FC<LessonReviewActionsProps> = ({ course
   const reject = useRejectLessonReview()
   const save = useSaveLessonToLive(courseId)
   const [modal, setModal] = useState<'submit' | 'approve' | 'reject' | 'content' | null>(null)
-  // Lưu bài là thao tác ghi của ADMIN → cần giữ khóa sửa khóa học phía ADMIN (gửi duyệt / rút thì không)
-  const { mine: editing } = useCourseEditLock(admin ? courseId : 0)
+  // Lưu bài là thao tác ghi của ADMIN → cần giữ khóa sửa khóa học phía ADMIN (gửi duyệt / rút thì không);
+  // chưa giữ khóa thì "Lưu bài" tự lấy khóa → lưu → nhả, chỉ chặn khi admin khác đang sửa
+  const { mine: editing, heldByOther, lock } = useCourseEditLock(admin ? courseId : 0)
 
   if (!state) return null
   const lessonId = state.lessonId
@@ -88,7 +89,8 @@ export const LessonReviewActions: React.FC<LessonReviewActionsProps> = ({ course
       : !state.hasUnpublishedChanges
         ? 'Bài không có thay đổi nào so với bản học viên đang học'
         : null
-  const saveBlockedReason = blockedReason ?? (!editing ? 'Bấm "Sửa khóa học" để bắt đầu sửa trước' : null)
+  const saveBlockedReason = blockedReason
+    ?? (heldByOther ? `${lock?.userName ?? 'Quản trị viên khác'} đang sửa khóa học — chờ họ bấm "Xong" hoặc tiếp quản trước` : null)
   const decision = state.pendingRequestId
     ? { requestId: state.pendingRequestId, courseId, lessonId }
     : null
@@ -123,7 +125,7 @@ export const LessonReviewActions: React.FC<LessonReviewActionsProps> = ({ course
       okText: 'Lưu bài',
       cancelText: 'Hủy',
     })
-    if (ok) save.mutate({ lessonId, majorChange })
+    if (ok) save.mutate({ lessonId, majorChange, acquireLock: !editing })
   }
 
   return (
