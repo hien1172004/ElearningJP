@@ -13,6 +13,7 @@ import type {
   LessonCreateRequest,
   LessonUpdateRequest,
   LessonReorderRequest,
+  LessonProgressUpdateRequest,
   LessonSection,
   LessonSectionCreateRequest,
   LessonSectionUpdateRequest,
@@ -174,6 +175,11 @@ export const lessonService = {
 export const progressService = {
   startLesson(lessonId: number): Promise<ApiResponse<void>> {
     return axiosClient.post(`/progress/lessons/${lessonId}/start`)
+  },
+
+  /** Lưu số mục đã xem của 1 phần và/hoặc % cả bài (server chỉ ghi khi tăng). */
+  updateSectionProgress(lessonId: number, payload: LessonProgressUpdateRequest): Promise<ApiResponse<void>> {
+    return axiosClient.put(`/progress/lessons/${lessonId}/sections`, payload)
   },
 
   getMyProgressForLesson(lessonId: number): Promise<ApiResponse<any>> {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Circle, ChevronLeft, ChevronRight, Award, FileCheck } from 'lucide-react'
+import { ProgressCircle } from '@/components/common'
 import { toSlug } from '@/utils'
 import { nextLessonState } from '@/utils/lessonNav'
 import type { LessonOutline, ProgressStatus } from '@/types'
@@ -14,6 +15,8 @@ interface LessonNavSidebarProps {
   lessons: LessonOutline[]
   currentLessonId?: number
   isEnrolled?: boolean
+  /** Hiện vòng tròn % thay cho icon trạng thái (chỉ học viên đã đăng ký). */
+  showProgress?: boolean
 }
 
 function statusIcon(status?: ProgressStatus | null) {
@@ -30,6 +33,7 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
   lessons,
   currentLessonId,
   isEnrolled,
+  showProgress,
 }) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -75,7 +79,7 @@ export const LessonNavSidebar: React.FC<LessonNavSidebarProps> = ({
                   : 'hover:bg-gray-50 text-gray-700'
               } ${!isEnrolled ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              {statusIcon(lesson.status)}
+              {showProgress ? <ProgressCircle percent={lesson.progressPercent ?? 0} size={32} /> : statusIcon(lesson.status)}
               <span className="flex-1 truncate">{lesson.title}</span>
             </button>
           )

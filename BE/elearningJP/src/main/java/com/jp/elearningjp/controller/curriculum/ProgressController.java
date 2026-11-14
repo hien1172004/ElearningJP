@@ -1,5 +1,6 @@
 package com.jp.elearningjp.controller.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.LessonProgressUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.ProgressResponse;
 import com.jp.elearningjp.service.curriculum.ProgressService;
@@ -8,6 +9,7 @@ import com.jp.elearningjp.shared.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -59,6 +61,23 @@ public class ProgressController {
                 .success(true)
                 .message("Lesson completed")
                 .data(progressService.completeLesson(lessonId))
+                .build();
+    }
+
+    // ============================================================
+    // SECTION PROGRESS
+    // ============================================================
+
+    @Operation(summary = "Cập nhật tiến độ trong 1 lesson (số mục đã xem của 1 phần, % cả bài)",
+            description = "Chỉ tăng, không giảm. Cần enrollment ACTIVE.")
+    @SecurityRequirement(name = "bearerAuth")
+    @PutMapping(ApiPaths.Progress.SECTIONS)
+    public ApiResponse<ProgressResponse> updateSectionProgress(
+            @PathVariable Long lessonId,
+            @Valid @RequestBody LessonProgressUpdateRequest request) {
+        return ApiResponse.<ProgressResponse>builder()
+                .success(true)
+                .data(progressService.updateSectionProgress(lessonId, request))
                 .build();
     }
 

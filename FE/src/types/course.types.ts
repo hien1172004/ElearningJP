@@ -113,6 +113,8 @@ export interface LessonOutline {
   hasSpeaking?: boolean
   status?: ProgressStatus | null
   bestScore?: number | null
+  /** % hoàn thành bài của học viên (COMPLETED = 100). */
+  progressPercent?: number | null
 }
 
 export interface LessonDetail {
@@ -131,7 +133,15 @@ export interface LessonDetail {
   bestScore?: number | null
   lastAccessedAt?: string
   completedAt?: string
+  /** Số mục học viên đã xem theo loại phần (lưu trên server). */
+  sectionProgress?: Partial<Record<LessonSectionType, number>> | null
   sections?: LessonSection[]
+}
+
+export interface LessonProgressUpdateRequest {
+  sectionType?: LessonSectionType
+  viewedCount?: number
+  lessonPercent?: number
 }
 
 export interface LessonSpeakingScenario {

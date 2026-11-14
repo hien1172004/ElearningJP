@@ -119,6 +119,7 @@ public class LessonService {
             response.setBestScore(progress.getBestScore());
             response.setLastAccessedAt(progress.getLastAccessedAt());
             response.setCompletedAt(progress.getCompletedAt());
+            response.setSectionProgress(progress.getSectionProgress());
         } else {
             response.setStatus(ProgressStatus.NOT_STARTED);
         }
@@ -156,6 +157,7 @@ public class LessonService {
             response.setBestScore(progress.getBestScore());
             response.setLastAccessedAt(progress.getLastAccessedAt());
             response.setCompletedAt(progress.getCompletedAt());
+            response.setSectionProgress(progress.getSectionProgress());
         } else {
             response.setStatus(ProgressStatus.NOT_STARTED);
         }

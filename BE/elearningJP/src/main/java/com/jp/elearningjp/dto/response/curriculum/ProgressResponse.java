@@ -1,5 +1,6 @@
 package com.jp.elearningjp.dto.response.curriculum;
 
+import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,7 @@ import lombok.experimental.FieldDefaults;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Map;
 
 /**
  * SAU REFACTOR (V14): bỏ trường {@code lessonType} vì bảng lessons không còn cột này.
@@ -29,6 +31,8 @@ public class ProgressResponse {
     Integer lessonOrderIndex;
     ProgressStatus status;
     BigDecimal bestScore;
+    Map<LessonSectionType, Integer> sectionProgress;
+    Integer progressPercent;
     Instant startedAt;
     Instant lastAccessedAt;
     Instant completedAt;

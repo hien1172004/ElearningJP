@@ -1,5 +1,6 @@
 package com.jp.elearningjp.service.curriculum;
 
+import com.jp.elearningjp.dto.request.curriculum.LessonProgressUpdateRequest;
 import com.jp.elearningjp.dto.response.curriculum.CourseProgressResponse;
 import com.jp.elearningjp.dto.response.curriculum.ProgressResponse;
 import com.jp.elearningjp.entity.curriculum.Course;
@@ -16,6 +17,7 @@ import com.jp.elearningjp.repository.curriculum.LessonRepository;
 import com.jp.elearningjp.repository.curriculum.QuizRepository;
 import com.jp.elearningjp.repository.curriculum.UserLessonProgressRepository;
 import com.jp.elearningjp.shared.enums.EnrollmentStatus;
+import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import com.jp.elearningjp.shared.event.curriculum.LessonStartedEvent;
 import com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver;
@@ -30,7 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service("curriculumProgressService")
@@ -144,6 +148,41 @@ public class ProgressService {
                 lessonId, currentUser.getId(), courseId, courseProgressPercent, isMiniTest);
 
         return progressMapper.toResponse(saved);
+    }
+
+    // ============================================================
+    // UPDATE SECTION PROGRESS
+    // ============================================================
+
+    /**
+     * Ghi số mục đã xem của 1 phần và/hoặc % cả bài. Chỉ tăng, không giảm (xem lại mục cũ không làm lùi tiến độ).
+     * <p>shortcut: % cả bài do client tính (server không tính lại tình huống luyện nói) nên chỉ dùng hiển thị,
+     * không ảnh hưởng hoàn thành bài/XP; chuyển sang server tính nếu % được dùng cho nghiệp vụ.</p>
+     */
+    @Transactional
+    public ProgressResponse updateSectionProgress(Long lessonId, LessonProgressUpdateRequest request) {
+        User currentUser = currentUserService.getCurrentUser();
+        resolveLessonForLearning(lessonId);
+
+        UserLessonProgress progress = lessonProgressRecorder.lockOrCreate(currentUser.getId(), lessonId);
+        Instant now = Instant.now();
+        if (progress.getStatus() == ProgressStatus.NOT_STARTED) {
+            progress.setStatus(ProgressStatus.IN_PROGRESS);
+            progress.setStartedAt(now);
+        }
+        progress.setLastAccessedAt(now);
+
+        if (request.getSectionType() != null && request.getViewedCount() != null) {
+            // Copy map mới để Hibernate nhận ra thay đổi của cột JSON
+            Map<LessonSectionType, Integer> sections = new HashMap<>(progress.getSectionProgress());
+            sections.merge(request.getSectionType(), request.getViewedCount(), Math::max);
+            progress.setSectionProgress(sections);
+        }
+        if (request.getLessonPercent() != null) {
+            progress.setProgressPercent(Math.max(progress.getProgressPercent(), request.getLessonPercent()));
+        }
+
+        return progressMapper.toResponse(progressRepository.save(progress));
     }
 
     // ============================================================

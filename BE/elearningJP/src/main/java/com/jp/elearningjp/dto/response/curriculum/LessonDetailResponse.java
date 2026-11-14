@@ -1,6 +1,7 @@
 package com.jp.elearningjp.dto.response.curriculum;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.jp.elearningjp.shared.enums.LessonSectionType;
 import com.jp.elearningjp.shared.enums.ProgressStatus;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -8,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Chi tiết bài học — kèm sections và items bên trong.
@@ -38,6 +40,8 @@ public class LessonDetailResponse {
     BigDecimal bestScore;
     Instant lastAccessedAt;
     Instant completedAt;
+    /** Số mục học viên đã xem theo loại phần (KANJI/VOCABULARY/GRAMMAR). */
+    Map<LessonSectionType, Integer> sectionProgress;
 
     /**
      * Danh sách section của bài học.

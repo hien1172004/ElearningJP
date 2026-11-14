@@ -27,4 +27,5 @@ public class LessonOutlineResponse {
     boolean hasSpeaking;
     ProgressStatus status; // null nếu chưa đăng nhập hoặc chưa bắt đầu
     BigDecimal bestScore;  // null nếu chưa làm quiz
+    Integer progressPercent; // % hoàn thành bài của học viên (COMPLETED = 100)
 }
