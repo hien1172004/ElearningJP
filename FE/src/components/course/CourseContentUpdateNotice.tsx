@@ -15,19 +15,45 @@ const MESSAGE: Record<CourseContentAudience, { title: string; body: string }> = 
 }
 
 /**
+ * Nháp của bài đang mở đã cũ (phía kia vừa đưa bài lên bản học viên, mình đã sửa bài): tải lại không đổi nội dung
+ * (trang soạn hiện nháp phía mình) → hướng dẫn bấm "Cập nhật bản mới" trên nội dung bài.
+ */
+const outdatedMessage = (admin: boolean) => ({
+  title: admin ? 'Bài này vừa được duyệt lên bản học viên' : 'Quản trị viên vừa lưu bài này',
+  body:
+    'Bấm "Cập nhật bản mới" ở trên nội dung bài để lấy nội dung mới — phần bạn đã sửa được giữ ở "Xem nháp cũ" ' +
+    'để chép lại.',
+})
+
+interface CourseContentUpdateNoticeProps {
+  courseId?: number
+  audience: CourseContentAudience
+  /**
+   * Trang soạn bài: nháp phía mình của bài đang mở đã cũ ({@code LessonReviewState.outdated}) → đổi lời nhắn sang
+   * "Cập nhật bản mới", nút thành "Đã hiểu".
+   */
+  draftOutdated?: boolean
+  /** Người xem là ADMIN (chọn lời nhắn khi nháp đã cũ). */
+  admin?: boolean
+}
+
+/**
  * Thông báo nổi (góc dưới) khi nội dung khóa đổi trong lúc đang mở trang; bấm Tải lại để làm mới dữ liệu.
  * Hiệu ứng để nổi bật (định nghĩa ở index.css, tắt khi người dùng giảm chuyển động):
  * trượt lên + nảy, viền phát sáng nhấp nháy, icon xoay chậm, vòng sóng quanh nút Tải lại.
  */
-export const CourseContentUpdateNotice: React.FC<{ courseId?: number; audience: CourseContentAudience }> = ({
+export const CourseContentUpdateNotice: React.FC<CourseContentUpdateNoticeProps> = ({
   courseId,
   audience,
+  draftOutdated = false,
+  admin = false,
 }) => {
   const { stale, reload } = useCourseContentUpdates(courseId, audience)
   const [reloading, setReloading] = useState(false)
   if (!stale) return null
 
-  const text = MESSAGE[audience]
+  const outdated = audience === 'editor' && draftOutdated
+  const text = outdated ? outdatedMessage(admin) : MESSAGE[audience]
   const handleReload = async () => {
     setReloading(true)
     try {
@@ -62,11 +88,12 @@ export const CourseContentUpdateNotice: React.FC<{ courseId?: number; audience: 
             <AntdButton
               type="primary"
               loading={reloading}
-              icon={<RefreshCw className="w-4 h-4" />}
+              icon={outdated ? undefined : <RefreshCw className="w-4 h-4" />}
               onClick={handleReload}
               className="relative !rounded-md !font-semibold"
             >
-              Tải lại
+              {/* Nháp đã cũ: vẫn làm mới dữ liệu khác (cấu trúc khóa, bài khác), nội dung bài chỉ đổi khi Cập nhật bản mới */}
+              {outdated ? 'Đã hiểu' : 'Tải lại'}
             </AntdButton>
           </span>
         </div>

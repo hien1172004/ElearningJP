@@ -167,12 +167,30 @@ export function useRejectLessonReview() {
   })
 }
 
-/** ADMIN "Lưu" 1 bài: đưa bản nháp lên bản học viên đang học, không qua duyệt. */
+/**
+ * ADMIN "Lưu" 1 bài: đưa bản nháp ADMIN lên bản học viên đang học, không qua duyệt — BE bắt giữ khóa sửa khóa học
+ * phía ADMIN.
+ * {@code acquireLock = true} (chưa giữ khóa): tự lấy khóa → lưu → nhả khóa (lưu là thao tác kết thúc, chỉ nhả khóa do
+ * chính lần lưu này lấy). Người cùng phía đang sửa → BE từ chối lấy khóa, không tiếp quản.
+ */
 export function useSaveLessonToLive(courseId: number) {
+  const qc = useQueryClient()
   const invalidate = useInvalidateLessonReview()
   return useMutation({
-    mutationFn: ({ lessonId, majorChange }: { lessonId: number; majorChange?: boolean }) =>
-      lessonReviewService.saveToLive(lessonId, majorChange),
+    mutationFn: async ({ lessonId, majorChange, acquireLock = false }: {
+      lessonId: number
+      majorChange?: boolean
+      acquireLock?: boolean
+    }) => {
+      if (!acquireLock) return lessonReviewService.saveToLive(lessonId, majorChange)
+      await lessonReviewService.acquireEditLock(courseId, false)
+      try {
+        return await lessonReviewService.saveToLive(lessonId, majorChange)
+      } finally {
+        await lessonReviewService.releaseEditLock(courseId).catch(() => undefined) // khóa tự hết hạn nếu lỗi
+        void qc.invalidateQueries({ queryKey: QUERY_KEYS.courseEditLock.detail(courseId) })
+      }
+    },
     onSuccess: (_res, { lessonId }) => {
       toast.success('Đã lưu bài lên bản học viên đang học')
       invalidate(courseId, lessonId)

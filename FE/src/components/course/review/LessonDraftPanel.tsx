@@ -4,14 +4,20 @@ import { AlertTriangle, History, RefreshCw, Trash2 } from 'lucide-react'
 import { confirmDialog } from '@/components/common/ConfirmModal'
 import { EmptyState, LoadingState } from '@/components/common'
 import { useArchivedLessonDraft, useLessonDraftActions, useLessonReviewRequestContent } from '@/hooks'
+import type { useCourseEditSession } from '@/hooks'
 import type { LessonDraftSnapshot, LessonReviewState, LessonSection } from '@/types'
 
 interface LessonDraftPanelProps {
   lessonId: number
   state?: LessonReviewState | null
   admin: boolean
-  /** Đang giữ khóa sửa khóa học của phía mình (bỏ nháp / cập nhật bản mới cần khóa). */
-  editing: boolean
+  /**
+   * Phiên sửa khóa học của trang ({@code useCourseEditSession}) — bỏ nháp / cập nhật bản mới cần giữ khóa sửa phía mình.
+   * "Cập nhật bản mới" khi chưa giữ khóa → tự bắt đầu sửa rồi cập nhật luôn.
+   */
+  session: ReturnType<typeof useCourseEditSession>
+  /** Lý do không bắt đầu sửa được (giống nút "Sửa khóa học") — chặn tự bắt đầu sửa khi cập nhật bản mới. */
+  startBlockedReason?: string | null
 }
 
 const SECTION_LABEL: Record<string, string> = { KANJI: 'Chữ Hán', VOCABULARY: 'Từ vựng', GRAMMAR: 'Ngữ pháp' }
@@ -22,18 +28,28 @@ const SECTION_LABEL: Record<string, string> = { KANJI: 'Chữ Hán', VOCABULARY:
  * - "Bỏ nháp": nháp quay về đúng bản học viên đang học.
  * - "Xem nháp cũ": nội dung nháp được giữ lại ở lần cập nhật bản mới gần nhất, để chép lại phần còn thiếu.
  */
-export const LessonDraftPanel: React.FC<LessonDraftPanelProps> = ({ lessonId, state, admin, editing }) => {
+export const LessonDraftPanel: React.FC<LessonDraftPanelProps> = ({ lessonId, state, admin, session, startBlockedReason }) => {
   const { discard, rebase } = useLessonDraftActions(lessonId)
   const [archiveOpen, setArchiveOpen] = useState(false)
   if (!state) return null
 
+  const editing = session.mine
   // Nháp giáo viên đã gửi duyệt → chỉ đọc (nháp ADMIN không bị ảnh hưởng)
   const submitted = !admin && state.reviewStatus === 'PENDING_REVIEW'
+  const submittedReason = 'Bài đã gửi duyệt — rút yêu cầu hoặc chờ quản trị viên quyết định trước'
   const blocked = submitted
-    ? 'Bài đã gửi duyệt — rút yêu cầu hoặc chờ quản trị viên quyết định trước'
+    ? submittedReason
     : !editing
       ? 'Bấm "Sửa khóa học" để bắt đầu sửa trước'
       : undefined
+  // Cập nhật bản mới: chưa giữ khóa thì tự bắt đầu sửa — chỉ chặn khi người cùng phía đang sửa / không bắt đầu sửa được
+  const rebaseBlocked = submitted
+    ? submittedReason
+    : editing
+      ? undefined
+      : session.heldByOther
+        ? `${session.lock?.userName ?? 'Người khác'} đang sửa khóa học — chờ họ bấm "Xong" hoặc tiếp quản trước`
+        : startBlockedReason ?? undefined
   const canDiscard = state.hasUnpublishedChanges && state.inPublishedVersion
   if (!state.outdated && !canDiscard && !state.hasArchivedDraft) return null
 
@@ -42,11 +58,20 @@ export const LessonDraftPanel: React.FC<LessonDraftPanelProps> = ({ lessonId, st
       title: 'Cập nhật bản mới?',
       content:
         'Nháp hiện tại được giữ lại ở chế độ chỉ đọc ("Xem nháp cũ"); nháp mới lấy đúng bản học viên đang học. ' +
-        'Bạn tự chép lại phần còn thiếu từ nháp cũ. Nháp cũ trước đó (nếu có) sẽ bị thay.',
+        'Bạn tự chép lại phần còn thiếu từ nháp cũ. Nháp cũ trước đó (nếu có) sẽ bị thay.' +
+        (editing ? '' : ' Thao tác này sẽ bắt đầu phiên sửa khóa học của bạn (bấm "Xong" khi sửa xong).'),
       okText: 'Cập nhật bản mới',
       cancelText: 'Hủy',
     })
-    if (ok) rebase.mutate()
+    if (!ok) return
+    if (!session.mine) {
+      try {
+        await session.start.mutateAsync(false)
+      } catch {
+        return // start đã báo lỗi (vd: người khác vừa bắt đầu sửa)
+      }
+    }
+    rebase.mutate()
   }
 
   const handleDiscard = async () => {
@@ -71,13 +96,13 @@ export const LessonDraftPanel: React.FC<LessonDraftPanelProps> = ({ lessonId, st
             ({admin ? 'giáo viên vừa được duyệt bài' : 'quản trị viên vừa lưu bài'}). Cần cập nhật bản mới trước khi{' '}
             {admin ? 'lưu bài' : 'gửi duyệt'}.
           </p>
-          <Tooltip title={blocked}>
+          <Tooltip title={rebaseBlocked}>
             <AntdButton
               size="small"
               type="primary"
               icon={<RefreshCw className="w-3.5 h-3.5" />}
-              disabled={!!blocked}
-              loading={rebase.isPending}
+              disabled={!!rebaseBlocked}
+              loading={rebase.isPending || session.start.isPending}
               onClick={handleRebase}
             >
               Cập nhật bản mới
