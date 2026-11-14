@@ -51,6 +51,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
     private final ExamViewBuilder examViewBuilder;
     private final ExamSnapshotService examSnapshotService;
     private final EntityManager entityManager;
+    private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     @Override
     public ExamTakingResponse startExam(Long examId, Long userId, StartExamRequest request) {
@@ -62,6 +63,10 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
         if (!exam.isPublished()) {
             throw new AppException(ErrorCode.EXAM_NOT_PUBLISHED);
+        }
+
+        if (exam.isPremium() && !subscriptionService.isUserPro(user.getId())) {
+            throw new AppException(ErrorCode.PREMIUM_REQUIRED);
         }
 
         // Học viên làm đề gắn khóa theo bản đã duyệt

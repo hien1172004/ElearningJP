@@ -259,5 +259,26 @@ export const examService = {
     const res: any = await axiosClient.post(`/admin/exams/${examId}/regrade`)
     return res.data
   },
+
+  setExamPremium: async (examId: number, isPremium: boolean): Promise<ApiResponse<void>> => {
+    return axiosClient.patch(`/admin/exams/${examId}/premium`, null, {
+      params: { isPremium },
+    })
+  },
+
+  updateExamBasic: async (
+    examId: number,
+    payload: {
+      title: string
+      jlptLevel?: JlptLevel
+      examType?: ExamType
+      totalDurationMinutes?: number
+      overallPassingScore?: number
+      courseId?: number | null
+    }
+  ): Promise<ExamSummary> => {
+    const res = await axiosClient.put<ApiResponse<ExamSummary>>(`/admin/exams/${examId}`, payload)
+    return res.data.data!
+  },
 }
 

@@ -39,6 +39,7 @@ public class UserService {
     CurrentUserService currentUserService;
     CloudinaryService cloudinaryService;
     PasswordEncoder passwordEncoder;
+    com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     /**
      * Lấy thông tin cá nhân & Profile học tập của user hiện tại.
@@ -170,6 +171,7 @@ public class UserService {
                 .avatarUrl(user.getAvatarUrl())
                 .roles(roleNames)
                 .status(user.getStatus())
+                .isPro(subscriptionService.isUserPro(user.getId()))
                 .phoneNumber(profile.getPhoneNumber())
                 .bio(profile.getBio())
                 .currentLevel(profile.getCurrentLevel())

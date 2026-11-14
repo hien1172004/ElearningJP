@@ -20,6 +20,7 @@ public class ExamSummaryResponse {
     Integer overallPassingScore;
     Integer totalQuestions;
     boolean published;
+    boolean isPremium;
     /** Đề gắn khóa: phiên bản đã duyệt (null = chưa được duyệt lần nào, chưa hiện được cho học viên). */
     Long publishedVersionId;
     /** Số phiên bản phát hành (V1, V2...). */

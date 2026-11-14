@@ -17,6 +17,7 @@ import {
 import { useLogout } from '@/hooks'
 import { NotificationBell } from '@/components/notification'
 import { ThemeToggle } from '@/components/theme'
+import { TokenBalanceWidget } from '@/components/subscription'
 import { BrandLogo } from '@/components/common/BrandLogo'
 import { cn } from '@/utils/cn'
 
@@ -67,6 +68,7 @@ export const TopBar: React.FC = () => {
 
         {/* Phải: tài khoản + đăng xuất (hoặc đăng nhập / đăng ký) */}
         <div className="flex items-center gap-2 shrink-0">
+          <TokenBalanceWidget />
           <ThemeToggle />
           {isAuthenticated ? (
             <>

@@ -43,6 +43,8 @@ import {
   NotebookReviewPage,
   NotebookExplorePage,
   NotebookShareRedirectPage,
+  PricingPage,
+  PricingCheckoutPage,
 } from '@/pages'
 import { AuthGatePage } from '@/pages/auth/AuthGatePage'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -77,6 +79,8 @@ export const router = createBrowserRouter([
       { path: 'speaking/free', element: <SpeakingFreeTalkPage /> },
       { path: 'speaking/scenario/:scenarioId', element: <ScenarioDetailPage /> },
       { path: 'speaking/session/:sessionId', element: <SpeakingPracticePage /> },
+      { path: 'pricing', element: <PricingPage /> },
+      { path: 'pricing/checkout', element: <PricingCheckoutPage /> },
     ],
   },
 

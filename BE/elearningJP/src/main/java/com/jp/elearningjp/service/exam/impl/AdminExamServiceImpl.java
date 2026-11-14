@@ -1420,5 +1420,70 @@ public class AdminExamServiceImpl implements AdminExamService {
 
         return attempts.size();
     }
+
+    @Override
+    @Transactional
+    public void setExamPremium(Long examId, boolean isPremium) {
+        Exam exam = examRepository.findById(examId)
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+        exam.setPremium(isPremium);
+        examRepository.save(exam);
+        log.info("Updated isPremium={} for examId={}", isPremium, examId);
+    }
+
+    @Override
+    @Transactional
+    public ExamSummaryResponse updateExamBasic(Long examId, com.jp.elearningjp.dto.request.exam.UpdateExamRequest request) {
+        requireEditAccess(examId);
+        Exam exam = examRepository.findByIdAndDeletedFalse(examId)
+                .orElseThrow(() -> new AppException(ErrorCode.EXAM_NOT_FOUND));
+
+        if (request.getTitle() != null && !request.getTitle().isBlank()) {
+            exam.setTitle(request.getTitle().trim());
+        }
+        if (request.getJlptLevel() != null) {
+            exam.setJlptLevel(request.getJlptLevel());
+        }
+        if (request.getExamType() != null) {
+            exam.setExamType(request.getExamType());
+        }
+        if (request.getTotalDurationMinutes() != null && request.getTotalDurationMinutes() > 0) {
+            exam.setTotalDurationMinutes(request.getTotalDurationMinutes());
+        }
+        if (request.getOverallPassingScore() != null && request.getOverallPassingScore() > 0) {
+            exam.setOverallPassingScore(request.getOverallPassingScore());
+        }
+        if (request.getCourseId() != null) {
+            if (request.getCourseId() > 0) {
+                com.jp.elearningjp.entity.curriculum.Course course = courseRepository.findById(request.getCourseId())
+                        .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+                exam.setCourse(course);
+            } else {
+                exam.setCourse(null);
+            }
+        }
+
+        if (request.getSections() != null && !request.getSections().isEmpty()) {
+            for (var secReq : request.getSections()) {
+                for (ExamSection s : exam.getSections()) {
+                    boolean match = (secReq.getId() != null && secReq.getId().equals(s.getId()))
+                            || (secReq.getSessionType() != null && secReq.getSessionType().equals(s.getSessionType()));
+                    if (match) {
+                        if (secReq.getDurationMinutes() != null && secReq.getDurationMinutes() > 0) {
+                            s.setDurationMinutes(secReq.getDurationMinutes());
+                        }
+                        if (secReq.getSectionTitle() != null && !secReq.getSectionTitle().isBlank()) {
+                            s.setSectionTitle(secReq.getSectionTitle());
+                        }
+                    }
+                }
+            }
+        }
+
+        Exam saved = examRepository.save(exam);
+        log.info("Updated basic info for examId={}: title='{}', level={}, duration={}",
+                examId, saved.getTitle(), saved.getJlptLevel(), saved.getTotalDurationMinutes());
+        return examMapper.toSummaryResponse(saved);
+    }
 }
 

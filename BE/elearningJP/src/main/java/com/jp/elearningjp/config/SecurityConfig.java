@@ -34,6 +34,7 @@ public class SecurityConfig {
             "/api/v1/auth/google",
             // Payment gateway webhook (IPN) called by VNPay
             "/api/v1/payments/vnpay/ipn",
+            "/api/v1/subscriptions/webhook",
             // Promotion preview/apply endpoints (kept public if frontend needs them before auth)
             "/api/v1/promotions/preview",
             "/api/v1/promotions/apply",
@@ -58,6 +59,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_GET_ENDPOINTS = {
             // Auth
             "/api/v1/auth/reset-password/validate",
+            "/api/v1/subscriptions/plans",
             // Public courses browsing (catalog + detail + slug/level + public lesson list)
             "/api/v1/courses",
             "/api/v1/courses/{id:[0-9]+}",

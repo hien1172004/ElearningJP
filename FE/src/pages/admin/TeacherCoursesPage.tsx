@@ -1,12 +1,13 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit3, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Edit3, Trash2, Eye, EyeOff, Crown } from 'lucide-react'
 import { Table, Tag, Button as AntdButton, Tooltip, Select } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { PageHeader, LoadingState, EmptyState, SearchInput, FilterBar } from '@/components/common'
 import { CourseFormModal, CourseReviewBadge } from '@/components/course'
 import { ConfirmModal } from '@/components/common'
 import { confirmDialog } from '@/components/common/ConfirmModal'
+import { PlanChangeConfirmModal } from '@/components/subscription'
 import { useCourses, useDeleteCourse } from '@/hooks'
 import { courseService } from '@/services'
 import { useQueryClient } from '@tanstack/react-query'
@@ -26,6 +27,13 @@ type PublishFilter = 'published' | 'draft'
 const PUBLISH_OPTIONS: { value: PublishFilter; label: string }[] = [
   { value: 'published', label: 'Đã xuất bản' },
   { value: 'draft', label: 'Bản nháp' },
+]
+
+type PremiumFilter = 'all' | 'premium' | 'free'
+const PREMIUM_OPTIONS: { value: PremiumFilter; label: string }[] = [
+  { value: 'all', label: 'Tất cả gói' },
+  { value: 'premium', label: 'Chỉ gói PRO' },
+  { value: 'free', label: 'Chỉ gói Miễn phí' },
 ]
 
 // "Chờ duyệt" = giáo viên đã gửi; "Đang soạn" = có thay đổi nhưng chưa ai gửi duyệt
@@ -71,6 +79,8 @@ export const TeacherCoursesPage: React.FC = () => {
   const [editingCourse, setEditingCourse] = useState<CourseSummary | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<CourseSummary | null>(null)
   const [publishingId, setPublishingId] = useState<number | null>(null)
+  const [premiumTarget, setPremiumTarget] = useState<{ course: CourseSummary; targetPremium: boolean } | null>(null)
+  const [isUpdatingPremium, setIsUpdatingPremium] = useState(false)
 
   // Bộ lọc của ADMIN theo bản đang soạn: chờ duyệt (đã gửi) / đang soạn (có thay đổi, chưa gửi)
   const [changesFilter, setChangesFilter] = useState<ChangesFilter>('all')
@@ -79,6 +89,7 @@ export const TeacherCoursesPage: React.FC = () => {
   const [keyword, setKeyword] = useState('')
   const [level, setLevel] = useState<JlptLevel | undefined>(undefined)
   const [publishFilter, setPublishFilter] = useState<PublishFilter | undefined>(undefined)
+  const [premiumFilter, setPremiumFilter] = useState<PremiumFilter>('all')
   const [page, setPage] = useState(1)
   const { data, isLoading, isFetching } = useCourses({
     admin: true,
@@ -96,7 +107,7 @@ export const TeacherCoursesPage: React.FC = () => {
     jlptLevel: level,
     published: publishFilter ? publishFilter === 'published' : undefined,
   })
-  const filtered = !!keyword || !!level || !!publishFilter
+  const filtered = !!keyword || !!level || !!publishFilter || premiumFilter !== 'all'
   const deleteCourse = useDeleteCourse()
 
   const handlePublish = async (course: CourseSummary, publish: boolean) => {
@@ -133,6 +144,27 @@ export const TeacherCoursesPage: React.FC = () => {
     }
   }
 
+  const handleConfirmTogglePremium = async () => {
+    if (!premiumTarget) return
+    setIsUpdatingPremium(true)
+    try {
+      await courseService.setCoursePremium(premiumTarget.course.id, premiumTarget.targetPremium)
+      toast.success(
+        premiumTarget.targetPremium
+          ? `Đã chuyển khóa học "${premiumTarget.course.title}" sang gói Premium (PRO)`
+          : `Đã chuyển khóa học "${premiumTarget.course.title}" sang Miễn phí (Free)`
+      )
+      qc.invalidateQueries({ queryKey: ['courses'] })
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.courseReview.all })
+      setPremiumTarget(null)
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Không thể thay đổi trạng thái gói.'
+      toast.error('Cập nhật gói thất bại', { description: msg })
+    } finally {
+      setIsUpdatingPremium(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!deleteTarget) return
     await deleteCourse.mutateAsync(deleteTarget.id)
@@ -142,6 +174,11 @@ export const TeacherCoursesPage: React.FC = () => {
   }
 
   const courses = data?.items ?? data?.content ?? []
+  const displayedCourses = courses.filter((c) => {
+    if (premiumFilter === 'premium') return Boolean(c.isPremium)
+    if (premiumFilter === 'free') return !c.isPremium
+    return true
+  })
   const total = data?.totalElements ?? 0
 
   const allColumns: ColumnsType<CourseSummary> = [
@@ -152,7 +189,15 @@ export const TeacherCoursesPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <CourseThumb src={record.thumbnailUrl} title={record.title} />
           <div>
-            <p className="font-semibold text-sm text-gray-900">{record.title}</p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="font-semibold text-sm text-gray-900">{record.title}</p>
+              {record.isPremium && (
+                <Tag color="gold" className="font-bold text-[10px] rounded-full inline-flex items-center gap-0.5 border-amber-300 px-1.5 py-0 leading-tight">
+                  <Crown className="w-2.5 h-2.5 text-amber-600 fill-amber-600" />
+                  <span>PRO</span>
+                </Tag>
+              )}
+            </div>
             {/* <p className="text-xs text-gray-400">/{record.slug}</p> */}
           </div>
         </div>
@@ -163,6 +208,23 @@ export const TeacherCoursesPage: React.FC = () => {
       dataIndex: 'jlptLevel',
       width: 80,
       render: (lvl) => <span className="font-bold text-sm text-indigo-600">{lvl}</span>,
+    },
+    {
+      title: 'Gói',
+      key: 'isPremium',
+      width: 105,
+      render: (_, record) => (
+        record.isPremium ? (
+          <Tag color="gold" className="font-bold text-xs rounded-full inline-flex items-center gap-1 border-amber-300 px-2 py-0.5">
+            <Crown className="w-3 h-3 text-amber-600 fill-amber-600" />
+            <span>PRO</span>
+          </Tag>
+        ) : (
+          <Tag color="default" className="text-xs rounded-full font-medium text-gray-600 px-2 py-0.5">
+            Miễn phí
+          </Tag>
+        )
+      ),
     },
     {
       title: 'Bài học',
@@ -212,6 +274,16 @@ export const TeacherCoursesPage: React.FC = () => {
               onClick={() => handlePublish(record, !record.published)}
             />
           </Tooltip>
+          {admin && (
+            <Tooltip title={record.isPremium ? 'Đổi sang Miễn phí (Yêu cầu xác nhận)' : 'Nâng lên PRO (Yêu cầu xác nhận)'}>
+              <AntdButton
+                size="small"
+                className={record.isPremium ? '!text-amber-600 !border-amber-300 hover:!text-amber-700' : '!text-gray-500'}
+                icon={<Crown className={`w-3.5 h-3.5 ${record.isPremium ? 'text-amber-500 fill-amber-500' : ''}`} />}
+                onClick={() => setPremiumTarget({ course: record, targetPremium: !record.isPremium })}
+              />
+            </Tooltip>
+          )}
           {/* <Tooltip title="Quản lý bài học">
             <AntdButton
               size="small"
@@ -242,6 +314,16 @@ export const TeacherCoursesPage: React.FC = () => {
       <PageHeader
         // Cùng khung với nội dung bên dưới để nút thao tác thẳng mép phải bảng
         className="max-w-7xl mx-auto px-3 sm:px-4"
+        title={
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Quản lý Khóa học JLPT
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Biên tập nội dung, thiết kế lộ trình bài học và phát hành các khóa học N1 ~ N5 chuẩn JLPT.
+            </p>
+          </div>
+        }
         actions={
           admin ? (
             <AntdButton
@@ -295,6 +377,16 @@ export const TeacherCoursesPage: React.FC = () => {
             options={PUBLISH_OPTIONS}
             className="md:w-44"
             aria-label="Lọc theo trạng thái xuất bản"
+          />
+          <Select<PremiumFilter>
+            value={premiumFilter}
+            onChange={(v) => {
+              setPremiumFilter(v)
+              setPage(1)
+            }}
+            options={PREMIUM_OPTIONS}
+            className="md:w-40"
+            aria-label="Lọc theo gói truy cập"
           />
           {/* Bộ lọc của ADMIN theo bản đang soạn (trước đây là thẻ tab) */}
           {admin && (
@@ -360,9 +452,9 @@ export const TeacherCoursesPage: React.FC = () => {
           />
         )}
 
-        {!isLoading && courses.length > 0 && (
+        {!isLoading && displayedCourses.length > 0 && (
           <Table<CourseSummary>
-            dataSource={courses}
+            dataSource={displayedCourses}
             rowKey="id"
             loading={isFetching}
             pagination={{
@@ -411,6 +503,18 @@ export const TeacherCoursesPage: React.FC = () => {
         isLoading={deleteCourse.isPending}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* MODAL XÁC NHẬN CHUYỂN GÓI PRO / FREE KHÓA HỌC HIỆN ĐẠI (ZEN / FINTECH) */}
+      <PlanChangeConfirmModal
+        open={!!premiumTarget}
+        itemType="course"
+        title={premiumTarget?.course.title ?? ''}
+        level={premiumTarget?.course.jlptLevel}
+        targetPremium={premiumTarget?.targetPremium ?? false}
+        isLoading={isUpdatingPremium}
+        onConfirm={handleConfirmTogglePremium}
+        onCancel={() => setPremiumTarget(null)}
       />
     </div>
   )

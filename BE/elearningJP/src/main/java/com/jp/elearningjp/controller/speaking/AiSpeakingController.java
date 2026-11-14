@@ -32,6 +32,7 @@ public class AiSpeakingController {
 
     private final AiSpeakingService aiSpeakingService;
     private final CurrentUserService currentUserService;
+    private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     private Long resolveCurrentUserId() {
         User currentUser = currentUserService.getCurrentUserOrNull();
@@ -59,6 +60,10 @@ public class AiSpeakingController {
             @Valid @RequestBody SendMessageRequest request) {
 
         Long currentUserId = resolveCurrentUserId();
+        if (!subscriptionService.hasAvailableTokens(currentUserId, 50)) {
+            throw new com.jp.elearningjp.exception.AppException(com.jp.elearningjp.exception.ErrorCode.TOKEN_EXHAUSTED);
+        }
+
         // Timeout 3 phút cho luồng SSE
         SseEmitter emitter = new SseEmitter(180_000L);
 
@@ -68,6 +73,10 @@ public class AiSpeakingController {
         });
 
         emitter.onError(throwable -> log.warn("SSE emitter error for session {}: {}", id, throwable.getMessage()));
+
+        emitter.onCompletion(() -> {
+            subscriptionService.deductTokens(currentUserId, 100);
+        });
 
         aiSpeakingService.sendMessageStream(currentUserId, id, request, emitter);
         return emitter;
@@ -80,7 +89,12 @@ public class AiSpeakingController {
             @Valid @RequestBody SendMessageRequest request) {
 
         Long currentUserId = resolveCurrentUserId();
+        if (!subscriptionService.hasAvailableTokens(currentUserId, 50)) {
+            throw new com.jp.elearningjp.exception.AppException(com.jp.elearningjp.exception.ErrorCode.TOKEN_EXHAUSTED);
+        }
+
         AiSpeakingResponse response = aiSpeakingService.sendMessageSync(currentUserId, id, request);
+        subscriptionService.deductTokens(currentUserId, 100);
 
         return ApiResponse.<AiSpeakingResponse>builder()
                 .success(true)

@@ -21,6 +21,7 @@ export interface CourseSummary {
   description?: string
   thumbnailUrl?: string
   published: boolean
+  isPremium?: boolean
   /** Bản đang soạn: EDITING | PENDING_REVIEW (chờ ADMIN duyệt, giáo viên tạm khóa sửa). */
   reviewStatus?: CourseReviewStatus
   /** Bản đang soạn có thay đổi chưa được chốt (chưa duyệt / chưa lưu). */
@@ -61,6 +62,7 @@ export interface CourseCreateRequest {
   description?: string
   thumbnailUrl?: string
   published?: boolean
+  isPremium?: boolean
 }
 
 export interface CourseUpdateRequest {
@@ -70,6 +72,7 @@ export interface CourseUpdateRequest {
   jlptLevel?: JlptLevel
   description?: string
   thumbnailUrl?: string
+  isPremium?: boolean
 }
 
 // ============================================================================

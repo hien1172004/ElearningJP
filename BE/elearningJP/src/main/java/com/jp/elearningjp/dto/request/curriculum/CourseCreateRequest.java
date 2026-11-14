@@ -28,4 +28,6 @@ public class CourseCreateRequest {
 
     @NotNull(message = "Public không được để trống")
     Boolean published;
+
+    Boolean isPremium;
 }

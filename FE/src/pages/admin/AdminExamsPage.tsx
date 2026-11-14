@@ -16,7 +16,6 @@ import {
   Send,
   Eye,
   EyeOff,
-  Copy,
   AlertTriangle,
   RotateCw,
   Award,
@@ -25,9 +24,13 @@ import {
   Plus,
   GraduationCap,
   ChevronDown,
+  Crown,
 } from 'lucide-react'
+import { Pagination } from 'antd'
 import { examService } from '@/services'
 import type { ExamSummary } from '@/types'
+import { PlanChangeConfirmModal } from '@/components/subscription'
+import { ExamFormModal } from '@/components/exam/ExamFormModal'
 
 // Dải màu định danh cho từng cấp độ JLPT
 const JLPT_BADGES: Record<
@@ -86,12 +89,17 @@ export const AdminExamsPage: React.FC = () => {
 
   // Trạng thái thao tác
   const [publishingId, setPublishingId] = useState<number | null>(null)
-  const [cloningId, setCloningId] = useState<number | null>(null)
   const [deleteModalExam, setDeleteModalExam] = useState<ExamSummary | null>(null)
+  const [premiumModalExam, setPremiumModalExam] = useState<{ exam: ExamSummary; targetPremium: boolean } | null>(null)
+  const [publishModalExam, setPublishModalExam] = useState<{ exam: ExamSummary; publish: boolean } | null>(null)
+  const [editingExam, setEditingExam] = useState<ExamSummary | null>(null)
+  const [updatingPremiumId, setUpdatingPremiumId] = useState<number | null>(null)
+  // Phân trang
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(10)
   // Khoá cuộn trang phía sau khi lớp phủ tự dựng đang mở
-  useBodyScrollLock(!!deleteModalExam)
+  useBodyScrollLock(!!deleteModalExam || !!premiumModalExam || !!publishModalExam || !!editingExam)
   const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [copiedId, setCopiedId] = useState<number | null>(null)
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null)
 
   // Tự ẩn toast sau 3.5s
@@ -131,20 +139,36 @@ export const AdminExamsPage: React.FC = () => {
     fetchExams()
   }, [])
 
-  // Thao tác Xuất bản đề thi
-  const handlePublishExam = async (examId: number, e: React.MouseEvent) => {
-    e.stopPropagation()
+  // Thao tác Xuất bản / Thu hồi đề thi (có xác nhận an toàn)
+  const confirmTogglePublishExam = async () => {
+    if (!publishModalExam) return
+    const { exam, publish } = publishModalExam
     try {
-      setPublishingId(examId)
-      await examService.publishExam(examId)
-      setToastMessage({ text: 'Đã xuất bản đề thi thành công! Học viên đã có thể thi thử.', type: 'success' })
-      setExams((prev) =>
-        prev.map((ex) => (ex.id === examId ? { ...ex, published: true, status: 'PUBLISHED' } : ex))
-      )
+      setPublishingId(exam.id)
+      if (publish) {
+        await examService.publishExam(exam.id)
+        setToastMessage({
+          text: `Đã xuất bản đề thi "${exam.title}" thành công! Học viên đã có thể thi thử.`,
+          type: 'success',
+        })
+        setExams((prev) =>
+          prev.map((ex) => (ex.id === exam.id ? { ...ex, published: true, status: 'PUBLISHED' } : ex))
+        )
+      } else {
+        await examService.unpublishExam(exam.id)
+        setToastMessage({
+          text: `Đã thu hồi đề thi "${exam.title}" về bản nháp. Học viên sẽ không nhìn thấy đề này.`,
+          type: 'info',
+        })
+        setExams((prev) =>
+          prev.map((ex) => (ex.id === exam.id ? { ...ex, published: false, status: 'DRAFT' } : ex))
+        )
+      }
+      setPublishModalExam(null)
     } catch (err: any) {
-      console.error('Failed to publish exam:', err)
+      console.error('Failed to change exam publish status:', err)
       setToastMessage({
-        text: err?.response?.data?.message || 'Có lỗi khi xuất bản đề thi.',
+        text: err?.response?.data?.message || 'Có lỗi khi cập nhật trạng thái phát hành.',
         type: 'error',
       })
     } finally {
@@ -152,41 +176,30 @@ export const AdminExamsPage: React.FC = () => {
     }
   }
 
-  // Thao tác Thu hồi đề thi
-  const handleUnpublishExam = async (examId: number, e: React.MouseEvent) => {
-    e.stopPropagation()
+  // Thao tác Bật/Tắt gói Premium của đề thi (có xác nhận)
+  const confirmTogglePremiumExam = async () => {
+    if (!premiumModalExam) return
+    const { exam, targetPremium } = premiumModalExam
     try {
-      setPublishingId(examId)
-      await examService.unpublishExam(examId)
-      setToastMessage({ text: 'Đã thu hồi đề thi về bản nháp (DRAFT). Học viên sẽ không nhìn thấy đề này.', type: 'info' })
-      setExams((prev) =>
-        prev.map((ex) => (ex.id === examId ? { ...ex, published: false, status: 'DRAFT' } : ex))
-      )
-    } catch (err: any) {
-      console.error('Failed to unpublish exam:', err)
+      setUpdatingPremiumId(exam.id)
+      await examService.setExamPremium(exam.id, targetPremium)
       setToastMessage({
-        text: err?.response?.data?.message || 'Có lỗi khi thu hồi đề thi.',
+        text: targetPremium
+          ? `Đã chuyển đề thi "${exam.title}" sang gói Premium (Chỉ dành cho hội viên PRO)`
+          : `Đã chuyển đề thi "${exam.title}" sang Miễn phí (Free)`,
+        type: 'success',
+      })
+      setExams((prev) =>
+        prev.map((ex) => (ex.id === exam.id ? { ...ex, isPremium: targetPremium } : ex))
+      )
+      setPremiumModalExam(null)
+    } catch (err: any) {
+      setToastMessage({
+        text: err?.response?.data?.message || 'Có lỗi khi cập nhật trạng thái Premium',
         type: 'error',
       })
     } finally {
-      setPublishingId(null)
-    }
-  }
-
-  // Thao tác Nhân bản đề thi (Clone)
-  const handleCloneExam = async (examId: number, e: React.MouseEvent) => {
-    e.stopPropagation()
-    try {
-      setCloningId(examId)
-      const newExamId = await examService.cloneExam(examId)
-      setToastMessage({ text: 'Nhân bản đề thi thành công!', type: 'success' })
-      await fetchExams()
-      navigate(`/admin/exams/${newExamId}/preview`)
-    } catch (err: any) {
-      console.error('Failed to clone exam:', err)
-      setToastMessage({ text: err?.response?.data?.message || 'Không thể nhân bản đề thi.', type: 'error' })
-    } finally {
-      setCloningId(null)
+      setUpdatingPremiumId(null)
     }
   }
 
@@ -208,16 +221,6 @@ export const AdminExamsPage: React.FC = () => {
     } finally {
       setDeletingId(null)
     }
-  }
-
-  // Sao chép liên kết đề thi
-  const handleCopyLink = (examId: number, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const url = `${window.location.origin}/exam/lobby/${examId}`
-    navigator.clipboard.writeText(url)
-    setCopiedId(examId)
-    setToastMessage({ text: 'Đã sao chép link đề thi vào bộ nhớ tạm!', type: 'info' })
-    setTimeout(() => setCopiedId(null), 2000)
   }
 
   // Thống kê nhanh
@@ -282,6 +285,17 @@ export const AdminExamsPage: React.FC = () => {
 
     return result
   }, [exams, searchTerm, selectedLevel, selectedStatus, selectedExamType, sortBy])
+
+  // Tự động về trang 1 khi thay đổi điều kiện lọc / sắp xếp
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedLevel, selectedStatus, selectedExamType, sortBy])
+
+  const totalItems = filteredExams.length
+  const paginatedExams = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredExams.slice(start, start + pageSize)
+  }, [filteredExams, currentPage, pageSize])
 
   return (
     <div className="space-y-5 pb-20 font-sans text-slate-900">
@@ -715,11 +729,10 @@ export const AdminExamsPage: React.FC = () => {
       ) : viewMode === 'GRID' ? (
         /* CHẾ ĐỘ 1: CARD GRID VIEW (LƯỚI THẺ CAO CẤP) */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredExams.map((exam) => {
+          {paginatedExams.map((exam) => {
             const isPublished = exam.published === true || exam.status === 'PUBLISHED'
             const badgeStyle = JLPT_BADGES[exam.jlptLevel] || JLPT_BADGES['N3']
             const isPublishing = publishingId === exam.id
-            const isCloning = cloningId === exam.id
 
             return (
               <div
@@ -730,7 +743,7 @@ export const AdminExamsPage: React.FC = () => {
                 <div className="space-y-3">
                   {/* Card Header: Level badge + Exam type + Status badge */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span
                         className={`px-2 py-0.5 rounded-md text-xs font-bold border tracking-wide ${badgeStyle.bg} ${badgeStyle.border}`}
                       >
@@ -743,6 +756,16 @@ export const AdminExamsPage: React.FC = () => {
                           ? 'Mini Test'
                           : exam.examType}
                       </span>
+                      {exam.isPremium ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-mono">
+                          <Crown className="w-3 h-3 text-amber-600 fill-amber-500" />
+                          <span>PRO</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px] font-medium rounded-md">
+                          Miễn phí
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -762,19 +785,6 @@ export const AdminExamsPage: React.FC = () => {
                           <span>Bản nháp</span>
                         </span>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={(e) => handleCopyLink(exam.id, e)}
-                        title="Sao chép link làm bài"
-                        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition cursor-pointer"
-                      >
-                        {copiedId === exam.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                      </button>
                     </div>
                   </div>
 
@@ -810,57 +820,26 @@ export const AdminExamsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Card Footer: Thao tác chính */}
-                <div className="mt-3.5 pt-2.5 flex items-center justify-between gap-1.5 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      navigate(`/admin/exams/${exam.id}/preview`)
-                    }}
-                    className="py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Biên soạn</span>
-                  </button>
-
-                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    {/* Xuất bản / Thu hồi */}
-                    {!isPublished ? (
-                      <button
-                        type="button"
-                        disabled={isPublishing}
-                        onClick={(e) => handlePublishExam(exam.id, e)}
-                        className="py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs"
-                      >
-                        {isPublishing ? <RotateCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                        <span>Xuất bản</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isPublishing}
-                        onClick={(e) => handleUnpublishExam(exam.id, e)}
-                        className="py-1.5 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition flex items-center gap-1 cursor-pointer"
-                        title="Thu hồi đề thi về bản nháp"
-                      >
-                        {isPublishing ? <RotateCw className="w-3 h-3 animate-spin" /> : <EyeOff className="w-3 h-3" />}
-                        <span>Thu hồi</span>
-                      </button>
-                    )}
-
-                    {/* Nhân bản (Clone) */}
+                {/* Card Footer: Thao tác chính phân nhóm cân đối */}
+                <div
+                  className="mt-3.5 pt-2.5 flex items-center justify-between gap-2 border-t border-slate-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Cụm công cụ phụ: Gói PRO, Nhân bản, Xóa */}
+                  <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      disabled={isCloning}
-                      onClick={(e) => handleCloneExam(exam.id, e)}
-                      title="Nhân bản đề thi này"
-                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                      onClick={() => setPremiumModalExam({ exam, targetPremium: !exam.isPremium })}
+                      title={exam.isPremium ? 'Đang là đề PRO (Bấm để chuyển Miễn phí)' : 'Đang là Miễn phí (Bấm để chuyển sang PRO)'}
+                      className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                        exam.isPremium
+                          ? 'bg-amber-50 text-amber-600 border-amber-300 hover:bg-amber-100'
+                          : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300'
+                      }`}
                     >
-                      <Copy className={`w-3.5 h-3.5 ${isCloning ? 'animate-spin text-indigo-600' : ''}`} />
+                      <Crown className={`w-3.5 h-3.5 ${exam.isPremium ? 'text-amber-600 fill-amber-500' : ''}`} />
                     </button>
 
-                    {/* Xóa đề thi */}
                     <button
                       type="button"
                       onClick={() => setDeleteModalExam(exam)}
@@ -870,8 +849,43 @@ export const AdminExamsPage: React.FC = () => {
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
+
+                  {/* Cụm hành động chính: Sửa thông tin & Xuất bản/Thu hồi */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setEditingExam(exam)}
+                      className="p-1.5 text-slate-500 hover:text-indigo-700 bg-slate-50 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 rounded-lg transition cursor-pointer"
+                      title="Sửa thông tin cơ bản của đề thi"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {!isPublished ? (
+                      <button
+                        type="button"
+                        disabled={isPublishing}
+                        onClick={() => setPublishModalExam({ exam, publish: true })}
+                        className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
+                      >
+                        {isPublishing ? <RotateCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                        <span>Xuất bản</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isPublishing}
+                        onClick={() => setPublishModalExam({ exam, publish: false })}
+                        className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 rounded-lg text-xs font-medium transition flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                        title="Thu hồi đề thi về bản nháp"
+                      >
+                        {isPublishing ? <RotateCw className="w-3 h-3 animate-spin" /> : <EyeOff className="w-3 h-3" />}
+                        <span>Thu hồi</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+                </div>
             )
           })}
         </div>
@@ -882,20 +896,22 @@ export const AdminExamsPage: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Cấp độ</th>
-                  <th className="py-3 px-4">Tên đề thi</th>
-                  <th className="py-3 px-4">Loại đề</th>
-                  <th className="py-3 px-4">Thời lượng</th>
-                  <th className="py-3 px-4">Số câu</th>
-                  <th className="py-3 px-4">Điểm đỗ</th>
-                  <th className="py-3 px-4">Trạng thái</th>
-                  <th className="py-3 px-4 text-right">Thao tác</th>
+                  <th className="py-3 px-4 w-20">Cấp độ</th>
+                  <th className="py-3 px-4 min-w-[200px]">Tên đề thi</th>
+                  <th className="py-3 px-4 w-28">Loại đề</th>
+                  <th className="py-3 px-4 w-24">Gói</th>
+                  <th className="py-3 px-4 w-24">Thời lượng</th>
+                  <th className="py-3 px-4 w-20">Số câu</th>
+                  <th className="py-3 px-4 w-24">Điểm đỗ</th>
+                  <th className="py-3 px-4 w-32">Trạng thái</th>
+                  <th className="py-3 px-4 text-center w-52 min-w-[200px]">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-                {filteredExams.map((exam) => {
+                {paginatedExams.map((exam) => {
                   const isPublished = exam.published === true || exam.status === 'PUBLISHED'
                   const badgeStyle = JLPT_BADGES[exam.jlptLevel] || JLPT_BADGES['N3']
+                  const isPublishing = publishingId === exam.id
 
                   return (
                     <tr
@@ -924,6 +940,19 @@ export const AdminExamsPage: React.FC = () => {
 
                       <td className="py-3 px-4 text-xs text-slate-600">
                         {exam.examType === 'JLPT_OFFICIAL_MOCK' ? 'JLPT Chuẩn' : exam.examType}
+                      </td>
+
+                      <td className="py-3 px-4">
+                        {exam.isPremium ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-mono">
+                            <Crown className="w-3 h-3 text-amber-600 fill-amber-500" />
+                            <span>PRO</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            Miễn phí
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-3 px-4 text-xs font-medium text-slate-700">
@@ -957,45 +986,66 @@ export const AdminExamsPage: React.FC = () => {
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-center w-52 min-w-[200px]">
                         <div
-                          className="flex items-center justify-end gap-1.5"
+                          className="inline-flex items-center gap-1 p-1 bg-slate-50 border border-slate-200/80 rounded-xl"
                           onClick={(e) => e.stopPropagation()}
                         >
+                          {/* Sửa thông tin cơ bản */}
                           <button
                             type="button"
-                            onClick={() => navigate(`/admin/exams/${exam.id}/preview`)}
-                            className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition cursor-pointer"
+                            onClick={() => setEditingExam(exam)}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-white hover:shadow-2xs transition cursor-pointer"
+                            title="Sửa thông tin đề thi"
                           >
-                            Biên soạn
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
 
+                          {/* Xuất bản / Thu hồi */}
                           {!isPublished ? (
                             <button
                               type="button"
-                              onClick={(e) => handlePublishExam(exam.id, e)}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition cursor-pointer shadow-2xs"
+                              disabled={isPublishing}
+                              onClick={() => setPublishModalExam({ exam, publish: true })}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-emerald-600 hover:bg-emerald-50 hover:shadow-2xs transition cursor-pointer"
+                              title="Xuất bản đề thi (học viên có thể thi)"
                             >
-                              Xuất bản
+                              {isPublishing ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                             </button>
                           ) : (
                             <button
                               type="button"
-                              onClick={(e) => handleUnpublishExam(exam.id, e)}
-                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-xs transition cursor-pointer"
+                              disabled={isPublishing}
+                              onClick={() => setPublishModalExam({ exam, publish: false })}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-amber-600 hover:bg-white hover:shadow-2xs transition cursor-pointer"
                               title="Thu hồi đề thi về bản nháp"
                             >
-                              Thu hồi
+                              {isPublishing ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : <EyeOff className="w-3.5 h-3.5" />}
                             </button>
                           )}
 
+                          {/* Gói PRO / Miễn phí */}
+                          <button
+                            type="button"
+                            onClick={() => setPremiumModalExam({ exam, targetPremium: !exam.isPremium })}
+                            title={exam.isPremium ? 'Đang là đề PRO (Bấm để đổi sang Miễn phí)' : 'Đang là Miễn phí (Bấm để nâng lên PRO)'}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition cursor-pointer ${
+                              exam.isPremium
+                                ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 hover:shadow-2xs'
+                                : 'text-slate-400 hover:text-amber-600 hover:bg-white hover:shadow-2xs'
+                            }`}
+                          >
+                            <Crown className={`w-3.5 h-3.5 ${exam.isPremium ? 'fill-amber-500' : ''}`} />
+                          </button>
+
+                          {/* Xóa */}
                           <button
                             type="button"
                             onClick={() => setDeleteModalExam(exam)}
-                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:shadow-2xs transition cursor-pointer"
                             title="Xóa đề thi"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -1005,6 +1055,31 @@ export const AdminExamsPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* 4. PHÂN TRANG */}
+      {totalItems > 0 && (
+        <div className="flex items-center justify-center pt-5">
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalItems}
+            onChange={(page, newPageSize) => {
+              setCurrentPage(page)
+              if (newPageSize && newPageSize !== pageSize) {
+                setPageSize(newPageSize)
+                setCurrentPage(1)
+              }
+            }}
+            onShowSizeChange={(_current, newPageSize) => {
+              setPageSize(newPageSize)
+              setCurrentPage(1)
+            }}
+            showSizeChanger={true}
+            pageSizeOptions={['5', '10', '20', '50', '100']}
+            locale={{ items_per_page: '/ trang' }}
+          />
         </div>
       )}
 
@@ -1055,6 +1130,162 @@ export const AdminExamsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 6. MODAL XÁC NHẬN CHUYỂN GÓI PRO / FREE HIỆN ĐẠI (ZEN / FINTECH) */}
+      <PlanChangeConfirmModal
+        open={!!premiumModalExam}
+        itemType="exam"
+        title={premiumModalExam?.exam.title ?? ''}
+        level={premiumModalExam?.exam.jlptLevel}
+        targetPremium={premiumModalExam?.targetPremium ?? false}
+        isLoading={updatingPremiumId !== null}
+        onConfirm={confirmTogglePremiumExam}
+        onCancel={() => setPremiumModalExam(null)}
+      />
+
+      {/* 7. MODAL XÁC NHẬN XUẤT BẢN / THU HỒI ĐỀ THI AN TOÀN */}
+      {publishModalExam && (
+        <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-4 shadow-xl border border-suna animate-in fade-in zoom-in-95 duration-200 text-sumi">
+            <div className="flex items-center justify-between">
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono tracking-wide ${
+                  publishModalExam.publish
+                    ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30'
+                }`}
+              >
+                {publishModalExam.publish ? (
+                  <>
+                    <Send className="w-3 h-3 text-emerald-600" />
+                    <span>PHÁT HÀNH ĐỀ THI</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="w-3 h-3 text-amber-600" />
+                    <span>THU HỒI VỀ NHÁP</span>
+                  </>
+                )}
+              </span>
+
+              <button
+                type="button"
+                disabled={publishingId !== null}
+                onClick={() => setPublishModalExam(null)}
+                className="text-nibi hover:text-sumi transition p-1 rounded-lg hover:bg-kinari cursor-pointer"
+                aria-label="Đóng"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-sumi">
+                {publishModalExam.publish
+                  ? 'Xác nhận phát hành đề thi?'
+                  : 'Xác nhận thu hồi đề thi?'}
+              </h3>
+              <p className="text-xs text-nibi mt-0.5">
+                {publishModalExam.publish
+                  ? 'Đề thi sẽ được công khai để học viên vào luyện thi thử'
+                  : 'Đề thi sẽ tạm thời được ẩn khỏi danh sách thi thử của học viên'}
+              </p>
+            </div>
+
+            {/* Target Item Card */}
+            <div className="bg-kinari/60 border border-suna rounded-xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-bold text-sumi text-sm truncate flex-1">
+                  {publishModalExam.exam.title}
+                </span>
+                <span className="shrink-0 text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-surface border border-suna text-ai">
+                  {publishModalExam.exam.jlptLevel}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-[11px] text-nibi">
+                <span>{publishModalExam.exam.totalDurationMinutes} phút</span>
+                <span>•</span>
+                <span>{publishModalExam.exam.totalQuestions} câu hỏi</span>
+                <span>•</span>
+                <span>{publishModalExam.exam.isPremium ? 'Gói PRO' : 'Miễn phí'}</span>
+              </div>
+            </div>
+
+            {/* Impact specifications */}
+            <div className="space-y-2 text-xs text-nibi">
+              <div className="flex items-start gap-2">
+                <Check className="w-3.5 h-3.5 text-ai shrink-0 mt-0.5" />
+                <span className="text-sumi leading-relaxed">
+                  {publishModalExam.publish
+                    ? 'Học viên có thể nhìn thấy, bấm làm bài và ghi nhận điểm thi vào bảng xếp hạng.'
+                    : 'Đề thi sẽ bị ẩn ngay lập tức, học viên không thể tạo lượt thi mới.'}
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <Check className="w-3.5 h-3.5 text-ai shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  {publishModalExam.publish
+                    ? 'Bạn vẫn có thể tiếp tục xem và quản lý câu hỏi bất kỳ lúc nào.'
+                    : 'Toàn bộ câu hỏi, đáp án và kết quả thi trước đây của học viên vẫn được giữ nguyên.'}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-suna">
+              <button
+                type="button"
+                disabled={publishingId !== null}
+                onClick={() => setPublishModalExam(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-nibi hover:text-sumi bg-surface border border-suna hover:border-nibi/40 transition cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={publishingId !== null}
+                onClick={confirmTogglePublishExam}
+                className={`px-4 sm:px-5 py-2 rounded-xl text-xs font-bold text-white transition flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                  publishModalExam.publish
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-slate-800 hover:bg-slate-900'
+                }`}
+              >
+                {publishingId ? (
+                  <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                ) : publishModalExam.publish ? (
+                  <Send className="w-3.5 h-3.5" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>
+                  {publishingId
+                    ? 'Đang xử lý...'
+                    : publishModalExam.publish
+                    ? 'Phát hành đề thi'
+                    : 'Thu hồi về nháp'}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. MODAL SỬA THÔNG TIN CƠ BẢN CỦA ĐỀ THI */}
+      <ExamFormModal
+        open={!!editingExam}
+        exam={editingExam}
+        onClose={() => setEditingExam(null)}
+        onSuccess={(updated) => {
+          setExams((prev) =>
+            prev.map((e) => (e.id === updated.id ? { ...e, ...updated } : e))
+          )
+          setToastMessage({
+            text: `Đã cập nhật thông tin đề thi "${updated.title}" thành công!`,
+            type: 'success',
+          })
+        }}
+      />
     </div>
   )
 }

@@ -42,4 +42,6 @@ public interface AdminExamService {
     AdminExamPreviewResponse reorderExamQuestions(Long examId);
     Long cloneExam(Long examId, Long currentUserId);
     int regradeExam(Long examId);
+    void setExamPremium(Long examId, boolean isPremium);
+    ExamSummaryResponse updateExamBasic(Long examId, com.jp.elearningjp.dto.request.exam.UpdateExamRequest request);
 }

@@ -7,6 +7,7 @@ import { storage } from '@/utils/storage'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { refreshAccessToken } from '@/utils/tokenRefresh'
 import { emitAuthExpired } from '@/utils/authEvents'
+import { emitPaywallTrigger } from '@/utils/paywallEvents'
 
 /**
  * Tạo axiosClient với:
@@ -74,6 +75,13 @@ axiosClient.interceptors.response.use(
       | undefined
 
     const status = error.response?.status
+    const errorData = error.response?.data as { code?: number; message?: string } | undefined
+
+    if (status === 402 || errorData?.code === 1050 || errorData?.code === 1051) {
+      emitPaywallTrigger({
+        reason: errorData?.message || 'Tính năng yêu cầu gói PRO hoặc đã dùng hết lượt thử nghiệm',
+      })
+    }
 
     // Không refresh cho endpoint auth hoặc khi không có config
     if (!originalRequest || isAuthEndpoint(originalRequest.url)) {

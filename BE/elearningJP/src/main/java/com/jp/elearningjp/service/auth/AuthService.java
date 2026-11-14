@@ -58,6 +58,7 @@ public class AuthService {
     private final UserTokenRevocationService userTokenRevocationService;
     private final RoleRepository roleRepository;
     private final UserProfileRepository userProfileRepository;
+    private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     @Value("${app.google.client-id:}")
     String googleClientId;
@@ -88,7 +89,8 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
         userEntity.setRoles(Set.of(role));
-        userRepo.save(userEntity);
+        userEntity = userRepo.save(userEntity);
+        subscriptionService.initializeUserFreeTierAndWallet(userEntity);
 
         return RegisterResponse.builder()
                 .userInfoResponse(userMapper.toUserInfoResponse(userEntity))
@@ -195,6 +197,7 @@ public class AuthService {
                             .timezone("Asia/Ho_Chi_Minh")
                             .build();
                     userProfileRepository.save(profile);
+                    subscriptionService.initializeUserFreeTierAndWallet(savedUser);
 
                     log.info("Created new user via Google login: email={}, id={}", email, savedUser.getId());
                     return savedUser;

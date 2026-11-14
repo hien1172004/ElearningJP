@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button, Checkbox, Empty, Input, Modal, Pagination, Select, Spin, Tag } from 'antd'
-import { ArrowLeft, Download, Eye, Printer, Search } from 'lucide-react'
+import { ArrowLeft, Download, Eye, Printer, Search, Crown } from 'lucide-react'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { practiceSheetService, type MissingStrokeItem, type PracticeSheetType } from '@/services'
 import type { ApiResponse, LessonSection } from '@/types'
 import { toSlug } from '@/utils'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useSubscriptionStore } from '@/stores/useSubscriptionStore'
 
 interface PracticeSheetModalProps {
   open: boolean
@@ -156,8 +158,14 @@ export const PracticeSheetModal: React.FC<PracticeSheetModalProps> = ({
       return allIds.filter((id) => next.has(id))
     })
 
+  const user = useAuthStore((s) => s.user)
+  const isProStore = useSubscriptionStore((s) => s.isPro)
+  const openPaywall = useSubscriptionStore((s) => s.openPaywall)
+  const isUserPro = isProStore || !!user?.isPro
+
   const label = TYPE_LABEL[type]
   const tooMany = checked.length > MAX_ITEMS
+  const tooManyForFree = !isUserPro && checked.length > 10
 
   const handleClose = () => {
     setPreview(null)
@@ -165,6 +173,11 @@ export const PracticeSheetModal: React.FC<PracticeSheetModalProps> = ({
   }
 
   const handlePreview = async () => {
+    if (tooManyForFree) {
+      openPaywall('Tài khoản Miễn phí được xuất tối đa 10 từ/phiếu PDF. Hãy nâng cấp PRO để xuất không giới hạn toàn bộ bài học!')
+      return
+    }
+
     // Giữ thứ tự theo bài học (BE cũng sắp lại theo nhóm → thứ tự trong nhóm)
     const itemIds = allIds.filter((id) => selected.has(id))
     if (itemIds.length === 0) return
@@ -222,16 +235,34 @@ export const PracticeSheetModal: React.FC<PracticeSheetModalProps> = ({
     </div>
   ) : (
     <div className="flex items-center justify-between gap-2">
-      <span className={`text-sm ${tooMany ? 'text-red-500' : 'text-slate-500'}`}>
-        Đã chọn {checked.length}/{allIds.length} mục{tooMany ? ` — tối đa ${MAX_ITEMS} mục mỗi lần in` : ''}
-      </span>
+      <div className="text-xs">
+        <span className={tooMany || tooManyForFree ? 'text-amber-600 font-medium' : 'text-slate-500'}>
+          Đã chọn {checked.length}/{allIds.length} mục
+          {tooMany ? ` — tối đa ${MAX_ITEMS} mục mỗi lần in` : ''}
+          {tooManyForFree && (
+            <span className="ml-1 text-rose-500 font-semibold">
+              (Miễn phí tối đa 10 chữ/phiếu)
+            </span>
+          )}
+        </span>
+        {tooManyForFree && (
+          <button
+            type="button"
+            onClick={() => openPaywall('Phiếu luyện viết chữ Hán trên 10 từ yêu cầu gói PRO')}
+            className="ml-2 text-amber-600 hover:text-amber-700 font-bold underline inline-flex items-center gap-0.5 cursor-pointer"
+          >
+            <Crown className="w-3 h-3" />
+            Nâng cấp PRO
+          </button>
+        )}
+      </div>
       <div className="flex gap-2">
         <Button onClick={handleClose}>Huỷ</Button>
         <Button
           type="primary"
           icon={<Eye className="h-4 w-4" />}
           loading={busy}
-          disabled={checked.length === 0 || tooMany}
+          disabled={checked.length === 0 || tooMany || tooManyForFree}
           onClick={handlePreview}
         >
           Xem trước

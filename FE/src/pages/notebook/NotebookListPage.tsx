@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Input,
@@ -9,6 +9,7 @@ import {
   Tooltip,
   Button,
   Select,
+  Pagination,
 } from 'antd'
 import type { MenuProps } from 'antd'
 import {
@@ -74,6 +75,10 @@ export const NotebookListPage: React.FC = () => {
   const [keyword, setKeyword] = useState('')
   const [sort, setSort] = useState<SortOption>('newest')
   const [srsEnabled, setSrsEnabled] = useState(true)
+
+  // Phân trang
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(6)
 
   // Modals state
   const [createNotebookOpen, setCreateNotebookOpen] = useState(false)
@@ -286,7 +291,10 @@ export const NotebookListPage: React.FC = () => {
         {sort === key && <CheckOutlined className="text-blue-600 text-xs" />}
       </div>
     ),
-    onClick: () => setSort(key),
+    onClick: () => {
+      setSort(key)
+      setCurrentPage(1)
+    },
   }))
 
   // Tính số lượng sổ tay của từng nhóm
@@ -337,6 +345,31 @@ export const NotebookListPage: React.FC = () => {
       if (sort === 'nameDesc') return b.name.localeCompare(a.name)
       return 0
     })
+
+  // Định nghĩa các mục ở Root (Nhóm thư mục 📁 + Sổ tay độc lập 📒)
+  type RootItem =
+    | { kind: 'group'; item: (typeof displayedGroups)[0] }
+    | { kind: 'notebook'; item: Notebook }
+
+  const totalItems = currentGroup
+    ? displayedGroupNotebooks.length
+    : displayedGroups.length + displayedUngroupedNotebooks.length
+
+  const paginatedRootItems = useMemo<RootItem[]>(() => {
+    if (currentGroup) return []
+    const combined: RootItem[] = [
+      ...displayedGroups.map((g) => ({ kind: 'group' as const, item: g })),
+      ...displayedUngroupedNotebooks.map((nb) => ({ kind: 'notebook' as const, item: nb })),
+    ]
+    const start = (currentPage - 1) * pageSize
+    return combined.slice(start, start + pageSize)
+  }, [currentGroup, displayedGroups, displayedUngroupedNotebooks, currentPage, pageSize])
+
+  const paginatedGroupNotebooks = useMemo<Notebook[]>(() => {
+    if (!currentGroup) return []
+    const start = (currentPage - 1) * pageSize
+    return displayedGroupNotebooks.slice(start, start + pageSize)
+  }, [currentGroup, displayedGroupNotebooks, currentPage, pageSize])
 
   const isLoading = notebooksLoading || groupsLoading
 
@@ -461,7 +494,12 @@ export const NotebookListPage: React.FC = () => {
       {/* 3. Nút QUAY LẠI khi đang ở bên trong nhóm */}
       {currentGroup && (
         <div>
-          <BackButton onClick={() => setCurrentGroup(null)} />
+          <BackButton
+            onClick={() => {
+              setCurrentGroup(null)
+              setCurrentPage(1)
+            }}
+          />
         </div>
       )}
 
@@ -495,7 +533,10 @@ export const NotebookListPage: React.FC = () => {
               placeholder="Tìm kiếm sổ tay..."
               allowClear
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              onChange={(e) => {
+                setKeyword(e.target.value)
+                setCurrentPage(1)
+              }}
               className="w-40 sm:w-52 h-9 rounded-lg border-suna text-xs"
             />
 
@@ -555,18 +596,45 @@ export const NotebookListPage: React.FC = () => {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {displayedGroupNotebooks.map((nb) => (
-                <NotebookCard
-                  key={nb.id}
-                  notebook={nb}
-                  onClick={(item) => navigate(`/notebooks/${item.id}`)}
-                  onEdit={(item) => navigate(`/notebooks/${item.id}`)}
-                  onDelete={handleDeleteNotebook}
-                  onShare={(item) => setSharingNotebook(item)}
-                  onMove={handleStartMoveNotebook}
-                />
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedGroupNotebooks.map((nb) => (
+                  <NotebookCard
+                    key={nb.id}
+                    notebook={nb}
+                    onClick={(item) => navigate(`/notebooks/${item.id}`)}
+                    onEdit={(item) => navigate(`/notebooks/${item.id}`)}
+                    onDelete={handleDeleteNotebook}
+                    onShare={(item) => setSharingNotebook(item)}
+                    onMove={handleStartMoveNotebook}
+                  />
+                ))}
+              </div>
+
+              {/* Phân trang chuẩn Ant Design trong nhóm */}
+              {totalItems > 0 && (
+                <div className="flex items-center justify-center pt-3">
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={totalItems}
+                    onChange={(page, newPageSize) => {
+                      setCurrentPage(page)
+                      if (newPageSize && newPageSize !== pageSize) {
+                        setPageSize(newPageSize)
+                        setCurrentPage(1)
+                      }
+                    }}
+                    onShowSizeChange={(_current, newPageSize) => {
+                      setPageSize(newPageSize)
+                      setCurrentPage(1)
+                    }}
+                    showSizeChanger={true}
+                    pageSizeOptions={['6', '9', '18', '36']}
+                    locale={{ items_per_page: '/ trang' }}
+                  />
+                </div>
+              )}
             </div>
           )
         ) : (
@@ -589,31 +657,64 @@ export const NotebookListPage: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* PHẦN A: Các Card Nhóm sổ tay màu xanh dương 📁 */}
-              {displayedGroups.map((g) => (
-                <NotebookGroupCard
-                  key={`group-${g.id}`}
-                  group={g}
-                  notebookCount={g.notebookCount}
-                  onClick={(selectedG) => setCurrentGroup(selectedG as NotebookGroup)}
-                  onEdit={(selectedG) => handleStartRenameGroup(selectedG as NotebookGroup)}
-                  onDelete={(selectedG) => handleDeleteGroup(selectedG as NotebookGroup)}
-                />
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paginatedRootItems.map((entry) => {
+                  if (entry.kind === 'group') {
+                    const g = entry.item
+                    return (
+                      <NotebookGroupCard
+                        key={`group-${g.id}`}
+                        group={g}
+                        notebookCount={g.notebookCount}
+                        onClick={(selectedG) => {
+                          setCurrentGroup(selectedG as NotebookGroup)
+                          setCurrentPage(1)
+                        }}
+                        onEdit={(selectedG) => handleStartRenameGroup(selectedG as NotebookGroup)}
+                        onDelete={(selectedG) => handleDeleteGroup(selectedG as NotebookGroup)}
+                      />
+                    )
+                  }
+                  const nb = entry.item
+                  return (
+                    <NotebookCard
+                      key={`nb-${nb.id}`}
+                      notebook={nb}
+                      onClick={(item) => navigate(`/notebooks/${item.id}`)}
+                      onEdit={(item) => navigate(`/notebooks/${item.id}`)}
+                      onDelete={handleDeleteNotebook}
+                      onShare={(item) => setSharingNotebook(item)}
+                      onMove={handleStartMoveNotebook}
+                    />
+                  )
+                })}
+              </div>
 
-              {/* PHẦN B: Các Card Sổ tay độc lập màu vàng cam 📒 */}
-              {displayedUngroupedNotebooks.map((nb) => (
-                <NotebookCard
-                  key={`nb-${nb.id}`}
-                  notebook={nb}
-                  onClick={(item) => navigate(`/notebooks/${item.id}`)}
-                  onEdit={(item) => navigate(`/notebooks/${item.id}`)}
-                  onDelete={handleDeleteNotebook}
-                  onShare={(item) => setSharingNotebook(item)}
-                  onMove={handleStartMoveNotebook}
-                />
-              ))}
+              {/* Phân trang chuẩn Ant Design ở ngoài Root */}
+              {totalItems > 0 && (
+                <div className="flex items-center justify-center pt-3">
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={totalItems}
+                    onChange={(page, newPageSize) => {
+                      setCurrentPage(page)
+                      if (newPageSize && newPageSize !== pageSize) {
+                        setPageSize(newPageSize)
+                        setCurrentPage(1)
+                      }
+                    }}
+                    onShowSizeChange={(_current, newPageSize) => {
+                      setPageSize(newPageSize)
+                      setCurrentPage(1)
+                    }}
+                    showSizeChanger={true}
+                    pageSizeOptions={['6', '9', '18', '36']}
+                    locale={{ items_per_page: '/ trang' }}
+                  />
+                </div>
+              )}
             </div>
           )
         )}
