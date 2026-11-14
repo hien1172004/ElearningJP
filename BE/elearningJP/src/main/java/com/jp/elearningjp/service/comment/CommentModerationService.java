@@ -88,13 +88,18 @@ public class CommentModerationService {
     // READ
     // =========================================================
 
-    /** Hàng chờ: nội dung bị báo cáo (theo trạng thái báo cáo), nhiều báo cáo nhất lên đầu. */
+    /**
+     * Hàng chờ: nội dung bị báo cáo (theo trạng thái báo cáo), nhiều báo cáo nhất lên đầu; lọc theo từ khóa
+     * (nội dung / tên / email người viết) như tra cứu.
+     */
     @Transactional(readOnly = true)
-    public PageResponse<ModerationItemResponse> getReportQueue(ReportStatus status, int page, int size) {
+    public PageResponse<ModerationItemResponse> getReportQueue(ReportStatus status, String keyword, int page, int size) {
         ReportStatus reportStatus = status != null ? status : ReportStatus.OPEN;
         Pageable pageable = PageRequest.of(Math.max(page, 1) - 1, clampSize(size));
+        String pattern = keyword == null || keyword.isBlank() ? null
+                : "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
         Page<Object[]> groups = commentReportRepository.findReportGroups(
-                reportStatus.name(), teacherScopeId(), pageable);
+                reportStatus.name(), teacherScopeId(), pattern, pageable);
 
         List<Long> commentIds = new ArrayList<>();
         List<Long> replyIds = new ArrayList<>();

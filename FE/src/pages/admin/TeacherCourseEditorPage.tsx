@@ -131,6 +131,30 @@ export const TeacherCourseEditorPage: React.FC = () => {
   const { data: course, isLoading, isFetching: courseFetching } = useCourseDetail(id)
   const deleteCourse = useDeleteCourse()
   const publishCourse = usePublishCourse(id)
+  /** Xuất bản / chuyển nháp — hỏi xác nhận trước (học viên đã đăng ký nhận thông báo khi trạng thái đổi). */
+  const handleTogglePublish = async () => {
+    if (!course) return
+    const publish = !course.published
+    const ok = await confirmDialog(
+      publish
+        ? {
+            title: `Xuất bản khóa học "${course.title}"?`,
+            content:
+              'Học viên sẽ thấy khóa học với phiên bản đã chốt gần nhất (không kèm phần đang soạn). '
+              + 'Học viên đã đăng ký sẽ nhận thông báo.',
+            okText: 'Xuất bản',
+            cancelText: 'Hủy',
+          }
+        : {
+            title: `Chuyển khóa học "${course.title}" về nháp?`,
+            content: 'Khóa học sẽ bị ẩn với học viên cho tới khi xuất bản lại. Học viên đã đăng ký sẽ nhận thông báo.',
+            okText: 'Chuyển nháp',
+            cancelText: 'Hủy',
+            danger: true,
+          },
+    )
+    if (ok) publishCourse.mutate(publish)
+  }
   const deleteLesson = useDeleteLesson(id)
   const reorderLessons = useReorderLessons(id)
 
@@ -585,7 +609,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
             icon={course.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             loading={publishCourse.isPending}
             disabled={!course.published && !canReopen}
-            onClick={() => publishCourse.mutate(!course.published)}
+            onClick={handleTogglePublish}
             className="!rounded-md !font-semibold"
           >
             {course.published ? 'Chuyển nháp' : 'Xuất bản'}
@@ -714,7 +738,7 @@ export const TeacherCourseEditorPage: React.FC = () => {
             {admin && (course.published || canReopen) && (
               <AntdButton
                 type={course.published ? 'default' : 'primary'}
-                onClick={() => publishCourse.mutate(!course.published)}
+                onClick={handleTogglePublish}
                 loading={publishCourse.isPending}
                 icon={course.published ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 className="!rounded-md !font-semibold"

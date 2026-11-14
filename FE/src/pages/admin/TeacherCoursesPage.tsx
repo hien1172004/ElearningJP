@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { PageHeader, LoadingState, EmptyState, SearchInput, FilterBar } from '@/components/common'
 import { CourseFormModal, CourseReviewBadge } from '@/components/course'
 import { ConfirmModal } from '@/components/common'
+import { confirmDialog } from '@/components/common/ConfirmModal'
 import { useCourses, useDeleteCourse } from '@/hooks'
 import { courseService } from '@/services'
 import { useQueryClient } from '@tanstack/react-query'
@@ -99,6 +100,25 @@ export const TeacherCoursesPage: React.FC = () => {
   const deleteCourse = useDeleteCourse()
 
   const handlePublish = async (course: CourseSummary, publish: boolean) => {
+    const ok = await confirmDialog(
+      publish
+        ? {
+            title: `Xuất bản khóa học "${course.title}"?`,
+            content:
+              'Học viên sẽ thấy khóa học với phiên bản đã chốt gần nhất (không kèm phần đang soạn). '
+              + 'Học viên đã đăng ký sẽ nhận thông báo.',
+            okText: 'Xuất bản',
+            cancelText: 'Hủy',
+          }
+        : {
+            title: `Chuyển khóa học "${course.title}" về nháp?`,
+            content: 'Khóa học sẽ bị ẩn với học viên cho tới khi xuất bản lại. Học viên đã đăng ký sẽ nhận thông báo.',
+            okText: 'Chuyển nháp',
+            cancelText: 'Hủy',
+            danger: true,
+          },
+    )
+    if (!ok) return
     setPublishingId(course.id)
     try {
       await courseService.publishCourse(course.id, publish)

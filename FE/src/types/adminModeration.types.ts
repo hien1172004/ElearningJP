@@ -32,6 +32,8 @@ export interface ModerationItem {
 
 export interface ModerationQueueParams {
   status?: ModerationReportStatus
+  /** Lọc theo nội dung bị báo cáo, tên hoặc email người viết */
+  keyword?: string
   page?: number
   size?: number
 }

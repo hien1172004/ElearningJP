@@ -80,6 +80,7 @@ export const AdminBroadcastsPage: React.FC = () => {
     audience: historyAudience,
   })
   const historyFiltered = !!historyKeyword || !!historyAudience
+  const historyRows = history.data?.items ?? history.data?.content ?? []
 
   const handleSend = async () => {
     const parsed = schema.safeParse({ title, body, link })
@@ -311,12 +312,20 @@ export const AdminBroadcastsPage: React.FC = () => {
             description="Kiểm tra kết nối rồi thử lại."
             action={<AntdButton onClick={() => void history.refetch()}>Thử lại</AntdButton>}
           />
+        ) : !history.isLoading && historyRows.length === 0 ? (
+          // Rỗng → hiện ngoài bảng: ô trống trong bảng có cột mở rộng (expandable) bị lệch, không phủ hết các cột
+          <EmptyState
+            card
+            icon={<Megaphone className="w-10 h-10 text-slate-300" />}
+            title={historyFiltered ? 'Không có thông báo phù hợp' : 'Chưa gửi thông báo nào'}
+            description={historyFiltered ? 'Thử đổi từ khóa hoặc bộ lọc.' : 'Các thông báo đã gửi sẽ hiện ở đây.'}
+          />
         ) : (
           <div className="bg-surface rounded-xl border border-slate-200 overflow-x-auto">
             <Table<Broadcast>
               rowKey="id"
               columns={columns}
-              dataSource={history.data?.items ?? history.data?.content ?? []}
+              dataSource={historyRows}
               loading={history.isLoading || history.isFetching}
               onChange={(p) => setHistoryPage(p.current ?? 1)}
               pagination={{
@@ -325,17 +334,6 @@ export const AdminBroadcastsPage: React.FC = () => {
                 total: history.data?.totalElements ?? 0,
                 showSizeChanger: false,
                 showTotal: (total) => `${total} lần gửi`,
-              }}
-              locale={{
-                emptyText: (
-                  <EmptyState
-                    icon={<Megaphone className="w-10 h-10 text-slate-300" />}
-                    title={historyFiltered ? 'Không có thông báo phù hợp' : 'Chưa gửi thông báo nào'}
-                    description={
-                      historyFiltered ? 'Thử đổi từ khóa hoặc bộ lọc.' : 'Các thông báo đã gửi sẽ hiện ở đây.'
-                    }
-                  />
-                ),
               }}
               expandable={{
                 expandedRowRender: (b) => (
