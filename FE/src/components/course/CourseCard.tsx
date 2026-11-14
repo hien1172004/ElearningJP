@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Users, GraduationCap } from 'lucide-react'
+import { BookOpen, Users, GraduationCap, Crown } from 'lucide-react'
 import type { CourseSummary } from '@/types'
 import { JLPT_LEVEL_BADGE } from '@/utils/jlpt'
 
@@ -66,7 +66,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
               </p>
             </div>
           )}
-          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
             <span
               className={`px-2.5 py-0.5 rounded-lg text-xs font-black shadow-2xs backdrop-blur-xs ${
                 JLPT_LEVEL_BADGE[course.jlptLevel] || 'bg-surface text-sumi border border-suna'
@@ -74,6 +74,12 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             >
               {course.jlptLevel}
             </span>
+            {course.isPremium && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wide bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
+                <Crown className="w-3 h-3 fill-white" />
+                PRO
+              </span>
+            )}
             {showStatus && (
               <span
                 className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-2xs ${statusColor}`}

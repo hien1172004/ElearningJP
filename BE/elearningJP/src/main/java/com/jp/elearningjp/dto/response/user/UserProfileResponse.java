@@ -23,6 +23,7 @@ public class UserProfileResponse {
     String avatarUrl;
     Set<String> roles;
     UserStatus status;
+    Boolean isPro;
 
     String phoneNumber;
     String bio;

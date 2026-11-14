@@ -26,6 +26,7 @@ public class CourseDetailResponse {
     String description;
     String thumbnailUrl;
     Boolean published;
+    Boolean isPremium;
     /** Trạng thái bản đang soạn: EDITING | PENDING_REVIEW. */
     CourseReviewStatus reviewStatus;
     /** Bản đang soạn có thay đổi chưa được duyệt / xuất bản. */

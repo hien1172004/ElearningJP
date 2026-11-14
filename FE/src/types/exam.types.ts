@@ -18,6 +18,7 @@ export interface ExamSummary {
   overallPassingScore: number
   totalQuestions: number
   published: boolean
+  isPremium?: boolean
   /** Đề gắn khóa: phiên bản đã duyệt; null = chưa duyệt (lên cùng lần duyệt khóa). */
   publishedVersionId?: number | null
   /** Số phiên bản phát hành (v1, v2...). */

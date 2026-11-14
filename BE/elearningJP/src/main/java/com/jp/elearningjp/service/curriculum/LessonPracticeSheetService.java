@@ -65,6 +65,8 @@ public class LessonPracticeSheetService {
     PracticeSheetRenderer renderer;
     PublishedLessonResolver publishedLessonResolver;
     LessonDraftService lessonDraftService;
+    com.jp.elearningjp.shared.util.CurrentUserService currentUserService;
+    com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     /** File PDF trả về cho trình duyệt. */
     public record PracticeSheetFile(String fileName, byte[] content) {
@@ -137,6 +139,14 @@ public class LessonPracticeSheetService {
                 : request.itemIds().stream().filter(Objects::nonNull).collect(Collectors.toSet());
         if (wanted.isEmpty()) throw new AppException(ErrorCode.PRACTICE_SHEET_NO_ITEMS);
         if (wanted.size() > MAX_ITEMS) throw new AppException(ErrorCode.PRACTICE_SHEET_TOO_MANY_ITEMS);
+
+        // Giới hạn 10 từ/phiếu cho tài khoản Free
+        if (wanted.size() > 10) {
+            Long currentUserId = currentUserService.getCurrentUserId();
+            if (currentUserId != null && !subscriptionService.isUserPro(currentUserId)) {
+                throw new AppException(ErrorCode.PREMIUM_REQUIRED);
+            }
+        }
 
         Lesson lesson;
         Optional<PublishedLessonResolver.PublishedLesson> published = publishedLessonResolver.forReading(lessonId);

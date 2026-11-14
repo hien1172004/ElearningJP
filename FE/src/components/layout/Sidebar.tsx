@@ -20,6 +20,7 @@ import {
   PieChart,
   ShieldAlert,
   Megaphone,
+  Crown,
   // UserCheck, // dùng lại khi bật mục "Học viên" trong sidebar
 } from 'lucide-react'
 import { Tooltip, Dropdown } from 'antd'
@@ -530,24 +531,66 @@ export const Sidebar: React.FC = () => {
         )}
 
         {/* ===================== Nav items ===================== */}
-        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
-          {visibleNavItems.map((item) => {
-            const groupOpen = groupStates[item.to] ?? isGroupActive(item)
-            return (
-              <NavItemRow
-                key={item.to}
-                item={item}
-                collapsed={collapsed}
-                groupOpen={groupOpen}
-                onToggleGroup={() => toggleGroup(item.to)}
-                onNavigate={isMobile ? closeMobile : undefined}
-              />
-            )
-          })}
-        </nav>
+        <nav className="flex-1 overflow-y-auto py-3 px-3 flex flex-col justify-between">
+          <div className="space-y-1">
+            {visibleNavItems.map((item) => {
+              const groupOpen = groupStates[item.to] ?? isGroupActive(item)
+              return (
+                <NavItemRow
+                  key={item.to}
+                  item={item}
+                  collapsed={collapsed}
+                  groupOpen={groupOpen}
+                  onToggleGroup={() => toggleGroup(item.to)}
+                  onNavigate={isMobile ? closeMobile : undefined}
+                />
+              )
+            })}
+          </div>
 
-        {/* Spacer đáy (user/auth đã chuyển lên TopBar) */}
-        <div className="shrink-0 border-t border-gray-200 p-2" />
+          {/* ===================== Gói cước PRO (Ở góc dưới Sidebar) ===================== */}
+          <div className="mt-auto pt-4 pb-1">
+            {collapsed ? (
+              <Tooltip title="Gói cước PRO" placement="right">
+                <NavLink
+                  to="/pricing"
+                  onClick={isMobile ? closeMobile : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      'w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition cursor-pointer',
+                      isActive
+                        ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                        : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40',
+                    )
+                  }
+                >
+                  <Crown className="w-5 h-5 fill-amber-500 text-amber-500" />
+                </NavLink>
+              </Tooltip>
+            ) : (
+              <NavLink
+                to="/pricing"
+                onClick={isMobile ? closeMobile : undefined}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-xs font-bold cursor-pointer',
+                    isActive
+                      ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30'
+                      : 'bg-kinari/70 hover:bg-kinari text-sumi border border-suna/70 hover:border-amber-400/50 shadow-2xs',
+                  )
+                }
+              >
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                  <Crown className="w-4 h-4 fill-amber-500 text-amber-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sumi text-xs truncate">Gói cước PRO</p>
+                  <p className="text-[10px] text-nibi truncate font-normal">Mở khóa toàn bộ quyền lợi</p>
+                </div>
+              </NavLink>
+            )}
+          </div>
+        </nav>
       </aside>
     </>
   )

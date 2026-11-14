@@ -4,6 +4,12 @@
  */
 export const QUERY_KEYS = {
   me: ['me'] as const,
+  subscription: {
+    plans: ['subscriptions', 'plans'] as const,
+    mine: ['subscriptions', 'mine'] as const,
+    wallet: ['subscriptions', 'wallet'] as const,
+    order: (orderCode: number) => ['subscriptions', 'order', orderCode] as const,
+  },
   course: {
     listAll: ['courses', 'list'] as const,
     list: (params: Record<string, unknown>) => ['courses', 'list', params] as const,

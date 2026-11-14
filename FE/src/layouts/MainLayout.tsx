@@ -1,7 +1,8 @@
 import React from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Sidebar, TopBar } from '@/components/layout'
+import { Sidebar, TopBar, Footer } from '@/components/layout'
 import { AuthModal } from '@/components/auth'
+import { PaywallModal } from '@/components/subscription'
 import { useSidebarStore } from '@/stores'
 import { useNotificationSocket, useWebPush } from '@/hooks'
 import { cn } from '@/utils/cn'
@@ -57,17 +58,12 @@ export const MainLayout: React.FC = () => {
           <Outlet />
         </main>
 
-        {!hideFooter && (
-          <footer className="bg-surface border-t border-gray-200">
-            <div className="max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-5 py-6 text-center text-sm text-gray-500">
-              © 2026 ElearningJP - Hệ thống học tiếng Nhật trực tuyến thông minh (SRS &amp; Mazii Dictionary)
-            </div>
-          </footer>
-        )}
+        {!hideFooter && <Footer />}
       </div>
 
       {/* Mount AuthModal 1 lần ở layout root để mở từ bất kỳ đâu */}
       <AuthModal />
+      <PaywallModal />
     </div>
   )
 }

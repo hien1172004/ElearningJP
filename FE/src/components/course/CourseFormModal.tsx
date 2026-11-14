@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
-import { Modal, Form, Input, Select, App } from 'antd'
-import { Save, BookPlus, BookOpen } from 'lucide-react'
+import { Modal, Form, Input, Select, App, Switch } from 'antd'
+import { Save, BookPlus, BookOpen, Crown } from 'lucide-react'
 import { z } from 'zod'
 import type { CourseCreateRequest, CourseDetail, CourseUpdateRequest, JlptLevel } from '@/types'
 import { useCreateCourse, useUpdateCourse, useOnConcurrentReload } from '@/hooks'
@@ -13,6 +13,7 @@ const baseSchema = z.object({
   jlptLevel: z.enum(['N5', 'N4', 'N3', 'N2', 'N1']),
   description: z.string().max(2000).optional().or(z.literal('')),
   thumbnailUrl: z.string().url('URL không hợp lệ').optional().or(z.literal('')),
+  isPremium: z.boolean().optional(),
 })
 
 type FormValues = z.infer<typeof baseSchema>
@@ -51,6 +52,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           jlptLevel: course.jlptLevel,
           description: course.description ?? '',
           thumbnailUrl: course.thumbnailUrl ?? '',
+          isPremium: course.isPremium ?? false,
         })
       } else {
         form.resetFields()
@@ -58,6 +60,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           jlptLevel: 'N5',
           description: '',
           thumbnailUrl: '',
+          isPremium: false,
         })
       }
     }
@@ -78,6 +81,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           jlptLevel: v.jlptLevel,
           description: v.description || undefined,
           thumbnailUrl: v.thumbnailUrl || undefined,
+          isPremium: v.isPremium ?? false,
           version: course.version,
         }
         await update.mutateAsync(payload)
@@ -88,6 +92,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           jlptLevel: v.jlptLevel,
           description: v.description || undefined,
           thumbnailUrl: v.thumbnailUrl || undefined,
+          isPremium: v.isPremium ?? false,
           published: false,
         }
         await create.mutateAsync(payload)
@@ -152,6 +157,30 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
               </Select.Option>
             ))}
           </Select>
+        </Form.Item>
+
+        <Form.Item
+          name="isPremium"
+          valuePropName="checked"
+          label="Gói hội viên truy cập"
+        >
+          <div className="flex items-center gap-3 p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl">
+            <Form.Item name="isPremium" valuePropName="checked" noStyle>
+              <Switch
+                checkedChildren="PRO"
+                unCheckedChildren="Free"
+              />
+            </Form.Item>
+            <div className="text-xs">
+              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Crown className="w-3.5 h-3.5 text-amber-600" />
+                Khóa học Premium (Chỉ dành cho hội viên PRO)
+              </span>
+              <p className="text-slate-500 text-[11px] mt-0.5">
+                Nếu bật, học viên miễn phí cần nâng cấp PRO mới có thể đăng ký khóa học này.
+              </p>
+            </div>
+          </div>
         </Form.Item>
 
         <Form.Item

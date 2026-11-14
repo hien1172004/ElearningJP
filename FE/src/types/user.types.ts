@@ -9,6 +9,7 @@ export interface UserProfile {
   avatarUrl?: string
   roles: string[]
   status: string
+  isPro?: boolean
   phoneNumber?: string
   bio?: string
   currentLevel?: LearnerLevel

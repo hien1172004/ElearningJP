@@ -22,6 +22,7 @@ public class ExamDetailResponse {
     Integer overallPassingScore;
     Integer totalQuestions;
     boolean published;
+    boolean isPremium;
     List<ExamScoreGroupResponse> scoreGroups;
     List<ExamSectionSummaryResponse> sections;
 }

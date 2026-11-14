@@ -104,6 +104,15 @@ export const courseService = {
       params: { publish },
     })
   },
+
+  setCoursePremium(
+    id: number,
+    isPremium: boolean,
+  ): Promise<ApiResponse<CourseSummary>> {
+    return axiosClient.patch(`/courses/${id}/premium`, null, {
+      params: { isPremium },
+    })
+  },
 }
 
 // ============================================================================

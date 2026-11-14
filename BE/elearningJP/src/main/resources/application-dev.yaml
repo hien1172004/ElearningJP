@@ -72,6 +72,13 @@ app:
     vapid-public-key: ${VAPID_PUBLIC_KEY:BFckzKFFMX4TAtW1lVLtLF8dad9YOyI2Eww2JWSeY845Xz869lC5IMTHsXOujNfAzI6dgbULc8bcFGmU5YLeC1c}
     vapid-private-key: ${VAPID_PRIVATE_KEY:CS8bP2-1rbsF5hGwtoldWAUZM9Ny4kZ_Z5chII3MFS0}
     vapid-subject: ${VAPID_SUBJECT:mailto:admin@elearningjp.com}
+  # Cổng thanh toán VietQR PayOS
+  payos:
+    client-id: ${PAYOS_CLIENT_ID:}
+    api-key: ${PAYOS_API_KEY:}
+    checksum-key: ${PAYOS_CHECKSUM_KEY:}
+    return-url: ${PAYOS_RETURN_URL:http://localhost:5173/pricing}
+    cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/pricing}
 
 springdoc:
   api-docs:

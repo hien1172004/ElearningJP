@@ -8,6 +8,7 @@ export interface User {
   role: string
   roles?: string[]
   status?: UserStatus
+  isPro?: boolean
   phone?: string
 }
 

@@ -75,6 +75,11 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID}
+      PAYOS_API_KEY: ${PAYOS_API_KEY}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY}
+      PAYOS_RETURN_URL: ${PAYOS_RETURN_URL:-http://localhost:5173/pricing}
+      PAYOS_CANCEL_URL: ${PAYOS_CANCEL_URL:-http://localhost:5173/pricing}
     depends_on:
       postgres:
         condition: service_healthy

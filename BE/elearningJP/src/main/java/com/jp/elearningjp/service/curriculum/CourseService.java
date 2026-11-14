@@ -442,6 +442,24 @@ public class CourseService {
     }
 
     /**
+     * ADMIN bật/tắt gói Premium (isPremium) cho khóa học.
+     */
+    @Transactional
+    public CourseResponse setCoursePremium(Long courseId, boolean isPremium) {
+        Course course = courseRepository.findByIdAndDeletedFalse(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+
+        course.setIsPremium(isPremium);
+        Course saved = courseRepository.save(course);
+        log.info("[COURSE] Course id={} isPremium status set to {}", courseId, isPremium);
+
+        CourseResponse response = courseMapper.toCourseResponse(saved);
+        long totalLessons = lessonRepository.countByCourseIdAndDeletedFalse(courseId);
+        response.setTotalLessons((int) totalLessons);
+        return response;
+    }
+
+    /**
      * Lấy tiến độ học tập chi tiết của học viên trong khóa học
      */
     @Transactional(readOnly = true)

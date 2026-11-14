@@ -32,6 +32,8 @@ public class CourseUpdateRequest {
     @Size(max = 500, message = "Link ảnh thumbnail tối đa 500 ký tự")
     String thumbnailUrl;
 
+    Boolean isPremium;
+
     // Không có field published: sửa thông tin giữ nguyên trạng thái xuất bản hiện tại,
     // bật/tắt xuất bản chỉ qua endpoint publish riêng.
 }

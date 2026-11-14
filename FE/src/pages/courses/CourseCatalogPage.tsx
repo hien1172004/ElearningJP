@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpen } from 'lucide-react'
+import { Pagination } from 'antd'
 import { LoadingState } from '@/components/common'
 import { CourseCard, CourseFilterBar } from '@/components/course'
 import { useCourses } from '@/hooks'
@@ -13,16 +14,20 @@ export const CourseCatalogPage: React.FC = () => {
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | undefined>(undefined)
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(12)
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedKeyword(keyword.trim()), 300)
+    const t = setTimeout(() => {
+      setDebouncedKeyword(keyword.trim())
+      setPage(1)
+    }, 300)
     return () => clearTimeout(t)
   }, [keyword])
 
   const { data, isLoading, isError } = useCourses({
     jlptLevel: selectedLevel,
     page,
-    size: 12,
+    size: pageSize,
   })
 
   const courses = data?.items ?? []
@@ -65,7 +70,10 @@ export const CourseCatalogPage: React.FC = () => {
           keyword={keyword}
           onKeywordChange={setKeyword}
           selectedLevel={selectedLevel}
-          onLevelChange={setSelectedLevel}
+          onLevelChange={(lvl) => {
+            setSelectedLevel(lvl)
+            setPage(1)
+          }}
         />
 
         {isLoading && <LoadingState message="Đang tải danh sách khóa học..." />}
@@ -100,27 +108,27 @@ export const CourseCatalogPage: React.FC = () => {
               ))}
             </div>
 
-            {data && data.totalPages > 1 && (
-              <div className="flex items-center justify-center gap-3 pt-6">
-                <button
-                  type="button"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-sumi bg-surface border border-suna hover:border-ai/40 hover:bg-kinari/50 disabled:opacity-40 transition cursor-pointer disabled:cursor-not-allowed shadow-2xs"
-                >
-                  Trang trước
-                </button>
-                <span className="text-xs font-semibold text-nibi px-3">
-                  Trang {data.page} / {data.totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={page >= data.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-sumi bg-surface border border-suna hover:border-ai/40 hover:bg-kinari/50 disabled:opacity-40 transition cursor-pointer disabled:cursor-not-allowed shadow-2xs"
-                >
-                  Trang sau
-                </button>
+            {data && data.totalElements > 0 && (
+              <div className="flex items-center justify-center pt-8">
+                <Pagination
+                  current={page}
+                  pageSize={pageSize}
+                  total={data.totalElements}
+                  onChange={(newPage, newPageSize) => {
+                    setPage(newPage)
+                    if (newPageSize && newPageSize !== pageSize) {
+                      setPageSize(newPageSize)
+                      setPage(1)
+                    }
+                  }}
+                  onShowSizeChange={(_current, newPageSize) => {
+                    setPageSize(newPageSize)
+                    setPage(1)
+                  }}
+                  showSizeChanger={true}
+                  pageSizeOptions={['8', '12', '24', '48']}
+                  locale={{ items_per_page: '/ trang' }}
+                />
               </div>
             )}
           </>

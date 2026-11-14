@@ -49,6 +49,10 @@ public class Course extends SoftDeletableEntity {
     @Column(name = "is_published", nullable = false)
     private Boolean published;
 
+    @Column(name = "is_premium", nullable = false)
+    @Builder.Default
+    private Boolean isPremium = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;

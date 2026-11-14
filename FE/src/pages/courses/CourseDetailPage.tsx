@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Users, BookOpen, GraduationCap, ArrowRight, LogIn, Award, FileCheck, Clock } from 'lucide-react'
+import { Users, BookOpen, GraduationCap, ArrowRight, LogIn, Award, FileCheck, Clock, Crown } from 'lucide-react'
 import { Button as AntdButton } from 'antd'
 import { PageHeader, LoadingState, BackButton } from '@/components/common'
 import { CourseContentUpdateNotice, LessonOutlineList } from '@/components/course'
 import { CourseProgressBar } from '@/components/common'
 import { useCourseDetail, useEnrollCourse, useMyEnrollments } from '@/hooks'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useSubscriptionStore } from '@/stores'
 import { toSlug } from '@/utils'
 import { canPreviewCourse } from '@/utils/roles'
 import { LESSON_FROM_COURSE_STATE } from '@/utils/lessonNav'
@@ -36,6 +36,9 @@ export const CourseDetailPage: React.FC = () => {
   // Admin (mọi khóa) / giáo viên chủ khóa được xem bài học mà không cần đăng ký
   const isPreview = !isEnrolled && canPreviewCourse(user, course?.canManage)
   const canOpenLessons = isEnrolled || isPreview
+  const isProStore = useSubscriptionStore((s) => s.isPro)
+  const openPaywall = useSubscriptionStore((s) => s.openPaywall)
+  const isUserPro = isProStore || !!user?.isPro
 
   if (isLoading) return <LoadingState message="Đang tải thông tin khóa học..." fullHeight />
   if (isError || !course) {
@@ -60,7 +63,17 @@ export const CourseDetailPage: React.FC = () => {
       <BackButton to="/courses" />
       {/* Hero */}
       <PageHeader
-        title={<h1 className="text-xl sm:text-2xl font-bold text-sumi leading-tight">{course.title}</h1>}
+        title={
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-sumi leading-tight">{course.title}</h1>
+            {course.isPremium && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black tracking-wide bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
+                <Crown className="w-3.5 h-3.5 fill-white" />
+                PRO
+              </span>
+            )}
+          </div>
+        }
         subtitle={
           // Mô tả dài → chỉ hiện tối đa 2 dòng, rê chuột để xem đầy đủ
           <span
@@ -74,16 +87,32 @@ export const CourseDetailPage: React.FC = () => {
         variant="indigo"
         actions={
           isAuthenticated && !canOpenLessons ? (
-            <AntdButton
-              type="primary"
-              size="large"
-              icon={<LogIn className="w-5 h-5" />}
-              loading={enroll.isPending}
-              onClick={() => enroll.mutate(courseId)}
-              className="!rounded-md !font-bold"
-            >
-              Đăng ký học ngay
-            </AntdButton>
+            course.isPremium && !isUserPro ? (
+              <AntdButton
+                type="primary"
+                size="large"
+                icon={<Crown className="w-5 h-5 text-amber-300 fill-amber-300" />}
+                onClick={() =>
+                  openPaywall(
+                    'Khóa học này dành riêng cho hội viên PRO. Hãy nâng cấp gói PRO để mở khóa toàn bộ bài học!',
+                  )
+                }
+                className="!rounded-md !font-bold !bg-gradient-to-r !from-amber-500 !to-amber-600 !border-none !text-white shadow-md hover:scale-105 transition"
+              >
+                Mở khóa bằng PRO 👑
+              </AntdButton>
+            ) : (
+              <AntdButton
+                type="primary"
+                size="large"
+                icon={<LogIn className="w-5 h-5" />}
+                loading={enroll.isPending}
+                onClick={() => enroll.mutate(courseId)}
+                className="!rounded-md !font-bold"
+              >
+                Đăng ký học ngay
+              </AntdButton>
+            )
           ) : canOpenLessons && firstLesson ? (
             <Link
               to={

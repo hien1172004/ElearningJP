@@ -63,10 +63,16 @@ class LessonPracticeSheetServiceTest {
 
     @BeforeEach
     void setUp() {
+        var currentUserService = org.mockito.Mockito.mock(com.jp.elearningjp.shared.util.CurrentUserService.class);
+        var subscriptionService = org.mockito.Mockito.mock(com.jp.elearningjp.service.subscription.SubscriptionService.class);
+        org.mockito.Mockito.when(subscriptionService.isUserPro(org.mockito.ArgumentMatchers.any())).thenReturn(true);
+
         service = new LessonPracticeSheetService(lessonRepository, sectionRepository, kanjiItemRepository,
                 vocabItemRepository, strokeRepository, courseAccessGuard, new PracticeSheetRenderer(),
                 org.mockito.Mockito.mock(com.jp.elearningjp.service.curriculum.snapshot.PublishedLessonResolver.class),
-                draftService());
+                draftService(),
+                currentUserService,
+                subscriptionService);
         lesson = new Lesson();
         lesson.setId(1L);
         lesson.setTitle("Bai 1");

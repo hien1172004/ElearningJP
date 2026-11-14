@@ -38,6 +38,7 @@ public class EnrollmentService {
     private final CurrentUserService currentUserService;
     private final CourseAccessGuard courseAccessGuard;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     // ============================================================
     // ENROLL
@@ -46,10 +47,12 @@ public class EnrollmentService {
     /**
      * User hiện tại enroll vào course.
      *
-     * <p>Điều kiện:</p>
+     * <p>
+     * Điều kiện:
+     * </p>
      * <ul>
-     *   <li>Course đã publish, chưa archived</li>
-     *   <li>User chưa có enrollment nào chưa xoá (ACTIVE hoặc COMPLETED)</li>
+     * <li>Course đã publish, chưa archived</li>
+     * <li>User chưa có enrollment nào chưa xoá (ACTIVE hoặc COMPLETED)</li>
      * </ul>
      */
     @Transactional
@@ -69,7 +72,12 @@ public class EnrollmentService {
             throw new AppException(ErrorCode.COURSE_ARCHIVED);
         }
 
-        // Khớp index uq_course_enrollments_active: chặn mọi bản ghi chưa xoá, không riêng ACTIVE
+        if (Boolean.TRUE.equals(course.getIsPremium()) && !subscriptionService.isUserPro(currentUser.getId())) {
+            throw new AppException(ErrorCode.PREMIUM_REQUIRED);
+        }
+
+        // Khớp index uq_course_enrollments_active: chặn mọi bản ghi chưa xoá, không
+        // riêng ACTIVE
         if (enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), courseId)) {
             throw new AppException(ErrorCode.ALREADY_ENROLLED);
         }
@@ -84,7 +92,8 @@ public class EnrollmentService {
         try {
             saved = enrollmentRepository.saveAndFlush(enrollment);
         } catch (DataIntegrityViolationException e) {
-            // Bấm đăng ký 2 lần gần như cùng lúc: cả 2 đều qua bước kiểm tra, index chặn request sau.
+            // Bấm đăng ký 2 lần gần như cùng lúc: cả 2 đều qua bước kiểm tra, index chặn
+            // request sau.
             throw new AppException(ErrorCode.ALREADY_ENROLLED);
         }
 
@@ -146,7 +155,10 @@ public class EnrollmentService {
         return toResponses(currentUser.getId(), enrollments);
     }
 
-    /** Tính % tiến độ của mọi khóa bằng 1 query gộp thay vì 1 query cho mỗi enrollment. */
+    /**
+     * Tính % tiến độ của mọi khóa bằng 1 query gộp thay vì 1 query cho mỗi
+     * enrollment.
+     */
     private List<EnrollmentResponse> toResponses(Long userId, List<CourseEnrollment> enrollments) {
         if (enrollments.isEmpty()) {
             return List.of();

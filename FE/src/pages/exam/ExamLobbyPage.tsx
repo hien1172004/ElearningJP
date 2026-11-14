@@ -10,8 +10,9 @@ import { isTeacherOrAdmin as checkTeacherOrAdmin } from '@/utils/roles'
 import { JLPT_LEVEL_BADGE } from '@/utils/jlpt'
 import { 
   Award, Clock, HelpCircle, CheckCircle2, ChevronRight, 
-  Flame, BookOpen, Headphones, Play, X, Loader2, Filter, Edit3
+  Flame, BookOpen, Headphones, Play, X, Loader2, Filter, Edit3, Crown
 } from 'lucide-react'
+import { Pagination } from 'antd'
 import { LeaderboardWidget } from '@/components'
 
 export const ExamLobbyPage: React.FC = () => {
@@ -26,6 +27,11 @@ export const ExamLobbyPage: React.FC = () => {
   const [exams, setExams] = useState<ExamSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Phân trang
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(6)
+  const [totalItems, setTotalItems] = useState<number>(0)
 
   // State cho Modal đăng nhập
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -43,7 +49,7 @@ export const ExamLobbyPage: React.FC = () => {
 
   useEffect(() => {
     fetchExams()
-  }, [selectedLevel])
+  }, [selectedLevel, currentPage, pageSize])
 
   const fetchExams = async () => {
     try {
@@ -51,9 +57,12 @@ export const ExamLobbyPage: React.FC = () => {
       setError(null)
       const res = await examService.getPublishedExams({
         level: selectedLevel === 'ALL' ? undefined : selectedLevel,
+        page: currentPage - 1,
+        size: pageSize,
       })
       const items = res.data?.content || res.data?.items || []
       setExams(items)
+      setTotalItems(res.data?.totalElements ?? items.length)
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Không thể tải danh sách đề thi')
     } finally {
@@ -126,7 +135,10 @@ export const ExamLobbyPage: React.FC = () => {
               {levels.map((lvl) => (
                 <button
                   key={lvl}
-                  onClick={() => setSelectedLevel(lvl)}
+                  onClick={() => {
+                    setSelectedLevel(lvl)
+                    setCurrentPage(1)
+                  }}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     selectedLevel === lvl
                       ? 'bg-ai text-white shadow-2xs font-bold'
@@ -168,7 +180,8 @@ export const ExamLobbyPage: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {exams.map((exam) => (
                 <div
                   key={exam.id}
@@ -176,10 +189,16 @@ export const ExamLobbyPage: React.FC = () => {
                 >
                   <div className="p-5">
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${JLPT_LEVEL_BADGE[exam.jlptLevel]}`}>
                           JLPT {exam.jlptLevel}
                         </span>
+                        {exam.isPremium && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
+                            <Crown className="w-3 h-3 fill-white" />
+                            PRO
+                          </span>
+                        )}
                         {exam.versionNo && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-nibi border border-suna">
                             v{exam.versionNo}
@@ -238,6 +257,32 @@ export const ExamLobbyPage: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Phân trang chuẩn Ant Design */}
+            {totalItems > 0 && (
+              <div className="flex items-center justify-center pt-5">
+                <Pagination
+                  current={currentPage}
+                  pageSize={pageSize}
+                  total={totalItems}
+                  onChange={(page, newPageSize) => {
+                    setCurrentPage(page)
+                    if (newPageSize && newPageSize !== pageSize) {
+                      setPageSize(newPageSize)
+                      setCurrentPage(1)
+                    }
+                  }}
+                  onShowSizeChange={(_current, newPageSize) => {
+                    setPageSize(newPageSize)
+                    setCurrentPage(1)
+                  }}
+                  showSizeChanger={true}
+                  pageSizeOptions={['6', '12', '20', '50']}
+                  locale={{ items_per_page: '/ trang' }}
+                />
+              </div>
+            )}
+          </>
           )}
         </div>
 

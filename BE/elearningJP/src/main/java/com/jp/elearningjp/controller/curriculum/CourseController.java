@@ -144,4 +144,19 @@ public class CourseController {
                 .data(courseService.publishCourse(id, publish))
                 .build();
     }
+
+    @Operation(summary = "[Admin] Bật/tắt trạng thái Premium (dành riêng cho hội viên PRO) của khóa học")
+    @SecurityRequirement(name = "bearerAuth")
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/premium")
+    public ApiResponse<CourseResponse> setCoursePremium(
+            @PathVariable Long id,
+            @RequestParam boolean isPremium
+    ) {
+        return ApiResponse.<CourseResponse>builder()
+                .success(true)
+                .message(isPremium ? "Đã chuyển khóa học sang gói Premium (Chỉ dành cho hội viên PRO)" : "Đã chuyển khóa học sang Miễn phí")
+                .data(courseService.setCoursePremium(id, isPremium))
+                .build();
+    }
 }

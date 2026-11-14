@@ -29,6 +29,9 @@ public enum ErrorCode {
     INVALID_RESET_TOKEN(1014, "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
     SAME_OLD_PASSWORD(1015, "Mật khẩu mới phải khác mật khẩu cũ", HttpStatus.BAD_REQUEST),
     CANNOT_MODIFY_OWN_ACCOUNT(1016, "Bạn không thể thay đổi trạng thái hoặc vai trò của chính mình", HttpStatus.BAD_REQUEST),
+    PREMIUM_REQUIRED(1050, "Nội dung này yêu cầu gói hội viên PRO", HttpStatus.PAYMENT_REQUIRED),
+    TOKEN_EXHAUSTED(1051, "Bạn đã hết lượt token AI hôm nay", HttpStatus.PAYMENT_REQUIRED),
+    ORDER_NOT_FOUND(1052, "Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND),
 
 // CURRICULUM MODULE — Course (1100-1199)
     COURSE_NOT_FOUND(1100, "Không tìm thấy khóa học", HttpStatus.NOT_FOUND),

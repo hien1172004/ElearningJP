@@ -68,6 +68,10 @@ public class Exam extends SoftDeletableEntity {
     @Column(name = "is_published", nullable = false)
     private boolean published = false;
 
+    @Builder.Default
+    @Column(name = "is_premium", nullable = false)
+    private boolean isPremium = false;
+
     /** Đề gắn khóa đã duyệt mà giáo viên yêu cầu gỡ: học viên vẫn thi tới khi ADMIN duyệt lần tới. */
     @Builder.Default
     @Column(name = "pending_removal", nullable = false)

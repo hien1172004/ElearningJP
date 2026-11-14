@@ -328,5 +328,31 @@ public class AdminExamController {
                 .data(regradedCount)
                 .build();
     }
+
+    @PatchMapping("/{id}/premium")
+    @Operation(summary = "Bật/tắt trạng thái Premium (dành riêng cho hội viên PRO) của đề thi")
+    public ApiResponse<Void> setExamPremium(@PathVariable Long id, @RequestParam boolean isPremium) {
+        adminExamService.setExamPremium(id, isPremium);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message(isPremium ? "Đã chuyển đề thi sang gói Premium" : "Đã chuyển đề thi sang Miễn phí")
+                .build();
+    }
+
+    @PutMapping(ApiPaths.AdminExam.BY_ID)
+    @Operation(summary = "Cập nhật thông tin cơ bản của đề thi (tiêu đề, cấp độ, thời lượng, điểm đỗ...)")
+    public ApiResponse<ExamSummaryResponse> updateExamBasic(
+            @PathVariable Long id,
+            @jakarta.validation.Valid @RequestBody com.jp.elearningjp.dto.request.exam.UpdateExamRequest request) {
+
+        ExamSummaryResponse updated = adminExamService.updateExamBasic(id, request);
+        return ApiResponse.<ExamSummaryResponse>builder()
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Cập nhật thông tin đề thi thành công")
+                .data(updated)
+                .build();
+    }
 }
 
