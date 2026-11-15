@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { Plus, X as XIcon, Link2, Shuffle, Sparkles, Wand2 } from 'lucide-react'
-import { Input, Select, Button, AutoComplete, Tag, App } from 'antd'
+import { Input, Select, Button, AutoComplete, Tag } from 'antd'
 import type { LessonDetail } from '@/types'
 import {
   buildCandidatesFromLesson,
@@ -118,7 +119,6 @@ export const MatchingPairsEditor: React.FC<MatchingPairsEditorProps> = ({
   lesson,
   onAutoFilled,
 }) => {
-  const { message } = App.useApp()
   const left = value?.left ?? []
   const right = value?.right ?? []
   const [shuffledRight, setShuffledRight] = useState<MatchingSide[]>([])
@@ -166,13 +166,13 @@ export const MatchingPairsEditor: React.FC<MatchingPairsEditorProps> = ({
    */
   const handleAutoFill = () => {
     if (filteredCandidates.length < 2) {
-      message.warning('Cần ít nhất 2 mục trong lesson để tạo cặp ghép.')
+      toast.warning('Cần ít nhất 2 mục trong lesson để tạo cặp ghép.')
       return
     }
     const paired = autoPairCandidates(filteredCandidates, 'word-to-meaning')
     onChange?.(paired)
     onAutoFilled?.(paired.left.length)
-    message.success(
+    toast.success(
       `Đã tạo ${paired.left.length} cặp ghép từ ${
         kindFilter === 'ALL' ? 'tất cả' : getKindLabel(kindFilter).toLowerCase()
       } trong lesson.`,

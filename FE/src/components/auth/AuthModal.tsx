@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
+import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
-import { Modal, Tabs, App as AntdApp, Divider, Form, Input, Button, Checkbox } from 'antd'
+import { Modal, Tabs, Divider, Form, Input, Button, Checkbox } from 'antd'
 import { Mail, Lock, User, Phone } from 'lucide-react'
 import { z } from 'zod'
 import { useAuthModalStore, useAuthStore } from '@/stores'
@@ -54,7 +55,6 @@ type RegisterFormValues = z.infer<typeof registerSchema>
 
 export const AuthModal: React.FC = () => {
   const navigate = useNavigate()
-  const { message } = AntdApp.useApp()
 
   const { open, mode, redirectTo, close, setMode } = useAuthModalStore()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -115,7 +115,7 @@ export const AuthModal: React.FC = () => {
       const values = (await loginForm.validateFields()) as LoginFormValues
       const parsed = loginSchema.safeParse(values)
       if (!parsed.success) {
-        message.error(parsed.error.issues[0].message)
+        toast.error(parsed.error.issues[0].message)
         return
       }
       // Truyền redirectTo qua __redirectTo để override default trong hook.
@@ -140,7 +140,7 @@ export const AuthModal: React.FC = () => {
       const values = (await registerForm.validateFields()) as RegisterFormValues
       const parsed = registerSchema.safeParse(values)
       if (!parsed.success) {
-        message.error(parsed.error.issues[0].message)
+        toast.error(parsed.error.issues[0].message)
         return
       }
       registerMutate(

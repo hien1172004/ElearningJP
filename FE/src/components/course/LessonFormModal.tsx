@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
-import { Modal, Form, Input, InputNumber, App } from 'antd'
+import { toast } from 'sonner'
+import { Modal, Form, Input, InputNumber } from 'antd'
 import { Save, Plus, Pencil } from 'lucide-react'
 import { z } from 'zod'
 import type { LessonCreateRequest, LessonDetail, LessonUpdateRequest } from '@/types'
@@ -32,7 +33,6 @@ export const LessonFormModal: React.FC<LessonFormModalProps> = ({
   onSuccess,
 }) => {
   const isEdit = !!lesson
-  const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
 
   const create = useCreateLesson(courseId)
@@ -72,7 +72,7 @@ export const LessonFormModal: React.FC<LessonFormModalProps> = ({
       const values = (await form.validateFields()) as FormValues
       const parsed = schema.safeParse(values)
       if (!parsed.success) {
-        message.error(parsed.error.issues[0].message)
+        toast.error(parsed.error.issues[0].message)
         return
       }
       if (isEdit && lesson) {

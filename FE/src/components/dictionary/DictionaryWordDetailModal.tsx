@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Tooltip, message } from 'antd'
+import { toast } from 'sonner'
+import { Modal, Tooltip } from 'antd'
 import {
   CloseOutlined,
   SoundOutlined,
@@ -185,7 +186,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
     if (!word) return
     navigator.clipboard.writeText(word)
     setCopied(true)
-    message.success('Đã sao chép vào bộ nhớ tạm')
+    toast.success('Đã sao chép vào bộ nhớ tạm')
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -371,7 +372,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                       <button
                         type="button"
                         onClick={() =>
-                          message.info(
+                          toast.info(
                             `Giải nghĩa AI: "${word}" là từ ngữ thường dùng trong giao tiếp tiếng Nhật đời sống và các kỳ thi JLPT.`
                           )
                         }
@@ -383,7 +384,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
 
                       <button
                         type="button"
-                        onClick={() => message.info('Hình ảnh minh họa trực quan cho từ vựng')}
+                        onClick={() => toast.info('Hình ảnh minh họa trực quan cho từ vựng')}
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-100 transition-all cursor-pointer"
                       >
                         <PictureOutlined />
@@ -393,7 +394,7 @@ export const DictionaryWordDetailModal: React.FC<DictionaryWordDetailModalProps>
                       <button
                         type="button"
                         onClick={() =>
-                          message.info('Bạn có thể mở chế độ "Luyện nói, viết" trong Sổ tay để thực hành phát âm với AI!')
+                          toast.info('Bạn có thể mở chế độ "Luyện nói, viết" trong Sổ tay để thực hành phát âm với AI!')
                         }
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium hover:bg-gray-100 transition-all cursor-pointer"
                       >

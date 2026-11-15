@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { toast } from 'sonner'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Button,
   Tag,
   Spin,
   Alert,
-  Tooltip,
-  message,
-} from 'antd'
+  Tooltip } from 'antd'
 import {
   SoundOutlined,
   CheckCircleOutlined,
@@ -335,7 +334,7 @@ export const NotebookReviewPage: React.FC = () => {
         setIsCompleted(true)
       }
     } catch {
-      message.error('Không thể lưu tiến độ ôn tập!')
+      toast.error('Không thể lưu tiến độ ôn tập!')
     }
   }
 
@@ -351,7 +350,7 @@ export const NotebookReviewPage: React.FC = () => {
     const shuffled = [...items].sort(() => Math.random() - 0.5)
     setItems(shuffled)
     setCurrentIndex(0)
-    message.success('Đã xáo trộn danh sách từ vựng!')
+    toast.success('Đã xáo trộn danh sách từ vựng!')
   }
 
   // Phím tắt bàn phím cho Flashcard
@@ -470,11 +469,11 @@ export const NotebookReviewPage: React.FC = () => {
 
     if (isCorrect) {
       setCorrectCount((prev) => prev + 1)
-      message.success('Chính xác!')
+      toast.success('Chính xác!')
       sendReviewRating(currentItem.id, 'GOOD')
     } else {
       const cleanReading = formatReading(currentItem.reading)
-      message.error(
+      toast.error(
         `Chưa chính xác! Đáp án đúng là: ${currentItem.word}${cleanReading ? ` (${cleanReading})` : ''}`
       )
       sendReviewRating(currentItem.id, 'AGAIN')
@@ -557,7 +556,7 @@ export const NotebookReviewPage: React.FC = () => {
         .webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      message.warning('Trình duyệt của bạn chưa bật hoặc không hỗ trợ Web Speech API!')
+      toast.warning('Trình duyệt của bạn chưa bật hoặc không hỗ trợ Web Speech API!')
       return
     }
 
@@ -585,7 +584,7 @@ export const NotebookReviewPage: React.FC = () => {
         setSpeechAccuracy(accuracy)
 
         if (accuracy >= 80) {
-          message.success('Phát âm rất tốt!')
+          toast.success('Phát âm rất tốt!')
           sendReviewRating(currentItem.id, 'GOOD')
           setTimeout(() => {
             if (currentIndex + 1 < items.length) {
@@ -595,10 +594,10 @@ export const NotebookReviewPage: React.FC = () => {
             }
           }, 1500)
         } else if (accuracy >= 50) {
-          message.info('Phát âm tương đối gần đúng!')
+          toast.info('Phát âm tương đối gần đúng!')
           sendReviewRating(currentItem.id, 'HARD')
         } else {
-          message.warning('Cần cải thiện phát âm!')
+          toast.warning('Cần cải thiện phát âm!')
           sendReviewRating(currentItem.id, 'AGAIN')
         }
       }
@@ -606,7 +605,7 @@ export const NotebookReviewPage: React.FC = () => {
 
     recognition.onerror = () => {
       setIsListening(false)
-      message.error('Không nhận diện được giọng nói hoặc quyền Micro bị từ chối!')
+      toast.error('Không nhận diện được giọng nói hoặc quyền Micro bị từ chối!')
     }
 
     recognition.onend = () => {
@@ -775,7 +774,7 @@ export const NotebookReviewPage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => message.info('Cảm ơn bạn! Đội ngũ sẽ tiếp tục hoàn thiện dữ liệu bài học.')}
+              onClick={() => toast.info('Cảm ơn bạn! Đội ngũ sẽ tiếp tục hoàn thiện dữ liệu bài học.')}
               className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
             >
               <ExclamationCircleOutlined className="text-xs text-amber-500" />
@@ -1041,7 +1040,7 @@ export const NotebookReviewPage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => message.info('Cảm ơn bạn! Đội ngũ sẽ tiếp tục hoàn thiện dữ liệu bài học.')}
+              onClick={() => toast.info('Cảm ơn bạn! Đội ngũ sẽ tiếp tục hoàn thiện dữ liệu bài học.')}
               className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors cursor-pointer"
             >
               <ExclamationCircleOutlined className="text-xs text-amber-500" />
@@ -1168,7 +1167,7 @@ export const NotebookReviewPage: React.FC = () => {
                         character={char}
                         size={220}
                         onCompleteQuiz={(summary) => {
-                          message.success(`Đã viết xong "${char}"! Chuẩn: ${summary.accuracyScore}%`)
+                          toast.success(`Đã viết xong "${char}"! Chuẩn: ${summary.accuracyScore}%`)
                           sendReviewRating(
                             currentItem.id,
                             summary.totalMistakes === 0 ? 'EASY' : 'GOOD'
@@ -1226,7 +1225,7 @@ export const NotebookReviewPage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => message.info('Cảm ơn bạn! Đội ngũ sẽ tiếp tục hoàn thiện dữ liệu bài học.')}
+              onClick={() => toast.info('Cảm ơn bạn! Đội ngũ sẽ tiếp tục hoàn thiện dữ liệu bài học.')}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
             >
               <ExclamationCircleOutlined className="text-xs text-gray-700" />

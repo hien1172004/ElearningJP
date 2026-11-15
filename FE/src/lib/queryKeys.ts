@@ -152,7 +152,7 @@ export const QUERY_KEYS = {
   notification: {
     /** Key gốc — invalidate `all` sẽ quét cả list/unread/recent. */
     all: ['notifications'] as const,
-    list: (page: number) => ['notifications', 'list', page] as const,
+    list: (page: number, size: number, filter: object) => ['notifications', 'list', page, size, filter] as const,
     /** Danh sách cuộn vô hạn trong dropdown chuông. */
     feedAll: ['notifications', 'feed'] as const,
     feed: (size: number) => ['notifications', 'feed', size] as const,

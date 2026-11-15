@@ -13,6 +13,7 @@ import {
   TeacherLessonEditorPage,
   LessonViewerPage,
   ProgressPage,
+  NotificationsPage,
   ProgressGoalPage,
   GoogleCallbackPage,
   ExamLobbyPage,
@@ -223,6 +224,21 @@ export const router = createBrowserRouter([
       // Theo dõi học viên: ADMIN mọi khóa, TEACHER khóa của mình
       { path: 'students', element: <TeacherStudentsPage /> },
     ],
+  },
+
+  // ====================================================================
+  // Protected: Tất cả thông báo (lọc, xoá)
+  // ====================================================================
+  {
+    path: '/notifications',
+    element: (
+      <ProtectedRoute>
+        <WithMainLayout>
+          <ProtectedOutlet />
+        </WithMainLayout>
+      </ProtectedRoute>
+    ),
+    children: [{ index: true, element: <NotificationsPage /> }],
   },
 
   // ====================================================================

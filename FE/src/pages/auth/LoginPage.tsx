@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, BookOpen, Brain, BarChart2 } from 'lucide-react'
-import { App, Button as AntdButton, Checkbox, Form, Input as AntdInput, Spin } from 'antd'
+import { Button as AntdButton, Checkbox, Form, Input as AntdInput, Spin } from 'antd'
 import { z } from 'zod'
 import { AuthFooter } from '@/components/auth'
 import { BrandLogo } from '@/components/common/BrandLogo'
@@ -55,7 +56,6 @@ export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const [remember, setRemember] = useState(true)
   const redirectTo = searchParams.get('redirect') || '/'
-  const { message } = App.useApp()
   const [form] = Form.useForm<LoginFormValues>()
 
   const googleBtnRef = useRef<HTMLDivElement>(null)
@@ -65,12 +65,9 @@ export const LoginPage: React.FC = () => {
 
   useEffect(() => {
     if (searchParams.get('expired') === '1') {
-      message.warning({
-        content: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.',
-        duration: 4,
-      })
+      toast.warning('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.', { duration: 4000 })
     }
-  }, [searchParams, message])
+  }, [searchParams])
 
   // Khởi tạo Google Identity Services
   useEffect(() => {
@@ -123,7 +120,7 @@ export const LoginPage: React.FC = () => {
       const parsed = loginSchema.safeParse(values)
       if (!parsed.success) {
         const first = parsed.error.issues[0]
-        message.error(first.message)
+        toast.error(first.message)
         return
       }
       mutate(parsed.data)

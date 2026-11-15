@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { toast } from 'sonner'
 import { formatNotebookCounts } from '@/components/notebook/itemTypeMeta'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -8,11 +9,9 @@ import {
   Pagination,
   Spin,
   Avatar,
-  message,
   Modal,
   Tag,
-  Empty,
-} from 'antd'
+  Empty } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   SearchOutlined,
@@ -95,7 +94,7 @@ export const NotebookExplorePage: React.FC = () => {
     try {
       await toggleLike.mutateAsync(notebook.id)
     } catch {
-      message.error('Không thể thực hiện thao tác thích')
+      toast.error('Không thể thực hiện thao tác thích')
     }
   }
 
@@ -111,7 +110,7 @@ export const NotebookExplorePage: React.FC = () => {
       const wordsRes = await notebookService.getWords(notebook.id, { page: 0, size: 20 })
       setPreviewWords(wordsRes.data?.items ?? [])
     } catch {
-      message.error('Không thể tải chi tiết sổ tay')
+      toast.error('Không thể tải chi tiết sổ tay')
     } finally {
       setLoadingPreview(false)
     }
@@ -120,7 +119,7 @@ export const NotebookExplorePage: React.FC = () => {
   // Clone sổ tay về kho cá nhân
   const handleCloneFromPreview = async () => {
     if (!selectedNotebook?.shareCode) {
-      message.warning('Sổ tay này chưa có mã chia sẻ công khai!')
+      toast.warning('Sổ tay này chưa có mã chia sẻ công khai!')
       return
     }
 
@@ -130,13 +129,13 @@ export const NotebookExplorePage: React.FC = () => {
         shareCode: selectedNotebook.shareCode,
       })
       if (res.data) {
-        message.success(`Đã nhân bản "${selectedNotebook.name}" vào sổ tay của bạn!`)
+        toast.success(`Đã nhân bản "${selectedNotebook.name}" vào sổ tay của bạn!`)
         setPreviewModalOpen(false)
         navigate(`/notebooks/${res.data.id}`)
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Không thể tải sổ tay này về kho!'
-      message.error(msg)
+      toast.error(msg)
     } finally {
       setCloning(false)
     }

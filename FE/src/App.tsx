@@ -10,7 +10,15 @@ export const App: React.FC = () => {
     <ErrorBoundary>
       <AppRouter />
       <ConcurrentEditModal />
-      <Toaster position="top-right" richColors closeButton theme={theme} />
+      {/* Kênh toast duy nhất của app: luôn góc phải, ngay dưới TopBar (không che chuông / tài khoản) */}
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        theme={theme}
+        offset={{ top: 'calc(var(--topbar-h) + 8px)', right: 16 }}
+        mobileOffset={{ top: 'calc(var(--topbar-h) + 8px)', right: 12, left: 12 }}
+      />
     </ErrorBoundary>
   )
 }

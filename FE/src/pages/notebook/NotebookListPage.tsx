@@ -1,16 +1,15 @@
 import React, { useState, useMemo } from 'react'
+import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import {
   Input,
   Dropdown,
   Modal,
-  message,
   Switch,
   Tooltip,
   Button,
   Select,
-  Pagination,
-} from 'antd'
+  Pagination } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   SearchOutlined,
@@ -40,7 +39,7 @@ import { ShareNotebookModal } from '@/components/notebook/ShareNotebookModal'
 import { ReviewModeSelectModal } from '@/components/notebook/ReviewModeSelectModal'
 import { notebookService } from '@/services/notebook.service'
 import type { Notebook, NotebookGroup } from '@/types'
-import { BackButton, RequiredMark } from '@/components/common'
+import { BackButton, RequiredMark, confirmDialog } from '@/components/common'
 
 type SortOption = 'newest' | 'oldest' | 'nameAsc' | 'nameDesc'
 
@@ -103,13 +102,13 @@ export const NotebookListPage: React.FC = () => {
       ])
       const hasError = results.some((r) => r.isError)
       if (hasError) {
-        if (!silent) message.error('Không thể đồng bộ dữ liệu sổ tay')
+        if (!silent) toast.error('Không thể đồng bộ dữ liệu sổ tay')
       } else if (!silent) {
-        message.success('Đã đồng bộ toàn bộ dữ liệu sổ tay và tiến độ SRS mới nhất!')
+        toast.success('Đã đồng bộ toàn bộ dữ liệu sổ tay và tiến độ SRS mới nhất!')
       }
     } catch {
       if (!silent) {
-        message.error('Không thể đồng bộ dữ liệu sổ tay')
+        toast.error('Không thể đồng bộ dữ liệu sổ tay')
       }
     } finally {
       setIsSyncing(false)
@@ -123,10 +122,10 @@ export const NotebookListPage: React.FC = () => {
         name,
         groupId: currentGroup ? currentGroup.id : null,
       })
-      message.success('Đã tạo sổ tay mới thành công!')
+      toast.success('Đã tạo sổ tay mới thành công!')
       handleSyncAll(true)
     } catch {
-      message.error('Không thể tạo sổ tay!')
+      toast.error('Không thể tạo sổ tay!')
     }
   }
 
@@ -143,10 +142,10 @@ export const NotebookListPage: React.FC = () => {
         name: notebookName,
         groupId,
       })
-      message.success(`Đã tạo nhóm "${groupName}" và sổ tay "${notebookName}" thành công!`)
+      toast.success(`Đã tạo nhóm "${groupName}" và sổ tay "${notebookName}" thành công!`)
       handleSyncAll(true)
     } catch {
-      message.error('Không thể tạo nhóm sổ tay!')
+      toast.error('Không thể tạo nhóm sổ tay!')
     }
   }
 
@@ -158,12 +157,12 @@ export const NotebookListPage: React.FC = () => {
         currentGroup ? currentGroup.id : null
       )
       if (res.data) {
-        message.success(`Đã nhân bản sổ tay "${res.data.name}" thành công!`)
+        toast.success(`Đã nhân bản sổ tay "${res.data.name}" thành công!`)
         handleSyncAll(true)
         navigate(`/notebooks/${res.data.id}`)
       }
     } catch {
-      message.error('Mã sổ tay không tồn tại hoặc tính năng chia sẻ đã bị tắt!')
+      toast.error('Mã sổ tay không tồn tại hoặc tính năng chia sẻ đã bị tắt!')
     }
   }
 
@@ -180,55 +179,51 @@ export const NotebookListPage: React.FC = () => {
         id: movingNotebook.id,
         targetGroupId: selectedTargetGroupId,
       })
-      message.success('Đã chuyển nhóm cho sổ tay thành công!')
+      toast.success('Đã chuyển nhóm cho sổ tay thành công!')
       setMovingNotebook(null)
       handleSyncAll(true)
     } catch {
-      message.error('Không thể chuyển nhóm sổ tay')
+      toast.error('Không thể chuyển nhóm sổ tay')
     }
   }
 
   // Xóa sổ tay
-  const handleDeleteNotebook = (nb: Notebook) => {
-    Modal.confirm({
+  const handleDeleteNotebook = async (nb: Notebook) => {
+    const ok = await confirmDialog({
       title: `Xóa sổ tay "${nb.name}"`,
       content: 'Toàn bộ từ vựng bên trong sẽ bị xóa theo. Bạn có chắc không?',
       okText: 'Xóa',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          await deleteNotebook.mutateAsync(nb.id)
-          message.success('Đã xóa sổ tay thành công')
-          handleSyncAll(true)
-        } catch {
-          message.error('Không thể xóa sổ tay')
-        }
-      },
+      danger: true,
     })
+    if (!ok) return
+    try {
+      await deleteNotebook.mutateAsync(nb.id)
+      toast.success('Đã xóa sổ tay thành công')
+      handleSyncAll(true)
+    } catch {
+      toast.error('Không thể xóa sổ tay')
+    }
   }
 
   // Xóa nhóm
-  const handleDeleteGroup = (g: NotebookGroup) => {
-    Modal.confirm({
+  const handleDeleteGroup = async (g: NotebookGroup) => {
+    const ok = await confirmDialog({
       title: `Xóa nhóm "${g.name}"`,
       content: 'Các sổ tay bên trong nhóm này sẽ được chuyển ra danh sách ngoài. Bạn có chắc không?',
       okText: 'Xóa nhóm',
-      okType: 'danger',
-      cancelText: 'Hủy',
-      onOk: async () => {
-        try {
-          await deleteGroup.mutateAsync(g.id)
-          message.success('Đã xóa nhóm sổ tay')
-          if (currentGroup?.id === g.id) {
-            setCurrentGroup(null)
-          }
-          handleSyncAll(true)
-        } catch {
-          message.error('Không thể xóa nhóm')
-        }
-      },
+      danger: true,
     })
+    if (!ok) return
+    try {
+      await deleteGroup.mutateAsync(g.id)
+      toast.success('Đã xóa nhóm sổ tay')
+      if (currentGroup?.id === g.id) {
+        setCurrentGroup(null)
+      }
+      handleSyncAll(true)
+    } catch {
+      toast.error('Không thể xóa nhóm')
+    }
   }
 
   // Đổi tên nhóm
@@ -244,14 +239,14 @@ export const NotebookListPage: React.FC = () => {
         id: editingGroup.id,
         data: { name: newGroupName.trim() },
       })
-      message.success('Đã đổi tên nhóm thành công!')
+      toast.success('Đã đổi tên nhóm thành công!')
       if (currentGroup?.id === editingGroup.id) {
         setCurrentGroup({ ...currentGroup, name: newGroupName.trim() })
       }
       setEditingGroup(null)
       handleSyncAll(true)
     } catch {
-      message.error('Không thể đổi tên nhóm')
+      toast.error('Không thể đổi tên nhóm')
     }
   }
 
@@ -432,7 +427,7 @@ export const NotebookListPage: React.FC = () => {
                 if (notebooks.length > 0) {
                   setReviewSelectOpen(true)
                 } else {
-                  message.info('Vui lòng tạo hoặc thêm từ vào sổ tay trước khi ôn tập!')
+                  toast.info('Vui lòng tạo hoặc thêm từ vào sổ tay trước khi ôn tập!')
                 }
               }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-ai hover:bg-ai/90 text-white font-semibold text-xs shadow-2xs transition-all cursor-pointer"

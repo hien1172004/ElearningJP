@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Button as AntdButton, Modal, Popconfirm } from 'antd'
+import { Button as AntdButton, Modal } from 'antd'
+import { confirmDialog } from './ConfirmModal'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Copy, FileWarning, RefreshCw, X } from 'lucide-react'
@@ -125,15 +126,22 @@ export const ConcurrentEditModal: React.FC = () => {
                 Mở lại mục cần sửa (đã là bản mới nhất), chép từng đoạn dưới đây vào rồi lưu như bình thường.
               </p>
             </div>
-            <Popconfirm
-              title="Bỏ bản chưa lưu?"
-              description="Các đoạn này sẽ mất, không khôi phục được."
-              okText="Bỏ"
-              cancelText="Giữ lại"
-              onConfirm={dismissUnsaved}
-            >
-              <AntdButton size="small" type="text" aria-label="Bỏ bản chưa lưu" icon={<X className="h-4 w-4" />} />
-            </Popconfirm>
+            <AntdButton
+              size="small"
+              type="text"
+              aria-label="Bỏ bản chưa lưu"
+              icon={<X className="h-4 w-4" />}
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: 'Bỏ bản chưa lưu?',
+                  content: 'Các đoạn này sẽ mất, không khôi phục được.',
+                  okText: 'Bỏ',
+                  cancelText: 'Giữ lại',
+                  danger: true,
+                })
+                if (ok) dismissUnsaved()
+              }}
+            />
           </div>
           <ul className="space-y-2 overflow-y-auto p-3">
             {unsaved.map((entry, i) => (

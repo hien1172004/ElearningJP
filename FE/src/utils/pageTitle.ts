@@ -20,6 +20,7 @@ export function getPageTitle(pathname: string): string {
     '/notebooks': 'Sổ tay từ vựng | ElearningJP',
     '/notebooks/explore': 'Khám phá sổ tay cộng đồng | ElearningJP',
     '/profile': 'Tài khoản cá nhân | ElearningJP',
+    '/notifications': 'Thông báo | ElearningJP',
     '/login': 'Đăng nhập | ElearningJP',
     '/register': 'Đăng ký tài khoản | ElearningJP',
     '/forgot-password': 'Quên mật khẩu | ElearningJP',

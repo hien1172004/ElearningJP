@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { Pencil, Trash2, Plus, BookOpen, X as XIcon, Check, Eye } from 'lucide-react'
-import { Modal, App, Button, Input, InputNumber } from 'antd'
+import { Modal, Button, Input, InputNumber } from 'antd'
 import { toast } from 'sonner'
 import { useLessonDetail, useLessonQuizManage, useQuizItemMutations, useOnConcurrentReload, useFormAutosave } from '@/hooks'
 import { AutosaveBar, AutosaveScope } from '@/components/course/autosave'
@@ -13,7 +13,7 @@ import {
   type MatchingData,
 } from './MatchingPairsEditor'
 import { shuffleMatchingRight } from './matchingFromLesson'
-import { RequiredMark } from '@/components/common'
+import { RequiredMark, confirmDialog } from '@/components/common'
 
 interface QuizPanelProps {
   lessonId: number
@@ -29,7 +29,6 @@ interface QuizPanelProps {
 export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _lessonTitle, inline = false }) => {
   // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
   const locked = useCourseEditLocked()
-  const { message } = App.useApp()
   // Trang này dành cho Admin/Teacher → dùng endpoint /quiz/manage
   // (trả kèm đáp án đúng, explanation). Học viên dùng /quiz (ẩn đáp án).
   const { data: quiz, isLoading, error } = useLessonQuizManage(lessonId)
@@ -84,32 +83,30 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
   const closeRename = () => setIsRenameOpen(false)
   const handleRename = () => {
     // BE chưa có PUT /lessons/{id}/quiz
-    message.warning('BE chưa hỗ trợ đổi tiêu đề quiz.')
+    toast.warning('BE chưa hỗ trợ đổi tiêu đề quiz.')
     closeRename()
   }
 
-  const handleDeleteAll = () => {
+  const handleDeleteAll = async () => {
     if (total === 0) {
-      message.info('Quiz chưa có câu hỏi nào.')
+      toast.info('Quiz chưa có câu hỏi nào.')
       return
     }
-    Modal.confirm({
+    const ok = await confirmDialog({
       title: 'Xoá toàn bộ câu hỏi?',
       content: `Sắp xoá ${total} câu hỏi. Thao tác này không thể hoàn tác.`,
       okText: 'Xoá tất cả',
-      cancelText: 'Huỷ',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          for (const q of questions) {
-            await deleteQuizItem.mutateAsync(q.id)
-          }
-          toast.success('Đã xoá toàn bộ câu hỏi')
-        } catch {
-          /* lỗi đã toast trong hook */
-        }
-      },
+      danger: true,
     })
+    if (!ok) return
+    try {
+      for (const q of questions) {
+        await deleteQuizItem.mutateAsync(q.id)
+      }
+      toast.success('Đã xoá toàn bộ câu hỏi')
+    } catch {
+      /* lỗi đã toast trong hook */
+    }
   }
 
   // Danh sách câu hỏi (dùng chung cho hộp thoại và chế độ inline)
@@ -190,15 +187,14 @@ export const QuizPanel: React.FC<QuizPanelProps> = ({ lessonId, lessonTitle: _le
                 <button
                   type="button"
                   disabled={locked}
-                  onClick={() => {
-                    Modal.confirm({
+                  onClick={async () => {
+                    const ok = await confirmDialog({
                       title: 'Xoá câu hỏi?',
                       content: 'Hành động này không thể hoàn tác.',
                       okText: 'Xoá',
-                      cancelText: 'Huỷ',
-                      okButtonProps: { danger: true },
-                      onOk: () => deleteQuizItem.mutate(q.id),
+                      danger: true,
                     })
+                    if (ok) deleteQuizItem.mutate(q.id)
                   }}
                   className="p-1 text-gray-400 hover:text-rose-600 rounded"
                   title="Xoá"
@@ -647,7 +643,6 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
   editing,
   onClose,
 }) => {
-  const { message } = App.useApp()
   const { createQuizItem, updateQuizItem } = useQuizItemMutations(lessonId)
 
   // "Tải bản mới nhất" sau xung đột: form sửa đang giữ version cũ → đóng, mở lại sẽ lấy bản mới nhất
@@ -794,7 +789,7 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
 
   const handleOk = async () => {
     if (!questionText.trim()) {
-      message.error('Vui lòng nhập nội dung câu hỏi')
+      toast.error('Vui lòng nhập nội dung câu hỏi')
       return
     }
     const payload: any = {
@@ -805,15 +800,15 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
     }
     if (questionType === 'MULTIPLE_CHOICE') {
       if (mcOptions.length < 2) {
-        message.error('Câu trắc nghiệm cần ít nhất 2 đáp án')
+        toast.error('Câu trắc nghiệm cần ít nhất 2 đáp án')
         return
       }
       if (mcOptions.some((o) => !o.optionText.trim())) {
-        message.error('Vui lòng nhập nội dung cho tất cả đáp án')
+        toast.error('Vui lòng nhập nội dung cho tất cả đáp án')
         return
       }
       if (mcOptions.filter((o) => o.correct).length !== 1) {
-        message.error('Vui lòng chọn đúng 1 đáp án đúng')
+        toast.error('Vui lòng chọn đúng 1 đáp án đúng')
         return
       }
       payload.options = mcOptions.map((o) => ({
@@ -823,34 +818,34 @@ const QuestionFormModal: React.FC<QuestionFormModalProps> = ({
       }))
     } else if (questionType === 'FILL_IN_THE_BLANK') {
       if (!correctText.trim()) {
-        message.error('Vui lòng nhập đáp án đúng cho câu điền')
+        toast.error('Vui lòng nhập đáp án đúng cho câu điền')
         return
       }
       payload.correctTextAnswer = correctText.trim()
     } else if (questionType === 'MATCHING') {
       if (matchingData.left.length < 2 || matchingData.right.length < 2) {
-        message.error('Câu ghép cặp cần ít nhất 2 cặp (mỗi cột 2 phần tử)')
+        toast.error('Câu ghép cặp cần ít nhất 2 cặp (mỗi cột 2 phần tử)')
         return
       }
       if (matchingData.left.length !== matchingData.right.length) {
-        message.error('Số lượng vế trái phải bằng số lượng vế phải')
+        toast.error('Số lượng vế trái phải bằng số lượng vế phải')
         return
       }
       if (
         matchingData.left.some((s) => !s.label.trim()) ||
         matchingData.right.some((s) => !s.label.trim())
       ) {
-        message.error('Vui lòng nhập đầy đủ nội dung cho cả 2 vế')
+        toast.error('Vui lòng nhập đầy đủ nội dung cho cả 2 vế')
         return
       }
       const leftLabels = matchingData.left.map((s) => s.label.trim().toLowerCase())
       const rightLabels = matchingData.right.map((s) => s.label.trim().toLowerCase())
       if (new Set(leftLabels).size !== leftLabels.length) {
-        message.error('Các vế trái bị trùng nội dung. Mỗi vế trái phải khác nhau.')
+        toast.error('Các vế trái bị trùng nội dung. Mỗi vế trái phải khác nhau.')
         return
       }
       if (new Set(rightLabels).size !== rightLabels.length) {
-        message.error('Các vế phải bị trùng nội dung. Mỗi vế phải phải khác nhau.')
+        toast.error('Các vế phải bị trùng nội dung. Mỗi vế phải phải khác nhau.')
         return
       }
       payload.matchingData = matchingData

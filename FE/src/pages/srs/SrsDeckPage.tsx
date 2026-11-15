@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
-import { BackButton } from '@/components/common'
+import { BackButton, confirmDialog } from '@/components/common'
 import { SrsForecastBar } from '@/components/srs'
 import { useSrsItems } from '@/hooks/useSrsItems'
 import { useSrsStats } from '@/hooks/useSrsStats'
@@ -114,8 +114,14 @@ export const SrsDeckPage: React.FC = () => {
   const archive = useArchiveSrsItem()
   const restore = useRestoreSrsItem()
 
-  const handleArchive = (item: SrsDueItem) => {
-    if (!window.confirm(`Xoá "${item.frontText}" khỏi sổ ôn? Bạn có thể khôi phục trong tab Lưu trữ.`)) return
+  const handleArchive = async (item: SrsDueItem) => {
+    const ok = await confirmDialog({
+      title: `Xoá "${item.frontText}" khỏi sổ ôn?`,
+      content: 'Bạn có thể khôi phục trong tab Lưu trữ.',
+      okText: 'Xoá',
+      danger: true,
+    })
+    if (!ok) return
     archive.mutate(item.srsItemId, {
       onSuccess: () => toast.success('Đã chuyển thẻ vào Lưu trữ'),
       onError: () => toast.error('Không thể xoá thẻ'),
@@ -282,7 +288,7 @@ export const SrsDeckPage: React.FC = () => {
               ) : (
                 <button
                   type="button"
-                  onClick={() => handleArchive(item)}
+                  onClick={() => void handleArchive(item)}
                   disabled={archive.isPending}
                   title="Xoá khỏi sổ ôn (chuyển vào Lưu trữ)"
                   aria-label="Xoá thẻ"

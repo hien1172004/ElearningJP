@@ -1,7 +1,8 @@
 import React from 'react'
+import { toast } from 'sonner'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, User, Phone, BookOpen, Brain, Shield } from 'lucide-react'
-import { App, Button as AntdButton, Form, Input as AntdInput } from 'antd'
+import { Button as AntdButton, Form, Input as AntdInput } from 'antd'
 import { z } from 'zod'
 import { AuthFooter } from '@/components/auth'
 import { BrandLogo } from '@/components/common/BrandLogo'
@@ -48,7 +49,6 @@ const features = [
 export const RegisterPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/'
-  const { message } = App.useApp()
   const [form] = Form.useForm<RegisterFormValues>()
 
   const { mutate, isPending } = useRegister()
@@ -59,7 +59,7 @@ export const RegisterPage: React.FC = () => {
       const parsed = registerSchema.safeParse(values)
       if (!parsed.success) {
         const first = parsed.error.issues[0]
-        message.error(first.message)
+        toast.error(first.message)
         return
       }
       mutate(parsed.data, {

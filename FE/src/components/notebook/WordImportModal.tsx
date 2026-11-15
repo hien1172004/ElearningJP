@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
-import { Modal, Button, message, Spin } from 'antd'
+import { toast } from 'sonner'
+import { Modal, Button, Spin } from 'antd'
 import {
   InfoCircleOutlined,
   CheckCircleOutlined,
@@ -51,12 +52,12 @@ export const WordImportModal: React.FC<WordImportModalProps> = ({
       file.type === 'application/vnd.ms-excel'
 
     if (!isExcel) {
-      message.error('Vui lòng chỉ tải lên file Excel (.xlsx hoặc .xls)!')
+      toast.error('Vui lòng chỉ tải lên file Excel (.xlsx hoặc .xls)!')
       return
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      message.error(`Dung lượng file vượt quá giới hạn ${MAX_FILE_SIZE_MB}MB!`)
+      toast.error(`Dung lượng file vượt quá giới hạn ${MAX_FILE_SIZE_MB}MB!`)
       return
     }
 
@@ -66,7 +67,7 @@ export const WordImportModal: React.FC<WordImportModalProps> = ({
       if (result) {
         setImportResult(result)
         const success = result.successCount ?? result.importedCount ?? 0
-        message.success(`Đã nhập thành công ${success} từ vựng!`)
+        toast.success(`Đã nhập thành công ${success} từ vựng!`)
       }
     } catch {
       // Error handled in parent/service

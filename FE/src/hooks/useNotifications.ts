@@ -1,12 +1,14 @@
 import {
   type InfiniteData,
   type QueryClient,
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
 import type { AxiosError } from 'axios'
+import { toast } from 'sonner'
 import { notificationService } from '@/services/notification.service'
 import { QUERY_KEYS } from '@/lib/queryKeys'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -14,6 +16,7 @@ import { useNotificationStore } from '@/stores/useNotificationStore'
 import type {
   AppNotification,
   NotificationListResponse,
+  NotificationType,
   UnreadCountResponse,
 } from '@/types'
 
@@ -125,13 +128,18 @@ function markReadInFeed(
 }
 
 /** Danh sách phân trang (trang thông báo đầy đủ, trang bắt đầu từ 1). */
-export function useNotifications(page = 1, size = 20) {
+export function useNotifications(
+  page = 1,
+  size = 20,
+  filter: { unreadOnly?: boolean; types?: NotificationType[] } = {},
+) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   return useQuery<NotificationListResponse, AxiosError>({
-    queryKey: QUERY_KEYS.notification.list(page),
+    queryKey: QUERY_KEYS.notification.list(page, size, filter),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
-      const res = await notificationService.getList(page, size)
+      const res = await notificationService.getList(page, size, filter)
       return (
         res?.data ?? {
           items: [],
@@ -178,6 +186,20 @@ export function useMarkAsRead() {
 }
 
 /** Đánh dấu tất cả đã đọc. */
+export function useDeleteNotification() {
+  const queryClient = useQueryClient()
+
+  return useMutation<void, AxiosError, number>({
+    mutationFn: async (id: number) => {
+      await notificationService.delete(id)
+    },
+    onSuccess: () => toast.success('Đã xoá thông báo'),
+    onError: () => toast.error('Không xoá được thông báo'),
+    // Xoá 1 thông báo chưa đọc làm badge giảm → làm mới cả list/feed/unread-count
+    onSettled: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notification.all }),
+  })
+}
+
 export function useMarkAllAsRead() {
   const queryClient = useQueryClient()
   const markAllReadLocal = useNotificationStore((s) => s.markAllReadLocal)

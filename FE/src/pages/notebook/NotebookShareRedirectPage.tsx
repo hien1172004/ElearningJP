@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { formatNotebookCounts } from '@/components/notebook/itemTypeMeta'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Button, Spin, Tag, message } from 'antd'
+import { Button, Spin, Tag } from 'antd'
 import { BookOutlined, DownloadOutlined, CheckOutlined } from '@ant-design/icons'
 import { notebookService } from '@/services/notebook.service'
 import type { Notebook } from '@/types'
@@ -29,7 +30,7 @@ export const NotebookShareRedirectPage: React.FC = () => {
           setNotebook(res.data)
         }
       } catch {
-        message.error('Không tìm thấy sổ tay hoặc liên kết chia sẻ đã hết hạn/bị tắt!')
+        toast.error('Không tìm thấy sổ tay hoặc liên kết chia sẻ đã hết hạn/bị tắt!')
       } finally {
         setLoading(false)
       }
@@ -44,12 +45,12 @@ export const NotebookShareRedirectPage: React.FC = () => {
       setCloning(true)
       const res = await notebookService.cloneNotebookByShareCode(shareCode)
       if (res.data) {
-        message.success(`Đã nhân bản "${res.data.name}" vào sổ tay cá nhân của bạn!`)
+        toast.success(`Đã nhân bản "${res.data.name}" vào sổ tay cá nhân của bạn!`)
         navigate(`/notebooks/${res.data.id}`)
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Không thể nhân bản sổ tay này!'
-      message.error(msg)
+      toast.error(msg)
     } finally {
       setCloning(false)
     }

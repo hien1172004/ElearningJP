@@ -13,12 +13,9 @@
 export type NotificationType =
   | 'SRS_DUE'
   | 'STREAK_WARNING'
-  | 'TASK_REMINDER'
   | 'EXAM_RESULT'
-  | 'BADGE_UNLOCKED'
   | 'COMMUNITY_REPLY'
   | 'COMMUNITY_LIKE'
-  | 'COMMUNITY_DISLIKE'
   /** Bình luận / trả lời bị người kiểm duyệt ẩn hoặc xóa */
   | 'COMMENT_MODERATED'
   /** Thông báo hàng loạt do ADMIN / TEACHER gửi */

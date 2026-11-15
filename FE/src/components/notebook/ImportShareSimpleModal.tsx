@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Input, Button, message } from 'antd'
+import { toast } from 'sonner'
+import { Modal, Input, Button } from 'antd'
 import { PlusCircleOutlined } from '@ant-design/icons'
 import { RequiredMark } from '@/components/common'
 
@@ -27,7 +28,7 @@ export const ImportShareSimpleModal: React.FC<ImportShareSimpleModalProps> = ({
   const handleConfirm = async () => {
     const trimmed = code.trim()
     if (!trimmed) {
-      message.warning('Vui lòng nhập mã sổ tay!')
+      toast.warning('Vui lòng nhập mã sổ tay!')
       return
     }
     await onConfirm(trimmed)

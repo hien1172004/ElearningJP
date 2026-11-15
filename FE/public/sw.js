@@ -29,12 +29,14 @@ self.addEventListener('notificationclick', (event) => {
     self.clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        for (const client of clientList) {
-          if ('focus' in client) {
-            return client.focus()
-          }
-        }
-        return self.clients.openWindow(url)
+        const client = clientList.find((c) => 'focus' in c)
+        if (!client) return self.clients.openWindow(url)
+        // Tab đã mở: chuyển tới đúng trang đích rồi đưa lên trước.
+        // navigate() lỗi với tab chưa do SW điều khiển → mở tab mới.
+        return client
+          .navigate(url)
+          .then((c) => (c ?? client).focus())
+          .catch(() => self.clients.openWindow(url))
       }),
   )
 })
