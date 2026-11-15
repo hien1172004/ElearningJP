@@ -954,7 +954,7 @@ export const SpeakingPracticePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={stopListening}
-                      className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center transition shadow-xs"
+                      className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-kinari flex items-center justify-center transition shadow-xs"
                       title="Dừng ghi âm"
                     >
                       <Square className="w-4 h-4 fill-white text-white rounded-xs" />

@@ -742,7 +742,7 @@ export const DictionaryPage: React.FC = () => {
                 onClick={() => setSelectedLevel(undefined)}
                 className={`px-2.5 py-1 rounded-md text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
                   selectedLevel === undefined
-                    ? 'bg-slate-900 text-white shadow-2xs'
+                    ? 'bg-slate-900 text-kinari shadow-2xs'
                     : 'text-nibi hover:bg-kamenozoki/60 hover:text-sumi'
                 }`}
               >

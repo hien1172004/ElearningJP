@@ -322,7 +322,7 @@ export const SpeakingLobbyPage: React.FC = () => {
               <div className="mb-2">
                 <MaziikoMascot size={60} showAura={true} showBadge={true} />
               </div>
-              <h2 className="text-base sm:text-lg font-bold text-[#1F51FF] mb-0.5">
+              <h2 className="text-base sm:text-lg font-bold text-ai mb-0.5">
                 Chào {username}!
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 font-medium">

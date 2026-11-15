@@ -226,7 +226,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
       ) : (
         <div className="space-y-4">
           {/* Header Action Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-surface rounded-xl border border-slate-200 shadow-2xs">
             <div>
               <h3 className="text-sm font-bold text-sumi flex items-center gap-2">
                 <span>Kịch bản hội thoại giao tiếp</span>
@@ -272,7 +272,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
             {speakingList.map((speaking, idx) => (
               <div
                 key={speaking.id || idx}
-                className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 hover:border-indigo-300 transition"
+                className="bg-surface rounded-xl border border-slate-200 p-4 space-y-3 hover:border-indigo-300 transition"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3 pb-2.5 border-b border-slate-100">
                   <div>
@@ -593,7 +593,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
                                 <div
                                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-2xs ${isUser
                                       ? 'bg-indigo-600 text-white rounded-tr-sm'
-                                      : 'bg-white text-slate-900 border border-slate-200/80 rounded-tl-sm'
+                                      : 'bg-surface text-slate-900 border border-slate-200/80 rounded-tl-sm'
                                     }`}
                                 >
                                   <p className="text-sm font-medium leading-relaxed">{text}</p>
@@ -640,7 +640,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
                             {viewingScenario.vocabulary.map((v: any, i: number) => (
                               <div
                                 key={i}
-                                className="p-2.5 rounded-lg bg-white border border-slate-200 flex flex-col justify-between"
+                                className="p-2.5 rounded-lg bg-surface border border-slate-200 flex flex-col justify-between"
                               >
                                 <div className="flex items-baseline gap-2">
                                   <span className="font-bold text-sumi text-sm">{v.word}</span>
@@ -665,7 +665,7 @@ export const LessonSpeakingPanel: React.FC<LessonSpeakingPanelProps> = ({
                         {viewingScenario.grammar && viewingScenario.grammar.length > 0 ? (
                           <div className="space-y-2">
                             {viewingScenario.grammar.map((g: any, i: number) => (
-                              <div key={i} className="p-2.5 rounded-lg bg-white border border-slate-200 space-y-1">
+                              <div key={i} className="p-2.5 rounded-lg bg-surface border border-slate-200 space-y-1">
                                 <div className="font-bold text-indigo-700 text-xs">{g.pattern}</div>
                                 <div className="text-xs text-slate-700">{g.meaning}</div>
                                 {g.example && (

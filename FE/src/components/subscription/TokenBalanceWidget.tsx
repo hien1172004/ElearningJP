@@ -24,9 +24,9 @@ export const TokenBalanceWidget: React.FC = () => {
     return (
       <Link
         to="/pricing"
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-amber-700 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition"
       >
-        <Crown className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <Crown className="w-3.5 h-3.5 text-amber-600" />
         <span>Gói PRO</span>
       </Link>
     )
@@ -59,7 +59,7 @@ export const TokenBalanceWidget: React.FC = () => {
           <Link
             to="/pricing"
             onClick={() => setPopoverOpen(false)}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+            className="text-xs text-blue-600 hover:underline font-semibold"
           >
             Nâng cấp PRO →
           </Link>
@@ -70,7 +70,7 @@ export const TokenBalanceWidget: React.FC = () => {
       <div className="border-b border-dashed border-suna/70 my-3" />
 
       {/* Token AI Header */}
-      <p className="text-xs font-bold text-purple-600 dark:text-purple-400 mb-1">
+      <p className="text-xs font-bold text-purple-600 mb-1">
         Token AI
       </p>
 
@@ -139,7 +139,7 @@ export const TokenBalanceWidget: React.FC = () => {
           className={cn(
             'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition border cursor-pointer select-none',
             popoverOpen
-              ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+              ? 'border-blue-500 bg-blue-50/50 text-blue-700'
               : 'border-suna bg-surface hover:bg-kinari text-sumi shadow-2xs',
           )}
         >

@@ -88,14 +88,14 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
             className={
               isLight
                 ? 'text-white tracking-tight'
-                : 'text-[#12304f] dark:text-slate-100 tracking-tight'
+                : 'text-indigo-900 tracking-tight'
             }
           >
             Elearning
           </span>
           <span
             className={`font-bold ml-0.5 ${
-              isLight ? 'text-[#ff6b6b]' : 'text-[#be3933]'
+              isLight ? 'text-[#ff6b6b]' : 'text-[#be3933] dark:text-[#e5736f]'
             }`}
           >
             JP

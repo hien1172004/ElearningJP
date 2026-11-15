@@ -146,7 +146,7 @@ export const formatJapanesePassageHtml = (rawText?: string | null): string => {
       resultBlocks.push(tableHtml)
     } else {
       tableBuffer.forEach(l => {
-        resultBlocks.push(`<p class="leading-relaxed my-1 font-serif text-slate-800 dark:text-slate-200">${formatJapaneseBlanksHtml(cleanJapaneseText(l))}</p>`)
+        resultBlocks.push(`<p class="leading-relaxed my-1 font-serif text-slate-800">${formatJapaneseBlanksHtml(cleanJapaneseText(l))}</p>`)
       })
     }
     tableBuffer = []

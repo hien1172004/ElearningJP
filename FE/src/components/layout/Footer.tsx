@@ -157,7 +157,7 @@ export const Footer: React.FC = () => {
               <span>Giao dịch bảo mật 100% Napas 247</span>
             </span>
             <span>•</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1.5">
+            <span className="text-emerald-600 font-medium flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Hệ thống hoạt động 24/7</span>
             </span>

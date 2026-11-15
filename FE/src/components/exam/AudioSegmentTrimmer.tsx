@@ -263,7 +263,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
                 setIsMuted(!isMuted)
               }
             }}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-kinari hover:bg-slate-800 transition cursor-pointer"
             title={isMuted ? 'Bật âm' : 'Tắt tiếng'}
           >
             {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5" />}
@@ -368,7 +368,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
               max={endTime - 0.5}
               value={startTime}
               onChange={(e) => handleStartChange(parseFloat(e.target.value) || 0)}
-              className="w-16 px-1.5 py-0.5 text-xs font-mono font-bold bg-slate-950 border border-slate-700 rounded text-white text-center focus:border-indigo-500 focus:outline-none"
+              className="w-16 px-1.5 py-0.5 text-xs font-mono font-bold bg-slate-950 border border-slate-700 rounded text-kinari text-center focus:border-indigo-500 focus:outline-none"
             />
             <span className="text-[10px] text-slate-400 font-mono hidden xl:inline">
               ({formatTime(startTime, true)})
@@ -415,7 +415,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
               max={maxDuration}
               value={endTime}
               onChange={(e) => handleEndChange(parseFloat(e.target.value) || 0)}
-              className="w-16 px-1.5 py-0.5 text-xs font-mono font-bold bg-slate-950 border border-slate-700 rounded text-white text-center focus:border-purple-500 focus:outline-none"
+              className="w-16 px-1.5 py-0.5 text-xs font-mono font-bold bg-slate-950 border border-slate-700 rounded text-kinari text-center focus:border-purple-500 focus:outline-none"
             />
             <span className="text-[10px] text-slate-400 font-mono hidden xl:inline">
               ({formatTime(endTime, true)})
@@ -489,7 +489,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
           <button
             type="button"
             onClick={() => handleSeek(Math.max(0, currentTime - 5))}
-            className="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition text-[11px] flex items-center gap-0.5 cursor-pointer"
+            className="px-2 py-1 text-slate-400 hover:text-kinari hover:bg-slate-800 rounded-lg transition text-[11px] flex items-center gap-0.5 cursor-pointer"
             title="Lùi 5s"
           >
             <RotateCcw className="w-3 h-3" />
@@ -498,7 +498,7 @@ export const AudioSegmentTrimmer: React.FC<AudioSegmentTrimmerProps> = ({
           <button
             type="button"
             onClick={() => handleSeek(Math.min(maxDuration, currentTime + 5))}
-            className="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition text-[11px] flex items-center gap-0.5 cursor-pointer"
+            className="px-2 py-1 text-slate-400 hover:text-kinari hover:bg-slate-800 rounded-lg transition text-[11px] flex items-center gap-0.5 cursor-pointer"
             title="Tiến 5s"
           >
             <span>+5s</span>

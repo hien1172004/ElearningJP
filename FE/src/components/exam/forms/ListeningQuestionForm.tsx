@@ -84,7 +84,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
   return (
     <div className="space-y-4">
       {/* KHỐI 1: CẤU HÌNH & TRÌNH PHÁT AUDIO SCRUBBER */}
-      <div className="p-4 bg-slate-900 text-white rounded-3xl space-y-3 shadow-sm">
+      <div className="p-4 bg-slate-900 text-kinari rounded-3xl space-y-3 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-extrabold flex items-center gap-1.5 text-xs text-indigo-300">
             <Volume2 className="w-4 h-4 text-indigo-400" />
@@ -139,7 +139,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                 value={data.audioUrl || ''}
                 onChange={(e) => onChange({ ...data, audioUrl: e.target.value })}
                 placeholder="Hoặc dán URL: https://.../mondai1_cau1.mp3"
-                className="w-full px-3 py-2 text-xs border border-slate-700 rounded-xl bg-slate-800 text-white font-mono focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+                className="w-full px-3 py-2 text-xs border border-slate-700 rounded-xl bg-slate-800 text-kinari font-mono focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
               />
             </div>
 
@@ -179,7 +179,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                   disabled={disabled}
                   value={data.audioStartTime !== undefined ? data.audioStartTime : 0}
                   onChange={(e) => onChange({ ...data, audioStartTime: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-700 rounded-xl bg-slate-800 text-white font-mono"
+                  className="w-full px-3 py-1.5 text-xs border border-slate-700 rounded-xl bg-slate-800 text-kinari font-mono"
                 />
               </div>
               <div>
@@ -191,7 +191,7 @@ export const ListeningQuestionForm: React.FC<ListeningQuestionFormProps> = ({
                   disabled={disabled}
                   value={data.audioEndTime !== undefined ? data.audioEndTime : 30}
                   onChange={(e) => onChange({ ...data, audioEndTime: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 text-xs border border-slate-700 rounded-xl bg-slate-800 text-white font-mono"
+                  className="w-full px-3 py-1.5 text-xs border border-slate-700 rounded-xl bg-slate-800 text-kinari font-mono"
                 />
               </div>
             </div>

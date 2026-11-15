@@ -1068,7 +1068,7 @@ export const AdminExamPreviewPage: React.FC = () => {
             <div className="h-5 w-px bg-slate-200 hidden sm:block shrink-0" />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-slate-900 text-white font-mono">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-slate-900 text-kinari font-mono">
                   {previewData.jlptLevel}
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
@@ -1107,7 +1107,7 @@ export const AdminExamPreviewPage: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate('/admin/exams')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-surface hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs cursor-pointer"
               title="Tất cả thay đổi đã được tự động lưu vào bản nháp. Bấm để trở về danh sách đề thi."
             >
               <Save className="w-3.5 h-3.5 text-slate-500" />
@@ -1119,7 +1119,7 @@ export const AdminExamPreviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsToolsDropdownOpen(!isToolsDropdownOpen)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-surface hover:bg-slate-50 text-slate-700 text-xs font-medium transition shadow-2xs cursor-pointer"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-slate-600" />
                 <span>Công cụ</span>
@@ -1319,7 +1319,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   type="button"
                   onClick={handleCloneExam}
                   disabled={isCloning}
-                  className="px-3 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-rose-700 text-xs font-medium border border-rose-200 shadow-2xs transition cursor-pointer"
+                  className="px-3 py-1.5 rounded-lg bg-surface hover:bg-rose-50 text-rose-700 text-xs font-medium border border-rose-200 shadow-2xs transition cursor-pointer"
                 >
                   Nhân bản đề mới
                 </button>
@@ -1339,7 +1339,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                 type="button"
                 onClick={handleRegradeExam}
                 disabled={isRegrading}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition shrink-0 self-end sm:self-center cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-surface hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-2xs transition shrink-0 self-end sm:self-center cursor-pointer"
               >
                 Chấm lại {previewData.totalAttempts} bài thi
               </button>
@@ -1365,8 +1365,8 @@ export const AdminExamPreviewPage: React.FC = () => {
                 onClick={() => setActiveSectionIdx(idx)}
                 className={`relative flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs sm:text-sm transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80 font-semibold'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 font-medium'
+                    ? 'bg-surface text-slate-900 shadow-xs border border-slate-200/80 font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-surface/60 font-medium'
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -1431,7 +1431,7 @@ export const AdminExamPreviewPage: React.FC = () => {
             {/* Nút công cụ thêm câu & quét AI cho riêng Section này */}
             <div className="flex items-center gap-2 flex-wrap">
               <label
-                className={`px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg border border-slate-200 bg-surface hover:bg-slate-50 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 shadow-2xs cursor-pointer ${
                   isBatchApplyingAnswerKey ? 'opacity-50 pointer-events-none' : ''
                 }`}
                 title="Tải ảnh hoặc PDF bảng đáp án chuẩn (正答表) để tự động khớp đáp án cho các câu hỏi hiện tại"
@@ -1454,7 +1454,7 @@ export const AdminExamPreviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleOpenAddModal()}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-surface hover:bg-slate-50 text-slate-700 text-xs font-medium transition flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Thêm câu hỏi</span>
@@ -1468,7 +1468,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   setAiSaveMode((activeSection?.questions?.length || 0) > 0 ? 'OVERWRITE' : 'APPEND')
                   setIsAiSectionModalOpen(true)
                 }}
-                className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-kinari text-xs font-medium transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5 text-indigo-300" />
                 <span>Trợ lý AI quét đề</span>
@@ -1504,7 +1504,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   type="button"
                   onClick={handleSaveSectionAudio}
                   disabled={isUpdatingAudio || !sectionAudioUrlInput.trim()}
-                  className="px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40 shrink-0"
+                  className="px-4 py-2 bg-slate-900 hover:bg-black text-kinari text-xs font-bold rounded-xl transition cursor-pointer disabled:opacity-40 shrink-0"
                 >
                   {isUpdatingAudio ? 'Đang lưu...' : 'Lưu Audio tổng'}
                 </button>
@@ -1549,7 +1549,7 @@ export const AdminExamPreviewPage: React.FC = () => {
                   setAiSaveMode('OVERWRITE')
                   setIsAiSectionModalOpen(true)
                 }}
-                className="group relative p-5 rounded-xl border border-slate-200 hover:border-indigo-400 bg-white hover:bg-indigo-50/20 text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
+                className="group relative p-5 rounded-xl border border-slate-200 hover:border-indigo-400 bg-surface hover:bg-indigo-50/20 text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
                   <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
@@ -1579,7 +1579,7 @@ export const AdminExamPreviewPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleOpenAddModal()}
-                className="group p-5 rounded-xl border border-slate-200 hover:border-slate-400 bg-white text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
+                className="group p-5 rounded-xl border border-slate-200 hover:border-slate-400 bg-surface text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
                   <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
@@ -1602,7 +1602,7 @@ export const AdminExamPreviewPage: React.FC = () => {
 
               {/* Card 3: Nạp bảng đáp án */}
               <label
-                className="group p-5 rounded-xl border border-slate-200 hover:border-emerald-400 bg-white text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
+                className="group p-5 rounded-xl border border-slate-200 hover:border-emerald-400 bg-surface text-left transition-all duration-200 hover:shadow-sm cursor-pointer flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
                   <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
@@ -2580,7 +2580,7 @@ export const AdminExamPreviewPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setZoomImageUrl(null)}
-              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-slate-700 shadow-lg cursor-pointer z-10"
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-900 text-kinari flex items-center justify-center hover:bg-slate-700 shadow-lg cursor-pointer z-10"
             >
               <X className="w-5 h-5" />
             </button>

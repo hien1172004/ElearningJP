@@ -48,7 +48,7 @@ const MissingList: React.FC<{ items: MissingStrokeItem[]; total: number }> = ({ 
       {items.length}/{total} mục có ký tự chưa có dữ liệu thứ tự nét. Các ký tự này vẫn được in chữ mẫu và chữ mờ để
       tô theo, nhưng <b>không có hàng thứ tự từng nét</b>.
     </p>
-    <div className="max-h-32 overflow-y-auto rounded-md border border-slate-200 bg-white divide-y divide-slate-100">
+    <div className="max-h-32 overflow-y-auto rounded-md border border-slate-200 bg-surface divide-y divide-slate-100">
       {items.map((m) => (
         <div key={m.itemId} className="flex items-center justify-between gap-2 px-3 py-1.5 text-sm">
           <span className="min-w-0 truncate">

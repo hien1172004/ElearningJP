@@ -62,9 +62,9 @@ export const PaywallModal: React.FC = () => {
 
         {/* Feature List */}
         <div className="p-6 sm:p-7 space-y-4">
-          <div className="bg-kinari/70 dark:bg-slate-900/60 border border-suna rounded-2xl p-4 space-y-3">
+          <div className="bg-kinari/70 border border-suna rounded-2xl p-4 space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
@@ -78,7 +78,7 @@ export const PaywallModal: React.FC = () => {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
@@ -92,7 +92,7 @@ export const PaywallModal: React.FC = () => {
             </div>
 
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>

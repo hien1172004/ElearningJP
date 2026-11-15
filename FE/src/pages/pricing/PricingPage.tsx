@@ -109,7 +109,7 @@ export const PricingPage: React.FC = () => {
       {/* 1. HERO HEADER — Thiết kế trang nhã phong cách Nhật Bản */}
       {/* =================================================================== */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-ai/10 text-ai dark:bg-ai/20 dark:text-indigo-300 text-xs font-semibold">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-ai/10 text-ai dark:bg-ai/20 text-xs font-semibold">
           <Crown className="w-3.5 h-3.5" />
           <span>Hội viên ElearningJP PRO</span>
         </div>
@@ -123,7 +123,7 @@ export const PricingPage: React.FC = () => {
         </p>
 
         {isPro && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-xs font-semibold mt-2">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-xs font-semibold mt-2">
             <Sparkles className="w-4 h-4 text-emerald-600" />
             <span>Tài khoản của bạn hiện đang là Hội viên PRO cao cấp</span>
           </div>
@@ -167,7 +167,7 @@ export const PricingPage: React.FC = () => {
                 </div>
               )}
               {isLifetime && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[11px] font-black tracking-wide shadow-xs uppercase">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-amber-500 text-black text-[11px] font-black tracking-wide shadow-xs uppercase">
                   Tiết kiệm trọn đời
                 </div>
               )}
@@ -177,7 +177,7 @@ export const PricingPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xl font-bold text-sumi">{plan.name}</h3>
                   {hasDiscount && (
-                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20">
                       Tiết kiệm {discountPercent}%
                     </span>
                   )}
@@ -209,7 +209,7 @@ export const PricingPage: React.FC = () => {
                     </div>
                   )}
 
-                  <p className="text-xs text-ai dark:text-indigo-300 font-medium mt-2">
+                  <p className="text-xs text-ai font-medium mt-2">
                     {subRateText}
                   </p>
                 </div>
@@ -217,27 +217,27 @@ export const PricingPage: React.FC = () => {
                 {/* Core Perks List */}
                 <ul className="space-y-3 text-xs text-sumi">
                   <li className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>Mở khóa 100% kho đề thi thử JLPT N5–N1</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>Mở khóa toàn bộ khóa học chuyên sâu</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>Luyện nói AI Speaking không giới hạn token</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>Xuất file PDF Kanji luyện viết không giới hạn</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>AI Canvas OCR nhận diện chữ viết tay miễn phí</span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span>Huy hiệu PRO vương miện trên hồ sơ cá nhân</span>
                   </li>
                 </ul>
@@ -253,7 +253,7 @@ export const PricingPage: React.FC = () => {
                     isYearly
                       ? 'bg-ai hover:bg-ai/90 text-white shadow-md'
                       : isLifetime
-                      ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-black'
+                      ? 'bg-amber-500 hover:bg-amber-600 text-black font-black'
                       : 'bg-kinari hover:bg-surface border border-suna text-sumi',
                   )}
                 >
@@ -276,7 +276,7 @@ export const PricingPage: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           <div className="space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-ai/10 text-ai dark:bg-ai/20 dark:text-indigo-300 font-bold text-sm flex items-center justify-center mx-auto">
+            <div className="w-10 h-10 rounded-xl bg-ai/10 text-ai dark:bg-ai/20 font-bold text-sm flex items-center justify-center mx-auto">
               1
             </div>
             <h4 className="text-xs sm:text-sm font-bold text-sumi">Chọn gói &amp; Thông tin</h4>
@@ -286,7 +286,7 @@ export const PricingPage: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-ai/10 text-ai dark:bg-ai/20 dark:text-indigo-300 font-bold text-sm flex items-center justify-center mx-auto">
+            <div className="w-10 h-10 rounded-xl bg-ai/10 text-ai dark:bg-ai/20 font-bold text-sm flex items-center justify-center mx-auto">
               2
             </div>
             <h4 className="text-xs sm:text-sm font-bold text-sumi">Quét mã VietQR</h4>
@@ -296,7 +296,7 @@ export const PricingPage: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-ai/10 text-ai dark:bg-ai/20 dark:text-indigo-300 font-bold text-sm flex items-center justify-center mx-auto">
+            <div className="w-10 h-10 rounded-xl bg-ai/10 text-ai dark:bg-ai/20 font-bold text-sm flex items-center justify-center mx-auto">
               3
             </div>
             <h4 className="text-xs sm:text-sm font-bold text-sumi">Kích hoạt sau 3 giây</h4>
@@ -326,7 +326,7 @@ export const PricingPage: React.FC = () => {
               <tr className="border-b border-suna text-xs font-bold uppercase tracking-wider text-nibi">
                 <th className="py-3 px-4">Tính năng &amp; Tài nguyên</th>
                 <th className="py-3 px-4 text-center w-36 text-nibi">Miễn phí</th>
-                <th className="py-3 px-4 text-center w-44 text-ai dark:text-indigo-300 bg-ai/5 rounded-t-xl">
+                <th className="py-3 px-4 text-center w-44 text-ai bg-ai/5 rounded-t-xl">
                   Hội viên PRO 👑
                 </th>
               </tr>
@@ -338,7 +338,7 @@ export const PricingPage: React.FC = () => {
                   <div className="text-[11px] text-nibi">Bấm giờ chuẩn thi thật, chấm điểm đậu/trượt tức thì</div>
                 </td>
                 <td className="py-3.5 px-4 text-center text-nibi">Chỉ làm đề mẫu</td>
-                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400 bg-ai/5">
+                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 bg-ai/5">
                   Mở khóa 100% toàn bộ
                 </td>
               </tr>
@@ -348,7 +348,7 @@ export const PricingPage: React.FC = () => {
                   <div className="text-[11px] text-nibi">Lộ trình bài giảng video, từ vựng, ngữ pháp, kanji</div>
                 </td>
                 <td className="py-3.5 px-4 text-center text-nibi">Chỉ học bài mở đầu</td>
-                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400 bg-ai/5">
+                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 bg-ai/5">
                   Mở khóa toàn bộ bài học
                 </td>
               </tr>
@@ -362,9 +362,9 @@ export const PricingPage: React.FC = () => {
                   <br />
                   <span className="text-[10px] text-nibi/80">+500 token/ngày</span>
                 </td>
-                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400 bg-ai/5">
+                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 bg-ai/5">
                   <div className="flex items-center justify-center gap-1">
-                    <InfinityIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <InfinityIcon className="w-4 h-4 text-emerald-600" />
                     <span>Không giới hạn</span>
                   </div>
                 </td>
@@ -375,7 +375,7 @@ export const PricingPage: React.FC = () => {
                   <div className="text-[11px] text-nibi">Tải file PDF ô ly chữ điền chuẩn nét bút để in ra tập viết</div>
                 </td>
                 <td className="py-3.5 px-4 text-center text-nibi">Tối đa 10 chữ / phiếu</td>
-                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400 bg-ai/5">
+                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 bg-ai/5">
                   Không giới hạn số chữ
                 </td>
               </tr>
@@ -384,8 +384,8 @@ export const PricingPage: React.FC = () => {
                   <div className="font-semibold">Nhận diện chữ viết tay AI (Canvas OCR)</div>
                   <div className="text-[11px] text-nibi">Vẽ chữ trực tiếp trên màn hình để tra cứu nghĩa và bộ thủ</div>
                 </td>
-                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400">100% Miễn phí</td>
-                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400 bg-ai/5">
+                <td className="py-3.5 px-4 text-center font-bold text-emerald-600">100% Miễn phí</td>
+                <td className="py-3.5 px-4 text-center font-bold text-emerald-600 bg-ai/5">
                   100% Miễn phí
                 </td>
               </tr>

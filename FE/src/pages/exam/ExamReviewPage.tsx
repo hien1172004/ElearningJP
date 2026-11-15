@@ -372,7 +372,7 @@ export const ExamReviewPage: React.FC = () => {
                   {/* Status Ribbon/Badge */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2.5">
-                      <span className="w-8 h-8 rounded-xl bg-slate-900 text-white font-extrabold flex items-center justify-center text-sm shadow-xs">
+                      <span className="w-8 h-8 rounded-xl bg-slate-900 text-kinari font-extrabold flex items-center justify-center text-sm shadow-xs">
                         {q.questionNumber}
                       </span>
                       {q.starPosition && (
@@ -447,7 +447,7 @@ export const ExamReviewPage: React.FC = () => {
                             />
                             <button
                               onClick={() => setZoomImageUrl(q.passage?.imageUrl || null)}
-                              className="absolute bottom-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-white p-2 rounded-lg text-xs flex items-center gap-1 shadow-md transition"
+                              className="absolute bottom-3 right-3 bg-slate-900/80 hover:bg-slate-900 text-kinari p-2 rounded-lg text-xs flex items-center gap-1 shadow-md transition"
                             >
                               <Maximize2 className="w-3.5 h-3.5" />
                               Phóng to xem rõ
@@ -819,7 +819,7 @@ export const ExamReviewPage: React.FC = () => {
           <div className="relative max-w-4xl max-h-[90vh] overflow-auto overscroll-contain bg-surface rounded-2xl p-2 shadow-2xl">
             <button
               onClick={() => setZoomImageUrl(null)}
-              className="absolute top-4 right-4 bg-slate-900/70 hover:bg-slate-900 text-white p-2 rounded-full transition z-10"
+              className="absolute top-4 right-4 bg-slate-900/70 hover:bg-slate-900 text-kinari p-2 rounded-full transition z-10"
             >
               <X className="w-5 h-5" />
             </button>
