@@ -1,20 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Popover, Button } from 'antd'
 import { Bell, CheckCheck, Inbox, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
 import {
   NOTIFICATION_FEED_PAGE_SIZE,
   useMarkAllAsRead,
-  useMarkAsRead,
   useNotificationFeed,
   useUnreadCount,
 } from '@/hooks/useNotifications'
+import { useOpenNotification } from '@/hooks/useOpenNotification'
 import { useNotificationStore } from '@/stores/useNotificationStore'
-import { formatRelativeTime } from '@/utils/format'
 import { cn } from '@/utils/cn'
-import { useResolveCommentLink, extractErrorMessage } from '@/hooks/useComments'
-import { NotificationIcon } from './NotificationIcon'
+import { NotificationItem } from './NotificationItem'
 import type { AppNotification } from '@/types'
 
 /**
@@ -31,8 +28,7 @@ export const NotificationBell: React.FC = () => {
   const [open, setOpen] = useState(false)
   // false: chỉ hiện trang đầu + nút "Xem thông báo trước"; true: cuộn tới cuối là tải thêm.
   const [expanded, setExpanded] = useState(false)
-  const navigate = useNavigate()
-  const resolveCommentLink = useResolveCommentLink()
+  const openNotification = useOpenNotification()
 
   const listRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -51,7 +47,6 @@ export const NotificationBell: React.FC = () => {
     hasNextPage,
     isFetchingNextPage,
   } = useNotificationFeed({ enabled: open })
-  const { mutate: markAsRead } = useMarkAsRead()
   const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllAsRead()
 
   // Đồng bộ store từ REST mỗi khi REST trả số mới (socket rớt / vừa load trang).
@@ -121,82 +116,15 @@ export const NotificationBell: React.FC = () => {
     }
   }
 
-  const handleItemClick = async (notification: AppNotification) => {
-    if (!notification.read) {
-      markAsRead(notification.id)
-    }
-
-    const data = notification.dataJson
-
-    // Được giao khóa / luồng duyệt: mở đường dẫn đính kèm (trang soạn khóa hoặc hàng chờ duyệt).
-    // Bị gỡ khỏi khóa: không còn quyền nên không có link → không điều hướng.
-    if (
-      notification.type === 'COURSE_TEACHER_ASSIGNMENT' ||
-      notification.type === 'COURSE_REVIEW' ||
-      notification.type.startsWith('LESSON_') ||
-      notification.type === 'DRAFT_STALE'
-    ) {
-      const link = typeof data?.link === 'string' && data.link.startsWith('/') && !data.link.startsWith('//')
-        ? data.link
-        : null
-      if (link) {
-        handleOpenChange(false)
-        navigate(link)
-      }
-      return
-    }
-
-    // Thông báo hàng loạt / đổi trạng thái khóa học: mở đường dẫn đính kèm, hoặc trang khóa học liên quan
-    if (notification.type === 'ANNOUNCEMENT' || notification.type === 'COURSE_STATUS_CHANGED') {
-      const link =
-        // Chỉ đường dẫn trong ứng dụng ("/..."), chặn "//domain" (mở sang trang ngoài)
-        typeof data?.link === 'string' && data.link.startsWith('/') && !data.link.startsWith('//')
-          ? data.link
-          : data?.courseId
-            ? `/courses/${data.courseId}`
-            : null
-      if (link) {
-        handleOpenChange(false)
-        navigate(link)
-      }
-      return
-    }
-
-    // Đề thi cập nhật hoặc đính chính điểm: mở trang sảnh thi hoặc lịch sử kết quả
-    if (notification.type === 'EXAM_UPDATED' || notification.type === 'EXAM_RESULT') {
-      handleOpenChange(false)
-      navigate('/exams')
-      return
-    }
-
-    const isCommunity =
-      notification.type === 'COMMUNITY_REPLY' ||
-      notification.type === 'COMMUNITY_LIKE' ||
-      notification.type === 'COMMUNITY_DISLIKE'
-    if (!isCommunity || !data?.targetType) return
-
+  // Bấm mục nào cũng đóng popover (kể cả loại không có trang đích) cho cách phản hồi nhất quán
+  const handleItemClick = (notification: AppNotification) => {
     handleOpenChange(false)
-
-    // Có commentId → hỏi BE vị trí hiện tại để mở thẳng tới bình luận / reply.
-    if (data.commentId) {
-      try {
-        const link = await resolveCommentLink(data.commentId, data.replyId)
-        navigate(link ?? resolveTargetUrl(data.targetType))
-      } catch (err) {
-        toast.error(
-          extractErrorMessage(
-            err,
-            'Bình luận không còn tồn tại hoặc bạn không có quyền xem.',
-          ),
-        )
-      }
-      return
-    }
-    navigate(resolveTargetUrl(data.targetType))
+    void openNotification(notification)
   }
 
+  // Rộng 100vw - 2×12px lề - 24px khung popover → vừa khít màn hẹp; desktop tối đa 360px
   const content = (
-    <div className="w-[320px] sm:w-[360px] -my-2 -mx-2">
+    <div className="w-[calc(100vw-48px)] max-w-[360px] -my-2 -mx-2">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
         <span className="text-sm font-bold text-gray-900">Thông báo</span>
@@ -235,40 +163,7 @@ export const NotificationBell: React.FC = () => {
             <ul className="divide-y divide-gray-50">
               {items.map((n) => (
                 <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => void handleItemClick(n)}
-                    className={cn(
-                      'w-full text-left flex items-start gap-2.5 px-3 py-2.5 transition',
-                      'hover:bg-gray-50',
-                      !n.read && 'bg-indigo-50/60',
-                    )}
-                  >
-                    <NotificationIcon type={n.type} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start gap-1.5">
-                        <p
-                          className={cn(
-                            'text-[13px] leading-snug line-clamp-2',
-                            n.read
-                              ? 'text-gray-700 font-medium'
-                              : 'text-gray-900 font-semibold',
-                          )}
-                        >
-                          {n.title}
-                        </p>
-                        {!n.read && (
-                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
-                        )}
-                      </div>
-                      <p className="mt-0.5 text-xs text-gray-500 line-clamp-2">
-                        {n.body}
-                      </p>
-                      <p className="mt-1 text-[11px] text-gray-400">
-                        {formatRelativeTime(n.createdAt)}
-                      </p>
-                    </div>
-                  </button>
+                  <NotificationItem notification={n} onClick={handleItemClick} />
                 </li>
               ))}
             </ul>
@@ -304,14 +199,19 @@ export const NotificationBell: React.FC = () => {
         )}
       </div>
 
-      {/* Footer — chỉ hiện khi còn thông báo chưa đọc để gợi ý hành động */}
-      {badgeCount > 0 && (
-        <div className="px-3 py-2 border-t border-gray-100 text-center">
-          <span className="text-[11px] text-gray-400">
-            Bạn còn {badgeCount > 99 ? '99+' : badgeCount} thông báo chưa đọc
-          </span>
-        </div>
-      )}
+      {/* Footer — số chưa đọc + lối vào trang đầy đủ */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-gray-100">
+        <span className="text-[11px] text-gray-400">
+          {badgeCount > 0 ? `Bạn còn ${badgeCount > 99 ? '99+' : badgeCount} thông báo chưa đọc` : ''}
+        </span>
+        <Link
+          to="/notifications"
+          onClick={() => handleOpenChange(false)}
+          className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+        >
+          Xem tất cả
+        </Link>
+      </div>
     </div>
   )
 
@@ -323,6 +223,7 @@ export const NotificationBell: React.FC = () => {
       open={open}
       onOpenChange={handleOpenChange}
       arrow={false}
+      rootClassName="notification-popover"
       styles={{ content: { padding: 8 } }}
       // TopBar là `fixed`: render popup vào body thì khi cuộn trang popup trôi theo trang rồi
       // mới được căn lại (nhảy ra rồi quay về). Gắn vào ngay trong header để đứng yên cùng chuông.
@@ -356,24 +257,4 @@ export const NotificationBell: React.FC = () => {
       </button>
     </Popover>
   )
-}
-
-/**
- * Link dự phòng khi không mở thẳng được bình luận (thông báo thiếu `commentId`
- * hoặc BE không trả đủ dữ liệu dựng URL): chỉ mở đúng tab tra cứu / danh sách khóa học.
- */
-function resolveTargetUrl(
-  targetType: NonNullable<AppNotification['dataJson']>['targetType'],
-): string {
-  switch (targetType) {
-    case 'VOCABULARY':
-      return '/dictionary?tab=vocab'
-    case 'KANJI':
-      return '/dictionary?tab=kanji'
-    case 'GRAMMAR':
-      return '/dictionary?tab=grammar'
-    case 'LESSON':
-    default:
-      return '/courses'
-  }
 }

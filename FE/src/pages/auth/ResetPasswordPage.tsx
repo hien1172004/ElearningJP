@@ -1,14 +1,13 @@
 ﻿import React from 'react'
+import { toast } from 'sonner'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Lock, ShieldCheck, AlertCircle, ArrowLeft } from 'lucide-react'
 import {
   Alert,
-  App,
   Button as AntdButton,
   Form,
   Input as AntdInput,
-  Spin,
-} from 'antd'
+  Spin } from 'antd'
 import { z } from 'zod'
 import { AuthHeader, AuthFooter } from '@/components/auth'
 import { useResetPassword, useValidateResetToken } from '@/hooks'
@@ -31,7 +30,6 @@ type ResetFormValues = z.infer<typeof resetSchema>
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
-  const { message } = App.useApp()
   const [form] = Form.useForm<ResetFormValues>()
 
   const {
@@ -48,7 +46,7 @@ export const ResetPasswordPage: React.FC = () => {
       const values = (await form.validateFields()) as ResetFormValues
       const parsed = resetSchema.safeParse(values)
       if (!parsed.success) {
-        message.error(parsed.error.issues[0].message)
+        toast.error(parsed.error.issues[0].message)
         return
       }
       mutate({ token, ...parsed.data })

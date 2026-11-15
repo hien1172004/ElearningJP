@@ -3,7 +3,6 @@ import {
   Table,
   Button,
   Space,
-  Popconfirm,
   Input,
   Tooltip,
 } from 'antd'
@@ -17,6 +16,7 @@ import {
 } from '@ant-design/icons'
 import type { NotebookWord, MemoryLevel } from '@/types'
 import { NOTEBOOK_ITEM_TYPE_META, itemTypeOf } from './itemTypeMeta'
+import { confirmDialog } from '@/components/common/ConfirmModal'
 
 interface WordTableProps {
   words: NotebookWord[]
@@ -246,21 +246,22 @@ export const WordTable: React.FC<WordTableProps> = ({
             />
           </Tooltip>
           <Tooltip title="Xóa khỏi sổ tay">
-            <Popconfirm
-              title="Xác nhận xóa"
-              description="Bạn có chắc chắn muốn xóa mục này khỏi sổ tay?"
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-              onConfirm={() => onDeleteWord(record.id)}
-            >
-              <Button
-                type="text"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Popconfirm>
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              aria-label="Xóa khỏi sổ tay"
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: 'Xác nhận xóa',
+                  content: 'Bạn có chắc chắn muốn xóa mục này khỏi sổ tay?',
+                  okText: 'Xóa',
+                  danger: true,
+                })
+                if (ok) onDeleteWord(record.id)
+              }}
+            />
           </Tooltip>
         </Space>
       ),

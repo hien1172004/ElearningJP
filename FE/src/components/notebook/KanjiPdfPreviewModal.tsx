@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Modal, Button, Spin, Select, message } from 'antd'
+import { toast } from 'sonner'
+import { Modal, Button, Spin, Select } from 'antd'
 import {
   ReloadOutlined,
   LeftOutlined,
@@ -149,9 +150,9 @@ export const KanjiPdfPreviewModal: React.FC<KanjiPdfPreviewModalProps> = ({
     try {
       setDownloading(true)
       await notebookService.downloadKanjiPdf(notebookId, notebookName)
-      message.success('Đã tải xuống vở luyện viết Kanji!')
+      toast.success('Đã tải xuống vở luyện viết Kanji!')
     } catch {
-      message.error('Không thể tải xuống tệp PDF!')
+      toast.error('Không thể tải xuống tệp PDF!')
     } finally {
       setDownloading(false)
     }

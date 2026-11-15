@@ -561,3 +561,14 @@ rt {
     display: none;
   }
 }
+
+/* Popover chuông thông báo: màn hình hẹp thì neo theo viewport (cách 2 mép 12px)
+   thay vì theo chuông — tránh tràn mép trái khi chuông nằm giữa TopBar. */
+@media (max-width: 639px) {
+  .notification-popover.ant-popover {
+    position: fixed !important;
+    top: calc(var(--topbar-h) + 4px) !important;
+    left: 12px !important;
+    right: 12px !important;
+  }
+}

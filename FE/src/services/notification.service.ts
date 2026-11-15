@@ -3,6 +3,7 @@ import type {
   ApiResponse,
   AppNotification,
   NotificationListResponse,
+  NotificationType,
   UnreadCountResponse,
 } from '@/types'
 
@@ -17,8 +18,15 @@ export const notificationService = {
   getList: async (
     page = 1,
     size = 20,
+    filter?: { unreadOnly?: boolean; types?: NotificationType[] },
   ): Promise<ApiResponse<NotificationListResponse>> => {
-    return axiosClient.get('/notifications', { params: { page, size } })
+    return axiosClient.get('/notifications', {
+      params: { page, size, unreadOnly: filter?.unreadOnly || undefined, types: filter?.types?.join(',') || undefined },
+    })
+  },
+
+  delete: async (id: number): Promise<ApiResponse<void>> => {
+    return axiosClient.delete(`/notifications/${id}`)
   },
 
   /** Số chưa đọc — cho badge trên chuông. */

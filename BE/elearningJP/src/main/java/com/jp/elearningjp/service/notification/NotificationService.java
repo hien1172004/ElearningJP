@@ -26,6 +26,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
@@ -111,12 +112,16 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     /** Trang bắt đầu từ 1 như phần còn lại của hệ thống. */
-    public NotificationListResponse getList(Long userId, int page, int size) {
+    public NotificationListResponse getList(Long userId, int page, int size,
+                                            boolean unreadOnly, Collection<NotificationType> types) {
         Pageable pageable = PageRequest.of(
                 Math.max(page, 1) - 1,
                 Math.min(Math.max(size, 1), 100)
         );
-        Page<Notification> result = notificationRepository.findByUserId(userId, pageable);
+        // Không truyền loại = lấy tất cả (IN với danh sách rỗng là lỗi SQL)
+        Collection<NotificationType> typeFilter =
+                types == null || types.isEmpty() ? EnumSet.allOf(NotificationType.class) : types;
+        Page<Notification> result = notificationRepository.findPage(userId, unreadOnly, typeFilter, pageable);
 
         List<NotificationResponse> items = result.getContent().stream()
                 .map(this::toResponse)
@@ -176,6 +181,19 @@ public class NotificationService {
     @Transactional
     public void markAllAsRead(Long userId) {
         notificationRepository.markAllAsRead(userId, Instant.now(clock));
+    }
+
+    /** Xoá mềm 1 thông báo của chính user (trang "Tất cả thông báo"). */
+    @Transactional
+    public void delete(Long userId, Long notificationId) {
+        Notification notification = notificationRepository
+                .findByIdAndDeletedFalse(notificationId)
+                .orElseThrow(() -> new AppException(ErrorCode.NOTIFICATION_NOT_FOUND));
+        if (notification.getUser() == null || !userId.equals(notification.getUser().getId())) {
+            throw new AppException(ErrorCode.NOTIFICATION_FORBIDDEN);
+        }
+        notification.softDelete();
+        notificationRepository.save(notification);
     }
 
     // ============================================================

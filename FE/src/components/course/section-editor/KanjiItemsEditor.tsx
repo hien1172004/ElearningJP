@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react'
+import { toast } from 'sonner'
 import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { ItemPreviewModal } from './ItemPreviewModal'
 import { useQueryClient } from '@tanstack/react-query'
@@ -13,7 +14,7 @@ import {
   PenTool,
   X as XIcon,
 } from 'lucide-react'
-import { Modal, Form, Input, InputNumber, App, Select, Empty, Spin, Tag, Button } from 'antd'
+import { Modal, Form, Input, InputNumber, Select, Empty, Spin, Tag, Button } from 'antd'
 import { z } from 'zod'
 import type {
   LessonKanjiItem,
@@ -206,7 +207,6 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
 }) => {
   // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
   const locked = useCourseEditLocked()
-  const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState<LessonKanjiItem | null>(null)
@@ -358,7 +358,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         } as unknown as KanjiDetail)
       }
     } catch {
-      message.error(`Không tìm thấy chữ "${trimmed[0]}" trong từ điển`)
+      toast.error(`Không tìm thấy chữ "${trimmed[0]}" trong từ điển`)
     }
   }
 
@@ -498,7 +498,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
       // Khi sửa, ô Kanji bị ẩn và có thể chưa render xong (đang tải chi tiết) → dùng editSchema
       const parsed = (editing ? editSchema : schema).safeParse(values)
       if (!parsed.success) {
-        message.error(parsed.error.issues[0].message)
+        toast.error(parsed.error.issues[0].message)
         return
       }
       const v = parsed.data
@@ -526,7 +526,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
         (r) => filledNewVocabs.includes(r) && (!r.word.trim() || !r.hiragana.trim()),
       )
       if (incompleteIdx >= 0) {
-        message.error(`Từ mới #${incompleteIdx + 1} cần nhập đủ cả Từ vựng và Hiragana`)
+        toast.error(`Từ mới #${incompleteIdx + 1} cần nhập đủ cả Từ vựng và Hiragana`)
         return
       }
       for (const r of filledNewVocabs) {
@@ -571,7 +571,7 @@ export const KanjiItemsEditor: React.FC<KanjiItemsEditorProps> = ({
       if (err && typeof err === 'object' && 'response' in err) {
         const axErr = err as any
         const msg = axErr.response?.data?.message ?? 'Yêu cầu không hợp lệ'
-        message.error(Array.isArray(msg) ? msg.join(', ') : String(msg))
+        toast.error(Array.isArray(msg) ? msg.join(', ') : String(msg))
       }
     }
   }

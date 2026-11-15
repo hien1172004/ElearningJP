@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
+import { toast } from 'sonner'
 import { formatNotebookCounts } from './itemTypeMeta'
-import { Modal, Input, Button, message, Alert } from 'antd'
+import { Modal, Input, Button, Alert } from 'antd'
 import { DownloadOutlined, KeyOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { notebookService } from '@/services/notebook.service'
 import type { Notebook } from '@/types'
@@ -36,7 +37,7 @@ export const ImportShareCodeModal: React.FC<ImportShareCodeModalProps> = ({
   const handleCheckCode = async () => {
     const code = shareCode.trim()
     if (!code) {
-      message.warning('Vui lòng nhập mã chia sẻ 6 ký tự!')
+      toast.warning('Vui lòng nhập mã chia sẻ 6 ký tự!')
       return
     }
 
@@ -47,7 +48,7 @@ export const ImportShareCodeModal: React.FC<ImportShareCodeModalProps> = ({
         setPreviewNotebook(res.data)
       }
     } catch {
-      message.error('Không tìm thấy sổ tay hoặc tính năng chia sẻ đã bị tắt!')
+      toast.error('Không tìm thấy sổ tay hoặc tính năng chia sẻ đã bị tắt!')
       setPreviewNotebook(null)
     } finally {
       setSearching(false)
@@ -62,12 +63,12 @@ export const ImportShareCodeModal: React.FC<ImportShareCodeModalProps> = ({
       setLoading(true)
       const res = await notebookService.cloneNotebookByShareCode(code)
       if (res.data) {
-        message.success(`Đã nhân bản thành công sổ tay "${res.data.name}"!`)
+        toast.success(`Đã nhân bản thành công sổ tay "${res.data.name}"!`)
         onSuccess(res.data)
         handleClose()
       }
     } catch {
-      message.error('Có lỗi xảy ra khi nhân bản sổ tay!')
+      toast.error('Có lỗi xảy ra khi nhân bản sổ tay!')
     } finally {
       setLoading(false)
     }

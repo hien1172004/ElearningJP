@@ -182,18 +182,40 @@ class NotificationFixesTest {
         void getList_pageStartsAtOne() {
             NotificationService service = new NotificationService(notificationRepository, userRepository, publisher,
                     Clock.systemUTC());
-            when(notificationRepository.findByUserId(eq(OWNER), any()))
+            when(notificationRepository.findPage(eq(OWNER), eq(false), any(), any()))
                     .thenAnswer(i -> new org.springframework.data.domain.PageImpl<>(List.of(),
-                            i.getArgument(1, org.springframework.data.domain.Pageable.class), 25));
+                            i.getArgument(3, org.springframework.data.domain.Pageable.class), 25));
 
-            var response = service.getList(OWNER, 2, 10);
+            var response = service.getList(OWNER, 2, 10, false, null);
 
             ArgumentCaptor<org.springframework.data.domain.Pageable> pageable =
                     ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
-            verify(notificationRepository).findByUserId(eq(OWNER), pageable.capture());
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<java.util.Collection<NotificationType>> types = ArgumentCaptor.forClass(java.util.Collection.class);
+            verify(notificationRepository).findPage(eq(OWNER), eq(false), types.capture(), pageable.capture());
             assertThat(pageable.getValue().getPageNumber()).isEqualTo(1); // trang 2 → index 1
+            // Không lọc loại → truyền đủ mọi loại (IN rỗng là lỗi SQL)
+            assertThat(types.getValue()).containsExactlyInAnyOrder(NotificationType.values());
             assertThat(response.getPage()).isEqualTo(2);
             assertThat(response.getTotalPages()).isEqualTo(3);
+        }
+
+        @Test
+        void delete_ownNotification_softDeletes_otherUsers_forbidden() {
+            NotificationService service = new NotificationService(notificationRepository, userRepository, publisher,
+                    Clock.systemUTC());
+            var owner = com.jp.elearningjp.entity.user.User.builder().build();
+            owner.setId(OWNER);
+            var n = com.jp.elearningjp.entity.gamification.Notification.builder().user(owner).build();
+            when(notificationRepository.findByIdAndDeletedFalse(9L)).thenReturn(java.util.Optional.of(n));
+
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.delete(2L, 9L))
+                    .isInstanceOf(com.jp.elearningjp.exception.AppException.class);
+            assertThat(n.isDeleted()).isFalse();
+
+            service.delete(OWNER, 9L);
+            assertThat(n.isDeleted()).isTrue();
+            verify(notificationRepository).save(n);
         }
     }
 

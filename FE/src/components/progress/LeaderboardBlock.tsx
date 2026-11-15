@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import { Avatar, Button, Tooltip, message } from 'antd'
+import { toast } from 'sonner'
+import { Avatar, Button, Tooltip } from 'antd'
 import {
   ChevronLeft,
   ChevronRight,
@@ -289,12 +290,12 @@ export const LeaderboardBlock: React.FC = () => {
         onError: (err) => {
           // BE có cooldown 30s → 429. Hiện thông báo rõ ràng thay vì lỗi chung.
           if (err?.response?.status === 429) {
-            void message.warning(
+            void toast.warning(
               'Vui lòng đợi vài giây rồi thử lại (giới hạn 1 lần / 30 giây).',
             )
             return
           }
-          void message.error('Không tải lại được bảng xếp hạng. Vui lòng thử lại.')
+          void toast.error('Không tải lại được bảng xếp hạng. Vui lòng thử lại.')
         },
       },
     )

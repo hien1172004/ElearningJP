@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { ItemPreviewModal } from './ItemPreviewModal'
 import { Plus, Pencil, Trash2, BookOpen, Eye, Search, Link2, X as XIcon, Volume2, Star } from 'lucide-react'
-import { Modal, Form, Input, InputNumber, App, Select, Spin, Empty, Tag } from 'antd'
+import { Modal, Form, Input, InputNumber, Select, Spin, Empty, Tag } from 'antd'
 import { z } from 'zod'
 import {
   type LessonVocabularyItem,
@@ -403,7 +404,6 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
 }) => {
   // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
   const locked = useCourseEditLocked()
-  const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState<LessonVocabularyItem | null>(null)
@@ -550,7 +550,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
     } catch {
       if (cancelled) return
       // Lỗi fetch detail → vẫn giữ vocab đã chọn, examples để trống
-      message.warning(
+      toast.warning(
         'Không tải được chi tiết từ vựng. Ví dụ minh hoạ sẽ để trống.',
       )
     } finally {
@@ -670,7 +670,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
       const values = (await form.validateFields()) as FormValues
       const v = baseSchema.safeParse(values)
       if (!v.success) {
-        message.error(v.error.issues[0].message)
+        toast.error(v.error.issues[0].message)
         return
       }
       const data = v.data
@@ -685,11 +685,11 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
 
       for (const e of cleanedExamples) {
         if (!e.exampleJp?.trim()) {
-          message.error('Mỗi ví dụ cần có câu tiếng Nhật')
+          toast.error('Mỗi ví dụ cần có câu tiếng Nhật')
           return
         }
         if (!e.exampleVi?.trim()) {
-          message.error(`Ví dụ "${e.exampleJp}" cần có bản dịch tiếng Việt`)
+          toast.error(`Ví dụ "${e.exampleJp}" cần có bản dịch tiếng Việt`)
           return
         }
       }
@@ -751,7 +751,7 @@ export const VocabItemsEditor: React.FC<VocabItemsEditorProps> = ({
       if (err && typeof err === 'object' && 'response' in err) {
         const axErr = err as any
         const msg = axErr.response?.data?.message ?? 'Yêu cầu không hợp lệ'
-        message.error(Array.isArray(msg) ? msg.join(', ') : String(msg))
+        toast.error(Array.isArray(msg) ? msg.join(', ') : String(msg))
       }
     }
   }

@@ -111,8 +111,10 @@ export {
   useNotifications,
   useMarkAsRead,
   useMarkAllAsRead,
+  useDeleteNotification,
 } from './useNotifications'
 export { useNotificationSocket } from './useNotificationSocket'
+export { useOpenNotification, resolveNotificationLink } from './useOpenNotification'
 
 // Module SRS (Spaced Repetition System)
 export { useSrsDue } from './useSrsDue'

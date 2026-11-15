@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Modal, Input, message, Tooltip, Select } from 'antd'
+import { toast } from 'sonner'
+import { Modal, Input, Tooltip, Select } from 'antd'
 import {
   SearchOutlined,
   PlusOutlined,
@@ -124,7 +125,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
       }
     } catch (err) {
       console.error('Lỗi tải danh sách sổ tay:', err)
-      message.error('Không thể tải danh sách sổ tay')
+      toast.error('Không thể tải danh sách sổ tay')
     } finally {
       setLoading(false)
     }
@@ -237,9 +238,9 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
   /** Thông báo kết quả lưu hàng loạt từ bài học */
   const notifyLessonResult = (res: { notebookName: string; addedCount: number; skippedCount: number }) => {
     if (res.addedCount === 0) {
-      message.info(`Tất cả ${res.skippedCount} mục đã có sẵn trong sổ tay "${res.notebookName}"`)
+      toast.info(`Tất cả ${res.skippedCount} mục đã có sẵn trong sổ tay "${res.notebookName}"`)
     } else {
-      message.success(
+      toast.success(
         `Đã lưu ${res.addedCount} mục vào sổ tay "${res.notebookName}"` +
           (res.skippedCount > 0 ? ` (bỏ qua ${res.skippedCount} mục đã có)` : ''),
       )
@@ -258,7 +259,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
         onSuccess?.(notebook.id)
         onClose()
       } catch (err: any) {
-        message.warning(err?.response?.data?.message || 'Không thể lưu vào sổ tay')
+        toast.warning(err?.response?.data?.message || 'Không thể lưu vào sổ tay')
       } finally {
         setAddingNotebookId(null)
       }
@@ -286,14 +287,14 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
 
       await notebookService.addWord(notebook.id, payload)
       invalidateNotebookQueries()
-      message.success(`Đã thêm "${wordData.word}" vào sổ tay "${notebook.name}" thành công!`)
+      toast.success(`Đã thêm "${wordData.word}" vào sổ tay "${notebook.name}" thành công!`)
       onSuccess?.(notebook.id)
       onClose()
     } catch (err: any) {
       const errMsg =
         err?.response?.data?.message ||
         (err?.response?.data?.code === 7011 ? 'Mục này đã có trong sổ tay' : `Không thể thêm ${typeLabel} vào sổ tay`)
-      message.warning(errMsg)
+      toast.warning(errMsg)
     } finally {
       setAddingNotebookId(null)
     }
@@ -317,7 +318,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
         }
         onClose()
       } catch (err: any) {
-        message.error(err?.response?.data?.message || 'Không thể tạo sổ tay mới')
+        toast.error(err?.response?.data?.message || 'Không thể tạo sổ tay mới')
       } finally {
         setCreatingNotebook(false)
       }
@@ -328,7 +329,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
         name,
         groupId: activeGroup?.id ?? null,
       })
-      message.success(`Đã tạo sổ tay "${name}" thành công`)
+      toast.success(`Đã tạo sổ tay "${name}" thành công`)
       setIsCreateModalOpen(false)
       await loadData()
 
@@ -338,7 +339,7 @@ export const AddWordToNotebookModal: React.FC<AddWordToNotebookModalProps> = ({
         await handleSelectNotebook(res.data)
       }
     } catch (err: any) {
-      message.error(err?.response?.data?.message || 'Không thể tạo sổ tay mới')
+      toast.error(err?.response?.data?.message || 'Không thể tạo sổ tay mới')
     } finally {
       setCreatingNotebook(false)
     }

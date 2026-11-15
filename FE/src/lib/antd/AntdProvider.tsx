@@ -3,6 +3,7 @@ import { ConfigProvider, App as AntdApp, theme as antdTheme } from 'antd'
 import { useThemeStore } from '@/stores/useThemeStore'
 // Import thẳng file (không qua barrel components/common) để tránh vòng import lib ↔ components
 import { RequiredMark } from '@/components/common/RequiredMark'
+import { ConfirmDialogHost } from '@/components/common/ConfirmModal'
 import viVN from 'antd/locale/vi_VN'
 // antd v6 already supports React 19, no patch needed.
 
@@ -101,7 +102,10 @@ export const AntdProvider: React.FC<AntdProviderProps> = ({ children }) => {
       }}
       form={{ requiredMark: renderRequiredMark }}
     >
-      <AntdApp>{children}</AntdApp>
+      <AntdApp>
+        <ConfirmDialogHost />
+        {children}
+      </AntdApp>
     </ConfigProvider>
   )
 }

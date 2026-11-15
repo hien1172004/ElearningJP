@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Modal, Button, Switch, Tooltip, message } from 'antd'
+import { toast } from 'sonner'
+import { Modal, Button, Switch, Tooltip } from 'antd'
 import { CopyOutlined, CheckOutlined } from '@ant-design/icons'
 import type { Notebook } from '@/types'
 
@@ -31,10 +32,10 @@ export const ShareNotebookModal: React.FC<ShareNotebookModalProps> = ({
     try {
       await navigator.clipboard.writeText(shareCode)
       setCopiedCode(true)
-      message.success('Đã sao chép mã chia sẻ!')
+      toast.success('Đã sao chép mã chia sẻ!')
       setTimeout(() => setCopiedCode(false), 2000)
     } catch {
-      message.error('Không thể sao chép vào bộ nhớ tạm')
+      toast.error('Không thể sao chép vào bộ nhớ tạm')
     }
   }
 
@@ -42,10 +43,10 @@ export const ShareNotebookModal: React.FC<ShareNotebookModalProps> = ({
     try {
       await navigator.clipboard.writeText(shareLink)
       setCopiedLink(true)
-      message.success('Đã sao chép đường link chia sẻ!')
+      toast.success('Đã sao chép đường link chia sẻ!')
       setTimeout(() => setCopiedLink(false), 2000)
     } catch {
-      message.error('Không thể sao chép vào bộ nhớ tạm')
+      toast.error('Không thể sao chép vào bộ nhớ tạm')
     }
   }
 
@@ -54,13 +55,13 @@ export const ShareNotebookModal: React.FC<ShareNotebookModalProps> = ({
     try {
       setTogglingSharing(true)
       await onToggleSharing(checked)
-      message.success(
+      toast.success(
         checked
           ? 'Đã bật chia sẻ sổ tay lên cộng đồng!'
           : 'Đã tắt chia sẻ sổ tay (trở về riêng tư)'
       )
     } catch {
-      message.error('Có lỗi xảy ra khi cập nhật trạng thái chia sẻ')
+      toast.error('Có lỗi xảy ra khi cập nhật trạng thái chia sẻ')
     } finally {
       setTogglingSharing(false)
     }

@@ -1,14 +1,12 @@
 import React, { useState } from 'react'
+import { toast } from 'sonner'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Button,
   Input,
   Dropdown,
-  Popconfirm,
-  message,
   Spin,
-  Segmented,
-} from 'antd'
+  Segmented } from 'antd'
 import type { MenuProps } from 'antd'
 import {
   PlusOutlined,
@@ -49,7 +47,7 @@ import type {
   UpdateNotebookRequest,
   NotebookItemType,
 } from '@/types'
-import { BackButton } from '@/components/common'
+import { BackButton, confirmDialog } from '@/components/common'
 
 export const NotebookDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -134,28 +132,28 @@ export const NotebookDetailPage: React.FC = () => {
           wordId: editingWord.id,
           data: values as UpdateNotebookWordRequest,
         })
-        message.success('Cập nhật từ vựng thành công!')
+        toast.success('Cập nhật từ vựng thành công!')
       } else {
         await addWord.mutateAsync(values as CreateNotebookWordRequest)
-        message.success('Đã thêm từ vựng mới vào sổ tay!')
+        toast.success('Đã thêm từ vựng mới vào sổ tay!')
       }
       setWordModalOpen(false)
       refetchWords()
       refetchShuffled()
     } catch (err: any) {
       // Ưu tiên thông báo cụ thể từ server (vd: "Mục này đã có trong sổ tay")
-      message.error(err?.response?.data?.message || 'Có lỗi xảy ra khi lưu từ vựng!')
+      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi lưu từ vựng!')
     }
   }
 
   const handleDeleteWord = async (wordId: number) => {
     try {
       await deleteWord.mutateAsync(wordId)
-      message.success('Đã xóa từ vựng khỏi sổ tay!')
+      toast.success('Đã xóa từ vựng khỏi sổ tay!')
       refetchWords()
       refetchShuffled()
     } catch (err: any) {
-      message.error(err?.response?.data?.message || 'Không thể xóa từ vựng!')
+      toast.error(err?.response?.data?.message || 'Không thể xóa từ vựng!')
     }
   }
 
@@ -164,11 +162,11 @@ export const NotebookDetailPage: React.FC = () => {
     try {
       await batchDeleteWords.mutateAsync(selectedWordIds)
       setSelectedWordIds([])
-      message.success(`Đã xóa ${selectedWordIds.length} từ vựng đã chọn!`)
+      toast.success(`Đã xóa ${selectedWordIds.length} từ vựng đã chọn!`)
       refetchWords()
       refetchShuffled()
     } catch (err: any) {
-      message.error(err?.response?.data?.message || 'Không thể xóa hàng loạt từ vựng!')
+      toast.error(err?.response?.data?.message || 'Không thể xóa hàng loạt từ vựng!')
     }
   }
 
@@ -178,20 +176,20 @@ export const NotebookDetailPage: React.FC = () => {
         wordId,
         data: { userNote: note },
       })
-      message.success('Đã lưu ghi chú')
+      toast.success('Đã lưu ghi chú')
     } catch (err: any) {
-      message.error(err?.response?.data?.message || 'Không thể cập nhật ghi chú')
+      toast.error(err?.response?.data?.message || 'Không thể cập nhật ghi chú')
     }
   }
 
   // Xuất file Excel an toàn có Bearer Token
   const handleExportExcel = async () => {
     try {
-      message.loading({ content: 'Đang chuẩn bị file Excel...', key: 'exportExcel' })
+      toast.loading('Đang chuẩn bị file Excel...', { id: 'exportExcel' })
       await notebookService.downloadExcel(notebookId, notebook.name)
-      message.success({ content: 'Đã tải xuống file Excel thành công!', key: 'exportExcel' })
+      toast.success('Đã tải xuống file Excel thành công!', { id: 'exportExcel' })
     } catch {
-      message.error({ content: 'Không thể xuất file Excel!', key: 'exportExcel' })
+      toast.error('Không thể xuất file Excel!', { id: 'exportExcel' })
     }
   }
 
@@ -208,9 +206,9 @@ export const NotebookDetailPage: React.FC = () => {
     try {
       await updateNotebook.mutateAsync({ id: notebookId, data: values })
       setEditNotebookModalOpen(false)
-      message.success('Đã cập nhật thông tin sổ tay!')
+      toast.success('Đã cập nhật thông tin sổ tay!')
     } catch {
-      message.error('Có lỗi xảy ra khi cập nhật sổ tay!')
+      toast.error('Có lỗi xảy ra khi cập nhật sổ tay!')
     }
   }
 
@@ -218,10 +216,10 @@ export const NotebookDetailPage: React.FC = () => {
   const handleDeleteNotebook = async () => {
     try {
       await deleteNotebook.mutateAsync(notebookId)
-      message.success('Đã xóa sổ tay thành công!')
+      toast.success('Đã xóa sổ tay thành công!')
       navigate('/notebooks')
     } catch {
-      message.error('Không thể xóa sổ tay!')
+      toast.error('Không thể xóa sổ tay!')
     }
   }
 
@@ -267,18 +265,16 @@ export const NotebookDetailPage: React.FC = () => {
       key: 'delete',
       danger: true,
       icon: <DeleteOutlined />,
-      label: (
-        <Popconfirm
-          title="Xác nhận xóa sổ tay"
-          description="Toàn bộ từ vựng bên trong sẽ bị xóa theo. Bạn có chắc không?"
-          okText="Xóa"
-          cancelText="Hủy"
-          okButtonProps={{ danger: true }}
-          onConfirm={handleDeleteNotebook}
-        >
-          <span>Xóa sổ tay này</span>
-        </Popconfirm>
-      ),
+      label: 'Xóa sổ tay này',
+      onClick: async () => {
+        const ok = await confirmDialog({
+          title: 'Xác nhận xóa sổ tay',
+          content: 'Toàn bộ từ vựng bên trong sẽ bị xóa theo. Bạn có chắc không?',
+          okText: 'Xóa',
+          danger: true,
+        })
+        if (ok) void handleDeleteNotebook()
+      },
     },
   ]
 
@@ -372,7 +368,7 @@ export const NotebookDetailPage: React.FC = () => {
               if (notebook && (notebook.wordCount || 0) > 0) {
                 setReviewSelectOpen(true)
               } else {
-                message.info('Sổ tay này chưa có mục nào để ôn tập!')
+                toast.info('Sổ tay này chưa có mục nào để ôn tập!')
               }
             }}
             className="h-9 px-4 rounded-lg bg-ai hover:bg-ai/90 text-white font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer whitespace-nowrap shrink-0 select-none"
@@ -408,18 +404,23 @@ export const NotebookDetailPage: React.FC = () => {
           </div>
 
           {selectedWordIds.length > 0 && (
-            <Popconfirm
-              title="Xác nhận xóa hàng loạt"
-              description={`Bạn có chắc muốn xóa ${selectedWordIds.length} từ đã chọn?`}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-              onConfirm={handleBatchDelete}
+            <Button
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              className="rounded-lg"
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: 'Xác nhận xóa hàng loạt',
+                  content: `Bạn có chắc muốn xóa ${selectedWordIds.length} từ đã chọn?`,
+                  okText: 'Xóa',
+                  danger: true,
+                })
+                if (ok) void handleBatchDelete()
+              }}
             >
-              <Button danger size="small" icon={<DeleteOutlined />} className="rounded-lg">
-                Xóa {selectedWordIds.length} mục đã chọn
-              </Button>
-            </Popconfirm>
+              Xóa {selectedWordIds.length} mục đã chọn
+            </Button>
           )}
         </div>
 

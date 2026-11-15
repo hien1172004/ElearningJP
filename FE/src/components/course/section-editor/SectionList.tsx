@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
+import { toast } from 'sonner'
 import { useCourseEditLocked } from '@/components/course/edit-lock'
 import { toVersionMap } from '@/utils/versions'
 import { Plus, ChevronUp, ChevronDown, Pencil, Trash2, BookOpen, List } from 'lucide-react'
-import { Modal, Form, Input, Select, InputNumber, App } from 'antd'
+import { Modal, Form, Input, Select, InputNumber } from 'antd'
 import { z } from 'zod'
 import type {
   LessonSection,
@@ -42,7 +43,6 @@ export const SectionList: React.FC<SectionListProps> = ({
 }) => {
   // Khóa đang chờ duyệt: tạm khóa các thao tác sửa nội dung
   const locked = useCourseEditLocked()
-  const { message } = App.useApp()
   const [form] = Form.useForm<FormValues>()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingSection, setEditingSection] = useState<LessonSection | null>(null)
@@ -103,7 +103,7 @@ export const SectionList: React.FC<SectionListProps> = ({
         // Sửa mục: ô "Loại mục" bị ẩn (không đổi được loại) → không kiểm tra sectionType
         const parsed = editSchema.safeParse(values)
         if (!parsed.success) {
-          message.error(parsed.error.issues[0].message)
+          toast.error(parsed.error.issues[0].message)
           return
         }
         await updateSection.mutateAsync({
@@ -113,7 +113,7 @@ export const SectionList: React.FC<SectionListProps> = ({
       } else {
         const parsed = schema.safeParse(values)
         if (!parsed.success) {
-          message.error(parsed.error.issues[0].message)
+          toast.error(parsed.error.issues[0].message)
           return
         }
         await createSection.mutateAsync({

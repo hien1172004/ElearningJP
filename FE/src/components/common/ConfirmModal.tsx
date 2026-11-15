@@ -1,6 +1,21 @@
-import React from 'react'
-import { Modal } from 'antd'
+import React, { useEffect } from 'react'
+import { App, Modal } from 'antd'
 import type { ModalFuncProps } from 'antd'
+
+/** `modal` lấy từ context antd App → hộp xác nhận theo đúng theme sáng/tối (Modal.confirm tĩnh thì không). */
+let appModal: ReturnType<typeof App.useApp>['modal'] | null = null
+
+/** Gắn 1 lần bên trong `<App>` của antd (xem AntdProvider) để confirmDialog dùng modal có theme. */
+export const ConfirmDialogHost: React.FC = () => {
+  const { modal } = App.useApp()
+  useEffect(() => {
+    appModal = modal
+    return () => {
+      appModal = null
+    }
+  }, [modal])
+  return null
+}
 
 interface ConfirmOptions {
   title: string
@@ -41,11 +56,11 @@ export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
         className: '!rounded-lg font-medium text-slate-600 hover:text-slate-800',
       },
       centered: true,
-      maskClosable: true,
+      mask: { closable: true },
       onOk: () => resolve(true),
       onCancel: () => resolve(false),
     }
-    Modal.confirm(props)
+    ;(appModal ?? Modal).confirm(props)
   })
 }
 
@@ -84,7 +99,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       cancelButtonProps={{ className: '!rounded-lg' }}
       confirmLoading={isLoading}
       centered
-      maskClosable={!isLoading}
+      mask={{ closable: !isLoading }}
     >
       {typeof content === 'string' ? (
         <div className="text-sm text-slate-600 whitespace-pre-line leading-relaxed mt-2.5">

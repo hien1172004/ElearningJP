@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { createElement, useEffect, useRef } from 'react'
 import { Client, type IMessage } from '@stomp/stompjs'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -9,7 +9,8 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { useNotificationStore } from '@/stores/useNotificationStore'
 import { storage } from '@/utils/storage'
 import { authService } from '@/services/auth.service'
-import { notificationService } from '@/services/notification.service'
+import { NotificationIcon } from '@/components/notification/NotificationIcon'
+import { useOpenNotification } from '@/hooks/useOpenNotification'
 import type { AppNotification } from '@/types'
 
 /** Destination client subscribe — khớp `convertAndSendToUser(id, "/queue/notifications", …)`. */
@@ -38,10 +39,16 @@ export function useNotificationSocket() {
 
   const pushNotification = useNotificationStore((s) => s.pushNotification)
   const setConnected = useNotificationStore((s) => s.setConnected)
-  const setUnreadCount = useNotificationStore((s) => s.setUnreadCount)
   const reset = useNotificationStore((s) => s.reset)
 
   const clientRef = useRef<Client | null>(null)
+
+  // Ref để nút 'Xem' trên toast dùng hàm mở mới nhất mà không phải kết nối lại STOMP
+  const openNotification = useOpenNotification()
+  const openRef = useRef(openNotification)
+  useEffect(() => {
+    openRef.current = openNotification
+  }, [openNotification])
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -71,6 +78,7 @@ export function useNotificationSocket() {
         if (disposed) {
           return
         }
+        const isReconnect = everConnected
         everConnected = true
         setConnected(true)
         toast.dismiss(RECONNECT_TOAST_ID)
@@ -86,6 +94,9 @@ export function useNotificationSocket() {
             toast(notification.title, {
               description: notification.body,
               duration: 6000,
+              icon: createElement(NotificationIcon, { type: notification.type, className: 'w-6 h-6', iconClassName: 'w-3.5 h-3.5' }),
+              // Cùng logic mở như khi bấm trong chuông
+              action: { label: 'Xem', onClick: () => void openRef.current(notification) },
             })
           } catch {
             // Payload hỏng: bỏ qua, không để listener chết.
@@ -95,9 +106,11 @@ export function useNotificationSocket() {
         // Topic khác (vd: nội dung khóa học vừa đổi) dùng chung kết nối này
         attachStompClient(client)
 
-        // Đồng bộ lại sau khi (re)connect — bù các thông báo bị lỡ khi mất mạng.
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notification.all })
-        void hydrateUnreadCount(setUnreadCount)
+        // Chỉ đồng bộ lại khi kết nối LẠI (bù thông báo lỡ lúc mất mạng); lần đầu useUnreadCount đã tải
+        // nên không gọi thêm. Badge store được NotificationBell đồng bộ từ kết quả query.
+        if (isReconnect) {
+          queryClient.invalidateQueries({ queryKey: QUERY_KEYS.notification.all })
+        }
       },
 
       onWebSocketClose: () => {
@@ -142,7 +155,6 @@ export function useNotificationSocket() {
     pushNotification,
     queryClient,
     setConnected,
-    setUnreadCount,
   ])
 
   // Reset store khi logout (badge của user cũ không được dính sang user mới).
@@ -156,20 +168,6 @@ export function useNotificationSocket() {
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/** Đồng bộ badge từ REST sau khi reconnect. */
-async function hydrateUnreadCount(
-  setUnreadCount: (count: number) => void,
-): Promise<void> {
-  try {
-    const res = await notificationService.getUnreadCount()
-    if (typeof res?.data?.count === 'number') {
-      setUnreadCount(res.data.count)
-    }
-  } catch {
-    // Không quan trọng — React Query sẽ refetch theo refetchInterval.
-  }
-}
 
 /**
  * Refresh access token dùng chung endpoint `/auth/refresh` như `axiosClient`.

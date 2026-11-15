@@ -1,7 +1,8 @@
 ﻿import React from 'react'
+import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
 import { Mail, Send, ArrowLeft } from 'lucide-react'
-import { App, Button as AntdButton, Form, Input as AntdInput } from 'antd'
+import { Button as AntdButton, Form, Input as AntdInput } from 'antd'
 import { z } from 'zod'
 import { AuthHeader, AuthFooter } from '@/components/auth'
 import { useForgotPassword } from '@/hooks'
@@ -13,7 +14,6 @@ const forgotSchema = z.object({
 type ForgotFormValues = z.infer<typeof forgotSchema>
 
 export const ForgotPasswordPage: React.FC = () => {
-  const { message } = App.useApp()
   const [form] = Form.useForm<ForgotFormValues>()
 
   const { mutate, isPending } = useForgotPassword()
@@ -23,7 +23,7 @@ export const ForgotPasswordPage: React.FC = () => {
       const values = (await form.validateFields()) as ForgotFormValues
       const parsed = forgotSchema.safeParse(values)
       if (!parsed.success) {
-        message.error(parsed.error.issues[0].message)
+        toast.error(parsed.error.issues[0].message)
         return
       }
       mutate(parsed.data)
