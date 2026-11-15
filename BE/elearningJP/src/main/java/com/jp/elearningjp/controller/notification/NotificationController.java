@@ -5,6 +5,7 @@ import com.jp.elearningjp.dto.response.notification.NotificationListResponse;
 import com.jp.elearningjp.dto.response.notification.NotificationResponse;
 import com.jp.elearningjp.dto.response.notification.UnreadCountResponse;
 import com.jp.elearningjp.service.notification.NotificationService;
+import com.jp.elearningjp.shared.enums.NotificationType;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
 import com.jp.elearningjp.shared.util.CurrentUserService;
@@ -15,6 +16,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -54,12 +56,25 @@ public class NotificationController {
     @GetMapping
     public ApiResponse<NotificationListResponse> getList(
             @Parameter(description = "Trang, bắt đầu từ 1") @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @Parameter(description = "Chỉ lấy thông báo chưa đọc") @RequestParam(value = "unreadOnly", defaultValue = "false") boolean unreadOnly,
+            @Parameter(description = "Lọc theo loại; bỏ trống = tất cả") @RequestParam(value = "types", required = false) List<NotificationType> types
     ) {
         Long userId = currentUserService.getCurrentUserId();
         return ApiResponse.<NotificationListResponse>builder()
                 .success(true)
-                .data(notificationService.getList(userId, page, size))
+                .data(notificationService.getList(userId, page, size, unreadOnly, types))
+                .build();
+    }
+
+    @Operation(summary = "Xoá 1 thông báo của chính mình (xoá mềm)")
+    @DeleteMapping(ApiPaths.Notification.BY_ID)
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
+        Long userId = currentUserService.getCurrentUserId();
+        notificationService.delete(userId, id);
+        return ApiResponse.<Void>builder()
+                .success(true)
+                .message("Đã xoá thông báo")
                 .build();
     }
 

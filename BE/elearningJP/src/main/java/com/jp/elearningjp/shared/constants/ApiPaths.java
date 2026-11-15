@@ -286,6 +286,7 @@ public final class ApiPaths {
         public static final String RECENT = "/recent";
         public static final String READ = "/{id}/read";
         public static final String READ_ALL = "/read-all";
+        public static final String BY_ID = "/{id}";
     }
 
     public static final class Exam {

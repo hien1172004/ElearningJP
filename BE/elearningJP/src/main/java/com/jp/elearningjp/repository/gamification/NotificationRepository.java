@@ -31,11 +31,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
            "WHERE n.user.id = :userId AND n.read = false AND n.deleted = false")
     long countUnread(@Param("userId") Long userId);
 
-    /** Danh sách phân trang, mới nhất trước. */
+    /** Danh sách phân trang, mới nhất trước; lọc chưa đọc + theo nhóm loại (types luôn khác rỗng). */
     @Query("SELECT n FROM Notification n " +
            "WHERE n.user.id = :userId AND n.deleted = false " +
+           "AND (:unreadOnly = false OR n.read = false) " +
+           "AND n.type IN :types " +
            "ORDER BY n.createdAt DESC, n.id DESC")
-    Page<Notification> findByUserId(@Param("userId") Long userId, Pageable pageable);
+    Page<Notification> findPage(@Param("userId") Long userId,
+                                @Param("unreadOnly") boolean unreadOnly,
+                                @Param("types") Collection<NotificationType> types,
+                                Pageable pageable);
 
     /** 20 thông báo CHƯA ĐỌC mới nhất — cho dropdown nhanh trên TopBar. */
     @Query("SELECT n FROM Notification n " +
@@ -83,7 +88,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             UPDATE notifications
             SET deleted = TRUE, deleted_at = :now, updated_at = :now
             WHERE deleted = FALSE
-              AND type IN ('COMMUNITY_REPLY', 'COMMUNITY_LIKE', 'COMMUNITY_DISLIKE')
+              AND type IN ('COMMUNITY_REPLY', 'COMMUNITY_LIKE')
               AND data_json ->> 'commentId' = CAST(:commentId AS text)
             """, nativeQuery = true)
     int softDeleteByCommentId(@Param("commentId") Long commentId, @Param("now") Instant now);
@@ -94,7 +99,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             UPDATE notifications
             SET deleted = TRUE, deleted_at = :now, updated_at = :now
             WHERE deleted = FALSE
-              AND type IN ('COMMUNITY_REPLY', 'COMMUNITY_LIKE', 'COMMUNITY_DISLIKE')
+              AND type IN ('COMMUNITY_REPLY', 'COMMUNITY_LIKE')
               AND data_json ->> 'replyId' IN (:replyIds)
             """, nativeQuery = true)
     int softDeleteByReplyIds(@Param("replyIds") Collection<String> replyIds, @Param("now") Instant now);

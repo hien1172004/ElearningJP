@@ -101,13 +101,32 @@ class NotificationQueriesIT {
         long third = notify("COMMUNITY_LIKE", "{}");
         jdbc.update("UPDATE notifications SET created_at = TIMESTAMPTZ '2026-11-02 08:00:00+07' WHERE user_id = ?", userId);
 
-        List<Long> page1 = notificationRepository.findByUserId(userId, org.springframework.data.domain.PageRequest.of(0, 2))
+        var all = java.util.EnumSet.allOf(com.jp.elearningjp.shared.enums.NotificationType.class);
+        List<Long> page1 = notificationRepository.findPage(userId, false, all, org.springframework.data.domain.PageRequest.of(0, 2))
                 .map(n -> n.getId()).getContent();
-        List<Long> page2 = notificationRepository.findByUserId(userId, org.springframework.data.domain.PageRequest.of(1, 2))
+        List<Long> page2 = notificationRepository.findPage(userId, false, all, org.springframework.data.domain.PageRequest.of(1, 2))
                 .map(n -> n.getId()).getContent();
 
         assertThat(page1).containsExactly(third, second);
         assertThat(page2).containsExactly(first);
+    }
+
+    @Test
+    void findPage_filtersUnreadAndTypes() {
+        long srs = notify("SRS_DUE", "{}");
+        long like = notify("COMMUNITY_LIKE", "{}");
+        long streak = notify("STREAK_WARNING", "{}");
+        jdbc.update("UPDATE notifications SET is_read = true WHERE id = ?", streak);
+        var pageReq = org.springframework.data.domain.PageRequest.of(0, 10);
+        var all = java.util.EnumSet.allOf(com.jp.elearningjp.shared.enums.NotificationType.class);
+
+        assertThat(notificationRepository.findPage(userId, true, all, pageReq).map(n -> n.getId()).getContent())
+                .containsExactlyInAnyOrder(srs, like);
+        assertThat(notificationRepository.findPage(userId, false,
+                        List.of(com.jp.elearningjp.shared.enums.NotificationType.SRS_DUE,
+                                com.jp.elearningjp.shared.enums.NotificationType.STREAK_WARNING), pageReq)
+                .map(n -> n.getId()).getContent())
+                .containsExactlyInAnyOrder(srs, streak);
     }
 
     @Test
