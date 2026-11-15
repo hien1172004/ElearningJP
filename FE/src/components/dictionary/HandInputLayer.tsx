@@ -62,7 +62,7 @@ export const HandInputLayer: React.FC<HandInputLayerProps> = ({
         {status === 'ready' && (
           <span
             className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-              cursor?.penDown ? 'bg-sky-600 text-white' : cursor ? 'bg-slate-800/75 text-white' : 'bg-amber-500 text-white'
+              cursor?.penDown ? 'bg-sky-600 text-kinari' : cursor ? 'bg-slate-800/75 text-kinari' : 'bg-amber-500 text-kinari'
             }`}
           >
             {cursor?.penDown ? '✍️ Đang vẽ' : cursor ? '✋ Di chuyển' : 'Đưa tay vào camera'}

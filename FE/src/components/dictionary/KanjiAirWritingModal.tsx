@@ -1329,7 +1329,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             {/* Nút đóng */}
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer ml-1"
+              className="p-2 text-slate-400 hover:text-kinari hover:bg-slate-800 rounded-xl transition cursor-pointer ml-1"
               title="Đóng"
             >
               <X className="w-5 h-5" />
@@ -1428,7 +1428,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
             {/* Màn hình Loading */}
             {isLoading && !isSimulationMode && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-white z-10 gap-3">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-kinari z-10 gap-3">
                 <div className="w-12 h-12 rounded-full border-3 border-indigo-500/30 border-t-indigo-500 animate-spin" />
                 <p className="text-sm font-medium text-slate-200">
                   Đang khởi tạo Camera & MediaPipe Hands...
@@ -1438,7 +1438,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
             {/* Màn hình Báo lỗi Camera (Hỗ trợ hướng dẫn phím cứng Fn + F10 & Chế độ chuột mô phỏng) */}
             {cameraError && !isSimulationMode && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 text-white z-20 p-6 text-center gap-3">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 text-kinari z-20 p-6 text-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
                   <VideoOff className="w-6 h-6" />
                 </div>

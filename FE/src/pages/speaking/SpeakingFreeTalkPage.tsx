@@ -328,7 +328,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
         </div>
 
         {/* Lời chào màu tím đặc trưng của Mazii */}
-        <h2 className="text-sm sm:text-base font-bold text-[#8B5CF6] max-w-xl leading-relaxed mb-5">
+        <h2 className="text-sm sm:text-base font-bold text-violet-600 max-w-xl leading-relaxed mb-5">
           Chào {username}! Hôm nay của bạn thế nào? Kể cho Maziiko nghe bằng tiếng Nhật nhé
         </h2>
 
@@ -427,7 +427,7 @@ export const SpeakingFreeTalkPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={stopListening}
-                      className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center transition shadow-xs"
+                      className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-kinari flex items-center justify-center transition shadow-xs"
                       title="Dừng ghi âm"
                     >
                       <Square className="w-4 h-4 fill-white text-white rounded-xs" />

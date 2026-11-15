@@ -48,18 +48,18 @@ export const PlanChangeConfirmModal: React.FC<PlanChangeConfirmModalProps> = ({
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold font-mono tracking-wide ${
                 targetPremium
-                  ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30'
-                  : 'bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border border-indigo-500/30'
+                  ? 'bg-amber-500/15 text-amber-800 border border-amber-500/30'
+                  : 'bg-indigo-500/15 text-indigo-800 border border-indigo-500/30'
               }`}
             >
               {targetPremium ? (
                 <>
-                  <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <Sparkles className="w-3 h-3 text-amber-600" />
                   <span>NÂNG CẤP GÓI PRO</span>
                 </>
               ) : (
                 <>
-                  <Globe className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                  <Globe className="w-3 h-3 text-indigo-600" />
                   <span>CÔNG KHAI MIỄN PHÍ</span>
                 </>
               )}
@@ -116,8 +116,8 @@ export const PlanChangeConfirmModal: React.FC<PlanChangeConfirmModalProps> = ({
                 <span
                   className={`font-bold px-2 py-0.5 rounded ${
                     targetPremium
-                      ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono'
-                      : 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-mono'
+                      ? 'bg-amber-500/20 text-amber-800 font-mono'
+                      : 'bg-emerald-500/20 text-emerald-800 font-mono'
                   }`}
                 >
                   {targetPremium ? '✦ PRO' : 'Miễn phí'}

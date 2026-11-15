@@ -173,10 +173,10 @@ export const VietQrModal: React.FC<VietQrModalProps> = ({
               Thanh toán thành công! 🎉
             </h3>
             <p className="text-sm text-nibi max-w-md mx-auto leading-relaxed">
-              Hệ thống đã nhận được tiền và kích hoạt toàn bộ quyền lợi <strong className="text-amber-600 dark:text-amber-400">ElearningJP PRO</strong> cho tài khoản của bạn.
+              Hệ thống đã nhận được tiền và kích hoạt toàn bộ quyền lợi <strong className="text-amber-600">ElearningJP PRO</strong> cho tài khoản của bạn.
             </p>
             <div className="pt-2">
-              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+              <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 font-bold text-xs">
                 <Check className="w-4 h-4" /> Đang chuyển hướng bạn đến kho học tập...
               </span>
             </div>
@@ -202,8 +202,8 @@ export const VietQrModal: React.FC<VietQrModalProps> = ({
                 </div>
 
                 {/* Countdown Badge */}
-                <div className="mt-3.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                  <Clock className="w-3.5 h-3.5 animate-spin text-amber-600 dark:text-amber-400" />
+                <div className="mt-3.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 border border-amber-500/30">
+                  <Clock className="w-3.5 h-3.5 animate-spin text-amber-600" />
                   <span>
                     Mã hết hạn sau: <strong className="font-mono text-sm">{formatTime(timeLeftSeconds)}</strong>
                   </span>
@@ -223,13 +223,13 @@ export const VietQrModal: React.FC<VietQrModalProps> = ({
                     <button
                       type="button"
                       onClick={() => copyToClipboard(order.amountVnd.toString(), 'Số tiền')}
-                      className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 font-bold transition cursor-pointer"
+                      className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-bold transition cursor-pointer"
                     >
                       {copiedField === 'Số tiền' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       <span>{copiedField === 'Số tiền' ? 'Đã chép' : 'Sao chép'}</span>
                     </button>
                   </div>
-                  <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 font-mono tracking-tight">
+                  <div className="text-2xl sm:text-3xl font-black text-amber-600 font-mono tracking-tight">
                     {order.amountVnd.toLocaleString('vi-VN')} <span className="text-lg">đ</span>
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export const VietQrModal: React.FC<VietQrModalProps> = ({
                 {/* Nội dung chuyển khoản (CRITICAL) */}
                 <div className="bg-amber-500/10 border-2 border-amber-500/40 rounded-2xl p-3.5 sm:p-4 relative">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide flex items-center gap-1.5 text-[11px]">
+                    <span className="font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5 text-[11px]">
                       <Zap className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                       <span>Nội dung chuyển khoản (Bắt buộc)</span>
                     </span>
@@ -255,7 +255,7 @@ export const VietQrModal: React.FC<VietQrModalProps> = ({
                     {paymentDescription}
                   </div>
 
-                  <p className="text-[10px] text-amber-700 dark:text-amber-300 mt-1.5 font-medium leading-relaxed">
+                  <p className="text-[10px] text-amber-700 mt-1.5 font-medium leading-relaxed">
                     ⚠️ Vui lòng giữ nguyên nội dung chuyển khoản để hệ thống tự động ghi nhận và kích hoạt ngay sau 3 giây.
                   </p>
                 </div>

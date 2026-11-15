@@ -358,7 +358,7 @@ export const PricingCheckoutPage: React.FC = () => {
               </div>
 
               {couponResult?.isValid && (
-                <div className="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-2.5">
+                <div className="flex justify-between items-center text-xs text-emerald-600 font-semibold mt-2.5">
                   <span className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5" />
                     <span>Đã áp dụng mã {couponResult.code}</span>
@@ -374,10 +374,10 @@ export const PricingCheckoutPage: React.FC = () => {
             <div className="pt-4 border-t border-suna flex justify-between items-baseline">
               <span className="text-sm font-bold text-sumi">Tổng thanh toán:</span>
               <div className="text-right">
-                <span className="text-2xl sm:text-3xl font-black text-ai dark:text-indigo-300 font-mono tracking-tight">
+                <span className="text-2xl sm:text-3xl font-black text-ai font-mono tracking-tight">
                   {finalPrice.toLocaleString('vi-VN')}
                 </span>
-                <span className="text-sm text-ai dark:text-indigo-300 font-bold ml-1">đ</span>
+                <span className="text-sm text-ai font-bold ml-1">đ</span>
               </div>
             </div>
           </div>
@@ -504,8 +504,8 @@ export const PricingCheckoutPage: React.FC = () => {
                   </div>
 
                   {/* Đếm ngược */}
-                  <div className="mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                    <Clock className="w-3.5 h-3.5 animate-spin text-amber-600 dark:text-amber-400" />
+                  <div className="mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-700 border border-amber-500/20">
+                    <Clock className="w-3.5 h-3.5 animate-spin text-amber-600" />
                     <span>Hết hạn sau: <strong className="font-mono text-sm">{formatTime(timeLeftSeconds)}</strong></span>
                   </div>
 
@@ -528,14 +528,14 @@ export const PricingCheckoutPage: React.FC = () => {
                         {copiedField === 'Số tiền' ? 'Đã chép ✓' : 'Sao chép'}
                       </button>
                     </div>
-                    <div className="text-2xl font-black text-ai dark:text-indigo-300 font-mono">
+                    <div className="text-2xl font-black text-ai font-mono">
                       {order.amountVnd.toLocaleString('vi-VN')} đ
                     </div>
                   </div>
 
                   {/* Nội dung chuyển khoản (QUAN TRỌNG) */}
                   <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5">
-                    <div className="flex justify-between items-center text-amber-700 dark:text-amber-300 font-semibold mb-1">
+                    <div className="flex justify-between items-center text-amber-700 font-semibold mb-1">
                       <span>Nội dung chuyển khoản (Bắt buộc):</span>
                       <button
                         type="button"
@@ -548,7 +548,7 @@ export const PricingCheckoutPage: React.FC = () => {
                     <div className="font-mono text-base font-bold text-sumi bg-surface px-3 py-1.5 rounded-lg border border-amber-500/30 select-all tracking-wider">
                       {paymentDescription}
                     </div>
-                    <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">
+                    <p className="text-[10px] text-amber-700 mt-1">
                       * Giữ nguyên nội dung chuyển khoản để hệ thống kích hoạt tức thì.
                     </p>
                   </div>

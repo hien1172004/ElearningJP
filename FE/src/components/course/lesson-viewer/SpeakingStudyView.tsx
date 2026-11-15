@@ -744,7 +744,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {/* 1. THANH CHUYỂN ĐỔI KỊCH BẢN (CHỈ HIỆN KHI Ở TRANG XEM TÀI LIỆU MẪU) */}
       {/* ==================================================================== */}
       {scenarioList.length > 1 && !isAiChatMode && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200/90 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-surface rounded-xl border border-slate-200/90 shadow-2xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
               Tình huống ({activeScenarioIndex + 1}/{scenarioList.length})
@@ -817,7 +817,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {!isAiChatMode ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* CỘT TRÁI: TỔNG QUAN (~35% -> lg:col-span-5 xl:col-span-4) */}
-          <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-5">
+          <div className="lg:col-span-5 xl:col-span-4 bg-surface rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-slate-800">
                 <LayoutGrid className="w-5 h-5 text-slate-700" />
@@ -916,7 +916,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
           </div>
 
           {/* CỘT PHẢI: LUYỆN TẬP TABS (8/12 cols ~65%) */}
-          <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs">
+          <div className="lg:col-span-7 xl:col-span-8 bg-surface rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-800">Luyện tập</h2>
@@ -1017,7 +1017,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-[#F7F5FC] rounded-2xl p-3 sm:p-5 space-y-4 min-h-[360px] max-h-[600px] overflow-y-auto overscroll-contain">
+                <div className="bg-indigo-50 rounded-2xl p-3 sm:p-5 space-y-4 min-h-[360px] max-h-[600px] overflow-y-auto overscroll-contain">
                   {currentScenario.sampleDialogue && currentScenario.sampleDialogue.length > 0 ? (
                     currentScenario.sampleDialogue.map((line: SampleDialogueLine, index: number) => {
                       const isUser = line.speaker === 'USER' || (line as any).role === 'USER'
@@ -1030,8 +1030,8 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                           <div
                             className={`max-w-[88%] sm:max-w-[78%] rounded-2xl p-3.5 shadow-xs transition-all ${
                               isUser
-                                ? 'bg-white rounded-tr-xs border border-slate-200/80 text-right'
-                                : 'bg-white rounded-tl-xs border border-slate-200/80 text-left'
+                                ? 'bg-surface rounded-tr-xs border border-slate-200/80 text-right'
+                                : 'bg-surface rounded-tl-xs border border-slate-200/80 text-left'
                             } ${isCurrentPlaying ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
                           >
                             <div className={`text-[11px] font-semibold text-slate-400 mb-1 ${isUser ? 'text-right' : 'text-left'}`}>
@@ -1149,7 +1149,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                       return (
                         <div
                           key={idx}
-                          className={`bg-[#F8FAFC] rounded-2xl p-4 border border-slate-200/80 hover:border-indigo-200 hover:bg-slate-50 transition flex items-start justify-between gap-3 ${
+                          className={`bg-slate-50 rounded-2xl p-4 border border-slate-200/80 hover:border-indigo-200 hover:bg-slate-50 transition flex items-start justify-between gap-3 ${
                             isCurrentPlaying ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : ''
                           }`}
                         >
@@ -1162,7 +1162,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                           <button
                             type="button"
                             onClick={() => playTts(item.word)}
-                            className="p-2 rounded-xl bg-white border border-slate-200/80 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition cursor-pointer shadow-2xs shrink-0"
+                            className="p-2 rounded-xl bg-surface border border-slate-200/80 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition cursor-pointer shadow-2xs shrink-0"
                             title="Nghe phát âm"
                           >
                             <Volume2 className="w-4 h-4" />
@@ -1216,7 +1216,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                     (currentScenario.grammar as any[]).map((item: any, idx: number) => {
                       const isExpanded = !!expandedGrammar[idx]
                       return (
-                        <div key={idx} className="bg-[#F8FAFC] rounded-2xl p-4 sm:p-5 border border-slate-200/80 hover:border-indigo-200 transition space-y-2.5">
+                        <div key={idx} className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200/80 hover:border-indigo-200 transition space-y-2.5">
                           <h4 className="font-bold text-sm text-slate-800 tracking-wide">{item.pattern}</h4>
                           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">{item.meaning}</p>
                           {item.example && (
@@ -1231,7 +1231,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                             </div>
                           )}
                           <div className="pt-1">
-                            <button type="button" onClick={() => setExpandedGrammar((prev) => ({ ...prev, [idx]: !prev[idx] }))} className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition cursor-pointer">
+                            <button type="button" onClick={() => setExpandedGrammar((prev) => ({ ...prev, [idx]: !prev[idx] }))} className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-surface border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition cursor-pointer">
                               <span>Giải nghĩa</span>
                               <ChevronRight className={`w-4 h-4 text-slate-400 transform transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                             </button>
@@ -1277,9 +1277,9 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
         /* ==================================================================== */
         /* 3. CHẾ ĐỘ 2: LUYỆN NÓI CÙNG AI TRỰC TIẾP (HẾT KHUNG, CUỘN NỘI BỘ, KHÔNG GIÃN TRANG) */
         /* ==================================================================== */
-        <div className="-m-6 md:-m-8 flex flex-col h-[calc(100vh-140px)] min-h-[580px] bg-[#FAF8F5] rounded-md overflow-hidden relative">
+        <div className="-m-6 md:-m-8 flex flex-col h-[calc(100vh-140px)] min-h-[580px] bg-kinari rounded-md overflow-hidden relative">
           {/* Header phòng luyện nói: Cố định ở trên cùng */}
-          <div className="shrink-0 bg-white/95 backdrop-blur-xs px-5 sm:px-8 py-3.5 border-b border-amber-100/90 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-2xs">
+          <div className="shrink-0 bg-surface/95 backdrop-blur-xs px-5 sm:px-8 py-3.5 border-b border-amber-100/90 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-2xs">
             <button
               type="button"
               onClick={() => {
@@ -1342,7 +1342,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
 
               {/* POPOVER CÀI ĐẶT PHÒNG NÓI */}
               {showSettings && (
-                <div className="absolute right-0 top-11 w-76 sm:w-80 bg-white rounded-2xl p-4 shadow-2xl border border-slate-200/90 z-50 space-y-4 animate-in fade-in zoom-in-95">
+                <div className="absolute right-0 top-11 w-76 sm:w-80 bg-surface rounded-2xl p-4 shadow-2xl border border-slate-200/90 z-50 space-y-4 animate-in fade-in zoom-in-95">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-700">Hiện Romaji</span>
                     <button
@@ -1459,7 +1459,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                     <span className="leading-snug">{currentScenario.description}</span>
                   </div>
                   {(currentScenario.userRole || currentScenario.aiRole) && (
-                    <div className="inline-flex items-center gap-2.5 text-xs text-slate-500 bg-white/80 backdrop-blur-xs px-3.5 py-1 rounded-full border border-slate-200/70 shadow-2xs">
+                    <div className="inline-flex items-center gap-2.5 text-xs text-slate-500 bg-surface/80 backdrop-blur-xs px-3.5 py-1 rounded-full border border-slate-200/70 shadow-2xs">
                       <span>👤 Bạn: <strong className="text-slate-800 font-semibold">{currentScenario.userRole || 'Người học'}</strong></span>
                       <span className="text-slate-300">·</span>
                       <span>🤖 AI: <strong className="text-slate-800 font-semibold">{currentScenario.aiRole || 'Maziiko'}</strong></span>
@@ -1493,7 +1493,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                           <MaziikoMascot size={36} />
                         </div>
 
-                        <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl rounded-tl-xs bg-white border border-slate-200/90 p-4 shadow-xs text-left space-y-2">
+                        <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl rounded-tl-xs bg-surface border border-slate-200/90 p-4 shadow-xs text-left space-y-2">
                           {/* Header của tin nhắn AI */}
                           <div className="flex items-center gap-2 text-xs">
                             <span className="font-bold text-slate-800">Maziiko</span>
@@ -1579,7 +1579,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                   // Tin nhắn người học - Căn phải (Trắng tinh khôi, viền trang nhã như SpeakingPracticePage)
                   return (
                     <div key={msg.id || index} className="flex justify-end items-start gap-2.5 animate-in fade-in">
-                      <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-xs bg-white border border-slate-200/90 p-4 shadow-xs text-left space-y-2">
+                      <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-xs bg-surface border border-slate-200/90 p-4 shadow-xs text-left space-y-2">
                         <div className="flex items-center justify-between gap-4 mb-1 text-xs text-slate-400">
                           <span className="font-semibold text-slate-700">{currentScenario.userRole || 'Bạn'}</span>
                           <span className="text-[11px]">{time}</span>
@@ -1644,7 +1644,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
               )}
 
               {isProcessing && (
-                <div className="flex items-center gap-2 p-3 bg-white border border-slate-200/80 text-slate-600 rounded-2xl w-fit text-xs animate-pulse shadow-2xs">
+                <div className="flex items-center gap-2 p-3 bg-surface border border-slate-200/80 text-slate-600 rounded-2xl w-fit text-xs animate-pulse shadow-2xs">
                   <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
                   <span>Maziiko đang suy nghĩ...</span>
                 </div>
@@ -1656,7 +1656,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
           {/* ==================================================================== */}
           {/* THANH ĐIỀU KHIỂN NỔI PHÍA DƯỚI (CỐ ĐỊNH, KHÔNG BỊ TRÔI) */}
           {/* ==================================================================== */}
-          <div className="shrink-0 pb-5 px-4 sm:px-6 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5]/95 to-transparent pt-3 border-t border-amber-100/60">
+          <div className="shrink-0 pb-5 px-4 sm:px-6 bg-gradient-to-t from-kinari via-kinari/95 to-transparent pt-3 border-t border-amber-100/60">
             <div className="max-w-2xl w-full mx-auto flex flex-col items-center gap-3">
               {/* HÀNG 3 NÚT NỔI: 🎯 Nhiệm vụ | ⚡ Dịch cả bài | 💡 Gợi ý */}
               <div className="flex items-center gap-2 flex-wrap justify-center">
@@ -1664,7 +1664,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowTasksModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition cursor-pointer"
                   >
                     <Target className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Nhiệm vụ</span>
@@ -1677,7 +1677,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleTranslateAll}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition cursor-pointer"
                   title="Bật / tắt bản dịch tiếng Việt cho tất cả các câu thoại"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
@@ -1688,7 +1688,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                   type="button"
                   disabled={isLoadingSuggestions}
                   onClick={handleOpenSuggestions}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-slate-200/90 hover:border-indigo-300 hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition cursor-pointer disabled:opacity-50"
                 >
                   {isLoadingSuggestions ? (
                     <div className="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
@@ -1701,7 +1701,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
 
               {/* THẺ GỢI Ý CÂU TRẢ LỜI INLINE KHI BẤM NÚT "GỢI Ý" */}
               {showInlineSuggestion && (
-                <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                <div className="w-full bg-surface rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
                   {isLoadingSuggestions ? (
                     <div className="flex items-center gap-3 py-2 text-indigo-600 text-sm font-medium">
                       <Loader2 className="w-4 h-4 animate-spin shrink-0" />
@@ -1772,7 +1772,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
               {/* THANH NHẬP LIỆU CAPSULE HOẶC THẺ THU ÂM */}
               {isListening || !!spokenText ? (
                 /* Thẻ thu âm sóng âm khi nói */
-                <div className="w-full bg-white rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
+                <div className="w-full bg-surface rounded-2xl p-4 border border-slate-200/90 shadow-md space-y-3 animate-in fade-in slide-in-from-bottom-2">
                   <div className="text-slate-800 text-sm sm:text-base font-medium min-h-[32px] select-text">
                     {spokenText || (
                       <span className="text-slate-400 italic">
@@ -1809,7 +1809,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                         <button
                           type="button"
                           onClick={stopListening}
-                          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center transition shadow-xs cursor-pointer"
+                          className="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-kinari flex items-center justify-center transition shadow-xs cursor-pointer"
                           title="Dừng thu âm"
                         >
                           <Square className="w-4 h-4 fill-white text-white rounded-xs" />
@@ -1842,7 +1842,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                 </div>
               ) : (
                 /* Thanh Capsule bình thường - Trắng tinh, đổ bóng chuẩn Mazii */
-                <div className="w-full bg-white rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3 hover:shadow-lg transition-shadow">
+                <div className="w-full bg-surface rounded-full p-2 pl-3.5 pr-2 border border-slate-200/90 shadow-md flex items-center justify-between gap-3 hover:shadow-lg transition-shadow">
                   <button
                     type="button"
                     onClick={() => setIsKeyboardMode((p) => !p)}
@@ -1937,7 +1937,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {/* ==================================================================== */}
       {showTasksModal && currentScenario.tasks && currentScenario.tasks.length > 0 && (
         <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl relative space-y-4">
+          <div className="bg-surface rounded-2xl max-w-md w-full p-5 shadow-2xl relative space-y-4">
             <button
               onClick={() => setShowTasksModal(false)}
               className="absolute top-4 right-4 p-1 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer"
@@ -1973,7 +1973,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {/* ==================================================================== */}
       {shadowingLine && (
         <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
+          <div className="bg-surface rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
             <button
               onClick={() => {
                 if (isListening) stopListening()
@@ -1989,12 +1989,12 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
               <span>Luyện phát âm theo mẫu (Shadowing)</span>
             </h3>
 
-            <div className="p-4 rounded-xl bg-[#F7F5FC] text-center space-y-2">
+            <div className="p-4 rounded-xl bg-indigo-50 text-center space-y-2">
               <FuriganaText text={shadowingLine.text} size="lg" />
               <button
                 type="button"
                 onClick={() => playTts(shadowingLine.text)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs mt-2 transition cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-2xs mt-2 transition cursor-pointer"
               >
                 <Volume2 className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Nghe lại câu mẫu</span>
@@ -2076,7 +2076,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
       {/* ==================================================================== */}
       {showVocabPracticeModal && currentScenario.vocabulary && currentScenario.vocabulary.length > 0 && (
         <div className="fixed inset-0 overscroll-contain z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
+          <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
             <button
               onClick={() => setShowVocabPracticeModal(false)}
               className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
@@ -2091,7 +2091,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
 
             <div
               onClick={() => setShowVocabAnswer((prev) => !prev)}
-              className="min-h-[180px] p-6 rounded-2xl bg-[#F8FAFC] border-2 border-dashed border-indigo-200 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition"
+              className="min-h-[180px] p-6 rounded-2xl bg-slate-50 border-2 border-dashed border-indigo-200 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-50 transition"
             >
               <div className="text-2xl font-bold text-slate-800 mb-2">
                 {currentScenario.vocabulary[practiceVocabIndex].word}
@@ -2102,7 +2102,7 @@ export const SpeakingStudyView: React.FC<SpeakingStudyViewProps> = ({
                   e.stopPropagation()
                   playTts(currentScenario.vocabulary[practiceVocabIndex].word)
                 }}
-                className="p-1.5 rounded-full bg-white shadow-xs text-slate-500 hover:text-indigo-600 mb-3 cursor-pointer"
+                className="p-1.5 rounded-full bg-surface shadow-xs text-slate-500 hover:text-indigo-600 mb-3 cursor-pointer"
               >
                 <Volume2 className="w-4 h-4" />
               </button>
