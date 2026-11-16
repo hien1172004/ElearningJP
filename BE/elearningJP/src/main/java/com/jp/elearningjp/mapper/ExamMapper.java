@@ -10,10 +10,12 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface ExamMapper {
 
+    @Mapping(target = "isPremium", source = "premium")
     ExamSummaryResponse toSummaryResponse(Exam exam);
 
     @Mapping(target = "scoreGroups", ignore = true)
     @Mapping(target = "sections", ignore = true)
+    @Mapping(target = "isPremium", source = "premium")
     ExamDetailResponse toDetailResponse(Exam exam);
 
     @Mapping(target = "scoreGroups", ignore = true)

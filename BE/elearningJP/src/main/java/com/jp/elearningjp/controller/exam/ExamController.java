@@ -57,7 +57,7 @@ public class ExamController {
     public ApiResponse<Page<ExamSummaryResponse>> getPublishedExams(
             @RequestParam(required = false) JlptLevel level,
             @RequestParam(required = false) ExamType examType,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+            @PageableDefault(size = 12, sort = {"isPremium", "id"}, direction = Sort.Direction.ASC) Pageable pageable) {
 
         Page<ExamSummaryResponse> exams = examService.getPublishedExams(level, examType, pageable);
         return ApiResponse.<Page<ExamSummaryResponse>>builder()

@@ -56,6 +56,7 @@ public class CourseAccessGuard {
     private final LessonDraftService lessonDraftService;
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
+    private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     /** Cùng người sửa liên tục → ghi lại "người / thời điểm sửa gần nhất" tối đa 1 lần mỗi khoảng này. */
     static final Duration DRAFT_EDIT_TOUCH_INTERVAL = Duration.ofMinutes(1);
@@ -70,6 +71,15 @@ public class CourseAccessGuard {
             return;
         }
         Long userId = currentUserService.getCurrentUserId();
+        Course course = courseRepository.findByIdAndDeletedFalse(courseId).orElse(null);
+        if (course != null && isAssignedTeacher(course, userId)) {
+            return;
+        }
+        if (course != null && Boolean.TRUE.equals(course.getIsPremium()) && !subscriptionService.isUserPro(userId)) {
+            log.warn("[SECURITY] User id={} attempted to access PRO course id={} without active PRO subscription",
+                    userId, courseId);
+            throw new AppException(ErrorCode.PREMIUM_REQUIRED);
+        }
         if (!enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(userId, courseId)) {
             Long currentUserId = userId; // chỉ log khi cần
             log.warn("[SECURITY] User id={} attempted to access course id={} without enrollment",
@@ -87,8 +97,15 @@ public class CourseAccessGuard {
             return;
         }
         Long userId = currentUserService.getCurrentUserId();
-        if (isAssignedTeacher(course, userId)
-                || enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(userId, course.getId())) {
+        if (isAssignedTeacher(course, userId)) {
+            return;
+        }
+        if (Boolean.TRUE.equals(course.getIsPremium()) && !subscriptionService.isUserPro(userId)) {
+            log.warn("[SECURITY] User id={} attempted to read content of PRO course id={} without active PRO subscription",
+                    userId, course.getId());
+            throw new AppException(ErrorCode.PREMIUM_REQUIRED);
+        }
+        if (enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(userId, course.getId())) {
             return;
         }
         log.warn("[SECURITY] User id={} attempted to read content of course id={} without enrollment",

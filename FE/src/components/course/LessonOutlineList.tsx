@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Circle, PlayCircle, ChevronRight, Mic } from 'lucide-react'
+import { CheckCircle2, Circle, PlayCircle, ChevronRight, Mic, Lock } from 'lucide-react'
 import { ProgressCircle } from '@/components/common'
 import { toSlug } from '@/utils'
 import { LESSON_FROM_COURSE_STATE } from '@/utils/lessonNav'
@@ -13,6 +13,8 @@ interface LessonOutlineListProps {
   isEnrolled?: boolean | null
   /** Hiện vòng tròn % thay cho icon trạng thái (chỉ học viên đã đăng ký). */
   showProgress?: boolean
+  isLocked?: boolean
+  onLockedClick?: () => void
   onSelect?: (lesson: LessonOutline) => void
 }
 
@@ -45,6 +47,8 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
   courseSlug,
   isEnrolled,
   showProgress,
+  isLocked,
+  onLockedClick,
   onSelect,
 }) => {
   const navigate = useNavigate()
@@ -64,20 +68,37 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
           <li key={lesson.id}>
             <div
               onClick={() => {
-                if (onSelect) onSelect(lesson)
-                else if (isEnrolled) navigate(href, { state: LESSON_FROM_COURSE_STATE })
+                if (isLocked && onLockedClick) {
+                  onLockedClick()
+                } else if (onSelect) {
+                  onSelect(lesson)
+                } else if (isEnrolled) {
+                  navigate(href, { state: LESSON_FROM_COURSE_STATE })
+                }
               }}
-              className={`flex items-center gap-3 p-3.5 rounded-md border border-gray-200/80 hover:border-indigo-300 hover:bg-indigo-50/30 transition cursor-pointer ${
-                isEnrolled ? '' : 'opacity-80'
+              className={`flex items-center gap-3 p-3.5 rounded-xl border transition cursor-pointer ${
+                isLocked
+                  ? 'border-suna/70 bg-surface hover:border-amber-400 hover:bg-amber-50/20 opacity-90'
+                  : isEnrolled
+                  ? 'border-suna/90 bg-surface hover:border-ai/50 hover:bg-kamenozoki/20'
+                  : 'border-suna/60 bg-surface opacity-80'
               }`}
             >
-              <div className="shrink-0 w-9 h-9 rounded-md bg-gray-50 text-gray-500 font-bold text-sm flex items-center justify-center border border-gray-200/80">
+              <div className="shrink-0 w-9 h-9 rounded-xl bg-kinari text-nibi font-bold text-sm flex items-center justify-center border border-suna">
                 {String(idx + 1).padStart(2, '0')}
               </div>
-              {showProgress ? <ProgressCircle percent={lesson.progressPercent ?? 0} size={40} /> : statusIcon(lesson.status)}
+              {isLocked ? (
+                <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-500 shrink-0">
+                  <Lock className="w-4 h-4" />
+                </div>
+              ) : showProgress ? (
+                <ProgressCircle percent={lesson.progressPercent ?? 0} size={40} />
+              ) : (
+                statusIcon(lesson.status)
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="font-semibold text-sm text-gray-900 truncate">
+                  <h4 className="font-semibold text-sm text-sumi truncate">
                     {lesson.title}
                   </h4>
                   {lesson.hasSpeaking && (
@@ -86,19 +107,23 @@ export const LessonOutlineList: React.FC<LessonOutlineListProps> = ({
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-nibi mt-0.5">
                   {statusLabel(lesson.status)}
                   {lesson.bestScore != null && (
                     <>
                       {' • '}
-                      <span className="font-semibold text-indigo-600">
+                      <span className="font-semibold text-ai">
                         Điểm cao nhất: {lesson.bestScore}
                       </span>
                     </>
                   )}
                 </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+              {isLocked ? (
+                <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-nibi shrink-0" />
+              )}
             </div>
           </li>
         )

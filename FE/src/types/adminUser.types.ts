@@ -26,6 +26,7 @@ export interface AdminUser {
   authProvider: AuthProvider
   status: UserStatus
   roles: string[]
+  isPro?: boolean
   emailVerifiedAt?: string | null
   createdAt?: string
   updatedAt?: string

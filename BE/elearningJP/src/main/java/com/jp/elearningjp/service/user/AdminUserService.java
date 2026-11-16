@@ -59,6 +59,7 @@ public class AdminUserService {
     CurrentUserService currentUserService;
     UserTokenRevocationService userTokenRevocationService;
     PasswordEncoder passwordEncoder;
+    com.jp.elearningjp.repository.subscription.UserSubscriptionRepository userSubscriptionRepository;
 
     /**
      * Admin cấp phát tài khoản đăng nhập bằng email/mật khẩu cho giáo viên hoặc quản trị viên.
@@ -89,7 +90,7 @@ public class AdminUserService {
         userRepository.save(user);
         log.info("Admin {} provisioned account {} with role {}",
                 currentUserService.getCurrentUserId(), user.getId(), roleName);
-        return toResponse(user, Set.of(roleName));
+        return toResponse(user, Set.of(roleName), checkUserPro(user.getId()));
     }
 
     /**
@@ -108,11 +109,12 @@ public class AdminUserService {
         }
 
         Page<User> userPage = userRepository.findAll(buildSpec(keyword, roleFilter, status), pageable);
-        Map<Long, Set<String>> rolesByUser = loadRoleNames(
-                userPage.getContent().stream().map(User::getId).toList());
+        List<Long> userIds = userPage.getContent().stream().map(User::getId).toList();
+        Map<Long, Set<String>> rolesByUser = loadRoleNames(userIds);
+        Set<Long> proUserIds = userIds.isEmpty() ? Set.of() : userSubscriptionRepository.findProUserIds(userIds, Instant.now());
 
         List<AdminUserResponse> items = userPage.getContent().stream()
-                .map(u -> toResponse(u, rolesByUser.getOrDefault(u.getId(), Set.of())))
+                .map(u -> toResponse(u, rolesByUser.getOrDefault(u.getId(), Set.of()), proUserIds.contains(u.getId())))
                 .toList();
 
         return PageResponse.<AdminUserResponse>builder()
@@ -127,7 +129,7 @@ public class AdminUserService {
     @Transactional(readOnly = true)
     public AdminUserResponse getUser(Long userId) {
         User user = findActiveUser(userId);
-        return toResponse(user, roleNamesOf(user));
+        return toResponse(user, roleNamesOf(user), checkUserPro(user.getId()));
     }
 
     /**
@@ -150,7 +152,7 @@ public class AdminUserService {
             log.info("Admin {} changed status of user {}: {} -> {}",
                     currentUserService.getCurrentUserId(), userId, oldStatus, newStatus);
         }
-        return toResponse(user, roleNamesOf(user));
+        return toResponse(user, roleNamesOf(user), checkUserPro(user.getId()));
     }
 
     /**
@@ -186,7 +188,14 @@ public class AdminUserService {
             log.info("Admin {} changed roles of user {}: {} -> {}",
                     currentUserService.getCurrentUserId(), userId, current, requested);
         }
-        return toResponse(user, requested);
+        return toResponse(user, requested, checkUserPro(user.getId()));
+    }
+
+    private boolean checkUserPro(Long userId) {
+        if (userId == null) return false;
+        return userSubscriptionRepository.findActiveSubscription(userId, Instant.now())
+                .map(com.jp.elearningjp.entity.subscription.UserSubscription::isPro)
+                .orElse(false);
     }
 
     // =========================================================
@@ -253,7 +262,7 @@ public class AdminUserService {
         };
     }
 
-    private static AdminUserResponse toResponse(User user, Set<String> roles) {
+    private static AdminUserResponse toResponse(User user, Set<String> roles, boolean isPro) {
         return AdminUserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -262,6 +271,7 @@ public class AdminUserService {
                 .authProvider(user.getAuthProvider())
                 .status(user.getStatus())
                 .roles(roles)
+                .isPro(isPro)
                 .emailVerifiedAt(user.getEmailVerifiedAt())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())

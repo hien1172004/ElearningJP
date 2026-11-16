@@ -8,11 +8,13 @@ import {
   UserPlus,
   PanelLeftClose,
   PanelLeftOpen,
+  Crown,
 } from 'lucide-react'
 import {
   useAuthStore,
   useAuthModalStore,
   useSidebarStore,
+  useSubscriptionStore,
 } from '@/stores'
 import { useLogout } from '@/hooks'
 import { NotificationBell } from '@/components/notification'
@@ -39,6 +41,7 @@ export const TopBar: React.FC = () => {
   const { mutate: logout } = useLogout()
   const openLogin = useAuthModalStore((s) => s.openLogin)
   const openRegister = useAuthModalStore((s) => s.openRegister)
+  const isPro = useSubscriptionStore((s) => s.isPro) || Boolean(user?.isPro)
 
   const collapsed = useSidebarStore((s) => s.collapsed)
   const toggle = useSidebarStore((s) => s.toggle)
@@ -76,23 +79,46 @@ export const TopBar: React.FC = () => {
               <NotificationBell />
               <Link
                 to="/profile"
-                className="inline-flex items-center gap-2 text-sm font-semibold px-2.5 py-1.5 rounded-full text-gray-700 hover:bg-gray-100 max-w-[200px] transition border border-transparent hover:border-gray-200"
-                title="Tài khoản cá nhân"
+                className="inline-flex items-center gap-2 text-sm font-semibold px-2.5 py-1.5 rounded-full text-sumi hover:bg-suna/30 max-w-[210px] transition border border-transparent hover:border-suna"
+                title={isPro ? 'Tài khoản Hội viên PRO' : 'Tài khoản cá nhân'}
               >
-                {user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.fullName || 'Avatar'}
-                    className="w-7 h-7 rounded-full object-cover shrink-0 border border-indigo-200 shadow-2xs"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-200 text-xs font-bold">
-                    {user?.fullName ? user.fullName.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
-                  </div>
-                )}
+                <div className="relative shrink-0">
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.fullName || 'Avatar'}
+                      className={cn(
+                        'w-7 h-7 rounded-full object-cover shadow-2xs',
+                        isPro ? 'ring-2 ring-amber-400 border border-amber-300' : 'border border-indigo-200',
+                      )}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className={cn(
+                        'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold',
+                        isPro
+                          ? 'bg-amber-50 text-amber-700 ring-2 ring-amber-400 border border-amber-300'
+                          : 'bg-indigo-50 text-indigo-600 border border-indigo-200',
+                      )}
+                    >
+                      {user?.fullName ? user.fullName.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
+                    </div>
+                  )}
+
+                  {/* Icon vương miện PRO trên góc avatar */}
+                  {isPro && (
+                    <span
+                      className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-gradient-to-tr from-amber-500 to-yellow-400 text-white rounded-full flex items-center justify-center shadow-xs border border-white"
+                      title="Hội viên PRO"
+                    >
+                      <Crown className="w-2 h-2 fill-current" />
+                    </span>
+                  )}
+                </div>
+
                 <span className="truncate">
                   {user?.fullName || user?.email || 'Tài khoản'}
                 </span>

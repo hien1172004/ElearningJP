@@ -71,6 +71,7 @@ public class CourseService {
     CoursePublishedVersionRepository publishedVersionRepository;
     ApplicationEventPublisher eventPublisher;
     com.jp.elearningjp.repository.curriculum.LessonReviewRequestRepository lessonReviewRequestRepository;
+    com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     private static final String DEFAULT_SLUG = "khoa-hoc";
 
@@ -229,7 +230,13 @@ public class CourseService {
         int completedCount = 0;
 
         if (currentUser != null) {
-            isEnrolled = enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), courseId);
+            boolean hasEnrollment = enrollmentRepository.existsByUserIdAndCourseIdAndDeletedFalse(currentUser.getId(), courseId);
+            boolean isUserPro = subscriptionService.isUserPro(currentUser.getId());
+            boolean isRestrictedPro = Boolean.TRUE.equals(course.getIsPremium())
+                    && !isUserPro
+                    && !currentUserService.isAdmin()
+                    && !courseAccessGuard.isAssignedTeacher(course, currentUser.getId());
+            isEnrolled = hasEnrollment && !isRestrictedPro;
             if (isEnrolled) {
                 List<UserLessonProgress> progressList = progressRepository.findAllByUserIdAndCourseId(currentUser.getId(), courseId);
                 progressMap = progressList.stream()

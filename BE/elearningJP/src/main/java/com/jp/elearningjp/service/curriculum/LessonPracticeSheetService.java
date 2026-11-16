@@ -67,6 +67,7 @@ public class LessonPracticeSheetService {
     LessonDraftService lessonDraftService;
     com.jp.elearningjp.shared.util.CurrentUserService currentUserService;
     com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
+    com.jp.elearningjp.service.subscription.DailyPracticeLimitService dailyPracticeLimitService;
 
     /** File PDF trả về cho trình duyệt. */
     public record PracticeSheetFile(String fileName, byte[] content) {
@@ -103,6 +104,10 @@ public class LessonPracticeSheetService {
                         showTitles ? collected.titles.get(en.getKey()) : null, en.getValue()))
                 .toList();
         byte[] pdf = renderer.render(collected.lesson.getTitle(), groups);
+        Long currentUserId = currentUserService.getCurrentUserId();
+        if (currentUserId != null && !subscriptionService.isUserPro(currentUserId)) {
+            dailyPracticeLimitService.recordUsage(currentUserId, collected.entries.size());
+        }
         String prefix = request.sectionType() == LessonSectionType.KANJI ? "luyen_viet_chu_han" : "luyen_viet_tu_vung";
         log.info("[PRACTICE-SHEET] lesson id={} type={} items={} groups={}",
                 lessonId, request.sectionType(), collected.entries.size(), groups.size());
@@ -140,12 +145,10 @@ public class LessonPracticeSheetService {
         if (wanted.isEmpty()) throw new AppException(ErrorCode.PRACTICE_SHEET_NO_ITEMS);
         if (wanted.size() > MAX_ITEMS) throw new AppException(ErrorCode.PRACTICE_SHEET_TOO_MANY_ITEMS);
 
-        // Giới hạn 10 từ/phiếu cho tài khoản Free
-        if (wanted.size() > 10) {
-            Long currentUserId = currentUserService.getCurrentUserId();
-            if (currentUserId != null && !subscriptionService.isUserPro(currentUserId)) {
-                throw new AppException(ErrorCode.PREMIUM_REQUIRED);
-            }
+        // Giới hạn 10 từ/ngày cho tài khoản Free (tự động reset vào 00:00 ngày hôm sau)
+        Long currentUserId = currentUserService.getCurrentUserId();
+        if (currentUserId != null && !subscriptionService.isUserPro(currentUserId)) {
+            dailyPracticeLimitService.checkLimit(currentUserId, wanted.size());
         }
 
         Lesson lesson;

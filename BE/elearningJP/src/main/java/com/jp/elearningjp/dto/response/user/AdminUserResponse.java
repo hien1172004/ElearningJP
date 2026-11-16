@@ -22,6 +22,8 @@ public class AdminUserResponse {
     AuthProvider authProvider;
     UserStatus status;
     Set<String> roles;
+    @com.fasterxml.jackson.annotation.JsonProperty("isPro")
+    Boolean isPro;
     Instant emailVerifiedAt;
     Instant createdAt;
     Instant updatedAt;
