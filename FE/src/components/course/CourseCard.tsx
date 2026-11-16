@@ -1,8 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Users, GraduationCap, Crown } from 'lucide-react'
+import { BookOpen, Users, GraduationCap, Crown, Lock } from 'lucide-react'
 import type { CourseSummary } from '@/types'
 import { JLPT_LEVEL_BADGE } from '@/utils/jlpt'
+import { useAuthStore, useSubscriptionStore } from '@/stores'
+import { canPreviewCourse } from '@/utils/roles'
 
 interface CourseCardProps {
   course: CourseSummary
@@ -28,6 +30,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   to,
   action,
 }) => {
+  const user = useAuthStore((s) => s.user)
+  const isProStore = useSubscriptionStore((s) => s.isPro)
+  const isUserPro = isProStore || !!user?.isPro
+  const isLocked = course.isPremium && !isUserPro && !canPreviewCourse(user, (course as any)?.canManage)
+
   const target = to ?? `/courses/${course.id}`
   const statusLabel = course.published
     ? course.archivedAt
@@ -78,6 +85,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wide bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
                 <Crown className="w-3 h-3 fill-white" />
                 PRO
+                {isLocked && <Lock className="w-2.5 h-2.5 ml-0.5 opacity-90" />}
               </span>
             )}
             {showStatus && (

@@ -46,6 +46,8 @@ public class NotebookExportServiceImpl implements NotebookExportService {
     CharacterStrokeRepository characterStrokeRepository;
     CurrentUserService currentUserService;
     PracticeSheetRenderer practiceSheetRenderer;
+    com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
+    com.jp.elearningjp.service.subscription.DailyPracticeLimitService dailyPracticeLimitService;
 
     @Override
     @Transactional(readOnly = true)
@@ -123,9 +125,22 @@ public class NotebookExportServiceImpl implements NotebookExportService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public byte[] generateKanjiPracticePdf(Long notebookId) {
-        return generatePdfInternal(notebookId);
+        Long currentUserId = currentUserService.getCurrentUserId();
+        boolean isPro = subscriptionService.isUserPro(currentUserId);
+        byte[] pdfBytes = generatePdfInternal(notebookId);
+
+        // Ghi nhận số lượng từ đã xuất vào hạn mức ngày của tài khoản Free
+        if (!isPro) {
+            List<NotebookWord> words = getEligibleWords(notebookId, currentUserId);
+            int remaining = dailyPracticeLimitService.getRemainingWordsToday(currentUserId);
+            int exportedCount = Math.min(remaining, words.size());
+            if (exportedCount > 0) {
+                dailyPracticeLimitService.recordUsage(currentUserId, exportedCount);
+            }
+        }
+        return pdfBytes;
     }
 
     @Override
@@ -163,15 +178,31 @@ public class NotebookExportServiceImpl implements NotebookExportService {
     @Override
     @Transactional(readOnly = true)
     public KanjiPdfMetaResponse getKanjiPracticePdfMeta(Long notebookId) {
+        Long currentUserId = currentUserService.getCurrentUserId();
+        boolean isPro = subscriptionService.isUserPro(currentUserId);
+        int remaining = dailyPracticeLimitService.getRemainingWordsToday(currentUserId);
+
         byte[] pdfBytes = generatePdfInternal(notebookId);
+        int totalPages = 1;
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
-            return KanjiPdfMetaResponse.builder()
-                    .totalPages(Math.max(1, document.getNumberOfPages()))
-                    .build();
+            totalPages = Math.max(1, document.getNumberOfPages());
         } catch (Exception e) {
             log.error("Error reading PDF metadata: ", e);
-            return KanjiPdfMetaResponse.builder().totalPages(1).build();
         }
+
+        return KanjiPdfMetaResponse.builder()
+                .totalPages(totalPages)
+                .dailyLimit(com.jp.elearningjp.service.subscription.DailyPracticeLimitService.FREE_DAILY_LIMIT)
+                .remainingToday(remaining)
+                .isPro(isPro)
+                .build();
+    }
+
+    private List<NotebookWord> getEligibleWords(Long notebookId, Long currentUserId) {
+        return notebookWordRepository.findByNotebookIdAndDeletedFalseOrderByDisplayOrderAscIdAsc(notebookId)
+                .stream()
+                .filter(w -> w.getItemType() != NotebookItemType.GRAMMAR)
+                .toList();
     }
 
     /**
@@ -183,11 +214,18 @@ public class NotebookExportServiceImpl implements NotebookExportService {
         Notebook notebook = notebookRepository.findByIdAndUserIdAndDeletedFalse(notebookId, currentUserId)
                 .orElseThrow(() -> new AppException(ErrorCode.NOTEBOOK_NOT_FOUND));
 
-        // Phiếu luyện viết chỉ gồm thẻ Chữ Hán và Từ vựng — thẻ Ngữ pháp không có chữ để luyện nét
-        List<NotebookWord> words = notebookWordRepository.findByNotebookIdAndDeletedFalseOrderByDisplayOrderAscIdAsc(notebookId)
-                .stream()
-                .filter(w -> w.getItemType() != NotebookItemType.GRAMMAR)
-                .toList();
+        List<NotebookWord> allWords = getEligibleWords(notebookId, currentUserId);
+
+        // Hạn mức theo ngày: Free tối đa 10 từ/ngày, reset 00:00 ngày hôm sau; PRO không giới hạn
+        boolean isPro = subscriptionService.isUserPro(currentUserId);
+        int remaining = isPro ? Integer.MAX_VALUE : dailyPracticeLimitService.getRemainingWordsToday(currentUserId);
+        if (!isPro && remaining <= 0) {
+            throw new AppException(ErrorCode.PREMIUM_REQUIRED);
+        }
+
+        List<NotebookWord> words = (!isPro && allWords.size() > remaining)
+                ? allWords.subList(0, remaining)
+                : allWords;
 
         List<PracticeSheetBlock> blocks = new ArrayList<>();
         for (NotebookWord w : words) {

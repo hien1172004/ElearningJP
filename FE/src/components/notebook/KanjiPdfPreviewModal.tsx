@@ -9,6 +9,8 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons'
 import { notebookService } from '@/services/notebook.service'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { useSubscriptionStore } from '@/stores/useSubscriptionStore'
 
 interface KanjiPdfPreviewModalProps {
   open: boolean
@@ -23,8 +25,14 @@ export const KanjiPdfPreviewModal: React.FC<KanjiPdfPreviewModalProps> = ({
   notebookName,
   onClose,
 }) => {
+  const user = useAuthStore((s) => s.user)
+  const isProStore = useSubscriptionStore((s) => s.isPro)
+  const openPaywall = useSubscriptionStore((s) => s.openPaywall)
+  const isUserPro = isProStore || !!user?.isPro
+
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [meta, setMeta] = useState<{ totalPages?: number; dailyLimit?: number; remainingToday?: number; isPro?: boolean } | null>(null)
   const [imageLoading, setImageLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const [pageCache, setPageCache] = useState<Record<number, string>>({})
@@ -75,11 +83,14 @@ export const KanjiPdfPreviewModal: React.FC<KanjiPdfPreviewModalProps> = ({
       setCurrentPage(1)
 
       try {
-        // 1. Lấy thông tin số trang thực tế của PDF
+        // 1. Lấy thông tin số trang thực tế của PDF và hạn mức ngày
         const metaRes = await notebookService.getKanjiPdfMeta(notebookId).catch(() => null)
         const pages = metaRes?.data?.totalPages || 1
         if (isMounted) {
           setTotalPages(pages)
+          if (metaRes?.data) {
+            setMeta(metaRes.data)
+          }
         }
 
         // 2. Tải ảnh trang 1
@@ -254,6 +265,28 @@ export const KanjiPdfPreviewModal: React.FC<KanjiPdfPreviewModalProps> = ({
       destroyOnClose
     >
       <div className="my-2">
+        {!isUserPro && (
+          <div className="mb-3 px-3.5 py-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/80 flex items-center justify-between gap-3 text-xs shadow-2xs">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
+              <span className="text-base">👑</span>
+              <span>
+                <strong>Gói Miễn phí:</strong> Giới hạn <strong>10 từ/ngày</strong> (hôm nay còn lại{' '}
+                <strong>{meta?.remainingToday ?? 10}/10</strong> từ, tự động reset vào 00:00 ngày mai). Nâng cấp{' '}
+                <strong>PRO</strong> để xuất không giới hạn.
+              </span>
+            </div>
+            <Button
+              size="small"
+              type="primary"
+              onClick={() =>
+                openPaywall('Nâng cấp PRO để xuất file PDF luyện viết Kanji không giới hạn!')
+              }
+              className="!rounded-lg !text-xs !font-bold !bg-gradient-to-r !from-amber-500 !to-amber-600 !border-none !text-white shrink-0 shadow-xs"
+            >
+              Mở khóa PRO
+            </Button>
+          </div>
+        )}
         <div className="relative min-h-[500px] max-h-[72vh] overflow-y-auto overflow-x-hidden bg-gray-50 rounded-xl p-4 flex flex-col items-center border border-gray-200">
           {imageLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/80 z-20 rounded-xl">

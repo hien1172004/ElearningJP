@@ -24,6 +24,12 @@ public interface UserSubscriptionRepository extends JpaRepository<UserSubscripti
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
+    @Query("SELECT DISTINCT s.user.id FROM UserSubscription s " +
+           "WHERE s.user.id IN :userIds AND s.status = 'ACTIVE' " +
+           "AND (s.endAt IS NULL OR s.endAt > :now) " +
+           "AND UPPER(s.plan.id) != 'FREE'")
+    java.util.Set<Long> findProUserIds(@Param("userIds") java.util.Collection<Long> userIds, @Param("now") Instant now);
+
     Optional<UserSubscription> findTopByUserIdAndStatusOrderByCreatedAtDesc(Long userId, String status);
 }
 

@@ -174,7 +174,9 @@ export const PracticeSheetModal: React.FC<PracticeSheetModalProps> = ({
 
   const handlePreview = async () => {
     if (tooManyForFree) {
-      openPaywall('Tài khoản Miễn phí được xuất tối đa 10 từ/phiếu PDF. Hãy nâng cấp PRO để xuất không giới hạn toàn bộ bài học!')
+      openPaywall(
+        'Tài khoản Miễn phí được xuất tối đa 10 từ/ngày (reset vào 00:00 ngày hôm sau). Hãy nâng cấp PRO để xuất không giới hạn toàn bộ bài học!',
+      )
       return
     }
 

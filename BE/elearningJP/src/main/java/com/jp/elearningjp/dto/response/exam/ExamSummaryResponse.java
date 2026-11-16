@@ -20,6 +20,7 @@ public class ExamSummaryResponse {
     Integer overallPassingScore;
     Integer totalQuestions;
     boolean published;
+    @com.fasterxml.jackson.annotation.JsonProperty("isPremium")
     boolean isPremium;
     /** Đề gắn khóa: phiên bản đã duyệt (null = chưa được duyệt lần nào, chưa hiện được cho học viên). */
     Long publishedVersionId;

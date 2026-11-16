@@ -11,5 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class KanjiPdfMetaResponse {
     private int totalPages;
+    private int dailyLimit;
+    private int remainingToday;
+    private boolean isPro;
 }
-

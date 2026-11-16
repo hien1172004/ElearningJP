@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import {
   ChevronDown,
+  ChevronRight,
   Info,
   Crown,
   Loader2,
@@ -23,11 +24,15 @@ const AVATAR_BG_COLORS = [
 interface LeaderboardWidgetProps {
   initialLevel?: JlptLevel
   className?: string
+  variant?: 'default' | 'lobby'
+  onRequestMoreExams?: () => void
 }
 
 export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
   initialLevel = 'N5',
   className = '',
+  variant = 'default',
+  onRequestMoreExams,
 }) => {
   // Bộ lọc
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel>(initialLevel)
@@ -75,6 +80,146 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
   const top3 = rankings[2]
   const otherRankings = rankings.slice(3)
   const myRank = data?.myRank
+
+  if (variant === 'lobby') {
+    return (
+      <div
+        className={`bg-surface rounded-2xl border border-suna shadow-2xs p-4 sm:p-5 space-y-3.5 transition-colors ${className}`}
+      >
+        {/* HEADER: Tiêu đề Bảng xếp hạng JLPT [cấp độ] + Pulldown thời gian */}
+        <div className="flex items-center justify-between gap-2 pb-0.5">
+          <h3 className="text-base font-bold text-sumi tracking-tight">
+            Bảng xếp hạng JLPT {selectedLevel}
+          </h3>
+
+          <div className="relative inline-flex items-center">
+            <select
+              value={selectedTimeframe}
+              onChange={(e: any) => setSelectedTimeframe(e.target.value)}
+              className="appearance-none bg-surface hover:bg-suna/20 text-sumi text-xs font-medium rounded-xl pl-3 pr-7 py-1.5 border border-suna cursor-pointer focus:outline-none focus:border-ai transition-colors shadow-2xs"
+            >
+              <option value="WEEK" className="bg-surface text-sumi">Tuần</option>
+              <option value="MONTH" className="bg-surface text-sumi">Tháng</option>
+              <option value="ALL" className="bg-surface text-sumi">Tất cả</option>
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-nibi absolute right-2 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* THÔNG BÁO / THỨ HẠNG CỦA HỌC VIÊN */}
+        {loading ? (
+          <div className="py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-nibi">
+            <Loader2 className="w-4 h-4 text-ai animate-spin" />
+            <span>Đang cập nhật...</span>
+          </div>
+        ) : myRank ? (
+          <div className="bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl p-3 flex items-center justify-between text-xs text-blue-900 dark:text-blue-200">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-bold text-[11px] flex items-center justify-center shrink-0">
+                #{myRank.rank}
+              </div>
+              <span className="truncate">Thứ hạng của bạn: <strong className="font-bold">Top #{myRank.rank}</strong></span>
+            </div>
+            <span className="font-bold font-mono text-sm pl-2 shrink-0">{myRank.score}/{myRank.maxScore || 180}</span>
+          </div>
+        ) : (
+          <div className="bg-surface border border-suna rounded-xl p-3 flex items-center gap-2.5 text-xs text-nibi leading-snug">
+            <Info className="w-4 h-4 text-ai shrink-0" />
+            <span>Bạn cần hoàn thành một bài thi để vào bảng xếp hạng</span>
+          </div>
+        )}
+
+        {/* DANH SÁCH THỨ HẠNG THÍ SINH (1..N) */}
+        {loading ? (
+          <div className="py-12 text-center text-nibi">
+            <Loader2 className="w-7 h-7 animate-spin mx-auto text-ai mb-2" />
+            <p className="text-xs font-semibold">Đang tải bảng xếp hạng...</p>
+          </div>
+        ) : rankings.length === 0 ? (
+          <div className="py-10 px-4 text-center bg-surface rounded-xl border border-dashed border-suna">
+            <Crown className="w-8 h-8 text-nibi/40 mx-auto mb-2" />
+            <p className="text-xs font-bold text-sumi mb-0.5">Chưa có lượt thi nào</p>
+            <p className="text-[11px] text-nibi">Hoàn thành bài thi JLPT {selectedLevel} để ghi danh vào bảng xếp hạng!</p>
+          </div>
+        ) : (
+          <div className="space-y-1 max-h-[380px] overflow-y-auto pr-1 divide-y divide-suna/60">
+            {rankings.map((item, idx) => {
+              const isUser = item.isCurrentUser
+              const colorBg = AVATAR_BG_COLORS[idx % AVATAR_BG_COLORS.length]
+              return (
+                <div
+                  key={item.userId || idx}
+                  className={`flex items-center justify-between py-2 px-2 rounded-xl transition ${
+                    isUser
+                      ? 'bg-blue-50/80 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-900 font-bold'
+                      : 'hover:bg-suna/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <span
+                      className={`w-5 text-center text-xs font-bold font-mono shrink-0 ${
+                        item.rank === 1
+                          ? 'text-amber-500 font-black'
+                          : item.rank === 2
+                          ? 'text-nibi font-black'
+                          : item.rank === 3
+                          ? 'text-amber-700 dark:text-amber-500 font-black'
+                          : 'text-nibi'
+                      }`}
+                    >
+                      {item.rank}
+                    </span>
+
+                    <div className={`w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-2xs flex items-center justify-center font-bold text-white text-xs ${colorBg}`}>
+                      {item.avatarUrl ? (
+                        <img
+                          src={item.avatarUrl}
+                          alt={item.fullName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        item.fullName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+
+                    <div className="truncate">
+                      <span className={`text-xs sm:text-sm truncate block ${isUser ? 'font-black text-blue-900 dark:text-blue-200' : 'font-medium text-sumi'}`}>
+                        {item.fullName}
+                      </span>
+                      {isUser && (
+                        <span className="text-[9px] text-blue-600 dark:text-blue-300 font-bold bg-blue-100 dark:bg-blue-900/60 px-1 py-0.2 rounded">
+                          Bạn
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pl-2 shrink-0">
+                    <span className="text-xs sm:text-sm font-bold text-sumi font-mono">
+                      {item.score}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* NÚT YÊU CẦU THÊM BÀI THI */}
+        <button
+          type="button"
+          onClick={onRequestMoreExams}
+          className="w-full py-2.5 px-3.5 rounded-xl border border-suna hover:border-ai bg-surface hover:bg-suna/20 text-xs font-medium text-sumi flex items-center justify-between transition-colors shadow-2xs cursor-pointer group mt-2"
+        >
+          <span>Yêu cầu thêm bài thi</span>
+          <ChevronRight className="w-4 h-4 text-nibi group-hover:text-ai group-hover:translate-x-0.5 transition-all" />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div

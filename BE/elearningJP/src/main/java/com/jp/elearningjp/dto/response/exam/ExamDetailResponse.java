@@ -22,6 +22,7 @@ public class ExamDetailResponse {
     Integer overallPassingScore;
     Integer totalQuestions;
     boolean published;
+    @com.fasterxml.jackson.annotation.JsonProperty("isPremium")
     boolean isPremium;
     List<ExamScoreGroupResponse> scoreGroups;
     List<ExamSectionSummaryResponse> sections;

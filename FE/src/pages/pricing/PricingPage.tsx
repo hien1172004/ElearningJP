@@ -67,7 +67,7 @@ const FAQS = [
   {
     question: 'Tài khoản miễn phí (Free Tier) có những giới hạn nào?',
     answer:
-      'Tài khoản Free được tặng 3.000 token AI Speaking khởi tạo và 500 token mỗi ngày, xuất tối đa 10 chữ Kanji/phiếu luyện viết, và học thử các bài học/đề thi mẫu. Nâng cấp PRO giúp bạn gỡ bỏ toàn bộ các giới hạn này.',
+      'Tài khoản Free được tặng 3.000 token AI Speaking khởi tạo và 500 token mỗi ngày, xuất tối đa 10 chữ Kanji/ngày (tự động làm mới vào 00:00 hôm sau), và học thử các bài học/đề thi mẫu. Nâng cấp PRO giúp bạn gỡ bỏ toàn bộ các giới hạn này.',
   },
 ]
 
@@ -374,7 +374,7 @@ export const PricingPage: React.FC = () => {
                   <div className="font-semibold">Xuất phiếu luyện viết chữ Hán (Practice Sheet)</div>
                   <div className="text-[11px] text-nibi">Tải file PDF ô ly chữ điền chuẩn nét bút để in ra tập viết</div>
                 </td>
-                <td className="py-3.5 px-4 text-center text-nibi">Tối đa 10 chữ / phiếu</td>
+                <td className="py-3.5 px-4 text-center text-nibi">Tối đa 10 chữ / ngày</td>
                 <td className="py-3.5 px-4 text-center font-bold text-emerald-600 bg-ai/5">
                   Không giới hạn số chữ
                 </td>

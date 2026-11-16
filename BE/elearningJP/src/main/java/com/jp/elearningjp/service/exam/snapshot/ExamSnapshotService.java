@@ -313,6 +313,7 @@ public class ExamSnapshotService {
                         s = examMapper.toSummaryResponse(e);
                     }
                     s.setPublished(e.isPublished());
+                    s.setPremium(e.isPremium());
                     if (e.getPublishedVersionId() != null && versionMap.containsKey(e.getPublishedVersionId())) {
                         ExamPublishedVersion v = versionMap.get(e.getPublishedVersionId());
                         s.setVersionNo(v.getVersionNo());

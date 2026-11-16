@@ -1,19 +1,27 @@
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BackButton } from '@/components/common'
 import { examService } from '@/services'
-import type { ExamSummary, ExamDetail, JlptLevel, AttemptType } from '@/types'
-import { useAuthStore } from '@/stores'
+import type { ExamSummary, ExamDetail, JlptLevel, AttemptType, ExamAttemptHistory } from '@/types'
+import { useAuthStore, useSubscriptionStore } from '@/stores'
 import { isTeacherOrAdmin as checkTeacherOrAdmin } from '@/utils/roles'
-import { JLPT_LEVEL_BADGE } from '@/utils/jlpt'
 import { 
-  Award, Clock, HelpCircle, CheckCircle2, ChevronRight, 
-  Flame, BookOpen, Headphones, Play, X, Loader2, Filter, Edit3, Crown
+  Award, Clock, ChevronRight, Flame, BookOpen,
+  X, Loader2, Edit3, Crown, FileText, Lock, Eye
 } from 'lucide-react'
 import { Pagination } from 'antd'
 import { LeaderboardWidget } from '@/components'
+
+type StatusFilter = 'ALL' | 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+
+const STATUS_TABS: { key: StatusFilter; label: string }[] = [
+  { key: 'ALL', label: 'Tất cả' },
+  { key: 'NOT_STARTED', label: 'Chưa làm' },
+  { key: 'IN_PROGRESS', label: 'Đang làm' },
+  { key: 'COMPLETED', label: 'Đã xong' },
+]
 
 export const ExamLobbyPage: React.FC = () => {
   const navigate = useNavigate()
@@ -22,15 +30,22 @@ export const ExamLobbyPage: React.FC = () => {
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const isTeacherOrAdmin = checkTeacherOrAdmin(user)
+  // Cho phép Admin/Teacher chuyển sang chế độ học viên thường để test/kiểm tra đề thi bị khóa PRO
+  const [adminSimulateFreeLearner, setAdminSimulateFreeLearner] = useState<boolean>(false)
+  const userHasPro = useSubscriptionStore((s) => s.isPro) || Boolean(user?.isPro)
+  const isPro = adminSimulateFreeLearner ? false : (userHasPro || isTeacherOrAdmin)
+  const openPaywall = useSubscriptionStore((s) => s.openPaywall)
 
-  const [selectedLevel, setSelectedLevel] = useState<JlptLevel | 'ALL'>('ALL')
+  const [selectedLevel, setSelectedLevel] = useState<JlptLevel | 'ALL'>('N5')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [exams, setExams] = useState<ExamSummary[]>([])
+  const [myHistory, setMyHistory] = useState<ExamAttemptHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Phân trang
+  // Phân trang chuẩn Ant Design (mặc định 12 đề = lưới 3x4)
   const [currentPage, setCurrentPage] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(6)
+  const [pageSize, setPageSize] = useState<number>(12)
   const [totalItems, setTotalItems] = useState<number>(0)
 
   // State cho Modal đăng nhập
@@ -51,6 +66,22 @@ export const ExamLobbyPage: React.FC = () => {
     fetchExams()
   }, [selectedLevel, currentPage, pageSize])
 
+  // Tải lịch sử làm bài của học viên để định danh trạng thái Chưa làm / Đang làm / Đạt / Chưa đạt
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setMyHistory([])
+      return
+    }
+    examService
+      .getMyExamHistory()
+      .then((history) => {
+        setMyHistory(history || [])
+      })
+      .catch(() => {
+        // im lặng nếu không tải được lịch sử thi
+      })
+  }, [isAuthenticated])
+
   const fetchExams = async () => {
     try {
       setLoading(true)
@@ -69,6 +100,47 @@ export const ExamLobbyPage: React.FC = () => {
       setLoading(false)
     }
   }
+
+  // Map trạng thái làm bài mới nhất của từng đề thi
+  const userExamStatusMap = useMemo(() => {
+    const map: Record<number, { status: 'IN_PROGRESS' | 'PASSED' | 'FAILED' | 'NOT_STARTED'; attemptId: number; score?: number }> = {}
+    if (!myHistory || myHistory.length === 0) return map
+
+    for (const attempt of myHistory) {
+      const existing = map[attempt.examId]
+      if (attempt.status === 'IN_PROGRESS') {
+        map[attempt.examId] = { status: 'IN_PROGRESS', attemptId: attempt.attemptId }
+      } else if (!existing || existing.status !== 'IN_PROGRESS') {
+        map[attempt.examId] = {
+          status: attempt.passed ? 'PASSED' : 'FAILED',
+          attemptId: attempt.attemptId,
+          score: attempt.totalScaledScore,
+        }
+      }
+    }
+    return map
+  }, [myHistory])
+
+  // Lọc đề thi theo tab trạng thái (Tất cả / Chưa làm / Đang làm / Đã xong)
+  const displayedExams = useMemo(() => {
+    let list = exams
+    if (statusFilter !== 'ALL') {
+      list = list.filter((exam) => {
+        const st = userExamStatusMap[exam.id]?.status ?? 'NOT_STARTED'
+        if (statusFilter === 'NOT_STARTED') return st === 'NOT_STARTED'
+        if (statusFilter === 'IN_PROGRESS') return st === 'IN_PROGRESS'
+        if (statusFilter === 'COMPLETED') return st === 'PASSED' || st === 'FAILED'
+        return true
+      })
+    }
+    // Sắp xếp: Đề Miễn phí (Free) lên trước, Đề Premium (PRO) ra sau; trong từng nhóm sắp xếp theo ID tăng dần (Đề 01, 02, 03, ...)
+    return list.slice().sort((a, b) => {
+      const aPrem = Boolean(a.isPremium ?? (a as any).premium)
+      const bPrem = Boolean(b.isPremium ?? (b as any).premium)
+      if (aPrem !== bPrem) return aPrem ? 1 : -1
+      return a.id - b.id
+    })
+  }, [exams, statusFilter, userExamStatusMap])
 
   const handleOpenStartModal = async (examSummary: ExamSummary) => {
     // Nếu chưa đăng nhập thì hiển thị modal yêu cầu đăng nhập
@@ -89,6 +161,26 @@ export const ExamLobbyPage: React.FC = () => {
       toast.error(err?.response?.data?.message || 'Lỗi khi tải chi tiết đề thi')
     } finally {
       setLoadingDetailId(null)
+    }
+  }
+
+  const handleUnlockPremium = (exam: ExamSummary) => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true)
+      return
+    }
+    openPaywall(
+      `Đề thi "${exam.title}" thuộc gói hội viên PRO. Nâng cấp ngay để mở khóa toàn bộ kho đề thi JLPT N5 ~ N1 chuẩn hóa!`,
+    )
+  }
+
+  const handleRequestMoreExams = () => {
+    if (isTeacherOrAdmin) {
+      navigate('/admin/exams/create')
+    } else {
+      toast.success(
+        'Cảm ơn bạn! Yêu cầu của bạn đã được ghi nhận. Ban học thuật ElearningJP sẽ sớm cập nhật thêm đề thi mới.',
+      )
     }
   }
 
@@ -118,31 +210,30 @@ export const ExamLobbyPage: React.FC = () => {
   }
 
   return (
-    <div className="pb-8">
+    <div className="pb-10 max-w-[1650px] mx-auto">
       {/* Mở từ trang quản lý đề thi ("Xem phòng thi") → cho quay lại trang đó */}
       {backTo && <BackButton to={backTo} className="mb-3" />}
-      {/* Grid 2 Cột Giống Mazii: Cột Trái Đề Thi + Cột Phải Bảng Xếp Hạng */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
+
+      {/* Grid 2 Cột: Cột Trái Đề Thi + Cột Phải Bảng Xếp Hạng */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* CỘT TRÁI (8 CỘT TRÊN DESKTOP): BỘ LỌC + DANH SÁCH BÀI THI */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
-          {/* Tabs Lọc Cấp Độ N1 - N5 và Nút chức năng */}
-          <div className="flex items-center justify-between flex-wrap gap-3 bg-surface p-2.5 rounded-xl border border-suna shadow-xs">
+        <div className="lg:col-span-8 space-y-4">
+          {/* HÀNG 1: CHỌN CẤP ĐỘ JLPT (N5 ~ N1) & NÚT CHỨC NĂNG */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <div className="px-2 text-xs font-bold text-nibi flex items-center gap-1.5 uppercase">
-                <Filter className="w-3.5 h-3.5 text-ai" />
-                <span>Cấp độ:</span>
-              </div>
+              <span className="text-xs font-bold text-nibi uppercase tracking-wider mr-1">Cấp độ:</span>
               {levels.map((lvl) => (
                 <button
                   key={lvl}
+                  type="button"
                   onClick={() => {
                     setSelectedLevel(lvl)
                     setCurrentPage(1)
                   }}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     selectedLevel === lvl
-                      ? 'bg-ai text-white shadow-2xs font-bold'
-                      : 'text-nibi hover:text-ai hover:bg-kamenozoki/50'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-surface hover:bg-suna/30 text-sumi border border-suna shadow-2xs'
                   }`}
                 >
                   {lvl === 'ALL' ? 'Tất cả' : lvl}
@@ -150,146 +241,244 @@ export const ExamLobbyPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => navigate('/exam-history')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-suna text-sumi hover:text-ai hover:border-ai/50 font-medium text-xs shadow-2xs transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface border border-suna text-sumi hover:text-blue-600 font-medium text-xs shadow-2xs transition-all cursor-pointer"
               >
-                <Clock className="w-3.5 h-3.5 text-ai" />
+                <Clock className="w-3.5 h-3.5 text-blue-600" />
                 <span>Lịch sử thi</span>
               </button>
+              {isTeacherOrAdmin && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdminSimulateFreeLearner((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold shadow-2xs transition-all cursor-pointer ${
+                      adminSimulateFreeLearner
+                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600'
+                        : 'bg-surface border-suna text-sumi hover:text-amber-600 hover:border-amber-300'
+                    }`}
+                    title="Bật/Tắt chế độ xem thử giao diện học viên miễn phí (để kiểm tra đề khóa PRO)"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{adminSimulateFreeLearner ? 'Chế độ: Học viên thường' : 'Xem như học viên'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/admin/exams')}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface border border-suna text-sumi hover:text-blue-600 font-medium text-xs shadow-2xs transition-all cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Quản lý</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* HÀNG 2: TAB TRẠNG THÁI (TẤT CẢ / CHƯA LÀM / ĐANG LÀM / ĐÃ XONG) + LEGEND */}
+          <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5">
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.key)}
+                  className={`px-3.5 sm:px-4 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                    statusFilter === tab.key
+                      ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 font-bold border border-blue-200/80 dark:border-blue-900 shadow-2xs'
+                      : 'bg-surface hover:bg-suna/30 text-nibi hover:text-sumi border border-suna font-medium'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Legend (Đang làm / Đạt / Chưa đạt) */}
+            <div className="flex items-center gap-3 text-xs font-medium text-nibi shrink-0">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                <span>Đang làm</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span>Đạt</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                <span>Chưa đạt</span>
+              </div>
             </div>
           </div>
 
           {/* Danh sách đề thi */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-14 text-nibi bg-surface rounded-2xl border border-suna">
-              <Loader2 className="w-8 h-8 animate-spin text-ai mb-3" />
+            <div className="flex flex-col items-center justify-center py-16 text-nibi bg-surface rounded-2xl border border-suna">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-3" />
               <p className="font-semibold text-sm">Đang tải danh sách đề thi...</p>
             </div>
           ) : error ? (
-            <div className="p-5 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm text-center font-medium">
+            <div className="p-5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-2xl text-rose-600 dark:text-rose-400 text-sm text-center font-medium">
               {error}
             </div>
-          ) : exams.length === 0 ? (
-            <div className="text-center py-12 bg-surface rounded-2xl border border-suna shadow-xs p-6">
-              <BookOpen className="w-12 h-12 text-nibi/40 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-sumi mb-1">Chưa có đề thi nào ở cấp độ này</h3>
-              <p className="text-sm text-nibi max-w-md mx-auto">
-                Hệ thống đang cập nhật thêm đề thi mới. Bạn vui lòng chọn cấp độ khác để trải nghiệm!
+          ) : displayedExams.length === 0 ? (
+            <div className="text-center py-14 bg-surface rounded-2xl border border-suna shadow-2xs p-6">
+              <BookOpen className="w-12 h-12 text-nibi/50 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-sumi mb-1">
+                {statusFilter === 'ALL'
+                  ? 'Chưa có đề thi nào ở cấp độ này'
+                  : 'Không có đề thi nào phù hợp với bộ lọc hiện tại'}
+              </h3>
+              <p className="text-xs sm:text-sm text-nibi max-w-md mx-auto">
+                Hệ thống đang liên tục cập nhật thêm đề thi chuẩn mới. Bạn vui lòng chọn cấp độ hoặc bộ lọc khác để luyện tập!
               </p>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {exams.map((exam) => (
-                <div
-                  key={exam.id}
-                  className="bg-surface rounded-2xl border border-suna/90 hover:border-ai/40 hover:shadow-sm transition-all duration-200 flex flex-col justify-between overflow-hidden group"
-                >
-                  <div className="p-5">
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${JLPT_LEVEL_BADGE[exam.jlptLevel]}`}>
-                          JLPT {exam.jlptLevel}
-                        </span>
-                        {exam.isPremium && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-xs">
-                            <Crown className="w-3 h-3 fill-white" />
-                            PRO
-                          </span>
-                        )}
-                        {exam.versionNo && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-nibi border border-suna">
-                            v{exam.versionNo}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs font-medium text-nibi">
-                        Thang điểm: <strong className="text-sumi">{exam.totalScaledMaxScore}đ</strong>
-                      </span>
-                    </div>
+              {/* LƯỚI THẺ ĐỀ THI 3 CỘT (MATCH CHUẨN DESIGN YÊU CẦU) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 pt-1">
+                {displayedExams.map((exam) => {
+                  const userStatus = userExamStatusMap[exam.id]?.status ?? 'NOT_STARTED'
+                  const isPremiumExam = Boolean(exam.isPremium ?? (exam as any).premium)
+                  const isLocked = Boolean(isPremiumExam && !isPro)
+                  const isInProgress = userStatus === 'IN_PROGRESS'
 
-                    <h3 className="text-base font-bold text-sumi group-hover:text-ai transition-colors line-clamp-2 mb-3 leading-snug">
-                      {exam.title}
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-nibi bg-kinari/70 border border-suna/60 p-3 rounded-xl">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-ai shrink-0" />
-                        <span><strong className="text-sumi">{exam.totalDurationMinutes}</strong> phút</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <HelpCircle className="w-3.5 h-3.5 text-ai shrink-0" />
-                        <span><strong className="text-sumi">{exam.totalQuestions}</strong> câu hỏi</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 col-span-2 pt-1 border-t border-suna/50">
-                        <Award className="w-3.5 h-3.5 text-shu shrink-0" />
-                        <span>Điểm đỗ: <strong className="text-sumi">{exam.overallPassingScore}</strong>/{exam.totalScaledMaxScore} điểm</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="px-5 pb-5 pt-0 flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenStartModal(exam)}
-                      disabled={loadingDetailId === exam.id}
-                      className="flex-1 h-9 bg-ai hover:bg-ai/90 active:scale-98 text-white rounded-lg font-medium text-xs shadow-2xs transition-all flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer select-none"
+                  return (
+                    <div
+                      key={exam.id}
+                      className={`relative bg-surface rounded-2xl border p-4 sm:p-4.5 transition-all duration-200 overflow-hidden flex flex-col justify-between min-h-[145px] shadow-2xs ${
+                        isInProgress
+                          ? 'border-blue-500 ring-1 ring-blue-500/20 shadow-xs'
+                          : isLocked
+                            ? 'border-suna hover:border-blue-300'
+                            : 'border-suna hover:border-suna/80'
+                      }`}
                     >
-                      {loadingDetailId === exam.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                      )}
-                      <span>{loadingDetailId === exam.id ? 'Đang chuẩn bị...' : 'Vào thi ngay'}</span>
-                    </button>
-                    {isTeacherOrAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/admin/exams/${exam.id}/preview`)}
-                        className="w-9 h-9 bg-surface hover:bg-slate-50 text-nibi hover:text-ai rounded-lg transition-all border border-suna hover:border-ai/50 flex items-center justify-center shadow-2xs cursor-pointer shrink-0"
-                        title="Biên soạn / Chỉnh sửa đề thi"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                      {/* Watermark JLPT lớn chìm phía sau nền */}
+                      <div className="absolute -bottom-2 -left-1 text-5xl font-black text-suna/30 select-none pointer-events-none uppercase tracking-wider">
+                        JLPT
+                      </div>
 
-            {/* Phân trang chuẩn Ant Design */}
-            {totalItems > 0 && (
-              <div className="flex items-center justify-center pt-5">
-                <Pagination
-                  current={currentPage}
-                  pageSize={pageSize}
-                  total={totalItems}
-                  onChange={(page, newPageSize) => {
-                    setCurrentPage(page)
-                    if (newPageSize && newPageSize !== pageSize) {
+                      {/* Header thẻ: Icon đề + Tiêu đề + Chấm trạng thái + Huy hiệu PRO */}
+                      <div className="flex items-start justify-between gap-2 relative z-10">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isLocked
+                              ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600'
+                              : 'bg-suna/30 text-nibi'
+                          }`}>
+                            <FileText className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="font-bold text-sm text-sumi truncate" title={exam.title}>
+                                {exam.title}
+                              </h4>
+                              {userStatus === 'IN_PROGRESS' && (
+                                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" title="Đang làm dở" />
+                              )}
+                              {userStatus === 'PASSED' && (
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" title="Đã thi - Đạt" />
+                              )}
+                              {userStatus === 'FAILED' && (
+                                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" title="Đã thi - Chưa đạt" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Huy hiệu vương miện PRO tròn chuẩn hình mẫu */}
+                        {isPremiumExam && (
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center shadow-2xs shrink-0 ${
+                              isLocked ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'
+                            }`}
+                            title={isLocked ? 'Đề thi VIP - Yêu cầu tài khoản PRO' : 'Đề thi VIP (Đã mở khóa)'}
+                          >
+                            <Crown className="w-3.5 h-3.5 fill-current" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Thông số đề thi: Số câu hỏi | Thời lượng làm bài */}
+                      <div className="mt-2 text-xs text-nibi font-medium relative z-10">
+                        <span>{exam.totalQuestions} câu</span>
+                        <span className="mx-1.5 text-suna">|</span>
+                        <span>{exam.totalDurationMinutes} phút</span>
+                      </div>
+
+                      {/* Nút hành động hoặc Trạng thái Mở khóa Premium */}
+                      <div className="mt-4 flex items-center justify-end relative z-10">
+                        {isLocked ? (
+                          <button
+                            type="button"
+                            onClick={() => handleUnlockPremium(exam)}
+                            className="text-xs font-semibold text-sumi hover:text-blue-600 flex items-center gap-1.5 transition-colors cursor-pointer group"
+                            title="Nhấn để nâng cấp tài khoản PRO mở khóa toàn bộ đề thi"
+                          >
+                            <span className="group-hover:underline">Mở khoá với premium</span>
+                            <Lock className="w-3.5 h-3.5 text-sumi group-hover:text-blue-600" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStartModal(exam)}
+                            disabled={loadingDetailId === exam.id}
+                            className="px-5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-60"
+                          >
+                            {loadingDetailId === exam.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                            ) : isInProgress ? (
+                              'Làm tiếp'
+                            ) : (
+                              'Bắt đầu'
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Phân trang chuẩn Ant Design */}
+              {totalItems > 0 && (
+                <div className="flex items-center justify-center pt-6">
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={totalItems}
+                    onChange={(page, newPageSize) => {
+                      setCurrentPage(page)
+                      if (newPageSize && newPageSize !== pageSize) {
+                        setPageSize(newPageSize)
+                        setCurrentPage(1)
+                      }
+                    }}
+                    onShowSizeChange={(_current, newPageSize) => {
                       setPageSize(newPageSize)
                       setCurrentPage(1)
-                    }
-                  }}
-                  onShowSizeChange={(_current, newPageSize) => {
-                    setPageSize(newPageSize)
-                    setCurrentPage(1)
-                  }}
-                  showSizeChanger={true}
-                  pageSizeOptions={['6', '12', '20', '50']}
-                  locale={{ items_per_page: '/ trang' }}
-                />
-              </div>
-            )}
-          </>
+                    }}
+                    showSizeChanger={true}
+                    pageSizeOptions={['6', '12', '24', '48']}
+                    locale={{ items_per_page: '/ trang' }}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* CỘT PHẢI (4-5 CỘT TRÊN DESKTOP): BẢNG XẾP HẠNG MAZII STICKY */}
-        <div className="lg:col-span-5 xl:col-span-4 lg:sticky-panel" id="leaderboard">
+        {/* CỘT PHẢI (4 CỘT TRÊN DESKTOP): BẢNG XẾP HẠNG GIAO DIỆN MỚI */}
+        <div className="lg:col-span-4 lg:sticky-panel" id="leaderboard">
           <LeaderboardWidget
             initialLevel={selectedLevel === 'ALL' ? 'N5' : selectedLevel}
+            variant="lobby"
+            onRequestMoreExams={handleRequestMoreExams}
           />
         </div>
       </div>
@@ -309,7 +498,7 @@ export const ExamLobbyPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setSelectedExam(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-nibi hover:text-sumi transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-suna/40 hover:bg-suna flex items-center justify-center text-nibi hover:text-sumi transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -357,96 +546,69 @@ export const ExamLobbyPage: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center gap-2 font-bold text-sm mb-1 text-ai">
-                      <BookOpen className="w-4 h-4 text-ai" />
-                      <span>Luyện riêng ca</span>
+                      <Award className="w-4 h-4 text-emerald-600" />
+                      <span>Luyện từng phần</span>
                     </div>
                     <p className="text-xs text-nibi font-normal">
-                      Chỉ làm riêng 1 phần (Từ vựng, Đọc hiểu, hoặc Nghe).
+                      Tùy chọn ôn luyện riêng lẻ Từ vựng, Ngữ pháp - Đọc hiểu hoặc Nghe hiểu.
                     </p>
                   </button>
                 </div>
               </div>
 
-              {/* Nếu chọn Luyện riêng ca -> Chọn ca cụ thể */}
               {attemptType === 'PRACTICE_SECTION' && (
                 <div>
                   <label className="block text-xs font-bold text-nibi uppercase tracking-wider mb-2">
-                    2. Chọn Phần thi bạn muốn luyện tập:
+                    2. Chọn Phần thi:
                   </label>
-                  <div className="space-y-2.5">
-                    {Array.from(new Map(selectedExam.sections.map((s) => [s.id, s])).values()).map((sec) => {
-                      const viName = sec.sessionType === 'KNOWLEDGE_READING'
-                        ? 'Kiến thức ngôn ngữ & Đọc hiểu'
-                        : sec.sessionType === 'VOCABULARY'
-                        ? 'Chữ Hán - Từ vựng'
-                        : sec.sessionType === 'GRAMMAR_READING'
-                        ? 'Ngữ pháp & Đọc hiểu'
-                        : 'Nghe hiểu'
-
-                      const jpName = sec.sessionType === 'KNOWLEDGE_READING'
-                        ? '言語知識（文字・語彙・文法）・読解'
-                        : sec.sessionType === 'VOCABULARY'
-                        ? '言語知識（文字・語彙）'
-                        : sec.sessionType === 'GRAMMAR_READING'
-                        ? '言語知識（文法）・読解'
-                        : '聴解'
-
-                      return (
-                        <button
-                          key={sec.id}
-                          type="button"
-                          onClick={() => setSelectedSectionId(sec.id)}
-                          className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                            selectedSectionId === sec.id
-                              ? 'border-ai bg-kamenozoki/40 text-sumi font-semibold ring-1 ring-ai shadow-2xs'
-                              : 'border-suna bg-surface text-sumi hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3.5">
-                            <div className="w-9 h-9 rounded-lg bg-kamenozoki text-ai flex items-center justify-center shrink-0">
-                              {sec.sessionType === 'LISTENING' ? (
-                                <Headphones className="w-5 h-5" />
-                              ) : (
-                                <BookOpen className="w-5 h-5" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-sm font-bold text-sumi flex items-center gap-2">
-                                <span>Phần {sec.orderIndex}: {viName}</span>
-                              </div>
-                              <div className="text-xs text-nibi mt-0.5 flex items-center gap-2">
-                                <span className="font-japanese text-ai font-semibold">{jpName}</span>
-                                <span>•</span>
-                                <span className="text-sumi font-semibold">{sec.durationMinutes} phút</span>
-                                <span>•</span>
-                                <span>{sec.questionCount} câu hỏi</span>
-                              </div>
-                            </div>
-                          </div>
-                          {selectedSectionId === sec.id && (
-                            <CheckCircle2 className="w-5 h-5 text-ai shrink-0" />
-                          )}
-                        </button>
-                      )
-                    })}
+                  <div className="space-y-2">
+                    {selectedExam.sections.map((sec) => (
+                      <button
+                        key={sec.id}
+                        type="button"
+                        onClick={() => setSelectedSectionId(sec.id)}
+                        className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                          selectedSectionId === sec.id
+                            ? 'border-ai bg-kamenozoki/30 text-ai font-bold ring-1 ring-ai'
+                            : 'border-suna hover:border-ai/30 text-sumi bg-surface'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              selectedSectionId === sec.id ? 'bg-ai' : 'bg-suna'
+                            }`}
+                          />
+                          <span className="text-xs">{sec.sectionTitle}</span>
+                        </div>
+                        <span className="text-xs text-nibi font-normal">
+                          {sec.durationMinutes} phút
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
+
+              <div className="pt-2 border-t border-suna/70 flex items-center justify-between text-xs text-nibi">
+                <span>Số câu hỏi: <strong className="text-sumi">{selectedExam.totalQuestions}</strong> câu</span>
+                <span>Thang điểm: <strong className="text-sumi">{selectedExam.totalScaledMaxScore}</strong> điểm</span>
+              </div>
             </div>
 
-            <div className="px-5 py-4 bg-kinari/40 border-t border-suna/80 flex items-center justify-end gap-3">
+            <div className="px-5 py-3.5 bg-kinari/60 border-t border-suna/80 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setSelectedExam(null)}
-                className="px-4 py-2 rounded-lg text-xs font-medium text-nibi hover:text-sumi hover:bg-slate-100 transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-lg text-xs font-medium text-nibi hover:text-sumi hover:bg-suna/30 transition-colors cursor-pointer"
               >
-                Hủy bỏ
+                Hủy
               </button>
               <button
                 type="button"
-                disabled={starting}
                 onClick={handleStartExam}
-                className="px-5 py-2 rounded-lg text-xs font-medium bg-ai hover:bg-ai/90 text-white shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                disabled={starting}
+                className="px-5 py-2 rounded-lg text-xs font-semibold bg-ai hover:bg-ai/90 active:scale-98 text-white shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-70"
               >
                 {starting ? (
                   <>
@@ -482,7 +644,7 @@ export const ExamLobbyPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowLoginModal(false)}
-                className="flex-1 py-2.5 px-4 rounded-lg text-xs font-medium text-nibi bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 px-4 rounded-lg text-xs font-medium text-nibi bg-suna/30 hover:bg-suna/50 transition-colors cursor-pointer"
               >
                 Để sau
               </button>

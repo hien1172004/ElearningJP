@@ -35,7 +35,7 @@ import {
   useCompleteLesson,
   useUpdateLessonProgress,
 } from '@/hooks'
-import { useAuthStore } from '@/stores'
+import { useAuthStore, useSubscriptionStore } from '@/stores'
 import { toSlug } from '@/utils'
 import { getLessonDepth, nextLessonState } from '@/utils/lessonNav'
 import { canPreviewCourse } from '@/utils/roles'
@@ -103,6 +103,7 @@ export const LessonViewerPage: React.FC = () => {
   }
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const user = useAuthStore((s) => s.user)
+  const openPaywall = useSubscriptionStore((s) => s.openPaywall)
 
   const { data: course } = useCourseDetail(cId)
   const {
@@ -418,6 +419,30 @@ export const LessonViewerPage: React.FC = () => {
             Đăng nhập lại
           </AntdButton>
         </Link>
+      )
+    } else if (status === 402 || code === 1050) {
+      title = 'Nội dung yêu cầu tài khoản PRO'
+      description = 'Bài học này thuộc khóa học độc quyền dành riêng cho hội viên PRO. Vui lòng nâng cấp tài khoản để tiếp tục học.'
+      action = (
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
+          <AntdButton
+            type="primary"
+            size="large"
+            onClick={() =>
+              openPaywall(
+                'Khóa học này dành riêng cho hội viên PRO. Hãy nâng cấp gói PRO để mở khóa toàn bộ bài học!',
+              )
+            }
+            className="!rounded-lg !font-bold !bg-gradient-to-r !from-amber-500 !to-amber-600 !border-none !text-white shadow-md"
+          >
+            Nâng cấp PRO ngay 👑
+          </AntdButton>
+          <Link to={`/courses/${cId}`}>
+            <AntdButton className="!rounded-lg !font-semibold">
+              Quay lại khóa học
+            </AntdButton>
+          </Link>
+        </div>
       )
     } else if (status === 403 || code === 2002) {
       title = 'Bạn chưa đăng ký khóa học này'

@@ -33,12 +33,15 @@ export const CourseDetailPage: React.FC = () => {
 
   const myEnrollment = enrollments.find((e) => e.courseId === courseId)
   const isEnrolled = course?.isEnrolled ?? !!myEnrollment
-  // Admin (mọi khóa) / giáo viên chủ khóa được xem bài học mà không cần đăng ký
-  const isPreview = !isEnrolled && canPreviewCourse(user, course?.canManage)
-  const canOpenLessons = isEnrolled || isPreview
   const isProStore = useSubscriptionStore((s) => s.isPro)
   const openPaywall = useSubscriptionStore((s) => s.openPaywall)
   const isUserPro = isProStore || !!user?.isPro
+  const isManager = canPreviewCourse(user, course?.canManage)
+  // Khóa PRO bị khóa nếu người dùng không có PRO và không phải admin/quản lý khóa
+  const isLockedForNonPro = Boolean(course?.isPremium) && !isUserPro && !isManager
+  // Admin (mọi khóa) / giáo viên chủ khóa được xem bài học mà không cần đăng ký
+  const isPreview = !isEnrolled && isManager
+  const canOpenLessons = !isLockedForNonPro && (isEnrolled || isPreview)
 
   if (isLoading) return <LoadingState message="Đang tải thông tin khóa học..." fullHeight />
   if (isError || !course) {
@@ -86,33 +89,28 @@ export const CourseDetailPage: React.FC = () => {
         }
         variant="indigo"
         actions={
-          isAuthenticated && !canOpenLessons ? (
-            course.isPremium && !isUserPro ? (
-              <AntdButton
-                type="primary"
-                size="large"
-                icon={<Crown className="w-5 h-5 text-amber-300 fill-amber-300" />}
-                onClick={() =>
-                  openPaywall(
-                    'Khóa học này dành riêng cho hội viên PRO. Hãy nâng cấp gói PRO để mở khóa toàn bộ bài học!',
-                  )
-                }
-                className="!rounded-md !font-bold !bg-gradient-to-r !from-amber-500 !to-amber-600 !border-none !text-white shadow-md hover:scale-105 transition"
-              >
-                Mở khóa bằng PRO 👑
-              </AntdButton>
-            ) : (
+          !isAuthenticated ? (
+            <Link to="/login">
               <AntdButton
                 type="primary"
                 size="large"
                 icon={<LogIn className="w-5 h-5" />}
-                loading={enroll.isPending}
-                onClick={() => enroll.mutate(courseId)}
                 className="!rounded-md !font-bold"
               >
-                Đăng ký học ngay
+                Đăng nhập để học
               </AntdButton>
-            )
+            </Link>
+          ) : isLockedForNonPro ? null : !canOpenLessons ? (
+            <AntdButton
+              type="primary"
+              size="large"
+              icon={<LogIn className="w-5 h-5" />}
+              loading={enroll.isPending}
+              onClick={() => enroll.mutate(courseId)}
+              className="!rounded-md !font-bold"
+            >
+              Đăng ký học ngay
+            </AntdButton>
           ) : canOpenLessons && firstLesson ? (
             <Link
               to={
@@ -244,17 +242,40 @@ export const CourseDetailPage: React.FC = () => {
             courseId={courseId}
             courseSlug={course?.slug ?? ''}
             isEnrolled={canOpenLessons}
-            showProgress={isEnrolled}
+            showProgress={isEnrolled && !isLockedForNonPro}
+            isLocked={isLockedForNonPro}
+            onLockedClick={() =>
+              openPaywall(
+                'Khóa học này dành riêng cho hội viên PRO. Hãy nâng cấp gói PRO để mở khóa toàn bộ bài học!',
+              )
+            }
           />
           {!canOpenLessons && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-md text-center text-sm text-gray-600">
-              <p>Vui lòng đăng ký khóa học để xem chi tiết bài học.</p>
-              {!isAuthenticated && (
-                <Link to="/login">
-                  <AntdButton type="primary" className="!rounded-md !font-semibold mt-3">
-                    Đăng nhập và đăng ký
+            <div className="mt-4 p-4 bg-kinari dark:bg-slate-800/50 rounded-xl text-center text-sm text-nibi border border-suna/80">
+              {isLockedForNonPro ? (
+                <div className="space-y-2">
+                  <p className="font-semibold text-sumi">Bạn cần tài khoản PRO để học khóa học này.</p>
+                  <AntdButton
+                    type="primary"
+                    onClick={() =>
+                      openPaywall('Nâng cấp PRO để mở khóa toàn bộ khóa học chuyên sâu!')
+                    }
+                    className="!rounded-lg !font-bold !bg-gradient-to-r !from-amber-500 !to-amber-600 !border-none !text-white"
+                  >
+                    Mở khóa ngay 👑
                   </AntdButton>
-                </Link>
+                </div>
+              ) : (
+                <div>
+                  <p>Vui lòng đăng ký khóa học để xem chi tiết bài học.</p>
+                  {!isAuthenticated && (
+                    <Link to="/login">
+                      <AntdButton type="primary" className="!rounded-md !font-semibold mt-3">
+                        Đăng nhập và đăng ký
+                      </AntdButton>
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
           )}

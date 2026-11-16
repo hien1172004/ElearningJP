@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Lock, Unlock, UserPlus, Users } from 'lucide-react'
+import { Lock, Unlock, UserPlus, Users, Crown } from 'lucide-react'
 import { Avatar, Button as AntdButton, Select, Table, Tag, Tooltip } from 'antd'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 import { EmptyState, SearchInput, confirmDialog, FilterBar } from '@/components/common'
@@ -73,14 +73,37 @@ export const AdminUsersPage: React.FC = () => {
       key: 'user',
       render: (_, u) => (
         <div className="flex items-center gap-3 min-w-0">
-          <Avatar src={u.avatarUrl || undefined} className="shrink-0 bg-indigo-100 text-indigo-700">
-            {u.fullName?.charAt(0)?.toUpperCase()}
-          </Avatar>
+          <div className="relative shrink-0">
+            <Avatar
+              src={u.avatarUrl || undefined}
+              className={`shrink-0 ${
+                u.isPro
+                  ? 'bg-amber-100 text-amber-800 ring-2 ring-amber-400'
+                  : 'bg-indigo-100 text-indigo-700'
+              }`}
+            >
+              {u.fullName?.charAt(0)?.toUpperCase()}
+            </Avatar>
+            {u.isPro && (
+              <span
+                className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-gradient-to-tr from-amber-500 to-yellow-400 text-white rounded-full flex items-center justify-center shadow-xs border border-white"
+                title="Tài khoản Hội viên PRO"
+              >
+                <Crown className="w-2 h-2 fill-current" />
+              </span>
+            )}
+          </div>
           <div className="min-w-0">
-            <div className="font-medium text-slate-800 truncate">
-              {u.fullName}
+            <div className="font-medium text-slate-800 truncate flex items-center gap-1.5">
+              <span>{u.fullName}</span>
+              {u.isPro && (
+                <Tag color="gold" className="rounded-md font-bold text-[10px] px-1 py-0 m-0 border-amber-300">
+                  <Crown className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />
+                  PRO
+                </Tag>
+              )}
               {u.id === currentUserId && (
-                <span className="ml-2 text-xs text-slate-400">(bạn)</span>
+                <span className="text-xs text-slate-400">(bạn)</span>
               )}
             </div>
             <div className="text-xs text-slate-500 truncate">{u.email}</div>
