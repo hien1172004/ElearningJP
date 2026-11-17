@@ -521,7 +521,7 @@ export const NotebookListPage: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 w-full lg:w-auto">
             {/* Ô tìm kiếm */}
             <Input
               prefix={<SearchOutlined className="text-nibi text-sm" />}
@@ -532,7 +532,7 @@ export const NotebookListPage: React.FC = () => {
                 setKeyword(e.target.value)
                 setCurrentPage(1)
               }}
-              className="w-40 sm:w-52 h-9 rounded-lg border-suna text-xs"
+              className="flex-1 min-w-0 lg:flex-none lg:!w-52 h-9 rounded-lg border-suna text-xs"
             />
 
             {/* Nút Thêm mới */}

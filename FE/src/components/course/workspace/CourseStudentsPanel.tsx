@@ -168,6 +168,7 @@ export const CourseStudentsPanel: React.FC<CourseStudentsPanelProps> = ({ course
       ) : (
         <div className="bg-surface rounded-xl border border-slate-200 overflow-x-auto">
           <Table<StudentProgress>
+            scroll={{ x: 'max-content' }}
             rowKey="userId"
             columns={columns}
             dataSource={students}

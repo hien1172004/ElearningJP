@@ -394,7 +394,7 @@ export const ScenarioDetailPage: React.FC = () => {
       {/* Header dính ngay dưới TopBar (không trượt xuống dưới header), nền cùng màu trang che nội dung cuộn */}
       <div className="sticky-below-topbar z-20 bg-kinari pt-2">
         <div className="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-4 bg-surface rounded-xl border border-slate-200/90 shadow-xs">
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <BackButton to="/speaking" />
             <h1 className="text-sm sm:text-base font-bold text-slate-800 truncate">
               {scenario.title}
@@ -406,7 +406,7 @@ export const ScenarioDetailPage: React.FC = () => {
               setShowReportModal(true)
               setReportSuccess(false)
             }}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
+            className="inline-flex shrink-0 items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
           >
             <Flag className="w-3.5 h-3.5 text-slate-400" />
             <span>Báo cáo</span>

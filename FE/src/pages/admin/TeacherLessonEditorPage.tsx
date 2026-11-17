@@ -125,7 +125,7 @@ const SectionTypeTab: React.FC<{
               {multi ? s.title : `Danh sách ${label.toLowerCase()}`}
               <span className="ml-2 text-xs font-normal text-slate-500">{countSectionItems(s)} mục</span>
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <SectionImportButton lessonId={lessonId} section={s} />
               {type !== 'GRAMMAR' && (
                 <PracticeSheetButton

@@ -56,7 +56,7 @@ export const CourseLessonList: React.FC<CourseLessonListProps> = ({
         <h3 className="font-bold text-sm text-sumi">
           Danh sách bài học <span className="font-normal text-slate-500">({lessons.length})</span>
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full sm:w-auto items-center gap-2">
           <Input
             allowClear
             size="middle"
@@ -67,7 +67,7 @@ export const CourseLessonList: React.FC<CourseLessonListProps> = ({
               setKeyword(e.target.value)
               setPage(1)
             }}
-            className="!w-56"
+            className="!w-full sm:!w-56"
             aria-label="Tìm bài học"
           />
           <AntdButton

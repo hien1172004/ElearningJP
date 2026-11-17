@@ -178,7 +178,7 @@ export const AdminStatsPage: React.FC = () => {
             hint="Mỗi người mỗi ngày tính 1 lượt"
           />
         </div>
-        <div className="grid lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <ChartCard title="Số người học mỗi ngày" className="lg:col-span-2">
             <DailyLineChart
               data={daily}
@@ -230,7 +230,7 @@ export const AdminStatsPage: React.FC = () => {
             hint="Bắt đầu trong kỳ nhưng chưa nộp"
           />
         </div>
-        <div className="grid lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <ChartCard title="Tỉ lệ đỗ theo cấp độ">
             <SimpleBarChart
               data={exams.byLevel}
@@ -244,6 +244,7 @@ export const AdminStatsPage: React.FC = () => {
           </ChartCard>
           <ChartCard title="Chi tiết theo cấp độ">
             <Table<DashboardLevelStats>
+              scroll={{ x: 'max-content' }}
               rowKey="level"
               size="small"
               columns={levelColumns}

@@ -214,6 +214,8 @@ export const AdminScenariosPage: React.FC = () => {
       ) : (
         <div className="bg-surface rounded-xl border border-slate-200">
           <Table<AdminScenario>
+            tableLayout="fixed"
+            scroll={{ x: 1000 }} // tổng cột cố định ~805px + chỗ cho tiêu đề; layout fixed để truncate cắt chữ thay vì nới bảng
             rowKey="id"
             columns={columns}
             dataSource={scenarios}
