@@ -152,6 +152,18 @@ public class GlobalExceptionHandle {
                         .build());
     }
 
+    /** Đường dẫn không khớp controller nào → 404 thay vì rơi xuống handler 500 bên dưới. */
+    @ExceptionHandler(value = org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleNoResourceFound(
+            org.springframework.web.servlet.resource.NoResourceFoundException e) {
+        ErrorCode errorCode = ErrorCode.ENDPOINT_NOT_FOUND;
+        return ResponseEntity.status(errorCode.getHttpStatusCode()).body(
+                ApiResponse.builder()
+                        .code(errorCode.getCode())
+                        .message(errorCode.getMessage())
+                        .build());
+    }
+
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<ApiResponse<?>> handleGenericException(Exception e) {
         // ClientAbort / AsyncRequestNotUsable = client closed connection before response was sent.

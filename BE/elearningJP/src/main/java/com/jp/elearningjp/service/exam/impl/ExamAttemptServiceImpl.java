@@ -103,6 +103,36 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
         attempt = examAttemptRepository.save(attempt);
 
+        ExamTakingResponse takingResp = examMapper.toTakingResponse(attempt);
+        takingResp.setSections(liveTakingSections(exam, targetSection));
+        return takingResp;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ExamTakingResponse getTaking(Long attemptId, Long userId) {
+        ExamAttempt attempt = getAuthorizedAttempt(attemptId, userId);
+        if (attempt.getStatus() != AttemptStatus.IN_PROGRESS) {
+            throw new AppException(ErrorCode.EXAM_ATTEMPT_ALREADY_SUBMITTED);
+        }
+
+        ExamTakingResponse takingResp = examMapper.toTakingResponse(attempt);
+        takingResp.setSections(attempt.getPublishedVersionId() != null
+                ? snapshotTakingSections(attemptSections(attempt, requireSnapshot(attempt)))
+                : liveTakingSections(attempt.getExam(), attempt.getSection()));
+
+        Map<Long, Long> saved = new HashMap<>();
+        for (StudentAnswer a : studentAnswerRepository.findByAttemptIdAndDeletedFalse(attemptId)) {
+            if (a.getSelectedOption() != null) {
+                saved.put(a.getQuestion().getId(), a.getSelectedOption().getId());
+            }
+        }
+        takingResp.setSavedAnswers(saved);
+        return takingResp;
+    }
+
+    /** Ca thi theo đề sống: luyện 1 ca → ca đó, thi cả đề → mọi ca chưa xoá theo thứ tự. */
+    private List<TakingSectionResponse> liveTakingSections(Exam exam, ExamSection targetSection) {
         List<ExamSection> sectionsToLoad;
         if (targetSection != null) {
             sectionsToLoad = List.of(targetSection);
@@ -113,7 +143,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                     .collect(Collectors.toList());
         }
 
-        List<TakingSectionResponse> sectionResponses = sectionsToLoad.stream()
+        return sectionsToLoad.stream()
                 .map(s -> {
                     var sectionQuestions = examSectionQuestionRepository
                             .findBySectionIdWithQuestionDetails(s.getId());
@@ -133,10 +163,6 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                             .build();
                 })
                 .collect(Collectors.toList());
-
-        ExamTakingResponse takingResp = examMapper.toTakingResponse(attempt);
-        takingResp.setSections(sectionResponses);
-        return takingResp;
     }
 
     @Override
@@ -606,7 +632,13 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                 .publishedVersionId(exam.getPublishedVersionId())
                 .build());
 
-        List<TakingSectionResponse> sectionResponses = sections.stream()
+        ExamTakingResponse takingResp = examMapper.toTakingResponse(attempt);
+        takingResp.setSections(snapshotTakingSections(sections));
+        return takingResp;
+    }
+
+    private List<TakingSectionResponse> snapshotTakingSections(List<ExamSnapshot.Section> sections) {
+        return sections.stream()
                 .map(s -> TakingSectionResponse.builder()
                         .id(s.getId())
                         .sessionType(s.getSessionType())
@@ -618,10 +650,6 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
                                 .collect(Collectors.toList()))
                         .build())
                 .collect(Collectors.toList());
-
-        ExamTakingResponse takingResp = examMapper.toTakingResponse(attempt);
-        takingResp.setSections(sectionResponses);
-        return takingResp;
     }
 
     private List<ReviewSectionResponse> snapshotReviewSections(ExamAttempt attempt,

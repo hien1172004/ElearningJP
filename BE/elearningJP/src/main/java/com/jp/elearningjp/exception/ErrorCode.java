@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatusCode;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public enum ErrorCode {
     CONCURRENT_MODIFICATION(9001, "Nội dung đã bị người khác thay đổi, vui lòng tải lại trước khi lưu", HttpStatus.CONFLICT),
+    ENDPOINT_NOT_FOUND(9004, "Đường dẫn API không tồn tại", HttpStatus.NOT_FOUND),
     UNCAUGHT_EXCEPTION(9999, "Đã xảy ra lỗi không mong muốn, vui lòng thử lại sau", HttpStatus.INTERNAL_SERVER_ERROR),
     USER_EXISTED(1001, "Email này đã được sử dụng", HttpStatus.BAD_REQUEST),
     USER_NOT_FOUND(1002, "Không tìm thấy người dùng", HttpStatus.NOT_FOUND),

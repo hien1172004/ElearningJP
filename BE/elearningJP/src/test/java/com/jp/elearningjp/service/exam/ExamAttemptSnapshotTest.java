@@ -120,6 +120,29 @@ class ExamAttemptSnapshotTest {
     }
 
     @Test
+    void getTaking_reloadReturnsSnapshotSectionsAndSavedAnswers_submittedRejected() {
+        ExamAttempt attempt = snapshotAttempt();
+        when(examMapper.toTakingResponse(any())).thenReturn(new ExamTakingResponse());
+        Question q = new Question();
+        q.setId(100L);
+        QuestionOption opt = QuestionOption.builder().build();
+        opt.setId(1001L);
+        StudentAnswer picked = StudentAnswer.builder().question(q).selectedOption(opt).build();
+        StudentAnswer cleared = StudentAnswer.builder().question(q).build(); // bỏ chọn → không khôi phục
+        when(studentAnswerRepository.findByAttemptIdAndDeletedFalse(50L)).thenReturn(List.of(picked, cleared));
+
+        ExamTakingResponse resp = service.getTaking(50L, 7L);
+
+        assertThat(resp.getSections().get(0).getQuestions()).extracting(TakingQuestionResponse::getId).containsExactly(100L);
+        assertThat(resp.getSavedAnswers()).containsExactlyEntriesOf(java.util.Map.of(100L, 1001L));
+
+        assertThatThrownBy(() -> service.getTaking(50L, 8L)).isInstanceOf(AppException.class); // người khác
+        attempt.setStatus(AttemptStatus.SUBMITTED);
+        assertThatThrownBy(() -> service.getTaking(50L, 7L))
+                .extracting(e -> ((AppException) e).getErrorCode()).isEqualTo(ErrorCode.EXAM_ATTEMPT_ALREADY_SUBMITTED);
+    }
+
+    @Test
     void startExam_usesSnapshot_andPinsVersionOnAttempt() {
         when(userRepository.findById(7L)).thenReturn(Optional.of(student));
         when(examRepository.findByIdWithSectionsAndScoreGroups(9L)).thenReturn(Optional.of(exam));

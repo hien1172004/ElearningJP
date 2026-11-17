@@ -5,6 +5,7 @@ import com.jp.elearningjp.dto.request.exam.SubmitExamRequest;
 import com.jp.elearningjp.dto.response.exam.ExamAttemptHistoryResponse;
 import com.jp.elearningjp.dto.response.exam.ExamResultResponse;
 import com.jp.elearningjp.dto.response.exam.ExamReviewResponse;
+import com.jp.elearningjp.dto.response.exam.ExamTakingResponse;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.service.exam.ExamAttemptService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
@@ -33,6 +34,16 @@ public class ExamAttemptController {
     private Long resolveCurrentUserId() {
         User currentUser = currentUserService.getCurrentUserOrNull();
         return (currentUser != null) ? currentUser.getId() : 1L;
+    }
+
+    @GetMapping(ApiPaths.ExamAttempt.BY_ID)
+    @Operation(summary = "Lấy lại đề + đáp án đã lưu của lượt thi đang làm (khi tải lại phòng thi)")
+    public ApiResponse<ExamTakingResponse> getTaking(@PathVariable Long id) {
+        return ApiResponse.<ExamTakingResponse>builder()
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .data(examAttemptService.getTaking(id, resolveCurrentUserId()))
+                .build();
     }
 
     @PutMapping(ApiPaths.ExamAttempt.SAVE_ANSWER)
