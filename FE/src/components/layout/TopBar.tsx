@@ -49,7 +49,7 @@ export const TopBar: React.FC = () => {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-md border-b border-gray-200/80 h-(--topbar-h)">
-      <div className="h-(--topbar-h) flex items-center justify-between gap-2 pl-0 pr-3 sm:pr-4 lg:pr-5">
+      <div className="h-(--topbar-h) flex items-center justify-between gap-2 pl-0 pr-2 sm:pr-4 lg:pr-5">
         {/* Trái: hamburger/toggle + logo */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Hamburger — chỉ hiện trên mobile (mở drawer overlay) */}
@@ -66,11 +66,11 @@ export const TopBar: React.FC = () => {
               Inline marginLeft để icon của button thẳng hàng với icon nav bên dưới. */}
           <TooltipToggle collapsed={collapsed} onToggle={toggle} />
 
-          <BrandLogo size="md" hideTextOnMobile className="ml-1" />
+          <BrandLogo size="md" hideTextOnMobile className="sm:ml-1" />
         </div>
 
         {/* Phải: tài khoản + đăng xuất (hoặc đăng nhập / đăng ký) */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <TokenBalanceWidget />
           <ThemeToggle />
           {isAuthenticated ? (
@@ -79,7 +79,7 @@ export const TopBar: React.FC = () => {
               <NotificationBell />
               <Link
                 to="/profile"
-                className="inline-flex items-center gap-2 text-sm font-semibold px-2.5 py-1.5 rounded-full text-sumi hover:bg-suna/30 max-w-[210px] transition border border-transparent hover:border-suna"
+                className="inline-flex items-center gap-2 text-sm font-semibold px-1 sm:px-2.5 py-1.5 rounded-full text-sumi hover:bg-suna/30 max-w-[210px] transition border border-transparent hover:border-suna"
                 title={isPro ? 'Tài khoản Hội viên PRO' : 'Tài khoản cá nhân'}
               >
                 <div className="relative shrink-0">
@@ -119,7 +119,8 @@ export const TopBar: React.FC = () => {
                   )}
                 </div>
 
-                <span className="truncate">
+                {/* Ẩn tên trên mobile để nút Đăng xuất không bị đẩy ra ngoài màn hình */}
+                <span className="truncate hidden md:inline">
                   {user?.fullName || user?.email || 'Tài khoản'}
                 </span>
               </Link>
@@ -128,10 +129,11 @@ export const TopBar: React.FC = () => {
                 onClick={() => logout()}
                 className={cn(
                   'inline-flex items-center gap-1.5',
-                  'text-sm font-semibold px-3 py-2',
+                  'text-sm font-semibold px-2 sm:px-3 py-2',
                   'bg-rose-50 text-rose-700 rounded-md hover:bg-rose-100 transition',
                 )}
                 title="Đăng xuất"
+                aria-label="Đăng xuất"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Đăng xuất</span>

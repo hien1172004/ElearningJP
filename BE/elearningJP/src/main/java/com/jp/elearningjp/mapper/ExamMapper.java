@@ -58,6 +58,7 @@ public interface ExamMapper {
     @Mapping(target = "jlptLevel", source = "exam.jlptLevel")
     @Mapping(target = "sectionId", source = "section.id")
     @Mapping(target = "sections", ignore = true)
+    @Mapping(target = "savedAnswers", ignore = true)
     ExamTakingResponse toTakingResponse(ExamAttempt attempt);
 
     @Mapping(target = "attemptId", source = "id")

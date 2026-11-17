@@ -23,4 +23,6 @@ public class ExamTakingResponse {
     Integer targetDurationMinutes;
     Instant startedAt;
     List<TakingSectionResponse> sections;
+    /** Đáp án đã lưu tạm (questionId → optionId) — để khôi phục khi tải lại phòng thi. */
+    java.util.Map<Long, Long> savedAnswers;
 }

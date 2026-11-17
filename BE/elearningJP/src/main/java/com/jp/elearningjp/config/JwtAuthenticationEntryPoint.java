@@ -28,6 +28,8 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
         response.setStatus(errorCode.getHttpStatusCode().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        // Thiếu charset thì writer mặc định ISO-8859-1 → tiếng Việt thành "B?n c?n..."
+        response.setCharacterEncoding("UTF-8");
 
         ApiResponse<?> apiResponse = ApiResponse.builder()
                 .code(errorCode.getCode())

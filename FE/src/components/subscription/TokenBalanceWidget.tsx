@@ -152,7 +152,7 @@ export const TokenBalanceWidget: React.FC = () => {
 
           <ChevronDown
             className={cn(
-              'w-3.5 h-3.5 text-nibi transition-transform',
+              'hidden sm:block w-3.5 h-3.5 text-nibi transition-transform',
               popoverOpen && 'rotate-180',
             )}
           />

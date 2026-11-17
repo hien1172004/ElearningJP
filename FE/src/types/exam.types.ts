@@ -108,6 +108,8 @@ export interface ExamTakingData {
   targetDurationMinutes: number
   startedAt: string
   sections: TakingSection[]
+  /** questionId → optionId đã lưu tạm; chỉ có khi lấy lại lượt thi đang làm */
+  savedAnswers?: Record<number, number>
 }
 
 export interface AttemptGroupScore {

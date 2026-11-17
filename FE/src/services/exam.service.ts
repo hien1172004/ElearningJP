@@ -48,6 +48,11 @@ export const examService = {
     return axiosClient.post(`/exams/${id}/attempts`, payload)
   },
 
+  // Lấy lại đề + đáp án đã lưu của lượt thi đang làm (tải lại phòng thi)
+  getTaking: async (attemptId: number): Promise<ApiResponse<ExamTakingData>> => {
+    return axiosClient.get(`/exam-attempts/${attemptId}`)
+  },
+
   // Tự động lưu đáp án câu hỏi (Auto-save)
   saveAnswer: async (
     attemptId: number,

@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 
 public interface ExamAttemptService {
     ExamTakingResponse startExam(Long examId, Long userId, StartExamRequest request);
+    /** Lấy lại đề + đáp án đã lưu của lượt thi đang làm (tải lại phòng thi). */
+    ExamTakingResponse getTaking(Long attemptId, Long userId);
     void saveAnswer(Long attemptId, Long userId, SaveAnswerRequest request);
     ExamResultResponse submitExam(Long attemptId, Long userId, SubmitExamRequest request);
     ExamResultResponse getResult(Long attemptId, Long userId);
