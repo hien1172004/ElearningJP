@@ -30,7 +30,7 @@ export const HomePage: React.FC = () => {
         Chinh phục JLPT từ N5 đến N1 dễ dàng hơn bao giờ hết
       </h1>
       <p className="mt-4 text-base sm:text-lg text-nibi max-w-xl leading-relaxed">
-        Hệ thống từ điển chuyên sâu kiểu Mazii, học từ vựng Spaced Repetition
+        Hệ thống từ điển Nhật – Việt chuyên sâu, học từ vựng Spaced Repetition
         (SRS), luyện viết chữ Hán SVG, và thi thử JLPT chuẩn hóa.
       </p>
 

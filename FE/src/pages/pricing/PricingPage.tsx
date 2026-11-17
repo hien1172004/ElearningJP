@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Crown,
   Check,
@@ -73,12 +73,18 @@ const FAQS = [
 
 export const PricingPage: React.FC = () => {
   const navigate = useNavigate()
+  const { hash } = useLocation()
   const [plans, setPlans] = useState<SubscriptionPlan[]>(FALLBACK_PLANS)
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const openLogin = useAuthModalStore((s) => s.openLogin)
   const { isPro } = useSubscriptionStore()
+
+  // Link "FAQ" ở footer trỏ tới /pricing#faq — SPA không tự cuộn theo hash
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' })
+  }, [hash])
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -397,7 +403,7 @@ export const PricingPage: React.FC = () => {
       {/* =================================================================== */}
       {/* 5. CÂU HỎI THƯỜNG GẶP (FAQ ACCORDION) */}
       {/* =================================================================== */}
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div id="faq" className="max-w-3xl mx-auto space-y-6 scroll-mt-20">
         <div className="text-center space-y-1">
           <h2 className="text-xl sm:text-2xl font-bold text-sumi">
             Câu hỏi thường gặp

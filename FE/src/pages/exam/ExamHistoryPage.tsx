@@ -226,7 +226,7 @@ export const ExamHistoryPage: React.FC = () => {
                   </div>
 
                   {/* Score & Badge */}
-                  <div className="flex items-center gap-5 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-5 justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-gray-100">
                     <div className="text-right">
                       <div className="text-xl font-bold text-sumi font-mono">
                         {item.totalScaledScore ?? 0}
@@ -248,7 +248,7 @@ export const ExamHistoryPage: React.FC = () => {
                     </div>
 
                     {/* Action buttons */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => navigate(`/exams/result/${item.attemptId}`)}
                         className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-suna hover:border-ai/50 text-sumi hover:text-ai bg-surface text-xs font-medium shadow-2xs transition-all cursor-pointer whitespace-nowrap"

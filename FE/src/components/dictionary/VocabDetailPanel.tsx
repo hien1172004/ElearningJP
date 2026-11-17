@@ -44,7 +44,7 @@ export const VocabDetailPanel: React.FC<VocabDetailPanelProps> = ({ vocabId, onS
     return (
       <div className="bg-surface rounded-md p-12 border border-gray-200/80 shadow-xs text-center text-gray-500 animate-pulse space-y-3">
         <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-sm font-medium">Đang tải chi tiết từ vựng kiểu Mazii...</p>
+        <p className="text-sm font-medium">Đang tải chi tiết từ vựng...</p>
       </div>
     )
   }

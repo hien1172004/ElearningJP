@@ -24,12 +24,13 @@ export const CourseDetailPage: React.FC = () => {
   const [courseExams, setCourseExams] = useState<ExamSummary[]>([])
 
   useEffect(() => {
-    if (!courseId) return
+    // API bài test của khóa cần đăng nhập — khách gọi sẽ nhận 401
+    if (!courseId || !isAuthenticated) return
     examService
       .getCourseExams(courseId)
       .then((data) => setCourseExams(data || []))
       .catch((err) => console.error('Lỗi tải bài test của khóa học:', err))
-  }, [courseId])
+  }, [courseId, isAuthenticated])
 
   const myEnrollment = enrollments.find((e) => e.courseId === courseId)
   const isEnrolled = course?.isEnrolled ?? !!myEnrollment
