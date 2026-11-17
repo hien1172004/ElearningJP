@@ -454,6 +454,7 @@ export const TeacherCoursesPage: React.FC = () => {
 
         {!isLoading && displayedCourses.length > 0 && (
           <Table<CourseSummary>
+            scroll={{ x: 'max-content' }}
             dataSource={displayedCourses}
             rowKey="id"
             loading={isFetching}

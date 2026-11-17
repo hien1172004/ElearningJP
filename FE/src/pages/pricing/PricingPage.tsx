@@ -139,7 +139,7 @@ export const PricingPage: React.FC = () => {
       {/* =================================================================== */}
       {/* 2. THREE PRO PLAN CARDS (Dữ liệu động 100% từ Database) */}
       {/* =================================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-5xl mx-auto">
         {plans.map((plan) => {
           const isYearly = plan.id === 'PRO_1Y'
           const isLifetime = plan.id === 'PRO_LIFETIME'

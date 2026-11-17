@@ -326,7 +326,7 @@ export const NotebookDetailPage: React.FC = () => {
         </div>
 
         {/* Thanh công cụ tìm kiếm, nút +, nút ⋮, và Ôn tập sổ tay nằm trên cùng 1 hàng */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <Input
             placeholder="Tìm trong sổ tay..."
             prefix={<SearchOutlined className="text-nibi text-xs" />}
@@ -336,7 +336,7 @@ export const NotebookDetailPage: React.FC = () => {
               setPage(0)
             }}
             allowClear
-            className="w-40 sm:w-56 h-9 rounded-lg border-suna text-xs"
+            className="flex-1 !min-w-40 lg:flex-none lg:!w-56 h-9 rounded-lg border-suna text-xs"
           />
 
           {/* Nút + Thêm từ */}
@@ -388,10 +388,11 @@ export const NotebookDetailPage: React.FC = () => {
       {/* Khối Danh sách từ vựng */}
       <div className="bg-surface border border-suna/90 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 min-w-0 max-w-full">
             <h2 className="text-base font-bold text-sumi">Danh sách từ vựng</h2>
             <Segmented
               size="small"
+              className="max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               value={typeFilter}
               options={typeOptions}
               onChange={(v) => {

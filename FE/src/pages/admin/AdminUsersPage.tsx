@@ -246,6 +246,7 @@ export const AdminUsersPage: React.FC = () => {
       ) : (
         <div className="bg-surface rounded-xl border border-slate-200 overflow-x-auto">
           <Table<AdminUser>
+            scroll={{ x: 'max-content' }}
             rowKey="id"
             columns={columns}
             dataSource={users}

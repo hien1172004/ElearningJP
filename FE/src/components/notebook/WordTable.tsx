@@ -278,6 +278,7 @@ export const WordTable: React.FC<WordTableProps> = ({
   return (
     <div className="rounded-xl overflow-hidden border border-suna/80">
       <Table<NotebookWord>
+        scroll={{ x: 920 }} // tổng cột cố định 730px + chỗ cho cột Ý nghĩa; max-content làm ellipsis mất tác dụng
         rowKey="id"
         rowSelection={rowSelection}
         columns={columns}
