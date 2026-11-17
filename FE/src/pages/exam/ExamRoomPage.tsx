@@ -11,16 +11,38 @@ import {
   Headphones, BookOpen, Check, ArrowRight
 } from 'lucide-react'
 
+// Ca đang làm + hạn chót của ca (ms) — lưu theo lượt thi để F5 / mở tab mới không reset đồng hồ
+type ExamTimer = { index: number; deadline: number }
+
+const readTimer = (key: string | null): ExamTimer | null => {
+  try {
+    const raw = key ? localStorage.getItem(key) : null
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+const writeTimer = (key: string | null, v: ExamTimer) => {
+  try {
+    if (key) localStorage.setItem(key, JSON.stringify(v))
+  } catch {
+    /* storage bị chặn: đồng hồ vẫn chạy, chỉ mất khả năng khôi phục */
+  }
+}
+
 export const ExamRoomPage: React.FC = () => {
-  const { examId, attemptId } = useParams<{ examId: string; attemptId: string }>()
+  const { attemptId } = useParams<{ attemptId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
 
   const [takingData, setTakingData] = useState<ExamTakingData | null>(location.state?.takingData || null)
   const [loading, setLoading] = useState(!location.state?.takingData)
-  
+
+  const timerKey = attemptId ? `exam_timer_${attemptId}` : null
+
   // Ca thi hiện tại (Session 0: Ca 1, Session 1: Ca 2, Session 2: Ca 3)
-  const [currentSectionIndex, setCurrentSectionIndex] = useState<number>(0)
+  const [currentSectionIndex, setCurrentSectionIndex] = useState<number>(() => readTimer(timerKey)?.index ?? 0)
 
   // State lưu đáp án: questionId -> selectedOptionId
   const [answers, setAnswers] = useState<Record<number, number>>({})
@@ -64,29 +86,61 @@ export const ExamRoomPage: React.FC = () => {
   // Ref audio player
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  // Luôn lấy lại đề + đáp án đã lưu từ server: location.state còn nguyên sau F5 nhưng không có đáp án
   useEffect(() => {
-    if (!takingData && examId && attemptId) {
-      examService.startExam(Number(examId), { attemptType: 'FULL_EXAM' })
-        .then(res => {
-          if (res.data) setTakingData(res.data)
-        })
-        .catch(err => {
-          toast.error('Không thể tải bài thi: ' + (err?.response?.data?.message || err.message))
-          navigate('/exams')
-        })
-        .finally(() => setLoading(false))
-    }
-  }, [examId, attemptId])
+    if (!attemptId) return
+    examService.getTaking(Number(attemptId))
+      .then(res => {
+        const data = res.data
+        if (!data) return
+        setTakingData(data)
+        // Đáp án chọn trong lúc đang tải được ưu tiên hơn bản trên server
+        setAnswers(prev => ({ ...(data.savedAnswers ?? {}), ...prev }))
+        if (!readTimer(timerKey)) {
+          // Không có mốc lưu (trình duyệt khác / storage bị xoá) → suy ra ca từ thời gian đã trôi qua.
+          // shortcut: ai nộp ca sớm sẽ bị đưa về ca theo giờ, nâng cấp bằng cách lưu ca hiện tại trên server
+          const start = new Date(data.startedAt).getTime()
+          const elapsed = Date.now() - start
+          let acc = 0
+          let index = data.sections.length - 1
+          for (let i = 0; i < data.sections.length; i++) {
+            acc += (data.sections[i].durationMinutes || 30) * 60_000
+            if (elapsed < acc) { index = i; break }
+          }
+          writeTimer(timerKey, { index, deadline: start + acc })
+          setCurrentSectionIndex(index)
+        }
+      })
+      .catch(err => {
+        if (err?.response?.data?.code === 5004) {
+          // Đã nộp bài → về trang kết quả thay vì cho làm lại
+          navigate(`/exams/result/${attemptId}`, { replace: true })
+          return
+        }
+        toast.error('Không thể tải bài thi: ' + (err?.response?.data?.message || err.message))
+        navigate('/exams')
+      })
+      .finally(() => setLoading(false))
+  }, [attemptId, timerKey])
 
-  // Cập nhật thời gian khi bắt đầu hoặc chuyển Ca thi
+  // Cập nhật thời gian khi bắt đầu, tải lại hoặc chuyển Ca thi
   useEffect(() => {
-    if (takingData && takingData.sections[currentSectionIndex]) {
-      const sec = takingData.sections[currentSectionIndex]
-      const durationMin = sec.durationMinutes || 30
-      setTimeLeft(durationMin * 60)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }, [takingData, currentSectionIndex])
+    if (!takingData || !takingData.sections[currentSectionIndex]) return
+    const durMs = (s: TakingSection) => (s.durationMinutes || 30) * 60_000
+    // Mốc trần: không ca nào được kéo quá giờ bắt đầu + tổng thời lượng đề
+    const examEnd = new Date(takingData.startedAt).getTime()
+      + takingData.sections.reduce((t, s) => t + durMs(s), 0)
+    const stored = readTimer(timerKey)
+    const deadline = Math.min(
+      stored?.index === currentSectionIndex
+        ? stored.deadline
+        : Date.now() + durMs(takingData.sections[currentSectionIndex]),
+      examEnd,
+    )
+    writeTimer(timerKey, { index: currentSectionIndex, deadline })
+    setTimeLeft(Math.max(0, Math.round((deadline - Date.now()) / 1000)))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [takingData, currentSectionIndex, timerKey])
 
   // Timer đếm ngược cho Ca thi hiện tại
   useEffect(() => {
@@ -535,11 +589,10 @@ export const ExamRoomPage: React.FC = () => {
       })
 
       if (res.data) {
-        if (flagStorageKey) {
-          try {
-            localStorage.removeItem(flagStorageKey)
-          } catch (_) {}
-        }
+        try {
+          if (flagStorageKey) localStorage.removeItem(flagStorageKey)
+          if (timerKey) localStorage.removeItem(timerKey)
+        } catch (_) {}
         navigate(`/exams/result/${attemptId}`, {
           state: { result: res.data },
         })
