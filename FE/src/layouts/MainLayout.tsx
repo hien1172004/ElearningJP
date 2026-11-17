@@ -26,8 +26,11 @@ export const MainLayout: React.FC = () => {
   useWebPush()
 
   // Không hiển thị footer trên trang ôn tập sổ tay (Flashcard, Quizz, Speaking)
+  // và khu quản trị/giáo viên (footer quảng bá gói PRO không dành cho các trang này)
   const hideFooter =
-    location.pathname.includes('/notebooks/') && location.pathname.includes('/review')
+    (location.pathname.includes('/notebooks/') && location.pathname.includes('/review')) ||
+    location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/teacher')
 
   return (
     <div className="min-h-screen bg-kinari text-sumi font-sans">

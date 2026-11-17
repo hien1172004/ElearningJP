@@ -64,11 +64,18 @@ export async function subscribeToPush(): Promise<PushSubscriptionPayload | null>
   }
   if (permission !== 'granted') return null
 
-  const keyBuffer = urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: keyBuffer,
-  })
+  let subscription: PushSubscription
+  try {
+    subscription =
+      (await registration.pushManager.getSubscription()) ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      }))
+  } catch {
+    // Trình duyệt không có dịch vụ push (headless, một số trình duyệt nhẹ) → bỏ qua, không làm vỡ trang
+    return null
+  }
 
   return {
     endpoint: subscription.endpoint,

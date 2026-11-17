@@ -16,6 +16,13 @@ export const QUERY_KEYS = {
     detailAll: ['courses', 'detail'] as const,
     detail: (id: number | string) => ['courses', 'detail', id] as const,
   },
+  exam: {
+    all: ['exams'] as const,
+    published: (params: Record<string, unknown>) => ['exams', 'published', params] as const,
+    // Kèm userId: đăng xuất không xoá cache, tránh hiện lịch sử của tài khoản trước
+    myHistory: (userId: number | undefined) => ['exams', 'my-history', userId] as const,
+    leaderboard: (params: Record<string, unknown>) => ['exams', 'leaderboard', params] as const,
+  },
   enrollment: {
     all: ['enrollments'] as const,
     mine: (activeOnly: boolean) =>

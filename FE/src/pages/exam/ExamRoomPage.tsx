@@ -2,6 +2,8 @@ import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import { examService } from '@/services'
 import type { ExamTakingData, TakingQuestion, TakingSection, TakingPassage } from '@/types'
 import { cleanJapaneseText, cleanQuestionPrompt, formatMondaiDisplay, formatJapanesePassageHtml, cleanPassageTitle, ensurePassageContentWithIntro } from '@/utils/format'
@@ -34,6 +36,7 @@ const writeTimer = (key: string | null, v: ExamTimer) => {
 export const ExamRoomPage: React.FC = () => {
   const { attemptId } = useParams<{ attemptId: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const location = useLocation()
 
   const [takingData, setTakingData] = useState<ExamTakingData | null>(location.state?.takingData || null)
@@ -479,7 +482,8 @@ export const ExamRoomPage: React.FC = () => {
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => handleSelectOption(q.id, opt.id)}
+                      aria-pressed={isSelected}
+                    onClick={() => handleSelectOption(q.id, opt.id)}
                       className={`p-3 rounded-2xl border transition-all text-left cursor-pointer flex flex-col justify-between gap-2.5 ${
                         isSelected
                           ? 'border-ai bg-kamenozoki/60 ring-2 ring-ai/20 shadow-2xs'
@@ -525,6 +529,7 @@ export const ExamRoomPage: React.FC = () => {
                   <button
                     key={opt.id}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => handleSelectOption(q.id, opt.id)}
                     className={`w-full ${useTwoCols || isThreeOptionsMondai ? 'p-3' : 'p-3.5'} rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
@@ -593,6 +598,8 @@ export const ExamRoomPage: React.FC = () => {
           if (flagStorageKey) localStorage.removeItem(flagStorageKey)
           if (timerKey) localStorage.removeItem(timerKey)
         } catch (_) {}
+        // Trạng thái đề, lịch sử thi và bảng xếp hạng đều đổi sau khi nộp
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.exam.all })
         navigate(`/exams/result/${attemptId}`, {
           state: { result: res.data },
         })
@@ -1054,7 +1061,7 @@ export const ExamRoomPage: React.FC = () => {
 
       {/* Modal Chuyển Ca Thi (Next Section Modal) */}
       {nextSectionModalOpen && takingData && currentSectionIndex < takingData.sections.length - 1 && (
-        <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" aria-label="Chuyển ca thi" className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-suna animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-kamenozoki text-ai flex items-center justify-center mx-auto mb-3 shadow-2xs border border-ai/20">
               <CheckCircle2 className="w-6 h-6" />
@@ -1111,7 +1118,7 @@ export const ExamRoomPage: React.FC = () => {
 
       {/* Modal Xác Nhận Nộp Toàn Bộ Bài */}
       {confirmSubmitOpen && (
-        <div className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" aria-label="Xác nhận nộp bài" className="fixed inset-0 overscroll-contain z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-3xl max-w-md w-full p-6 shadow-xl border border-suna animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 shadow-2xs border border-amber-200">
               <AlertCircle className="w-6 h-6" />

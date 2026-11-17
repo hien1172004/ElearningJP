@@ -81,7 +81,7 @@ export const Footer: React.FC = () => {
                   className="text-nibi hover:text-ai transition flex items-center gap-1.5"
                 >
                   <Search className="w-3.5 h-3.5" />
-                  <span>Tra cứu từ điển Mazii</span>
+                  <span>Tra cứu từ điển Nhật – Việt</span>
                 </Link>
               </li>
               <li>
@@ -120,17 +120,9 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#faq"
-                  onClick={() => {
-                    if (window.location.pathname !== '/pricing') {
-                      window.location.href = '/pricing#faq'
-                    }
-                  }}
-                  className="text-nibi hover:text-ai transition"
-                >
+                <Link to="/pricing#faq" className="text-nibi hover:text-ai transition">
                   Câu hỏi thường gặp (FAQ)
-                </a>
+                </Link>
               </li>
               <li>
                 <span className="text-nibi/80 text-xs">
@@ -138,12 +130,6 @@ export const Footer: React.FC = () => {
                 </span>
               </li>
             </ul>
-
-            {/* Support Hotline / Email */}
-            <div className="pt-2 text-xs text-nibi space-y-1">
-              <p>Email hỗ trợ: <a href="mailto:support@elearningjp.vn" className="text-ai hover:underline">support@elearningjp.vn</a></p>
-              <p>Thời gian làm việc: 08:00 – 22:00 (Hàng ngày)</p>
-            </div>
           </div>
         </div>
 

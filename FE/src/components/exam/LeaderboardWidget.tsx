@@ -6,7 +6,9 @@ import {
   Crown,
   Loader2,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { examService } from '@/services'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import type { LeaderboardData, JlptLevel } from '@/types'
 
 // Bảng màu avatar phong phú cho danh sách xếp hạng
@@ -38,11 +40,6 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel>(initialLevel)
   const [selectedTimeframe, setSelectedTimeframe] = useState<'WEEK' | 'MONTH' | 'ALL'>('WEEK')
 
-  // Dữ liệu
-  const [data, setData] = useState<LeaderboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
   const levels: JlptLevel[] = ['N5', 'N4', 'N3', 'N2', 'N1']
 
   useEffect(() => {
@@ -51,28 +48,16 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
     }
   }, [initialLevel])
 
-  useEffect(() => {
-    fetchLeaderboard()
-  }, [selectedLevel, selectedTimeframe])
-
-  const fetchLeaderboard = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const res = await examService.getLeaderboard({
-        level: selectedLevel,
-        timeframe: selectedTimeframe,
-      })
-      if (res.data) {
-        setData(res.data)
-      }
-    } catch (err: any) {
-      console.error('Failed to load leaderboard', err)
-      setError(err?.response?.data?.message || 'Không thể tải bảng xếp hạng lúc này.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const leaderboardParams = { level: selectedLevel, timeframe: selectedTimeframe }
+  const query = useQuery({
+    queryKey: QUERY_KEYS.exam.leaderboard(leaderboardParams),
+    queryFn: () => examService.getLeaderboard(leaderboardParams),
+  })
+  const data: LeaderboardData | null = query.data?.data ?? null
+  const loading = query.isLoading
+  const error = query.error
+    ? (query.error as any)?.response?.data?.message || 'Không thể tải bảng xếp hạng lúc này.'
+    : null
 
   const rankings = data?.rankings || []
   const top1 = rankings[0]
@@ -113,9 +98,9 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
             <span>Đang cập nhật...</span>
           </div>
         ) : myRank ? (
-          <div className="bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl p-3 flex items-center justify-between text-xs text-blue-900 dark:text-blue-200">
+          <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3 flex items-center justify-between text-xs text-blue-900">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded-full bg-blue-600 dark:bg-blue-500 text-white font-bold text-[11px] flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[11px] flex items-center justify-center shrink-0">
                 #{myRank.rank}
               </div>
               <span className="truncate">Thứ hạng của bạn: <strong className="font-bold">Top #{myRank.rank}</strong></span>
@@ -151,7 +136,7 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
                   key={item.userId || idx}
                   className={`flex items-center justify-between py-2 px-2 rounded-xl transition ${
                     isUser
-                      ? 'bg-blue-50/80 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-900 font-bold'
+                      ? 'bg-blue-50/80 border border-blue-200/80 font-bold'
                       : 'hover:bg-suna/20'
                   }`}
                 >
@@ -186,11 +171,11 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
                     </div>
 
                     <div className="truncate">
-                      <span className={`text-xs sm:text-sm truncate block ${isUser ? 'font-black text-blue-900 dark:text-blue-200' : 'font-medium text-sumi'}`}>
+                      <span className={`text-xs sm:text-sm truncate block ${isUser ? 'font-black text-blue-900' : 'font-medium text-sumi'}`}>
                         {item.fullName}
                       </span>
                       {isUser && (
-                        <span className="text-[9px] text-blue-600 dark:text-blue-300 font-bold bg-blue-100 dark:bg-blue-900/60 px-1 py-0.2 rounded">
+                        <span className="text-[9px] text-blue-600 font-bold bg-blue-100 px-1 py-0.2 rounded">
                           Bạn
                         </span>
                       )}
@@ -208,15 +193,17 @@ export const LeaderboardWidget: React.FC<LeaderboardWidgetProps> = ({
           </div>
         )}
 
-        {/* NÚT YÊU CẦU THÊM BÀI THI */}
+        {/* NÚT THÊM ĐỀ THI — chỉ hiện khi trang cha truyền handler */}
+        {onRequestMoreExams && (
         <button
           type="button"
           onClick={onRequestMoreExams}
           className="w-full py-2.5 px-3.5 rounded-xl border border-suna hover:border-ai bg-surface hover:bg-suna/20 text-xs font-medium text-sumi flex items-center justify-between transition-colors shadow-2xs cursor-pointer group mt-2"
         >
-          <span>Yêu cầu thêm bài thi</span>
+          <span>Thêm đề thi mới</span>
           <ChevronRight className="w-4 h-4 text-nibi group-hover:text-ai group-hover:translate-x-0.5 transition-all" />
         </button>
+        )}
       </div>
     )
   }

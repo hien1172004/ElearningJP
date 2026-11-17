@@ -1,10 +1,12 @@
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { toast } from 'sonner'
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { QUERY_KEYS } from '@/lib/queryKeys'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { BackButton } from '@/components/common'
 import { examService } from '@/services'
-import type { ExamSummary, ExamDetail, JlptLevel, AttemptType, ExamAttemptHistory } from '@/types'
+import type { ExamSummary, ExamDetail, JlptLevel, AttemptType } from '@/types'
 import { useAuthStore, useSubscriptionStore } from '@/stores'
 import { isTeacherOrAdmin as checkTeacherOrAdmin } from '@/utils/roles'
 import { 
@@ -25,6 +27,7 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 
 export const ExamLobbyPage: React.FC = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   // Trang gọi tới có thể gửi kèm state.backTo để hiện nút quay lại (vd: quản lý đề thi)
   const backTo = (useLocation().state as { backTo?: string } | null)?.backTo
   const user = useAuthStore((s) => s.user)
@@ -38,15 +41,38 @@ export const ExamLobbyPage: React.FC = () => {
 
   const [selectedLevel, setSelectedLevel] = useState<JlptLevel | 'ALL'>('N5')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
-  const [exams, setExams] = useState<ExamSummary[]>([])
-  const [myHistory, setMyHistory] = useState<ExamAttemptHistory[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Phân trang chuẩn Ant Design (mặc định 12 đề = lưới 3x4)
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [pageSize, setPageSize] = useState<number>(12)
-  const [totalItems, setTotalItems] = useState<number>(0)
+
+  const examsQuery = useQuery({
+    queryKey: QUERY_KEYS.exam.published({ level: selectedLevel, page: currentPage, size: pageSize }),
+    queryFn: () =>
+      examService.getPublishedExams({
+        level: selectedLevel === 'ALL' ? undefined : selectedLevel,
+        page: currentPage - 1,
+        size: pageSize,
+      }),
+    placeholderData: keepPreviousData,
+  })
+  const exams = useMemo<ExamSummary[]>(
+    () => examsQuery.data?.data?.content || examsQuery.data?.data?.items || [],
+    [examsQuery.data],
+  )
+  const totalItems = examsQuery.data?.data?.totalElements ?? exams.length
+  const loading = examsQuery.isLoading
+  const error = examsQuery.error
+    ? (examsQuery.error as any)?.response?.data?.message || 'Không thể tải danh sách đề thi'
+    : null
+
+  // Lịch sử làm bài để định danh trạng thái Chưa làm / Đang làm / Đạt / Chưa đạt (lỗi thì bỏ qua)
+  const { data: myHistory } = useQuery({
+    queryKey: QUERY_KEYS.exam.myHistory(user?.id),
+    queryFn: examService.getMyExamHistory,
+    // Chờ có user.id, nếu không key đổi từ undefined → id làm gọi API 2 lần
+    enabled: isAuthenticated && !!user?.id,
+  })
 
   // State cho Modal đăng nhập
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -62,49 +88,10 @@ export const ExamLobbyPage: React.FC = () => {
 
   const levels: (JlptLevel | 'ALL')[] = ['ALL', 'N5', 'N4', 'N3', 'N2', 'N1']
 
-  useEffect(() => {
-    fetchExams()
-  }, [selectedLevel, currentPage, pageSize])
-
-  // Tải lịch sử làm bài của học viên để định danh trạng thái Chưa làm / Đang làm / Đạt / Chưa đạt
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setMyHistory([])
-      return
-    }
-    examService
-      .getMyExamHistory()
-      .then((history) => {
-        setMyHistory(history || [])
-      })
-      .catch(() => {
-        // im lặng nếu không tải được lịch sử thi
-      })
-  }, [isAuthenticated])
-
-  const fetchExams = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const res = await examService.getPublishedExams({
-        level: selectedLevel === 'ALL' ? undefined : selectedLevel,
-        page: currentPage - 1,
-        size: pageSize,
-      })
-      const items = res.data?.content || res.data?.items || []
-      setExams(items)
-      setTotalItems(res.data?.totalElements ?? items.length)
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Không thể tải danh sách đề thi')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // Map trạng thái làm bài mới nhất của từng đề thi
   const userExamStatusMap = useMemo(() => {
     const map: Record<number, { status: 'IN_PROGRESS' | 'PASSED' | 'FAILED' | 'NOT_STARTED'; attemptId: number; score?: number }> = {}
-    if (!myHistory || myHistory.length === 0) return map
+    if (!isAuthenticated || !myHistory || myHistory.length === 0) return map
 
     for (const attempt of myHistory) {
       const existing = map[attempt.examId]
@@ -119,7 +106,7 @@ export const ExamLobbyPage: React.FC = () => {
       }
     }
     return map
-  }, [myHistory])
+  }, [isAuthenticated, myHistory])
 
   // Lọc đề thi theo tab trạng thái (Tất cả / Chưa làm / Đang làm / Đã xong)
   const displayedExams = useMemo(() => {
@@ -174,16 +161,6 @@ export const ExamLobbyPage: React.FC = () => {
     )
   }
 
-  const handleRequestMoreExams = () => {
-    if (isTeacherOrAdmin) {
-      navigate('/admin/exams/create')
-    } else {
-      toast.success(
-        'Cảm ơn bạn! Yêu cầu của bạn đã được ghi nhận. Ban học thuật ElearningJP sẽ sớm cập nhật thêm đề thi mới.',
-      )
-    }
-  }
-
   const handleStartExam = async () => {
     if (!selectedExam) return
     if (attemptType === 'PRACTICE_SECTION' && !selectedSectionId) {
@@ -198,6 +175,7 @@ export const ExamLobbyPage: React.FC = () => {
         sectionId: attemptType === 'PRACTICE_SECTION' ? selectedSectionId || undefined : undefined,
       })
       if (res.data) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.exam.myHistory(user?.id) })
         navigate(`/exams/${selectedExam.id}/taking/${res.data.attemptId}`, {
           state: { takingData: res.data },
         })
@@ -226,6 +204,7 @@ export const ExamLobbyPage: React.FC = () => {
                 <button
                   key={lvl}
                   type="button"
+                  aria-pressed={selectedLevel === lvl}
                   onClick={() => {
                     setSelectedLevel(lvl)
                     setCurrentPage(1)
@@ -286,10 +265,11 @@ export const ExamLobbyPage: React.FC = () => {
                 <button
                   key={tab.key}
                   type="button"
+                  aria-pressed={statusFilter === tab.key}
                   onClick={() => setStatusFilter(tab.key)}
                   className={`px-3.5 sm:px-4 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
                     statusFilter === tab.key
-                      ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 font-bold border border-blue-200/80 dark:border-blue-900 shadow-2xs'
+                      ? 'bg-blue-50 text-blue-600 font-bold border border-blue-200/80 shadow-2xs'
                       : 'bg-surface hover:bg-suna/30 text-nibi hover:text-sumi border border-suna font-medium'
                   }`}
                 >
@@ -478,14 +458,15 @@ export const ExamLobbyPage: React.FC = () => {
           <LeaderboardWidget
             initialLevel={selectedLevel === 'ALL' ? 'N5' : selectedLevel}
             variant="lobby"
-            onRequestMoreExams={handleRequestMoreExams}
+            // Chưa có API ghi nhận yêu cầu của học viên → chỉ giáo viên/admin thấy nút (mở trang tạo đề)
+            onRequestMoreExams={isTeacherOrAdmin ? () => navigate('/admin/exams/create') : undefined}
           />
         </div>
       </div>
 
       {/* Modal Chọn Chế Độ Thi (Full Exam hoặc Practice Section) */}
       {selectedExam && (
-        <div className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" aria-label="Chọn chế độ làm bài" className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl max-w-lg w-full overflow-hidden shadow-xl border border-suna animate-in fade-in zoom-in-95 duration-200">
             <div className="px-5 py-4 border-b border-suna/80 flex items-center justify-between bg-kinari/50">
               <div>
@@ -629,7 +610,7 @@ export const ExamLobbyPage: React.FC = () => {
 
       {/* Modal Yêu Cầu Đăng Nhập Trước Khi Vào Thi */}
       {showLoginModal && (
-        <div className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" aria-label="Yêu cầu đăng nhập" className="fixed inset-0 overscroll-contain z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-surface rounded-2xl max-w-md w-full overflow-hidden shadow-xl border border-suna p-6 text-center animate-in fade-in zoom-in-95 duration-200">
             <div className="w-12 h-12 rounded-full bg-kamenozoki text-ai flex items-center justify-center mx-auto mb-3 shadow-2xs">
               <Award className="w-6 h-6" />

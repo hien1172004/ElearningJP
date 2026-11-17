@@ -162,8 +162,8 @@ export const ExamResultPage: React.FC = () => {
 
             {/* Score Breakdown Section */}
             <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Main Scaled Score Card */}
-              <div className="md:col-span-1 bg-indigo-700 text-white rounded-xl p-5 flex flex-col justify-between">
+              {/* Main Scaled Score Card — màu nền cố định vì palette indigo bị đảo ở dark mode, chữ trắng sẽ mất */}
+              <div className="md:col-span-1 bg-[#2e5c8a] text-white rounded-xl p-5 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between opacity-80 text-xs font-semibold uppercase tracking-wider mb-2">
                     <span>Điểm chuẩn hóa</span>
@@ -173,13 +173,13 @@ export const ExamResultPage: React.FC = () => {
                     {result.totalScaledScore}
                     <span className="text-base font-normal opacity-70"> / {result.totalScaledMaxScore}</span>
                   </div>
-                  <p className="text-xs text-indigo-200 mt-2">
+                  <p className="text-xs text-white/80 mt-2">
                     Điểm sàn yêu cầu: <span className="font-semibold text-white">{result.overallPassingScore} điểm</span>
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-indigo-500/50">
-                  <div className="text-xs text-indigo-200">Điểm thô (Số câu đúng):</div>
+                <div className="mt-4 pt-3 border-t border-white/25">
+                  <div className="text-xs text-white/80">Điểm thô (Số câu đúng):</div>
                   <div className="text-lg font-bold mt-0.5">{result.totalRawScore} câu</div>
                 </div>
               </div>
