@@ -67,6 +67,13 @@ export const isTeacherOrAdmin = (user?: User | null): boolean =>
   hasRole(user, [ROLE_ADMIN, ROLE_TEACHER])
 
 /**
+ * Trang đích sau đăng nhập: ADMIN/TEACHER vào thẳng khu quản trị khi đích là trang chủ
+ * (`/admin` tự rẽ nhánh theo role — xem AdminHomeRedirect). Đích cụ thể khác giữ nguyên.
+ */
+export const resolveLandingPath = (user: User | null | undefined, redirectTo: string): string =>
+  redirectTo === '/' && isTeacherOrAdmin(user) ? '/admin' : redirectTo
+
+/**
  * Được xem nội dung khóa học mà không cần đăng ký: admin (mọi khóa) hoặc giáo viên được giao khóa
  * (`canManage` do BE tính trong chi tiết khóa học).
  * Khớp quy tắc BE `CourseAccessGuard.requireContentAccess`.

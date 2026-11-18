@@ -1,9 +1,8 @@
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import React, { useEffect, useState } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   Search as SearchLucide,
-  GraduationCap,
   ClipboardCheck,
   BookOpen,
   Bookmark,
@@ -11,8 +10,6 @@ import {
   BarChart3,
   X,
   Award,
-  ChevronDown,
-  ChevronRight,
   FileText,
   Mic,
   Layers,
@@ -21,29 +18,18 @@ import {
   ShieldAlert,
   Megaphone,
   Crown,
-  // UserCheck, // dùng lại khi bật mục "Học viên" trong sidebar
+  ArrowLeftRight,
 } from 'lucide-react'
-import { Tooltip, Dropdown } from 'antd'
-import type { MenuProps } from 'antd'
+import { Tooltip } from 'antd'
 import { BrandLogo } from '@/components/common/BrandLogo'
 import { useAuthStore, useSidebarStore } from '@/stores'
-import { hasRole } from '@/utils/roles'
+import { isAdmin, isTeacherOrAdmin } from '@/utils/roles'
 import { cn } from '@/utils/cn'
 import { useSrsStats } from '@/hooks/useSrsStats'
 
 // ============================================================================
 // Types
 // ============================================================================
-
-/** Một mục con (nằm trong nhóm có thể mở rộng, vd: "Quản lý"). */
-interface NavChildItem {
-  to: string
-  label: string
-  icon?: React.ReactNode
-  match?: (pathname: string) => boolean
-  /** Chỉ hiện cho user có ít nhất 1 role trong danh sách (vd: chỉ ADMIN). */
-  requiresRoles?: readonly string[]
-}
 
 interface NavItem {
   to: string
@@ -52,10 +38,6 @@ interface NavItem {
   match?: (pathname: string) => boolean
   /** Chỉ hiện cho user đã đăng nhập (vd: tiến độ học tập). */
   requiresAuth?: boolean
-  /** Chỉ hiện cho user có ít nhất 1 role trong danh sách (vd: ADMIN/TEACHER). */
-  requiresRoles?: readonly string[]
-  /** Danh sách mục con — nếu có, mục này trở thành nhóm có thể mở rộng. */
-  children?: NavChildItem[]
   /** Badge hiển thị cạnh nhãn (vd: số thẻ SRS đến hạn). */
   badge?: React.ReactNode
 }
@@ -63,11 +45,13 @@ interface NavItem {
 const isActiveOrStartsWith = (prefix: string) => (pathname: string) =>
   pathname === prefix || pathname.startsWith(`${prefix}/`)
 
-const isAdminArea = (pathname: string) =>
-  isActiveOrStartsWith('/teacher')(pathname) ||
-  isActiveOrStartsWith('/admin')(pathname)
+// Trang soạn khóa học có 2 đường dẫn: /teacher/courses và /admin/courses
+const isCourseManageArea = (pathname: string) =>
+  isActiveOrStartsWith('/teacher/courses')(pathname) ||
+  isActiveOrStartsWith('/admin/courses')(pathname)
 
-const navItems: NavItem[] = [
+/** Menu học viên / khách. */
+const studentNav: NavItem[] = [
   { to: '/', label: 'Trang chủ', icon: <Home className="w-5 h-5" /> },
   {
     to: '/dictionary',
@@ -114,73 +98,73 @@ const navItems: NavItem[] = [
     match: isActiveOrStartsWith('/srs'),
     requiresAuth: true,
   },
+]
+
+// Các mục quản lý dùng chung cho TEACHER & ADMIN (BE tự giới hạn phạm vi dữ liệu theo role).
+const sharedStaffNav: NavItem[] = [
+  {
+    to: '/admin/exams',
+    label: 'Đề thi',
+    icon: <FileText className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/admin/exams'),
+  },
+  {
+    to: '/admin/scenarios',
+    label: 'Kịch bản luyện nói',
+    icon: <Mic className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/admin/scenarios'),
+  },
+  {
+    to: '/admin/comments',
+    label: 'Kiểm duyệt bình luận',
+    icon: <ShieldAlert className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/admin/comments'),
+  },
+  {
+    to: '/admin/broadcasts',
+    label: 'Gửi thông báo',
+    icon: <Megaphone className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/admin/broadcasts'),
+  },
+]
+
+/** Menu giáo viên. */
+const teacherNav: NavItem[] = [
   {
     to: '/teacher/courses',
-    label: 'Quản lý',
-    icon: <GraduationCap className="w-5 h-5" />,
-    match: isAdminArea,
-    requiresRoles: ['ADMIN', 'TEACHER'],
-    children: [
-      {
-        to: '/teacher/courses',
-        label: 'Khóa học',
-        icon: <BookOpen className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/teacher/courses'),
-      },
-      // Học viên đã chuyển vào trang soạn khóa học (/teacher/courses/:id?view=students).
-      // Trang /teacher/students vẫn giữ route, chỉ ẩn khỏi sidebar.
-      // {
-      //   to: '/teacher/students',
-      //   label: 'Học viên',
-      //   icon: <UserCheck className="w-4 h-4" />,
-      //   match: isActiveOrStartsWith('/teacher/students'),
-      // },
-      {
-        to: '/admin/course-reviews',
-        label: 'Hàng chờ duyệt',
-        icon: <ClipboardCheck className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin/course-reviews'),
-        requiresRoles: ['ADMIN'],
-      },
-      {
-        to: '/admin/exams',
-        label: 'Đề thi',
-        icon: <FileText className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin/exams'),
-      },
-      {
-        to: '/admin/broadcasts',
-        label: 'Gửi thông báo',
-        icon: <Megaphone className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin/broadcasts'),
-      },
-      {
-        to: '/admin/comments',
-        label: 'Kiểm duyệt bình luận',
-        icon: <ShieldAlert className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin/comments'),
-      },
-      {
-        to: '/admin/scenarios',
-        label: 'Kịch bản luyện nói',
-        icon: <Mic className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin/scenarios'),
-      },
-      {
-        to: '/admin/stats',
-        label: 'Thống kê',
-        icon: <PieChart className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin/stats'),
-        requiresRoles: ['ADMIN'],
-      },
-      {
-        to: '/admin/users',
-        label: 'Người dùng',
-        icon: <Users className="w-4 h-4" />,
-        match: isActiveOrStartsWith('/admin/users'),
-        requiresRoles: ['ADMIN'],
-      },
-    ],
+    label: 'Khóa học của tôi',
+    icon: <BookOpen className="w-5 h-5" />,
+    match: isCourseManageArea,
+  },
+  ...sharedStaffNav,
+]
+
+/** Menu quản trị viên. */
+const adminNav: NavItem[] = [
+  {
+    to: '/admin/stats',
+    label: 'Thống kê',
+    icon: <PieChart className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/admin/stats'),
+  },
+  {
+    to: '/admin/course-reviews',
+    label: 'Hàng chờ duyệt',
+    icon: <ClipboardCheck className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/admin/course-reviews'),
+  },
+  {
+    to: '/teacher/courses',
+    label: 'Khóa học',
+    icon: <BookOpen className="w-5 h-5" />,
+    match: isCourseManageArea,
+  },
+  ...sharedStaffNav,
+  {
+    to: '/admin/users',
+    label: 'Người dùng',
+    icon: <Users className="w-5 h-5" />,
+    match: isActiveOrStartsWith('/admin/users'),
   },
 ]
 
@@ -218,185 +202,50 @@ function useIsMobile(): boolean {
 interface NavItemRowProps {
   item: NavItem
   collapsed: boolean
-  /** Nhóm đang mở rộng (chỉ dùng cho item có children). */
-  groupOpen: boolean
-  onToggleGroup: () => void
   onNavigate?: () => void
 }
 
-/**
- * Một dòng nav. Nếu item có `children` thì:
- *  - Desktop mở rộng -> hiện nút bấm toggle + danh sách mục con thụt lề.
- *  - Desktop thu gọn -> hiện icon, bấm ra menu dropdown chứa các mục con.
- */
-const NavItemRow: React.FC<NavItemRowProps> = ({
-  item,
-  collapsed,
-  groupOpen,
-  onToggleGroup,
-  onNavigate,
-}) => {
+/** Một dòng nav; khi sidebar thu gọn chỉ hiện icon kèm tooltip. */
+const NavItemRow: React.FC<NavItemRowProps> = ({ item, collapsed, onNavigate }) => {
   const location = useLocation()
-  const navigate = useNavigate()
-
-  const hasChildren = !!item.children?.length
 
   const isItemActive = item.match
     ? item.match(location.pathname)
     : location.pathname === item.to
 
-  const isChildActive = (child: NavChildItem) =>
-    child.match ? child.match(location.pathname) : location.pathname === child.to
+  const link = (
+    <NavLink
+      to={item.to}
+      end={item.to === '/'}
+      onClick={onNavigate}
+      className={cn(
+        'flex items-center gap-3 rounded-md text-sm font-semibold transition',
+        'px-3 py-2.5',
+        collapsed && 'justify-center px-0',
+        isItemActive
+          ? 'text-indigo-600 bg-indigo-50/80 font-bold'
+          : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50',
+      )}
+    >
+      <span className="shrink-0 relative inline-flex items-center justify-center">
+        {item.icon}
+        {collapsed && item.badge && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-600" />
+        )}
+      </span>
+      {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+      {!collapsed && item.badge}
+    </NavLink>
+  )
 
-  // Nhóm được coi là "active" khi bản thân nó hoặc bất kỳ mục con nào active.
-  const isGroupActive = isItemActive || (item.children?.some(isChildActive) ?? false)
-
-  // ---------------------- Item KHÔNG có children ----------------------
-  if (!hasChildren) {
-    const linkClasses = cn(
-      'flex items-center gap-3 rounded-md text-sm font-semibold transition',
-      'px-3 py-2.5',
-      collapsed && 'justify-center px-0',
-      isItemActive
-        ? 'text-indigo-600 bg-indigo-50/80 font-bold'
-        : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50',
-    )
-
-    const link = (
-      <NavLink
-        to={item.to}
-        end={item.to === '/'}
-        onClick={onNavigate}
-        className={linkClasses}
-      >
-        <span className="shrink-0 relative inline-flex items-center justify-center">
-          {item.icon}
-          {collapsed && item.badge && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-indigo-600" />
-          )}
-        </span>
-        {!collapsed && <span className="truncate flex-1">{item.label}</span>}
-        {!collapsed && item.badge}
-      </NavLink>
-    )
-
-    if (collapsed) {
-      return (
-        <Tooltip title={item.label} placement="right">
-          {link}
-        </Tooltip>
-      )
-    }
-    return link
-  }
-
-  // ---------------------- Item CÓ children ----------------------
-
-  // Thu gọn: icon + dropdown menu chứa các mục con.
   if (collapsed) {
-    const menuItems: MenuProps['items'] = (item.children ?? []).map((child) => ({
-      key: child.to,
-      icon: child.icon,
-      label: child.label,
-    }))
-
     return (
       <Tooltip title={item.label} placement="right">
-        <span className="block w-full">
-          <Dropdown
-            menu={{
-              items: menuItems,
-              onClick: ({ key }) => {
-                navigate(key)
-                onNavigate?.()
-              },
-            }}
-            placement="rightTop"
-            trigger={['click']}
-          >
-            <button
-              type="button"
-              aria-label={item.label}
-              aria-haspopup="menu"
-              aria-expanded={groupOpen}
-              className={cn(
-                'flex items-center justify-center w-full rounded-md transition',
-                'px-0 py-2.5',
-                isGroupActive
-                  ? 'text-indigo-600 bg-indigo-50/80 font-bold'
-                  : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50',
-              )}
-            >
-              <span className="shrink-0 inline-flex items-center justify-center">
-                {item.icon}
-              </span>
-            </button>
-          </Dropdown>
-        </span>
+        {link}
       </Tooltip>
     )
   }
-
-  // Mở rộng: nút toggle + danh sách mục con.
-  const toggleClasses = cn(
-    'flex items-center gap-3 rounded-md text-sm font-semibold transition w-full',
-    'px-3 py-2.5',
-    isGroupActive
-      ? 'text-indigo-600 bg-indigo-50/80 font-bold'
-      : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50',
-  )
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={onToggleGroup}
-        aria-expanded={groupOpen}
-        className={toggleClasses}
-      >
-        <span className="shrink-0 inline-flex items-center justify-center">
-          {item.icon}
-        </span>
-        <span className="truncate flex-1 text-left">{item.label}</span>
-        <span className="shrink-0 inline-flex items-center justify-center">
-          {groupOpen ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
-        </span>
-      </button>
-
-      {groupOpen && (
-        <div className="mt-1 ml-4 pl-3 border-l border-gray-200 space-y-0.5">
-          {(item.children ?? []).map((child) => {
-            const childActive = isChildActive(child)
-            return (
-              <NavLink
-                key={child.to}
-                to={child.to}
-                onClick={onNavigate}
-                className={cn(
-                  'flex items-center gap-2.5 rounded-md text-xs font-semibold transition',
-                  'px-2.5 py-2',
-                  childActive
-                    ? 'text-indigo-600 bg-indigo-50/80 font-bold'
-                    : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-50',
-                )}
-              >
-                {child.icon && (
-                  <span className="shrink-0 inline-flex items-center justify-center">
-                    {child.icon}
-                  </span>
-                )}
-                <span className="truncate">{child.label}</span>
-              </NavLink>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
+  return link
 }
 
 // ============================================================================
@@ -410,15 +259,13 @@ export const Sidebar: React.FC = () => {
 
   const user = useAuthStore((s) => s.user)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const { data: srsStats } = useSrsStats()
+  const staff = isTeacherOrAdmin(user)
+  // Chỉ học viên mới cần số thẻ SRS đến hạn
+  const { data: srsStats } = useSrsStats({ enabled: !staff })
   const dueCount = srsStats?.dueTodayCount ?? 0
 
   const location = useLocation()
   const isMobile = useIsMobile()
-
-  // Trạng thái mở/đóng các nhóm (key = item.to).
-  // `undefined` = chưa người dùng chỉ định -> dùng trạng thái auto (mở khi mục con active).
-  const [groupStates, setGroupStates] = useState<Record<string, boolean>>({})
 
   // Đóng drawer mobile khi chuyển route
   useEffect(() => {
@@ -447,55 +294,25 @@ export const Sidebar: React.FC = () => {
         ),
   )
 
-  // Items hiển thị
-  const visibleNavItems = navItems
-    .filter((item) => {
-      // Chỉ hiện "Quản lý" cho TEACHER/ADMIN
-      if (item.requiresRoles?.length) return hasRole(user, item.requiresRoles)
-      // Chỉ hiện "Tiến độ" / "Ôn tập SRS" khi đã đăng nhập
-      if (item.requiresAuth) return isAuthenticated
-      return true
-    })
-    .map((rawItem) => {
-      // Ẩn mục con yêu cầu role mà user không có (vd: "Người dùng" chỉ cho ADMIN).
-      const item: NavItem = rawItem.children
+  // Mỗi role một menu riêng, ưu tiên ADMIN > TEACHER > học viên/khách.
+  const baseNav = isAdmin(user) ? adminNav : staff ? teacherNav : studentNav
+  const visibleNavItems = baseNav
+    .filter((item) => !item.requiresAuth || isAuthenticated)
+    .map((item) =>
+      // Badge số thẻ SRS đến hạn trên mục "Ôn tập SRS".
+      item.to === '/srs' && dueCount > 0
         ? {
-            ...rawItem,
-            children: rawItem.children.filter(
-              (child) => !child.requiresRoles?.length || hasRole(user, child.requiresRoles),
+            ...item,
+            badge: (
+              <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold tabular-nums">
+                {dueCount}
+              </span>
             ),
           }
-        : rawItem
-      // Badge số thẻ SRS đến hạn trên mục "Ôn tập SRS".
-      if (item.to === '/srs' && dueCount > 0) {
-        return {
-          ...item,
-          badge: (
-            <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold tabular-nums">
-              {dueCount}
-            </span>
-          ),
-        }
-      }
-      return item
-    })
-
-  /** Nhóm có đang active (bản thân hoặc mục con) hay không. */
-  const isGroupActive = (item: NavItem): boolean => {
-    const selfActive = item.match
-      ? item.match(location.pathname)
-      : location.pathname === item.to
-    if (selfActive) return true
-    return (
-      item.children?.some((child) =>
-        child.match ? child.match(location.pathname) : location.pathname === child.to,
-      ) ?? false
+        : item,
     )
-  }
 
-  const toggleGroup = (key: string) => {
-    setGroupStates((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
+  const onNavigate = isMobile ? closeMobile : undefined
 
   return (
     <>
@@ -533,28 +350,37 @@ export const Sidebar: React.FC = () => {
         {/* ===================== Nav items ===================== */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 flex flex-col justify-between">
           <div className="space-y-1">
-            {visibleNavItems.map((item) => {
-              const groupOpen = groupStates[item.to] ?? isGroupActive(item)
-              return (
-                <NavItemRow
-                  key={item.to}
-                  item={item}
-                  collapsed={collapsed}
-                  groupOpen={groupOpen}
-                  onToggleGroup={() => toggleGroup(item.to)}
-                  onNavigate={isMobile ? closeMobile : undefined}
-                />
-              )
-            })}
+            {visibleNavItems.map((item) => (
+              <NavItemRow
+                key={item.to}
+                item={item}
+                collapsed={collapsed}
+                onNavigate={onNavigate}
+              />
+            ))}
           </div>
 
-          {/* ===================== Gói cước PRO (Ở góc dưới Sidebar) ===================== */}
           <div className="mt-auto pt-4 pb-1">
-            {collapsed ? (
+            {staff ? (
+              // Admin/giáo viên vẫn cần vào trang học viên (xem trước khóa học, đề thi...)
+              <div className="border-t border-gray-200 pt-3">
+                <NavItemRow
+                  item={{
+                    to: '/',
+                    label: 'Xem trang học viên',
+                    icon: <ArrowLeftRight className="w-5 h-5" />,
+                    match: () => false,
+                  }}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
+              </div>
+            ) : collapsed ? (
+              /* ===================== Gói cước PRO (Ở góc dưới Sidebar) ===================== */
               <Tooltip title="Gói cước PRO" placement="right">
                 <NavLink
                   to="/pricing"
-                  onClick={isMobile ? closeMobile : undefined}
+                  onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
                       'w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition cursor-pointer',
@@ -570,7 +396,7 @@ export const Sidebar: React.FC = () => {
             ) : (
               <NavLink
                 to="/pricing"
-                onClick={isMobile ? closeMobile : undefined}
+                onClick={onNavigate}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-xs font-bold cursor-pointer',

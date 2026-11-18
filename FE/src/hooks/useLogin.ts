@@ -11,6 +11,7 @@ import {
   extractFullNameFromToken,
   extractAvatarUrlFromToken,
 } from '@/utils/jwt'
+import { resolveLandingPath } from '@/utils/roles'
 import type { ApiResponse, LoginRequest, LoginResponse, User } from '@/types'
 
 interface UseLoginOptions {
@@ -94,7 +95,7 @@ export function useLogin(options: UseLoginOptions = {}) {
 
       // Ưu tiên __redirectTo truyền theo lần gọi (từ modal) → fallback option → '/'
       const redirectTo = variables.__redirectTo || options.redirectTo || '/'
-      navigate(redirectTo, { replace: true })
+      navigate(resolveLandingPath(user, redirectTo), { replace: true })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const code = error.response?.data?.code

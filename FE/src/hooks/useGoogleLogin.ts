@@ -15,6 +15,7 @@ import {
   extractRolesFromToken,
   extractUserIdFromToken,
 } from '@/utils/jwt'
+import { resolveLandingPath } from '@/utils/roles'
 import type { ApiResponse, LoginResponse, User } from '@/types'
 
 // ============================================================================
@@ -333,7 +334,7 @@ export function useGoogleLogin(options: UseGoogleLoginOptions = {}) {
       const redirectTo = redirectOverride.current || options.redirectTo || '/'
       redirectOverride.current = null
       useAuthModalStore.getState().close()
-      navigate(redirectTo, { replace: true })
+      navigate(resolveLandingPath(user, redirectTo), { replace: true })
     },
     onError: (error: AxiosError<ApiResponse<unknown>>) => {
       const msg =
