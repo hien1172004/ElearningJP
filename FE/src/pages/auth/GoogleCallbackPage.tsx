@@ -2,7 +2,8 @@ import React, { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Spin, Result, Button } from 'antd'
 import { useGoogleCallback } from '@/hooks'
-import { useAuthModalStore } from '@/stores'
+import { useAuthModalStore, useAuthStore } from '@/stores'
+import { resolveLandingPath } from '@/utils/roles'
 
 /**
  * Trang callback Google OAuth.
@@ -55,11 +56,9 @@ export const GoogleCallbackPage: React.FC = () => {
       }
 
       // Validate redirectTo: chỉ chấp nhận path nội bộ bắt đầu bằng "/"
-      if (redirectTo && /^\/[A-Za-z0-9/_\-?&=.%]*$/.test(redirectTo)) {
-        navigate(redirectTo, { replace: true })
-      } else {
-        navigate('/', { replace: true })
-      }
+      const safe =
+        redirectTo && /^\/[A-Za-z0-9/_\-?&=.%]*$/.test(redirectTo) ? redirectTo : '/'
+      navigate(resolveLandingPath(useAuthStore.getState().user, safe), { replace: true })
     }
   }, [searchParams, handle, navigate, closeAuthModal])
 
