@@ -6,7 +6,6 @@ import com.jp.elearningjp.dto.request.exam.UpdateQuestionInlineRequest;
 import com.jp.elearningjp.dto.response.exam.AdminExamPreviewResponse;
 import com.jp.elearningjp.dto.response.exam.ExamSummaryResponse;
 import java.util.List;
-import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.service.exam.AdminExamService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
@@ -39,8 +38,7 @@ public class AdminExamController {
     @PostMapping
     @Operation(summary = "Tạo đề thi mới từ cấu trúc trích xuất AI hoặc thủ công (ở trạng thái DRAFT)")
     public ApiResponse<Long> importExam(@Valid @RequestBody ImportExamRequest request) {
-        User currentUser = currentUserService.getCurrentUserOrNull();
-        Long currentUserId = (currentUser != null) ? currentUser.getId() : 1L;
+        Long currentUserId = currentUserService.getCurrentUserId();
         Long examId = adminExamService.importExam(request, currentUserId);
         return ApiResponse.<Long>builder()
                 .success(true)
@@ -125,8 +123,7 @@ public class AdminExamController {
             @PathVariable Long sectionId,
             @Valid @RequestBody CreateQuestionRequest request) {
 
-        User currentUser = currentUserService.getCurrentUserOrNull();
-        Long currentUserId = (currentUser != null) ? currentUser.getId() : 1L;
+        Long currentUserId = currentUserService.getCurrentUserId();
         Long questionId = adminExamService.addQuestion(id, sectionId, request, currentUserId);
 
         return ApiResponse.<Long>builder()
@@ -306,8 +303,7 @@ public class AdminExamController {
     @PostMapping("/{id}/clone")
     @Operation(summary = "Nhân bản đề thi sang phiên bản mới an toàn để biên tập")
     public ApiResponse<Long> cloneExam(@PathVariable Long id) {
-        User currentUser = currentUserService.getCurrentUserOrNull();
-        Long currentUserId = (currentUser != null) ? currentUser.getId() : 1L;
+        Long currentUserId = currentUserService.getCurrentUserId();
         Long newExamId = adminExamService.cloneExam(id, currentUserId);
         return ApiResponse.<Long>builder()
                 .success(true)

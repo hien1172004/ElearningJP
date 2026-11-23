@@ -6,7 +6,6 @@ import com.jp.elearningjp.dto.response.exam.ExamAttemptHistoryResponse;
 import com.jp.elearningjp.dto.response.exam.ExamResultResponse;
 import com.jp.elearningjp.dto.response.exam.ExamReviewResponse;
 import com.jp.elearningjp.dto.response.exam.ExamTakingResponse;
-import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.service.exam.ExamAttemptService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
@@ -32,8 +31,7 @@ public class ExamAttemptController {
     private final CurrentUserService currentUserService;
 
     private Long resolveCurrentUserId() {
-        User currentUser = currentUserService.getCurrentUserOrNull();
-        return (currentUser != null) ? currentUser.getId() : 1L;
+        return currentUserService.getCurrentUserId();
     }
 
     @GetMapping(ApiPaths.ExamAttempt.BY_ID)

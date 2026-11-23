@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { speakingService } from '@/services/speaking.service'
 import { useAuthStore } from '@/stores'
+import { useAuthModalStore } from '@/stores/useAuthModalStore'
 import { MaziikoMascot } from '@/components/speaking/MaziikoMascot'
 import type { AiScenario, AiSession, JlptLevel } from '@/types/speaking.types'
 import { RequiredMark } from '@/components/common'
@@ -134,6 +135,8 @@ const getJlptBadgeStyle = (level: string) => {
 export const SpeakingLobbyPage: React.FC = () => {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const openLogin = useAuthModalStore((s) => s.openLogin)
 
   const [scenarios, setScenarios] = useState<AiScenario[]>([])
   const [historySessions, setHistorySessions] = useState<AiSession[]>([])
@@ -167,11 +170,13 @@ export const SpeakingLobbyPage: React.FC = () => {
   useEffect(() => {
     fetchScenarios()
 
+    // Lịch sử là dữ liệu riêng của user — khách không có
+    if (!isAuthenticated) return
     speakingService
       .getUserSessions(0, 10)
       .then((res) => setHistorySessions(res.content || []))
       .catch((err) => console.error('Lỗi tải lịch sử:', err))
-  }, [])
+  }, [isAuthenticated])
 
   // Xóa một phiên lịch sử
   const handleDeleteSession = async (e: React.MouseEvent, id: number) => {
@@ -334,7 +339,7 @@ export const SpeakingLobbyPage: React.FC = () => {
             <div className="flex items-center justify-center gap-3 p-1">
               <button
                 type="button"
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => (isAuthenticated ? setShowCreateModal(true) : openLogin())}
                 className="flex-1 py-2 px-5 rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all bg-linear-to-r from-purple-600 via-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-500/25 hover:opacity-95 active:scale-[0.99] cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 fill-current" />
