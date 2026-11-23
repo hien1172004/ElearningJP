@@ -66,4 +66,10 @@ public interface DictionaryService {
      * Tra cứu nhanh tức thì cho popup / bôi đen từ (Exact match).
      */
     List<VocabularySummaryResponse> quickLookup(String text);
+
+    /**
+     * Xóa cache tra cứu có chứa từ vựng (sau khi transaction hiện tại commit).
+     * Gọi khi có từ vựng mới được tạo lúc ứng dụng đang chạy.
+     */
+    void evictVocabularySearchCache();
 }

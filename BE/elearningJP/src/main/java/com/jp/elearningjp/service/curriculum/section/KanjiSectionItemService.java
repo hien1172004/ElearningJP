@@ -703,6 +703,8 @@ public class KanjiSectionItemService extends AbstractSectionItemService {
                 .active(true)
                 .build();
         Vocabulary saved = vocabularyRepository.save(vocab);
+        // Từ mới (USER_CUSTOM) xuất hiện trong tra từ điển → xóa cache tìm kiếm từ vựng
+        dictionaryService.evictVocabularySearchCache();
         log.info("[KANJI-ITEM] Created new vocabulary id={} (word='{}') by user id={}",
                 saved.getId(), saved.getWord(), currentUser.getId());
         return saved;

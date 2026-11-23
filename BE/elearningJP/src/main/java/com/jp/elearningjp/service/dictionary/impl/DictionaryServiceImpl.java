@@ -13,6 +13,8 @@ import com.jp.elearningjp.repository.content.GrammarPointRepository;
 import com.jp.elearningjp.repository.content.VocabularyCharacterRepository;
 import com.jp.elearningjp.repository.content.VocabularyRepository;
 import com.jp.elearningjp.repository.content.WritingCharacterRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.jp.elearningjp.service.dictionary.DictionaryCacheService;
 import com.jp.elearningjp.service.dictionary.DictionaryService;
 import com.jp.elearningjp.shared.enums.CharacterType;
 import com.jp.elearningjp.shared.enums.JlptLevel;
@@ -42,9 +44,65 @@ public class DictionaryServiceImpl implements DictionaryService {
     VocabularyCharacterRepository vocabularyCharacterRepository;
     GrammarPointRepository grammarPointRepository;
     DictionaryMapper dictionaryMapper;
+    DictionaryCacheService dictionaryCache;
+
+    // =========================================================================
+    // Danh sách / tìm kiếm: đi qua cache Redis (DictionaryCacheService), lần đầu mới tra DB
+    // =========================================================================
+
+    private static final TypeReference<DictionaryUnifiedSearchResponse> UNIFIED_TYPE = new TypeReference<>() {};
+    private static final TypeReference<PageResponse<VocabularySummaryResponse>> VOCAB_PAGE_TYPE = new TypeReference<>() {};
+    private static final TypeReference<PageResponse<KanjiSummaryResponse>> KANJI_PAGE_TYPE = new TypeReference<>() {};
+    private static final TypeReference<PageResponse<GrammarSummaryResponse>> GRAMMAR_PAGE_TYPE = new TypeReference<>() {};
+    private static final TypeReference<KanaMatrixResponse> KANA_TYPE = new TypeReference<>() {};
+    private static final TypeReference<List<VocabularySummaryResponse>> VOCAB_LIST_TYPE = new TypeReference<>() {};
 
     @Override
     public DictionaryUnifiedSearchResponse searchUnified(String keyword, JlptLevel level) {
+        return dictionaryCache.getOrLoad(DictionaryCacheService.searchKey("unified", keyword, level, null, null),
+                UNIFIED_TYPE, DictionaryCacheService.SEARCH_TTL, () -> loadUnified(keyword, level));
+    }
+
+    @Override
+    public PageResponse<VocabularySummaryResponse> searchVocabularies(String keyword, JlptLevel level, int page, int size) {
+        return dictionaryCache.getOrLoad(DictionaryCacheService.searchKey("vocab", keyword, level, page, size),
+                VOCAB_PAGE_TYPE, DictionaryCacheService.SEARCH_TTL, () -> loadVocabularies(keyword, level, page, size));
+    }
+
+    @Override
+    public PageResponse<KanjiSummaryResponse> searchKanjis(String keyword, JlptLevel level, int page, int size) {
+        return dictionaryCache.getOrLoad(DictionaryCacheService.searchKey("kanji", keyword, level, page, size),
+                KANJI_PAGE_TYPE, DictionaryCacheService.SEARCH_TTL, () -> loadKanjis(keyword, level, page, size));
+    }
+
+    @Override
+    public PageResponse<GrammarSummaryResponse> searchGrammars(String keyword, JlptLevel level, int page, int size) {
+        return dictionaryCache.getOrLoad(DictionaryCacheService.searchKey("grammar", keyword, level, page, size),
+                GRAMMAR_PAGE_TYPE, DictionaryCacheService.SEARCH_TTL, () -> loadGrammars(keyword, level, page, size));
+    }
+
+    @Override
+    public KanaMatrixResponse getKanaMatrix(CharacterType charType) {
+        CharacterType type = (charType == null) ? CharacterType.HIRAGANA : charType;
+        return dictionaryCache.getOrLoad(DictionaryCacheService.PREFIX + "kana:" + type,
+                KANA_TYPE, DictionaryCacheService.KANA_TTL, () -> loadKanaMatrix(type));
+    }
+
+    @Override
+    public List<VocabularySummaryResponse> quickLookup(String text) {
+        // Text rỗng: loader trả list rỗng, không cần cache
+        String key = (text == null || text.isBlank()) ? null
+                : DictionaryCacheService.searchKey("quick", text, null, null, null);
+        return dictionaryCache.getOrLoad(key, VOCAB_LIST_TYPE, DictionaryCacheService.SEARCH_TTL,
+                () -> loadQuickLookup(text));
+    }
+
+    @Override
+    public void evictVocabularySearchCache() {
+        dictionaryCache.evictVocabularyAfterCommit();
+    }
+
+    private DictionaryUnifiedSearchResponse loadUnified(String keyword, JlptLevel level) {
         String cleanKeyword = (keyword == null) ? "" : keyword.trim();
         if (cleanKeyword.isEmpty()) {
             return DictionaryUnifiedSearchResponse.builder()
@@ -78,8 +136,7 @@ public class DictionaryServiceImpl implements DictionaryService {
                 .build();
     }
 
-    @Override
-    public PageResponse<VocabularySummaryResponse> searchVocabularies(String keyword, JlptLevel level, int page, int size) {
+    private PageResponse<VocabularySummaryResponse> loadVocabularies(String keyword, JlptLevel level, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
         String cleanKeyword = (keyword == null) ? "" : keyword.trim();
         Page<Vocabulary> vocabPage = vocabularyRepository.searchWithFilter(cleanKeyword, level, pageable);
@@ -134,8 +191,7 @@ public class DictionaryServiceImpl implements DictionaryService {
         return response;
     }
 
-    @Override
-    public PageResponse<KanjiSummaryResponse> searchKanjis(String keyword, JlptLevel level, int page, int size) {
+    private PageResponse<KanjiSummaryResponse> loadKanjis(String keyword, JlptLevel level, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
         String cleanKeyword = (keyword == null) ? "" : keyword.trim();
 
@@ -235,8 +291,7 @@ public class DictionaryServiceImpl implements DictionaryService {
                 .build();
     }
 
-    @Override
-    public PageResponse<GrammarSummaryResponse> searchGrammars(String keyword, JlptLevel level, int page, int size) {
+    private PageResponse<GrammarSummaryResponse> loadGrammars(String keyword, JlptLevel level, int page, int size) {
         Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size));
         String cleanKeyword = (keyword == null) ? "" : keyword.trim();
         Page<GrammarPoint> grammarPage = grammarPointRepository.searchWithFilter(cleanKeyword, level, pageable);
@@ -260,8 +315,7 @@ public class DictionaryServiceImpl implements DictionaryService {
         return dictionaryMapper.toGrammarDetailResponse(gp);
     }
 
-    @Override
-    public KanaMatrixResponse getKanaMatrix(CharacterType charType) {
+    private KanaMatrixResponse loadKanaMatrix(CharacterType charType) {
         CharacterType targetType = (charType == null) ? CharacterType.HIRAGANA : charType;
         List<WritingCharacter> rawChars = writingCharacterRepository.findByCharTypeAndDeletedFalseAndActiveTrue(targetType);
 
@@ -358,8 +412,7 @@ public class DictionaryServiceImpl implements DictionaryService {
         return resp;
     }
 
-    @Override
-    public List<VocabularySummaryResponse> quickLookup(String text) {
+    private List<VocabularySummaryResponse> loadQuickLookup(String text) {
         if (text == null || text.isBlank()) {
             return Collections.emptyList();
         }
