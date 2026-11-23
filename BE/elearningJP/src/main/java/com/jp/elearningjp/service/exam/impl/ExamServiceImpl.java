@@ -9,6 +9,7 @@ import com.jp.elearningjp.dto.response.exam.LeaderboardItemResponse;
 import com.jp.elearningjp.dto.response.exam.LeaderboardResponse;
 import com.jp.elearningjp.repository.exam.ExamAttemptRepository;
 import com.jp.elearningjp.repository.exam.ExamRepository;
+import com.jp.elearningjp.service.exam.ExamLeaderboardCacheService;
 import com.jp.elearningjp.service.exam.ExamService;
 import com.jp.elearningjp.shared.enums.ExamType;
 import com.jp.elearningjp.shared.enums.JlptLevel;
@@ -33,6 +34,7 @@ public class ExamServiceImpl implements ExamService {
     private final ExamAttemptRepository examAttemptRepository;
     private final ExamViewBuilder examViewBuilder;
     private final ExamSnapshotService examSnapshotService;
+    private final ExamLeaderboardCacheService leaderboardCache;
 
     @Override
     public Page<ExamSummaryResponse> getPublishedExams(JlptLevel level, ExamType examType, Pageable pageable) {
@@ -78,10 +80,38 @@ public class ExamServiceImpl implements ExamService {
     @Override
     public LeaderboardResponse getLeaderboard(JlptLevel level, String timeframe, Long currentUserId) {
         JlptLevel targetLevel = level != null ? level : JlptLevel.N5;
+        String period = "WEEK".equalsIgnoreCase(timeframe) ? "WEEK"
+                : "MONTH".equalsIgnoreCase(timeframe) ? "MONTH" : "ALL";
+
+        // Phần dùng chung cho mọi người xem → cache; phần "là tôi" tính riêng cho từng request
+        java.util.List<LeaderboardItemResponse> items = leaderboardCache.get(targetLevel, period);
+        if (items == null) {
+            items = buildRankings(targetLevel, period);
+            leaderboardCache.put(targetLevel, period, items);
+        }
+
+        LeaderboardItemResponse myRank = null;
+        for (var item : items) {
+            boolean isCur = currentUserId != null && currentUserId.equals(item.getUserId());
+            item.setCurrentUser(isCur);
+            if (isCur && myRank == null) {
+                myRank = item;
+            }
+        }
+
+        return LeaderboardResponse.builder()
+                .rankings(items)
+                .myRank(myRank)
+                .totalParticipants((long) items.size())
+                .build();
+    }
+
+    /** Bảng xếp hạng (chưa đánh dấu người xem): bài điểm cao nhất của mỗi user, đã sắp hạng. */
+    private java.util.List<LeaderboardItemResponse> buildRankings(JlptLevel targetLevel, String period) {
         Instant since = null;
-        if ("WEEK".equalsIgnoreCase(timeframe)) {
+        if ("WEEK".equals(period)) {
             since = Instant.now().minus(7, java.time.temporal.ChronoUnit.DAYS);
-        } else if ("MONTH".equalsIgnoreCase(timeframe)) {
+        } else if ("MONTH".equals(period)) {
             since = Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS);
         }
 
@@ -105,11 +135,8 @@ public class ExamServiceImpl implements ExamService {
 
         java.util.List<LeaderboardItemResponse> items = new java.util.ArrayList<>();
         int rank = 1;
-        LeaderboardItemResponse myRank = null;
-
         for (var entry : bestAttemptByUser.values()) {
-            boolean isCur = currentUserId != null && currentUserId.equals(entry.getUser().getId());
-            var item = LeaderboardItemResponse.builder()
+            items.add(LeaderboardItemResponse.builder()
                     .rank(rank)
                     .userId(entry.getUser().getId())
                     .fullName(entry.getUser().getFullName())
@@ -120,20 +147,9 @@ public class ExamServiceImpl implements ExamService {
                     .examTitle(entry.getExam() != null ? entry.getExam().getTitle() : "JLPT Mock Test")
                     .timeSpentSeconds(entry.getTimeSpentSeconds())
                     .submittedAt(entry.getSubmittedAt())
-                    .isCurrentUser(isCur)
-                    .build();
-
-            items.add(item);
-            if (isCur && myRank == null) {
-                myRank = item;
-            }
+                    .build());
             rank++;
         }
-
-        return LeaderboardResponse.builder()
-                .rankings(items)
-                .myRank(myRank)
-                .totalParticipants((long) items.size())
-                .build();
+        return items;
     }
 }
