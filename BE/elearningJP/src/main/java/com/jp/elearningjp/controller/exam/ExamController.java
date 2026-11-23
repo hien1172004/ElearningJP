@@ -98,8 +98,7 @@ public class ExamController {
             @PathVariable Long id,
             @Valid @RequestBody StartExamRequest request) {
 
-        User currentUser = currentUserService.getCurrentUserOrNull();
-        Long currentUserId = (currentUser != null) ? currentUser.getId() : 1L;
+        Long currentUserId = currentUserService.getCurrentUserId();
         ExamTakingResponse takingResponse = examAttemptService.startExam(id, currentUserId, request);
 
         return ApiResponse.<ExamTakingResponse>builder()

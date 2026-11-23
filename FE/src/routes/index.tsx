@@ -74,12 +74,12 @@ export const router = createBrowserRouter([
       { path: 'exams', element: <ExamLobbyPage /> },
       { path: 'leaderboard', element: <Navigate to="/exams" replace /> },
       { path: 'exams/leaderboard', element: <Navigate to="/exams" replace /> },
-      { path: 'exam-history', element: <ExamHistoryPage /> },
-      { path: 'exams/result/:attemptId', element: <ExamResultPage /> },
+      { path: 'exam-history', element: <ProtectedRoute><ExamHistoryPage /></ProtectedRoute> },
+      { path: 'exams/result/:attemptId', element: <ProtectedRoute><ExamResultPage /></ProtectedRoute> },
       { path: 'speaking', element: <SpeakingLobbyPage /> },
-      { path: 'speaking/free', element: <SpeakingFreeTalkPage /> },
-      { path: 'speaking/scenario/:scenarioId', element: <ScenarioDetailPage /> },
-      { path: 'speaking/session/:sessionId', element: <SpeakingPracticePage /> },
+      { path: 'speaking/free', element: <ProtectedRoute><SpeakingFreeTalkPage /></ProtectedRoute> },
+      { path: 'speaking/scenario/:scenarioId', element: <ProtectedRoute><ScenarioDetailPage /></ProtectedRoute> },
+      { path: 'speaking/session/:sessionId', element: <ProtectedRoute><SpeakingPracticePage /></ProtectedRoute> },
       { path: 'pricing', element: <PricingPage /> },
       { path: 'pricing/checkout', element: <PricingCheckoutPage /> },
     ],
@@ -98,11 +98,11 @@ export const router = createBrowserRouter([
   // ====================================================================
   {
     path: '/exams/:examId/taking/:attemptId',
-    element: <ExamRoomPage />,
+    element: <ProtectedRoute><ExamRoomPage /></ProtectedRoute>,
   },
   {
     path: '/exams/review/:attemptId',
-    element: <ExamReviewPage />,
+    element: <ProtectedRoute><ExamReviewPage /></ProtectedRoute>,
   },
 
   // ====================================================================

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/media")
+// Chỉ dùng trong trình soạn khóa học, đề thi, kịch bản luyện nói
+@PreAuthorize("hasAnyRole('ADMIN','TEACHER')")
 @RequiredArgsConstructor
 @Tag(name = "Media Upload", description = "API tải lên tệp đa phương tiện (Ảnh, Audio) từ máy tính")
 public class MediaController {

@@ -4,7 +4,6 @@ import com.jp.elearningjp.dto.request.speaking.CreateSessionRequest;
 import com.jp.elearningjp.dto.request.speaking.SendMessageRequest;
 import com.jp.elearningjp.dto.response.speaking.AiSessionResponse;
 import com.jp.elearningjp.dto.response.speaking.AiSpeakingResponse;
-import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.service.speaking.AiSpeakingService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
@@ -35,8 +34,7 @@ public class AiSpeakingController {
     private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
 
     private Long resolveCurrentUserId() {
-        User currentUser = currentUserService.getCurrentUserOrNull();
-        return (currentUser != null) ? currentUser.getId() : 1L;
+        return currentUserService.getCurrentUserId();
     }
 
     @PostMapping

@@ -38,22 +38,7 @@ public class SecurityConfig {
             // Promotion preview/apply endpoints (kept public if frontend needs them before auth)
             "/api/v1/promotions/preview",
             "/api/v1/promotions/apply",
-            // Thi thử JLPT công khai
-            "/api/v1/exams/*/attempts",
-            "/api/v1/exam-attempts/*/submit",
-            // Upload media (ảnh, audio)
-            "/api/v1/media/upload",
-            // AI Speaking tools & scenarios
-            ApiPaths.API_V1 + "/ai/**",
-    };
-
-    private static final String[] PUBLIC_PUT_ENDPOINTS = {
-            // Tự động lưu đáp án câu hỏi thi thử
-            "/api/v1/exam-attempts/*/answers",
-    };
-
-    private static final String[] PUBLIC_DELETE_ENDPOINTS = {
-            ApiPaths.API_V1 + "/ai/**",
+            // Làm bài thi, upload media, luyện nói AI: bắt buộc đăng nhập (trước đây khách bị gán vào user id 1)
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
@@ -73,9 +58,6 @@ public class SecurityConfig {
             "/api/v1/exams",
             "/api/v1/exams/leaderboard",
             "/api/v1/exams/{id:[0-9]+}",
-            "/api/v1/exam-attempts/*/result",
-            "/api/v1/exam-attempts/*/review",
-            "/api/v1/exam-attempts/my-history",
             // Comments — cho phép xem danh sách / chi tiết / reply công khai
             // (các method POST/PUT/DELETE tự bảo vệ qua @PreAuthorize("isAuthenticated()"))
             "/api/v1/LESSON/*/comments",
@@ -84,8 +66,12 @@ public class SecurityConfig {
             "/api/v1/GRAMMAR/*/comments",
             "/api/v1/comments/*",
             "/api/v1/comments/*/replies",
-            // AI Speaking & Scenarios công khai
-            ApiPaths.API_V1 + "/ai/**"
+            // Xem kịch bản luyện nói công khai (sảnh luyện nói)
+            ApiPaths.API_V1 + ApiPaths.AiScenario.BASE,
+            ApiPaths.API_V1 + ApiPaths.AiScenario.BASE + "/*",
+            // File audio TTS: thẻ <audio> không gắn được header Authorization; tên file là hash, không chứa dữ liệu user
+            ApiPaths.API_V1 + "/ai/tts/audio/*",
+            ApiPaths.API_V1 + "/ai/tts/stream"
             // POST /api/v1/courses/*/lessons/reorder cần auth (owner/admin) - để mặc định
     };
 
@@ -117,8 +103,6 @@ public class SecurityConfig {
                                 "/ws/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS).permitAll()
-                        .requestMatchers(HttpMethod.PUT, PUBLIC_PUT_ENDPOINTS).permitAll()
-                        .requestMatchers(HttpMethod.DELETE, PUBLIC_DELETE_ENDPOINTS).permitAll()
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET_ENDPOINTS).permitAll()
                         .anyRequest().authenticated())
 
