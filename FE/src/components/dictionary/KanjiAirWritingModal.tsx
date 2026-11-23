@@ -70,8 +70,32 @@ const isFingerFolded = (
   return distTipWrist <= distPipWrist || tip.y >= pip.y - 0.02
 }
 
+// shortcut: log debug chỉnh ngưỡng 👍/✊ (chỉ chạy ở dev, giới hạn 3 lần/giây), xoá khi đã chốt ngưỡng
+let lastThumbLogAt = 0
+const logThumbMetrics = (
+  straightness: number,
+  rise: number,
+  gap: number,
+  thumbUp: boolean,
+  handScore: number,
+) => {
+  const now = performance.now()
+  if (now - lastThumbLogAt < 300) return
+  lastThumbLogAt = now
+  const label = handScore < MIN_GESTURE_HAND_SCORE ? '⛔ bỏ qua' : thumbUp ? '👍' : '✊'
+  console.debug(
+    `[AirGesture] ${label} score=${handScore.toFixed(2)} (>=${MIN_GESTURE_HAND_SCORE}) ` +
+      `straightness=${straightness.toFixed(2)} (>0.9) rise=${rise.toFixed(2)} (>0.35) gap=${gap.toFixed(2)} (>0.6)`,
+  )
+}
+
+// Độ tin cậy bàn tay (multiHandedness score) tối thiểu để kích hoạt cử chỉ điều khiển.
+// Dưới ngưỡng thì toạ độ khớp (nhất là ngón cái bị che) dễ là ước lượng nhiễu -> không kích hoạt
+// thao tác xoá/tra từ. Không ảnh hưởng tư thế vẽ.
+const MIN_GESTURE_HAND_SCORE = 0.85
+
 // Nhận diện các cử chỉ tay tĩnh điều khiển (không bao gồm tư thế vẽ 1 ngón trỏ)
-const detectStaticGesture = (lm: NormalizedLandmark[]): AirGestureType => {
+const detectStaticGesture = (lm: NormalizedLandmark[], handScore: number): AirGestureType => {
   const wrist = lm[0]
   const thumbTip = lm[4]
   const thumbMcp = lm[2]
@@ -98,22 +122,28 @@ const detectStaticGesture = (lm: NormalizedLandmark[]): AirGestureType => {
   const pinkyFolded = isFingerFolded(pinkyTip, pinkyPip, pinkyMcp, wrist)
 
   const allFolded = indexFolded && middleFolded && ringFolded && pinkyFolded
-  // 👍 Phân biệt với ✊ nắm đấm bằng 2 yếu tố:
-  // (1) Độ "duỗi thẳng" của ngón cái: ≈ 1.0 khi duỗi thẳng, < 1.0 khi gập (bất đẳng thức tam giác).
-  // (2) Hướng: đầu ngón cái phải cao hơn gốc (chỉ lên), tránh nhầm ngón cái thẳng nhưng nằm ngang.
-  // (3) Visibility: ngón cái bị che (visibility thấp) -> coi là KHÔNG vươn (nắm đấm).
-  const thumbVisible =
-    (thumbTip.visibility ?? 1) > 0.4 && (thumbMcp.visibility ?? 1) > 0.4
+  // 👍 vs ✊: so đầu ngón cái với "khối nắm tay" (không so với gốc ngón cái — khi nắm tay
+  // đầu ngón cái vắt trên các ngón gập nên vẫn cao hơn gốc). Ngưỡng tính theo kích thước bàn tay.
+  const handSize = getDistance(wrist, middleMcp)
 
+  // Độ duỗi thẳng ngón cái: ≈ 1.0 khi duỗi thẳng, < 1.0 khi gập (bất đẳng thức tam giác)
   const thumbStraightness =
     getDistance(thumbCmc, thumbTip) /
     (getDistance(thumbCmc, thumbMcp) +
       getDistance(thumbMcp, thumbIp) +
       getDistance(thumbIp, thumbTip))
+  // Đầu ngón cái nhô lên trên khớp gốc ngón trỏ (đỉnh nắm tay), dương = cao hơn
+  const thumbRise = (indexMcp.y - thumbTip.y) / handSize
+  // Khoảng cách đầu ngón cái tới đốt giữa ngón trỏ (nắm tay: ngón cái tì sát đốt này)
+  const thumbGap = getDistance(thumbTip, indexPip) / handSize
 
-  const thumbPointingUp = thumbTip.y < thumbMcp.y - 0.02
+  const thumbUp = thumbStraightness > 0.9 && thumbRise > 0.35 && thumbGap > 0.6
 
-  const thumbUp = thumbVisible && thumbStraightness > 0.85 && thumbPointingUp
+  if (import.meta.env.DEV && allFolded) {
+    logThumbMetrics(thumbStraightness, thumbRise, thumbGap, thumbUp, handScore)
+  }
+
+  if (handScore < MIN_GESTURE_HAND_SCORE) return 'NONE'
 
   // 1. NẮM ĐẤM ✊ (XÓA HẾT): cả 4 ngón gập + ngón cái gập (không chỉ lên)
   if (allFolded && !thumbUp) return 'FIST_CLEAR'
@@ -716,7 +746,9 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
           // Tư thế VẼ: chỉ duy nhất 1 ngón trỏ duỗi (Strict Pointing 👆)
           const isDrawingPose = isStrictPointing(landmarks)
           // Cử chỉ tĩnh điều khiển (nắm đấm / chọn / undo / tra từ)
-          const staticGesture = detectStaticGesture(landmarks)
+          // Thiếu score (không nên xảy ra) thì coi như tin cậy để giữ hành vi cũ
+          const handScore = results.multiHandedness?.[0]?.score ?? 1
+          const staticGesture = detectStaticGesture(landmarks, handScore)
 
           // 3.3. BỘ LỌC CHỐNG RUNG TAY (EMA + Trung bình trượt 3 điểm)
           let smoothedX = rawIndexX
