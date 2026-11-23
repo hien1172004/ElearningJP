@@ -7,11 +7,15 @@ import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.entity.user.User;
 import com.jp.elearningjp.repository.user.UserRepository;
 import com.jp.elearningjp.service.redis.PasswordResetTokenService;
+import com.jp.elearningjp.service.redis.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.util.Locale;
 
 @Service
 @Slf4j
@@ -22,6 +26,10 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordResetTokenService tokenService;
     private final EmailService emailService;
+    private final RateLimitService rateLimitService;
+
+    static final int FORGOT_MAX_PER_IP = 10;    // mỗi giờ
+    static final int FORGOT_MAX_PER_EMAIL = 3;  // mỗi giờ
 
     /**
      * Bước 1: User nhập email → tạo token → gửi link qua email
@@ -29,7 +37,14 @@ public class PasswordResetService {
      * Lưu ý: Dù email không tồn tại vẫn trả về thành công
      * → tránh lộ thông tin tài khoản nào đang tồn tại (security best practice)
      */
-    public void forgotPassword(ForgotPasswordRequest request) {
+    public void forgotPassword(ForgotPasswordRequest request, String clientIp) {
+        rateLimitService.check("forgot:ip:" + clientIp, FORGOT_MAX_PER_IP, Duration.ofHours(1));
+        // Vượt ngưỡng theo email → lặng lẽ không gửi mail nhưng vẫn trả thành công (không lộ email tồn tại)
+        String emailKey = "forgot:" + request.getEmail().trim().toLowerCase(Locale.ROOT);
+        if (!rateLimitService.tryAcquire(emailKey, FORGOT_MAX_PER_EMAIL, Duration.ofHours(1))) {
+            log.warn("Bỏ qua gửi mail reset: vượt {} lần/giờ cho 1 email", FORGOT_MAX_PER_EMAIL);
+            return;
+        }
         userRepo.findUserByEmail(request.getEmail()).ifPresent(user -> {
             String token = tokenService.createToken(user.getEmail());
             emailService.sendPasswordResetEmail(

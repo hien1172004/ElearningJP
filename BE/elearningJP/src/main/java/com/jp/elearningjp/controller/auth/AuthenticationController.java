@@ -16,6 +16,7 @@ import com.nimbusds.jose.JOSEException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -37,27 +38,30 @@ public class AuthenticationController {
     //API Register
     @Operation(summary = "Đăng ký người dùng mới", description = "Tạo tài khoản người dùng mới với thông tin cung cấp.", security = {})
     @PostMapping(ApiPaths.Auth.REGISTER)
-    public ApiResponse<RegisterResponse> registerUser(@RequestBody @Valid RegisterRequest registerRequest) {
+    public ApiResponse<RegisterResponse> registerUser(@RequestBody @Valid RegisterRequest registerRequest,
+                                                     HttpServletRequest http) {
         return ApiResponse.<RegisterResponse>builder()
                 .success(true)
-                .data(authService.registerUser(registerRequest))
+                .data(authService.registerUser(registerRequest, http.getRemoteAddr()))
                 .build();
     }
     //API Login
     @Operation(summary = "Đăng nhập", description = "Xác thực người dùng và trả về access token.", security = {})
     @PostMapping(ApiPaths.Auth.LOGIN)
-    public ApiResponse<LoginResponse> loginUser(@RequestBody @Valid LoginRequest loginRequest) {
+    public ApiResponse<LoginResponse> loginUser(@RequestBody @Valid LoginRequest loginRequest,
+                                               HttpServletRequest http) {
         return ApiResponse.<LoginResponse>builder()
                 .success(true)
-                .data(authService.loginUser(loginRequest)).build();
+                .data(authService.loginUser(loginRequest, http.getRemoteAddr())).build();
     }
 
     @Operation(summary = "Đăng nhập bằng Google", description = "Xác thực Google ID Token và trả về access token hệ thống.", security = {})
     @PostMapping(ApiPaths.Auth.GOOGLE)
-    public ApiResponse<LoginResponse> loginWithGoogle(@RequestBody @Valid GoogleLoginRequest request) {
+    public ApiResponse<LoginResponse> loginWithGoogle(@RequestBody @Valid GoogleLoginRequest request,
+                                                     HttpServletRequest http) {
         return ApiResponse.<LoginResponse>builder()
                 .success(true)
-                .data(authService.loginWithGoogle(request))
+                .data(authService.loginWithGoogle(request, http.getRemoteAddr()))
                 .build();
     }
 
@@ -100,8 +104,9 @@ public class AuthenticationController {
      */
     @Operation(summary = "Quên mật khẩu", description = "Yêu cầu gửi link đặt lại mật khẩu đến email người dùng.", security = {})
     @PostMapping(ApiPaths.Auth.FORGOT_PASSWORD)
-    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        passwordResetService.forgotPassword(request);
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                                            HttpServletRequest http) {
+        passwordResetService.forgotPassword(request, http.getRemoteAddr());
         log.info("[AUTH CONTROLLER] Password reset requested for email: {}", request.getEmail());
         return ApiResponse.<Void>builder()
                 .success(true)

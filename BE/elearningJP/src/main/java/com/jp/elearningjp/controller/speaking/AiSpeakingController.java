@@ -4,6 +4,7 @@ import com.jp.elearningjp.dto.request.speaking.CreateSessionRequest;
 import com.jp.elearningjp.dto.request.speaking.SendMessageRequest;
 import com.jp.elearningjp.dto.response.speaking.AiSessionResponse;
 import com.jp.elearningjp.dto.response.speaking.AiSpeakingResponse;
+import com.jp.elearningjp.service.redis.RateLimitService;
 import com.jp.elearningjp.service.speaking.AiSpeakingService;
 import com.jp.elearningjp.shared.constants.ApiPaths;
 import com.jp.elearningjp.shared.response.ApiResponse;
@@ -22,6 +23,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Duration;
+
 @RestController
 @RequestMapping(ApiPaths.API_V1 + ApiPaths.AiSpeaking.BASE)
 @RequiredArgsConstructor
@@ -32,9 +35,17 @@ public class AiSpeakingController {
     private final AiSpeakingService aiSpeakingService;
     private final CurrentUserService currentUserService;
     private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
+    private final RateLimitService rateLimitService;
+
+    static final int MESSAGE_MAX_PER_USER_PER_MINUTE = 10;
 
     private Long resolveCurrentUserId() {
         return currentUserService.getCurrentUserId();
+    }
+
+    /** Chống spam gửi tin (mỗi tin gọi Gemini); stream và sync dùng chung 1 bộ đếm. */
+    private void checkMessageRate(Long userId) {
+        rateLimitService.check("ai:speak:" + userId, MESSAGE_MAX_PER_USER_PER_MINUTE, Duration.ofMinutes(1));
     }
 
     @PostMapping
@@ -58,6 +69,7 @@ public class AiSpeakingController {
             @Valid @RequestBody SendMessageRequest request) {
 
         Long currentUserId = resolveCurrentUserId();
+        checkMessageRate(currentUserId);
         if (!subscriptionService.hasAvailableTokens(currentUserId, 50)) {
             throw new com.jp.elearningjp.exception.AppException(com.jp.elearningjp.exception.ErrorCode.TOKEN_EXHAUSTED);
         }
@@ -87,6 +99,7 @@ public class AiSpeakingController {
             @Valid @RequestBody SendMessageRequest request) {
 
         Long currentUserId = resolveCurrentUserId();
+        checkMessageRate(currentUserId);
         if (!subscriptionService.hasAvailableTokens(currentUserId, 50)) {
             throw new com.jp.elearningjp.exception.AppException(com.jp.elearningjp.exception.ErrorCode.TOKEN_EXHAUSTED);
         }
