@@ -16,6 +16,7 @@ import com.jp.elearningjp.exception.ErrorCode;
 import com.jp.elearningjp.mapper.UserMapper;
 import com.jp.elearningjp.repository.user.RoleRepository;
 import com.jp.elearningjp.repository.user.UserRepository;
+import com.jp.elearningjp.service.redis.RateLimitService;
 import com.jp.elearningjp.service.redis.TokenBlacklistService;
 import com.jp.elearningjp.service.redis.UserTokenRevocationService;
 import com.jp.elearningjp.shared.constants.PredefinedRole;
@@ -42,6 +43,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.text.ParseException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -59,6 +61,13 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final UserProfileRepository userProfileRepository;
     private final com.jp.elearningjp.service.subscription.SubscriptionService subscriptionService;
+    private final RateLimitService rateLimitService;
+
+    static final int REGISTER_MAX_PER_IP = 5;              // mỗi giờ
+    static final int LOGIN_MAX_PER_IP_PER_MINUTE = 20;
+    static final int LOGIN_MAX_FAILS = 5;                  // sai 5 lần → khóa email trong LOGIN_LOCK_DURATION
+    static final Duration LOGIN_LOCK_DURATION = Duration.ofMinutes(15);
+    static final int GOOGLE_MAX_PER_IP_PER_MINUTE = 20;
 
     @Value("${app.google.client-id:}")
     String googleClientId;
@@ -74,7 +83,8 @@ public class AuthService {
     // =========================================================
     // ĐĂNG KÝ
     // =========================================================
-    public RegisterResponse registerUser(RegisterRequest registerRequest) {
+    public RegisterResponse registerUser(RegisterRequest registerRequest, String clientIp) {
+        rateLimitService.check("register:ip:" + clientIp, REGISTER_MAX_PER_IP, Duration.ofHours(1));
         // Kiểm tra username đã tồn tại chưa
         if (userRepo.existsByEmail((registerRequest.getEmail()))) {
             throw new AppException(ErrorCode.USER_EXISTED);
@@ -101,13 +111,26 @@ public class AuthService {
     // =========================================================
     // ĐĂNG NHẬP
     // =========================================================
-    public LoginResponse loginUser(LoginRequest loginRequest) {
-        User userEntity = userRepo.findUserByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    public LoginResponse loginUser(LoginRequest loginRequest, String clientIp) {
+        // Lớp 1: theo IP, đếm mọi lần gọi — chặn thử 1 mật khẩu trên nhiều email
+        rateLimitService.check("login:ip:" + clientIp, LOGIN_MAX_PER_IP_PER_MINUTE, Duration.ofMinutes(1));
+        // Lớp 2: theo email, chỉ đếm lần sai — đã khóa thì từ chối cả khi mật khẩu đúng
+        String failKey = "login:fail:" + loginRequest.getEmail().trim().toLowerCase(Locale.ROOT);
+        if (rateLimitService.isOverLimit(failKey, LOGIN_MAX_FAILS)) {
+            throw new AppException(ErrorCode.TOO_MANY_REQUESTS);
+        }
 
+        // Email không tồn tại cũng tính là sai, để việc bị khóa không lộ email nào đã đăng ký
+        User userEntity = userRepo.findUserByEmail(loginRequest.getEmail()).orElse(null);
+        if (userEntity == null) {
+            rateLimitService.hit(failKey, LOGIN_LOCK_DURATION);
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
+        }
         if (!passwordEncoder.matches(loginRequest.getPassword(), userEntity.getPassword())) {
+            rateLimitService.hit(failKey, LOGIN_LOCK_DURATION);
             throw new AppException(ErrorCode.PASSWORD_INVALID);
         }
+        rateLimitService.reset(failKey);
         if(!userEntity.getStatus() .equals(UserStatus.ACTIVE)) {
             throw new AppException(ErrorCode.USER_BANNED);
         }
@@ -120,7 +143,8 @@ public class AuthService {
     // =========================================================
     // ĐĂNG NHẬP BẰNG GOOGLE (OAUTH2 ID TOKEN)
     // =========================================================
-    public LoginResponse loginWithGoogle(GoogleLoginRequest request) {
+    public LoginResponse loginWithGoogle(GoogleLoginRequest request, String clientIp) {
+        rateLimitService.check("google:ip:" + clientIp, GOOGLE_MAX_PER_IP_PER_MINUTE, Duration.ofMinutes(1));
         Map<String, Object> tokenInfo;
         try {
             RestClient restClient = RestClient.create();
