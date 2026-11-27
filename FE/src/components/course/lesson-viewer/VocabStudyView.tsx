@@ -183,18 +183,18 @@ const VocabStudyCard: React.FC<VocabStudyCardProps> = ({ item, lessonId }) => {
                 key={ex.id ?? idx}
                 className="flex items-start gap-3 p-3 rounded-md border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition"
               >
-                <span className="text-lg font-bold text-indigo-500 w-5 shrink-0 pt-0.5">
+                <span className="text-base font-bold text-indigo-500 w-5 shrink-0 pt-0.5">
                   {idx + 1}.
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xl font-semibold text-gray-900">{ex.exampleJp}</p>
+                  <p className="text-lg font-semibold text-gray-900">{ex.exampleJp}</p>
                   {ex.exampleRomaji && (
-                    <p className="text-lg text-gray-500 italic mt-0.5">
+                    <p className="text-base text-gray-500 italic mt-0.5">
                       {ex.exampleRomaji}
                     </p>
                   )}
                   {ex.exampleVi && (
-                    <p className="text-lg text-indigo-950 font-medium mt-1">
+                    <p className="text-base text-indigo-950 font-medium mt-1">
                       {ex.exampleVi}
                     </p>
                   )}

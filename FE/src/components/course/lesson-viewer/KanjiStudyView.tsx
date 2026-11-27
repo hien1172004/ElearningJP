@@ -249,13 +249,13 @@ const KanjiStudyCard: React.FC<KanjiStudyCardProps> = ({ item, lessonId }) => {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-xl font-bold text-gray-900">{v.word}</span>
+                    <span className="text-lg font-bold text-gray-900">{v.word}</span>
                     {v.hiragana && (
-                      <span className="text-lg text-gray-500">【{v.hiragana}】</span>
+                      <span className="text-base text-gray-500">【{v.hiragana}】</span>
                     )}
                   </div>
                   {v.meaningVi && (
-                    <p className="text-lg text-indigo-950 font-medium mt-0.5">{v.meaningVi}</p>
+                    <p className="text-base text-indigo-950 font-medium mt-0.5">{v.meaningVi}</p>
                   )}
                 </div>
                 {v.word && (

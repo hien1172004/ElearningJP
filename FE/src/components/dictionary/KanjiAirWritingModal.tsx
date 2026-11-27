@@ -1272,22 +1272,22 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
   return (
     <div className="fixed inset-0 overscroll-contain z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="relative bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col"
+        className="relative bg-surface border border-suna rounded-3xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col"
         style={{ maxHeight: '94vh' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className="flex items-center justify-between px-6 py-3.5 bg-slate-800/90 border-b border-slate-700">
+        <div className="flex items-center justify-between px-6 py-3.5 bg-kinari border-b border-suna">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <div className="w-10 h-10 rounded-2xl bg-kamenozoki border border-ai/30 flex items-center justify-center text-ai">
               <CameraIcon className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-white tracking-wide">
+                <h3 className="text-lg font-bold text-sumi tracking-wide">
                   Viết chữ Hán trên không (Air Writing)
                 </h3>
-                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-kamenozoki text-ai border border-ai/30">
                   {isSimulationMode ? 'Chế độ Chuột mô phỏng' : 'Air Touch & Word Building'}
                 </span>
                 {isSimulationMode && (
@@ -1297,7 +1297,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                       setIsLoading(true)
                       setRetryCount((c) => c + 1)
                     }}
-                    className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-indigo-600/30 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 transition cursor-pointer flex items-center gap-1"
+                    className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-kamenozoki hover:bg-ai/20 text-ai border border-ai/30 transition cursor-pointer flex items-center gap-1"
                     title="Chuyển về kết nối Camera Webcam"
                   >
                     <CameraIcon className="w-3 h-3" />
@@ -1305,7 +1305,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-nibi">
                 Điều khiển 100% không chạm (👆 Vẽ, ✊ Xóa, 🤏 Chọn, ✌️ Undo, 👍 Tra từ) • Ghép cụm từ Kanji
               </p>
             </div>
@@ -1318,8 +1318,8 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
               onClick={() => setSoundEnabled((prev) => !prev)}
               className={`p-2 rounded-xl border text-xs font-medium transition cursor-pointer ${
                 soundEnabled
-                  ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 hover:bg-indigo-600/30'
-                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750'
+                  ? 'bg-kamenozoki border-ai/30 text-ai hover:bg-kamenozoki'
+                  : 'bg-kinari border-suna text-nibi hover:bg-kamenozoki'
               }`}
               title={soundEnabled ? 'Tắt âm thanh phản hồi' : 'Bật âm thanh phản hồi'}
             >
@@ -1330,8 +1330,8 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             <div
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition ${
                 isDrawing
-                  ? 'bg-sky-500/20 text-sky-300 border-sky-400/50 animate-pulse'
-                  : 'bg-slate-800 text-slate-400 border-slate-700'
+                  ? 'bg-kamenozoki text-ai border-ai/30 animate-pulse'
+                  : 'bg-kinari text-nibi border-suna'
               }`}
             >
               <PenTool className="w-3.5 h-3.5" />
@@ -1339,7 +1339,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             </div>
 
             {/* Trạng thái Bàn tay (Hand Detected) */}
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs text-slate-300">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-kinari border border-suna text-xs text-sumi">
               <span
                 className={`w-2 h-2 rounded-full ${
                   handDetected ? 'bg-emerald-400' : 'bg-slate-500'
@@ -1349,7 +1349,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             </div>
 
             {/* FPS Badge */}
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-mono text-slate-400">
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-kinari border border-suna text-xs font-mono text-nibi">
               <span
                 className={`w-2 h-2 rounded-full ${
                   fps > 25 ? 'bg-emerald-400' : fps > 15 ? 'bg-amber-400' : 'bg-red-400'
@@ -1361,7 +1361,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             {/* Nút đóng */}
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-kinari hover:bg-slate-800 rounded-xl transition cursor-pointer ml-1"
+              className="p-2 text-nibi hover:text-sumi hover:bg-kamenozoki rounded-xl transition cursor-pointer ml-1"
               title="Đóng"
             >
               <X className="w-5 h-5" />
@@ -1370,14 +1370,14 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
         </div>
 
         {/* 4.4. WORD BUILDING: THANH GHÉP CỤM TỪ KANJI */}
-        <div className="px-6 py-2.5 bg-slate-950/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-6 py-2.5 bg-surface border-b border-suna flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-sky-400" />
+            <span className="text-xs font-semibold text-sumi flex items-center gap-1">
+              <Layers className="w-3.5 h-3.5 text-ai" />
               <span>Cụm từ đang ghép:</span>
             </span>
             {wordBuffer.length === 0 ? (
-              <span className="text-xs text-slate-500 italic">
+              <span className="text-xs text-nibi italic">
                 (Chưa ghép chữ nào — Nhấp &quot;+ Ghép&quot; hoặc chụm 2 ngón 🤏 để ghép thành từ hoàn chỉnh)
               </span>
             ) : (
@@ -1385,12 +1385,12 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                 {wordBuffer.map((char, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/40 text-lg font-bold font-serif text-sky-200 shadow-sm"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-kamenozoki border border-ai/30 text-lg font-bold font-serif text-ai shadow-sm"
                   >
                     {char}
                   </span>
                 ))}
-                <span className="text-sm font-bold text-sky-400 ml-1">
+                <span className="text-sm font-bold text-ai ml-1">
                   = &ldquo;{wordBuffer.join('')}&rdquo;
                 </span>
               </div>
@@ -1402,7 +1402,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
               <>
                 <button
                   onClick={handleRemoveLastChar}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1 transition cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-kinari hover:bg-kamenozoki text-sumi text-xs font-medium flex items-center gap-1 transition cursor-pointer"
                   title="Xóa ký tự vừa ghép (Backspace)"
                 >
                   <Delete className="w-3.5 h-3.5" />
@@ -1410,7 +1410,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                 </button>
                 <button
                   onClick={handleClearWordBuffer}
-                  className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/25 text-xs font-medium flex items-center gap-1 transition cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-medium flex items-center gap-1 transition cursor-pointer"
                   title="Xóa toàn bộ cụm từ đang ghép"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1422,7 +1422,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             <button
               onClick={() => handleSearchFinal()}
               disabled={wordBuffer.length === 0 && !topChar && predictions.length === 0}
-              className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-500/25 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className="px-4 py-1.5 rounded-xl bg-[#2e5c8a] hover:bg-[#254b70] text-white font-semibold text-xs flex items-center gap-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               title="Tra cứu từ điển (Hoặc giơ ngón cái 👍 giữ 1.0s)"
             >
               <Search className="w-3.5 h-3.5" />
@@ -1460,9 +1460,9 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
             {/* Màn hình Loading */}
             {isLoading && !isSimulationMode && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-kinari z-10 gap-3">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 text-kinari z-10 gap-3">
                 <div className="w-12 h-12 rounded-full border-3 border-indigo-500/30 border-t-indigo-500 animate-spin" />
-                <p className="text-sm font-medium text-slate-200">
+                <p className="text-sm font-medium text-white">
                   Đang khởi tạo Camera & MediaPipe Hands...
                 </p>
               </div>
@@ -1470,35 +1470,35 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
             {/* Màn hình Báo lỗi Camera (Hỗ trợ hướng dẫn phím cứng Fn + F10 & Chế độ chuột mô phỏng) */}
             {cameraError && !isSimulationMode && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/95 text-kinari z-20 p-6 text-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/85 text-kinari z-20 p-6 text-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-[#fca5a5]">
                   <VideoOff className="w-6 h-6" />
                 </div>
-                <h4 className="text-base font-semibold text-red-400">
+                <h4 className="text-base font-semibold text-[#fca5a5]">
                   Lỗi truy cập Camera (Mã 0xA00F4244)
                 </h4>
-                <p className="text-sm text-slate-300 max-w-md font-medium">{cameraError}</p>
+                <p className="text-sm text-white/85 max-w-md font-medium">{cameraError}</p>
 
                 {/* Hộp hướng dẫn phần cứng cho máy tính GIGABYTE / Laptop */}
-                <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-xs text-slate-300 max-w-lg text-left space-y-2 mt-1">
+                <div className="bg-black/75 border border-white/15 rounded-2xl p-4 text-xs text-white/85 max-w-lg text-left space-y-2 mt-1">
                   <div className="font-semibold text-white flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-sky-400" />
+                    <Sparkles className="w-4 h-4 text-[#8fcdf5]" />
                     <span>Cách kích hoạt Camera trên laptop:</span>
                   </div>
-                  <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
+                  <ul className="list-disc pl-5 space-y-1.5 text-white/70">
                     <li>
-                      <strong className="text-sky-300">Phím tắt bàn phím:</strong> Nhấn tổ hợp phím{' '}
-                      <kbd className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-sky-200 font-mono font-bold">
+                      <strong className="text-[#8fcdf5]">Phím tắt bàn phím:</strong> Nhấn tổ hợp phím{' '}
+                      <kbd className="px-2 py-0.5 rounded bg-white/10 border border-white/20 text-[#bfe3fb] font-mono font-bold">
                         Fn + F10
                       </kbd>{' '}
                       để cấp nguồn cho Camera (màn hình sẽ hiện thông báo <em>Camera ON</em>).
                     </li>
                     <li>
-                      <strong className="text-sky-300">GIGABYTE Control Center:</strong> Vào tab{' '}
+                      <strong className="text-[#8fcdf5]">GIGABYTE Control Center:</strong> Vào tab{' '}
                       <em>Device Settings</em> gạt mục <em>Camera</em> sang <strong>ON</strong>.
                     </li>
                     <li>
-                      <strong className="text-sky-300">Chưa tiện cắm Camera?</strong> Bấm nút{' '}
+                      <strong className="text-[#8fcdf5]">Chưa tiện cắm Camera?</strong> Bấm nút{' '}
                       <strong>Chế độ Chuột mô phỏng</strong> bên dưới để test ngay AI nhận diện 3.170 lớp!
                     </li>
                   </ul>
@@ -1511,14 +1511,14 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                       setIsLoading(true)
                       setRetryCount((prev) => prev + 1)
                     }}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-[#2e5c8a] hover:bg-[#254b70] text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
                   >
                     <RefreshCw className="w-3.5 h-3.5" /> Thử lại kết nối Camera
                   </button>
 
                   <button
                     onClick={startSimulationMode}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer shadow-md shadow-emerald-900/20"
+                    className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer"
                   >
                     <MousePointer className="w-3.5 h-3.5" /> Chế độ Chuột mô phỏng
                   </button>
@@ -1528,11 +1528,11 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
             {/* 4.1 & 4.2 & 4.5: BANNER PHẢN HỒI CỬ CHỈ ĐANG GIỮ (GESTURE HOLD HUD) */}
             {gestureOverlay && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-md border border-sky-400/60 rounded-2xl px-5 py-3 shadow-2xl flex flex-col items-center gap-2 z-30 animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/75 backdrop-blur-md border border-[#8fcdf5]/60 rounded-2xl px-5 py-3 shadow-2xl flex flex-col items-center gap-2 z-30 animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center gap-2 text-white font-bold text-sm tracking-wide">
                   <span>{gestureOverlay.label}</span>
                 </div>
-                <div className="w-56 bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700">
+                <div className="w-56 bg-white/20 h-2.5 rounded-full overflow-hidden border border-white/20">
                   <div
                     className="h-full bg-gradient-to-r from-sky-400 via-indigo-500 to-emerald-400 transition-all duration-75"
                     style={{ width: `${Math.round(gestureOverlay.progress * 100)}%` }}
@@ -1542,19 +1542,19 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             )}
 
             {/* HƯỚNG DẪN CỬ CHỈ KHÔNG CHẠM NHANH DƯỚI ĐÁY KHUNG CAMERA */}
-            <div className="absolute bottom-4 left-4 right-4 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-2xl px-4 py-2 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-2 shadow-lg pointer-events-none">
+            <div className="absolute bottom-4 left-4 right-4 bg-black/65 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-2 text-xs text-white/85 flex flex-wrap items-center justify-between gap-2 shadow-lg pointer-events-none">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1 font-semibold text-white">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-400" /> Cử chỉ:
+                  <Sparkles className="w-3.5 h-3.5 text-[#8fcdf5]" /> Cử chỉ:
                 </span>
-                <span className="text-sky-300">👆 1 ngón trỏ (Vẽ)</span>
-                <span className="text-sky-300">✌️ Chữ V (Undo 0.6s)</span>
-                <span className="text-rose-300">✊ Nắm đấm (Xóa 1.2s)</span>
-                <span className="text-emerald-300">👍 Ngón cái (Tra từ 1.0s)</span>
-                <span className="text-amber-300">🤏 Chụm 2 ngón (Chọn thẻ)</span>
+                <span className="text-[#8fcdf5]">👆 1 ngón trỏ (Vẽ)</span>
+                <span className="text-[#8fcdf5]">✌️ Chữ V (Undo 0.6s)</span>
+                <span className="text-[#fda4af]">✊ Nắm đấm (Xóa 1.2s)</span>
+                <span className="text-[#6ee7b7]">👍 Ngón cái (Tra từ 1.0s)</span>
+                <span className="text-[#fcd34d]">🤏 Chụm 2 ngón (Chọn thẻ)</span>
               </div>
               {hoverTargetKey && (
-                <div className="text-[11px] font-semibold text-sky-400 animate-pulse">
+                <div className="text-[11px] font-semibold text-[#8fcdf5] animate-pulse">
                   Đang trỏ vào: {hoverTargetKey}
                 </div>
               )}
@@ -1562,34 +1562,34 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
             {/* BADGE BÁO ĐANG DỰ ĐOÁN NÉT VẼ */}
             {isPredicting && (
-              <div className="absolute top-14 left-4 bg-indigo-950/85 backdrop-blur-md border border-indigo-500/40 rounded-xl px-3 py-1.5 text-xs text-indigo-200 flex items-center gap-2 shadow-lg animate-pulse">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" />
+              <div className="absolute top-14 left-4 bg-black/70 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs text-white flex items-center gap-2 shadow-lg animate-pulse">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#8fcdf5]" />
                 <span>AI đang phân tích nét vẽ...</span>
               </div>
             )}
           </div>
 
           {/* CỘT PHẢI: SIDEBAR HIỂN THỊ DANH SÁCH ỨNG VIÊN TOP-K AI */}
-          <div className="w-full md:w-80 bg-slate-900/95 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col justify-between shrink-0">
+          <div className="w-full md:w-80 bg-surface border-t md:border-t-0 md:border-l border-suna flex flex-col justify-between shrink-0">
             {/* Thanh tiêu đề Sidebar */}
-            <div className="px-4 py-3 bg-slate-800/60 border-b border-slate-700/80 flex items-center justify-between">
+            <div className="px-4 py-3 bg-kinari border-b border-suna flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-sky-400" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                <Brain className="w-4 h-4 text-ai" />
+                <span className="text-xs font-bold text-sumi uppercase tracking-wider">
                   Gợi ý AI thời gian thực
                 </span>
               </div>
               {isPredicting ? (
-                <span className="flex items-center gap-1.5 text-xs text-sky-400 font-medium">
+                <span className="flex items-center gap-1.5 text-xs text-ai font-medium">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>Đang đoán...</span>
                 </span>
               ) : topChar ? (
-                <span className="text-xs font-semibold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
+                <span className="text-xs font-semibold text-ai bg-kamenozoki px-2 py-0.5 rounded border border-ai/30">
                   Khớp: {topChar}
                 </span>
               ) : (
-                <span className="text-[11px] font-semibold text-slate-400">
+                <span className="text-[11px] font-semibold text-nibi">
                   {predictions.length > 0 ? `Top ${predictions.length}` : 'Chờ nét vẽ'}
                 </span>
               )}
@@ -1599,12 +1599,12 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-2.5 max-h-[300px] md:max-h-[460px]">
               {/* Trạng thái chưa có nét vẽ nào */}
               {strokesCount === 0 && (
-                <div className="h-full min-h-[220px] flex flex-col items-center justify-center p-4 text-center text-slate-400">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2.5">
+                <div className="h-full min-h-[220px] flex flex-col items-center justify-center p-4 text-center text-nibi">
+                  <div className="w-12 h-12 rounded-2xl bg-kamenozoki border border-ai/30 flex items-center justify-center text-ai mb-2.5">
                     <PenTool className="w-6 h-6" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-200">Bắt đầu vẽ nét</p>
-                  <p className="text-xs text-slate-400 max-w-[210px] mt-1 leading-relaxed">
+                  <p className="text-sm font-semibold text-sumi">Bắt đầu vẽ nét</p>
+                  <p className="text-xs text-nibi max-w-[210px] mt-1 leading-relaxed">
                     Duỗi 1 ngón trỏ trước camera để vẽ chữ Kanji. AI sẽ tự động phân tích và đưa ra gợi ý tức thì!
                   </p>
                 </div>
@@ -1612,16 +1612,16 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
               {/* Trạng thái đang tải nét đầu tiên */}
               {strokesCount > 0 && isPredicting && predictions.length === 0 && (
-                <div className="h-full min-h-[220px] flex flex-col items-center justify-center p-4 text-center text-slate-400">
-                  <Loader2 className="w-8 h-8 text-sky-400 animate-spin mb-2.5" />
-                  <p className="text-sm font-semibold text-slate-200">Đang đối sánh với 3.170 lớp AI...</p>
-                  <p className="text-xs text-slate-400 mt-1">Chuẩn hóa khung giấy ETL9G</p>
+                <div className="h-full min-h-[220px] flex flex-col items-center justify-center p-4 text-center text-nibi">
+                  <Loader2 className="w-8 h-8 text-ai animate-spin mb-2.5" />
+                  <p className="text-sm font-semibold text-sumi">Đang đối sánh với 3.170 lớp AI...</p>
+                  <p className="text-xs text-nibi mt-1">Chuẩn hóa khung giấy ETL9G</p>
                 </div>
               )}
 
               {/* Báo lỗi kết nối AI nếu có */}
               {predictionError && (
-                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-300">
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
                   {predictionError}
                 </div>
               )}
@@ -1630,31 +1630,31 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
               {predictions.length > 0 && (
                 <>
                   {/* Ký tự khớp nhất (Top 1) */}
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/60 via-slate-800/90 to-slate-900 border border-sky-500/60 hover:border-sky-400 shadow-lg shadow-sky-950/20 transition group">
+                  <div className="p-3.5 rounded-2xl bg-kamenozoki/50 border border-ai/30 hover:border-ai shadow-sm transition group">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30 text-[10px] font-bold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-sky-400" /> Khớp nhất
+                      <span className="px-2 py-0.5 rounded-full bg-kamenozoki text-ai border border-ai/30 text-[10px] font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-ai" /> Khớp nhất
                       </span>
-                      <span className="text-[11px] font-mono text-slate-400">
+                      <span className="text-[11px] font-mono text-nibi">
                         {predictions[0].unicode_hex || ''}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between mt-1">
-                      <span className="text-4xl font-serif font-bold text-white group-hover:text-sky-300 transition">
+                      <span className="text-4xl font-serif font-bold text-sumi group-hover:text-ai transition">
                         {predictions[0].char}
                       </span>
                       <div className="text-right">
-                        <span className="text-base font-bold text-sky-400">
+                        <span className="text-base font-bold text-ai">
                           {predictions[0].percentage.toFixed(1)}%
                         </span>
-                        <div className="text-[10px] text-slate-400">độ tin cậy</div>
+                        <div className="text-[10px] text-nibi">độ tin cậy</div>
                       </div>
                     </div>
 
-                    <div className="w-full bg-slate-700/60 h-2 rounded-full overflow-hidden mt-2">
+                    <div className="w-full bg-suna h-2 rounded-full overflow-hidden mt-2">
                       <div
-                        className="bg-gradient-to-r from-sky-400 to-indigo-500 h-full rounded-full transition-all duration-300"
+                        className="bg-ai h-full rounded-full transition-all duration-300"
                         style={{
                           width: `${Math.min(100, Math.max(5, predictions[0].percentage))}%`,
                         }}
@@ -1665,7 +1665,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleAppendToWordBuffer(predictions[0].char)}
-                        className="flex-1 py-1.5 px-3 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-400/35 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                        className="flex-1 py-1.5 px-3 rounded-xl bg-kamenozoki hover:bg-kamenozoki text-ai border border-ai/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                         title="Thêm vào cụm từ đang ghép và xóa bảng để vẽ tiếp"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -1675,7 +1675,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleSearchFinal(predictions[0].char)}
-                        className="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium flex items-center justify-center gap-1 transition cursor-pointer"
+                        className="py-1.5 px-3 rounded-xl bg-kinari hover:bg-kamenozoki text-sumi border border-suna text-xs font-medium flex items-center justify-center gap-1 transition cursor-pointer"
                         title="Tra cứu trực tiếp chữ này vào từ điển"
                       >
                         <span>Tra ngay</span>
@@ -1688,22 +1688,22 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                   {predictions.slice(1).map((item, idx) => (
                     <div
                       key={item.char + idx}
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-slate-600 transition group"
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-kinari hover:bg-kamenozoki border border-suna hover:border-suna transition group"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="w-5 text-center text-xs font-bold text-slate-500 group-hover:text-slate-400">
+                        <span className="w-5 text-center text-xs font-bold text-nibi group-hover:text-sumi">
                           #{idx + 2}
                         </span>
-                        <span className="text-2xl font-serif font-bold text-slate-200 group-hover:text-white transition">
+                        <span className="text-2xl font-serif font-bold text-sumi group-hover:text-ai transition">
                           {item.char}
                         </span>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-mono text-slate-400">
+                          <span className="text-[10px] font-mono text-nibi">
                             {item.unicode_hex || ''}
                           </span>
-                          <div className="w-16 bg-slate-700 h-1 rounded-full overflow-hidden mt-1">
+                          <div className="w-16 bg-suna h-1 rounded-full overflow-hidden mt-1">
                             <div
-                              className="bg-indigo-400 h-full rounded-full"
+                              className="bg-ai h-full rounded-full"
                               style={{ width: `${item.percentage}%` }}
                             />
                           </div>
@@ -1713,7 +1713,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleAppendToWordBuffer(item.char)}
-                          className="px-2 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-400/30 text-[11px] font-semibold flex items-center gap-0.5 transition cursor-pointer"
+                          className="px-2 py-1 rounded-lg bg-kamenozoki hover:bg-ai/20 text-ai border border-ai/30 text-[11px] font-semibold flex items-center gap-0.5 transition cursor-pointer"
                           title="Ghép vào cụm từ"
                         >
                           <Plus className="w-3 h-3" />
@@ -1721,7 +1721,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
                         </button>
                         <button
                           onClick={() => handleSearchFinal(item.char)}
-                          className="p-1.5 rounded-lg bg-slate-750 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer"
+                          className="p-1.5 rounded-lg bg-kinari hover:bg-kamenozoki text-sumi hover:text-sumi transition cursor-pointer"
                           title="Tra ngay"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -1734,15 +1734,15 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             </div>
 
             {/* Thông tin footer của Sidebar */}
-            <div className="p-3 bg-slate-900 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col gap-1">
-              <div className="flex items-center justify-between text-slate-300 font-medium">
+            <div className="p-3 bg-surface border-t border-suna text-[11px] text-nibi flex flex-col gap-1">
+              <div className="flex items-center justify-between text-sumi font-medium">
                 <span className="flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-indigo-400" />
+                  <Layers className="w-3 h-3 text-ai" />
                   <span>Deep Residual CNN</span>
                 </span>
-                <span className="text-[10px] text-indigo-400 font-semibold">3.170 lớp nhãn</span>
+                <span className="text-[10px] text-ai font-semibold">3.170 lớp nhãn</span>
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-nibi">
                 100% Không chạm: 👆 Vẽ • ✊ Xóa • 🤏 Chọn • ✌️ Undo • 👍 Tra từ
               </p>
             </div>
@@ -1750,13 +1750,13 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
         </div>
 
         {/* FOOTER ĐIỀU KHIỂN & CÁC NÚT THAO TÁC NHANH */}
-        <div className="px-6 py-3 bg-slate-800/90 border-t border-slate-700/80 flex items-center justify-between gap-3">
+        <div className="px-6 py-3 bg-kinari border-t border-suna flex items-center justify-between gap-3">
           {/* Nhóm nút Hoàn tác & Xóa tất cả */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleUndo}
               disabled={strokesCount === 0}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-kinari hover:bg-kamenozoki text-sumi disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
               title="Xóa nét vẽ vừa rồi (Hoặc giơ 2 ngón tay chữ V ✌️)"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -1766,7 +1766,7 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
             <button
               onClick={handleClearAll}
               disabled={strokesCount === 0}
-              className="px-3.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
               title="Xóa toàn bộ các nét (Hoặc nắm đấm ✊)"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -1776,17 +1776,17 @@ export const KanjiAirWritingModal: React.FC<KanjiAirWritingModalProps> = ({
 
           {/* Checkbox ẩn/hiện xương tay & Huy hiệu Phase 4 */}
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-xs text-nibi cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={showSkeleton}
                 onChange={(e) => setShowSkeleton(e.target.checked)}
-                className="rounded border-slate-600 text-indigo-600 focus:ring-indigo-500 bg-slate-700 w-3.5 h-3.5"
+                className="rounded border-suna text-ai focus:ring-ai bg-surface w-3.5 h-3.5"
               />
               <span>Khung xương tay</span>
             </label>
 
-            <div className="text-xs text-emerald-400 flex items-center gap-1 font-medium">
+            <div className="text-xs text-emerald-600 flex items-center gap-1 font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Phase 4: Không chạm 100%</span>
             </div>
