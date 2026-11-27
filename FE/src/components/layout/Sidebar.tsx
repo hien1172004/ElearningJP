@@ -224,7 +224,7 @@ const NavItemRow: React.FC<NavItemRowProps> = ({ item, collapsed, onNavigate }) 
         collapsed && 'justify-center px-0',
         isItemActive
           ? 'text-indigo-600 bg-indigo-50/80 font-bold'
-          : 'text-gray-600 hover:text-indigo-600 hover:bg-gray-50',
+          : 'text-gray-900 hover:text-indigo-600 hover:bg-gray-50',
       )}
     >
       <span className="shrink-0 relative inline-flex items-center justify-center">
@@ -304,7 +304,7 @@ export const Sidebar: React.FC = () => {
         ? {
             ...item,
             badge: (
-              <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold tabular-nums">
+              <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-[#2e5c8a] text-white text-[10px] font-bold tabular-nums">
                 {dueCount}
               </span>
             ),

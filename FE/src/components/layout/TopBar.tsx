@@ -159,7 +159,8 @@ export const TopBar: React.FC = () => {
                 className={cn(
                   'inline-flex items-center gap-1.5',
                   'text-sm font-semibold px-4 py-2',
-                  'bg-indigo-600 text-white rounded-md hover:bg-indigo-700 shadow-xs',
+                  // Màu cố định: indigo-600 bị đảo sáng ở dark mode nên chữ trắng sẽ chìm
+                  'bg-[#2e5c8a] text-white rounded-md hover:bg-[#254b70] shadow-xs',
                   'active:scale-[0.98] transition',
                 )}
               >
